@@ -128,7 +128,7 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 
 ## 2. Schema
 
-PostgreSQL via Drizzle ORM. Every table has `id uuid primary key default gen_random_uuid()` unless stated, and every timestamp is `timestamptz` in UTC (DATA-003). "FK → x, cascade" means `on delete cascade`.
+PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). The schema is `src/server/schema.ts`; `drizzle-kit generate` writes migrations to `migrations/`. Every table has `id uuid primary key default gen_random_uuid()` unless stated, and every timestamp is `timestamptz` in UTC (DATA-003). "FK → x, cascade" means `on delete cascade`.
 
 ### 2.1 Enums
 
