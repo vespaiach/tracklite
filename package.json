@@ -12,9 +12,6 @@
     "test": "vitest run",
     "lint": "biome check",
     "typecheck": "next typegen && tsc --noEmit",
-    "db:migrate": "node --conditions=react-server scripts/migrate.ts",
-    "setup": "node --conditions=react-server scripts/setup.ts",
-    "db:seed": "node --conditions=react-server scripts/seed.ts",
     "db:generate": "NODE_OPTIONS=--conditions=react-server drizzle-kit generate",
     "db:studio": "NODE_OPTIONS=--conditions=react-server drizzle-kit studio"
   },
