@@ -115,8 +115,12 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 
 - **No comments in code under `src/`.** That includes line comments, block comments and JSDoc. Say what the code means through names, types and test titles; spec IDs belong in test names, not comments.
 - **Component-driven development first.** Build UI from the bottom up. Each element starts as an isolated component that holds no app state and gets its data and callbacks through props. Develop it on its own in the design sandbox, then compose it into larger layouts and finally connect it to the store and the router.
-- **Test-driven development.** Write a failing automated test first and watch it fail. Then write the minimum code that makes it pass, and refactor while the tests stay green.
+- **Test-driven development.** Write a failing test first, run it to confirm it fails for the expected reason, then write the minimum code to make it pass, then refactor with the tests green. Two owner checkpoints apply in every coding session:
+   - **Before writing tests**, list the test cases you plan to write (name, what it asserts, which R-ID it closes) and ask the owner whether to add or change any. Do not write test code until the owner confirms the list.
+   - **After writing the tests** (and confirming they fail for the expected reason), stop and wait for the owner to review and approve them. Do not write implementation code until the owner approves.
 - **No dead or unused code.** Delete unused exports, files, branches and parameters, and don't add code for later. The exception is prebuilt UI components, which may sit unused.
+- **Run the code checks after implementing.** When a task's implementation is done, run these in order and fix any failure before moving on: `npm run typecheck`, `npm run lint`, `npm test`.
+- **Commit, push and open a PR when done.** Once the implementation is done and every check in rule 4 passes, commit, push the branch and open a PR without waiting to be asked.
 
 ## Code style
 
