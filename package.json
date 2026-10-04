@@ -13,7 +13,8 @@
     "lint": "biome check",
     "typecheck": "next typegen && tsc --noEmit",
     "db:generate": "NODE_OPTIONS=--conditions=react-server drizzle-kit generate",
-    "db:studio": "NODE_OPTIONS=--conditions=react-server drizzle-kit studio"
+    "db:studio": "NODE_OPTIONS=--conditions=react-server drizzle-kit studio",
+    "email:dev": "tsx --conditions=react-server --env-file=.env.local scripts/send-dev-email.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.1",
@@ -39,6 +40,7 @@
     "drizzle-kit": "^0.31.11",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^5.0.3"
   }
