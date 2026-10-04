@@ -17,11 +17,11 @@ function cookieName() {
   return isProduction() ? "__Host-session" : "session";
 }
 
-export function sessionCookie(token: string) {
+function cookieWith(value: string, maxAgeSeconds: number) {
   const attributes = [
-    `${cookieName()}=${token}`,
+    `${cookieName()}=${value}`,
     "Path=/",
-    `Max-Age=${sessionMaxAgeSeconds}`,
+    `Max-Age=${maxAgeSeconds}`,
     "HttpOnly",
     "SameSite=Lax",
   ];
@@ -29,7 +29,15 @@ export function sessionCookie(token: string) {
   return attributes.join("; ");
 }
 
-function readSessionToken(request: Request) {
+export function sessionCookie(token: string) {
+  return cookieWith(token, sessionMaxAgeSeconds);
+}
+
+export function clearedSessionCookie() {
+  return cookieWith("", 0);
+}
+
+export function readSessionToken(request: Request) {
   const prefix = `${cookieName()}=`;
   const pair = request.headers
     .get("cookie")
