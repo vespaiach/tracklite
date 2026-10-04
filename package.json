@@ -14,6 +14,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "db:generate": "NODE_OPTIONS=--conditions=react-server drizzle-kit generate",
     "db:studio": "NODE_OPTIONS=--conditions=react-server drizzle-kit studio",
+    "setup": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/setup.ts",
     "email:dev": "tsx --conditions=react-server --env-file=.env.local scripts/send-dev-email.ts"
   },
   "dependencies": {
