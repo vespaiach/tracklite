@@ -137,7 +137,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2.2, §4.3 · spec REQ-006, SEC-004, SEC-006
   - Needs: M0.3, M1.1
   - Done: REQ-006.*, SEC-004.*, SEC-006.*
-- [ ] **M1.3 Sign-in and sign-out API.** `POST /api/sessions`, `DELETE /api/sessions/current`, `GET /api/me`, and the SEC-001 sign-in limit.
+- [x] **M1.3 Sign-in and sign-out API.** `POST /api/sessions`, `DELETE /api/sessions/current`, `GET /api/me`, and the SEC-001 sign-in limit.
   - Reads: design §3.3 (sign-in table), §3.4 (last bullet), §4.5 · spec REQ-047, REQ-003.3–4, SEC-001, SEC-008.2
   - Needs: M1.2
   - Done: REQ-047.*, REQ-003.3–4, SEC-001's sign-in examples, SEC-008.2 (against `GET /api/me`)
