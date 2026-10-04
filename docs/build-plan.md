@@ -102,7 +102,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §1.1, §1.3, §1.6 · spec §12
   - Needs: M0.1
   - Done: a sample test creates a member with a factory and moves its `created_at` back a day; the app refuses to start with a variable missing
-- [ ] **M0.3 API wrapper and health.** `apiRoute` (same-site check for writes, `ApiError` → error body, anything else → `500`, one log line per request with no bodies or tokens); the catch-all for unknown `/api` paths (`401` while no sessions exist yet; the signed-in `404` comes in M1.2); `GET /health`.
+- [x] **M0.3 API wrapper and health.** `apiRoute` (same-site check for writes, `ApiError` → error body, anything else → `500`, one log line per request with no bodies or tokens); the catch-all for unknown `/api` paths (`401` while no sessions exist yet; the signed-in `404` comes in M1.2); `GET /health`.
   - Reads: design §1.2, §3.1, §3.2, §4.4, §4.8 · spec API-001, STD-1…4, STD-7, SEC-004.1, SEC-006, SEC-007, OPS-005
   - Needs: M0.2
   - Done: SEC-004.1, SEC-007.*, OPS-005 (`/health`) pass; tests for the error mapping and the `500` path
