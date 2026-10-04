@@ -110,7 +110,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §1.7, §6.1, §6.2 · spec API-004 · AGENTS.md (read the Next.js guide it names)
   - Needs: M0.2
   - Done: any page address loads the shell; an unknown address shows Not found; moving between two routes doesn't reload the document
-- [ ] **M0.5 Store and data layer.** The Redux store, the RTK Query `api` slice and its `baseQuery` (redirect to sign-in on `401`), the `toast` slice, the 300 ms loading hook.
+- [x] **M0.5 Store and data layer.** The Redux store, the RTK Query `api` slice and its `baseQuery` (redirect to sign-in on `401`), the `toast` slice, the 300 ms loading hook.
   - Reads: design §1.7 · spec STD-1, STD-9
   - Needs: M0.4
   - Done: STD-9.*; tests for the `401` redirect and the loading hook; with no session the shell lands on sign-in

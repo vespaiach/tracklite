@@ -1,8 +1,27 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import ClientApp from "./ClientApp";
 
-afterEach(cleanup);
+const sam = {
+  username: "sam",
+  fullName: "Sam Lee",
+  initials: "SL",
+  deactivated: false,
+  email: "sam@acme.com",
+  role: "member",
+};
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json(sam)),
+  );
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 function renderAt(path: string) {
   window.history.replaceState(null, "", path);
@@ -41,4 +60,18 @@ it("M0.4: / redirects to /my-issues", async () => {
   renderAt("/");
   expect(await screen.findByRole("heading", { name: "My issues" })).toBeTruthy();
   expect(window.location.pathname).toBe("/my-issues");
+});
+
+it("STD-1: with no session the shell lands on sign-in", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ error: { message: "Sign in to continue." } }, { status: 401 })),
+  );
+
+  renderAt("/my-issues");
+
+  expect(await screen.findByRole("heading", { name: "Sign in" })).toBeTruthy();
+  expect(window.location.pathname).toBe("/sign-in");
+  expect(window.location.search).toBe(`?next=${encodeURIComponent("/my-issues")}`);
+  expect(screen.queryByRole("heading", { name: "My issues" })).toBeNull();
 });

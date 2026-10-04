@@ -1,9 +1,9 @@
 ---
 product: "Tracklite"
-version: "0.10"
+version: "0.11"
 release: "R1"
 status: Ready to build
-updated: "2026-10-03"
+updated: "2026-10-04"
 ---
 
 # Tracklite: Spec
@@ -505,6 +505,11 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
 | STD-8 | Two members edit the same thing | Single fields such as status, assignee, priority and labels: the last save wins. Descriptions: if someone else saved since you opened the editor, nothing is saved. You see "This was changed by [name]. Copy your text and reload.", and your text stays in the editor. |
 | STD-9 | A form submission fails | A toast error appears, disappears after 5 seconds with no dismiss or pause control, and the form keeps everything typed (DEC-006). This covers failures not tied to one field, such as a network error, a server error, a `403` (STD-2) or a failed invitation or password reset email (STD-6). Validation errors stay next to their fields (STD-3), and the STD-8 conflict message stays in the editor. For a network error or a server error, the toast reads "Couldn't save. Try again." |
 
+**STD-9 examples**
+  - STD-9.1: Sam's save fails → one error toast shows, and 5 seconds later it's gone; it has no dismiss or pause control. (Verify: auto)
+  - STD-9.2: A second save fails while the first toast is showing → the new message replaces it, and the 5 seconds start again. (Verify: auto)
+  - STD-9.3: Sam's save fails with a network error or a server error → the toast reads "Couldn't save. Try again."; any other failure shows the server's message. (Verify: auto)
+
 ### 7. Roles and permissions
 
 | Action | Admin | Member |
@@ -721,6 +726,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.11 (2026-10-04):** STD-9 gets numbered examples (STD-9.1 to STD-9.3) so its toast behaviour can be tested.
 - **0.10 (2026-10-03):** UI stack in section 12: the Track Lite design system replaces the Hairline Design System. React Aria Components stay for complex interactive widgets; Tailwind CSS is no longer named.
 - **0.9 (2026-10-03):** Review fixes before build, plus the technical-design pass.
   - **From the technical-design pass:** Section 12 names Drizzle ORM instead of postgres.js, reversing the 0.7 change. Reordering a card within its column doesn't change "last updated" (REQ-036, new REQ-036.5). The notification wait is fixed from the first notification, not restarted by later ones (REQ-045, new REQ-045.8). A failed invitation email saves nothing and shows "We couldn't send the email. Try again." (REQ-001, new REQ-001.7, STD-6, STD-9). Mentions are shown highlighted with the full name on hover, not as links (DATA-001, DATA-001.1, REQ-031.1). The wording of every email is defined (section 9, Email content). API-004 lists the invitation, project settings, archived projects and profile pages. Copy added for a password change (REQ-049), the deactivate confirmation (REQ-007) and an empty Archived list (REQ-013). The front end is a single-page app with React Router and Redux Toolkit (section 12).
