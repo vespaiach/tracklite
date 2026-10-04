@@ -1,0 +1,80 @@
+import "server-only";
+import { and, eq, getTableColumns, gt, isNull, sql } from "drizzle-orm";
+import { ApiError } from "./api-error";
+import { db } from "./db";
+import { members, sessions } from "./schema";
+import { createToken, hashToken } from "./tokens";
+
+export type Member = typeof members.$inferSelect;
+
+const sessionMaxAgeSeconds = 30 * 24 * 60 * 60;
+
+function isProduction() {
+  return process.env.NODE_ENV === "production";
+}
+
+function cookieName() {
+  return isProduction() ? "__Host-session" : "session";
+}
+
+export function sessionCookie(token: string) {
+  const attributes = [
+    `${cookieName()}=${token}`,
+    "Path=/",
+    `Max-Age=${sessionMaxAgeSeconds}`,
+    "HttpOnly",
+    "SameSite=Lax",
+  ];
+  if (isProduction()) attributes.push("Secure");
+  return attributes.join("; ");
+}
+
+function readSessionToken(request: Request) {
+  const prefix = `${cookieName()}=`;
+  const pair = request.headers
+    .get("cookie")
+    ?.split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix));
+  return pair?.slice(prefix.length);
+}
+
+export async function createSession(memberId: string) {
+  const token = createToken();
+  await db.insert(sessions).values({ memberId, tokenHash: hashToken(token) });
+  return token;
+}
+
+export async function endSession(token: string) {
+  await db.delete(sessions).where(eq(sessions.tokenHash, hashToken(token)));
+}
+
+export async function requireMember(request: Request): Promise<{ member: Member; cookie?: string }> {
+  const token = readSessionToken(request);
+  if (!token) throw new ApiError(401, "Sign in to continue.");
+
+  const [found] = await db
+    .select({
+      member: getTableColumns(members),
+      sessionId: sessions.id,
+      needsRenewal: sql<boolean>`${sessions.lastActiveAt} < now() - interval '1 hour'`,
+    })
+    .from(sessions)
+    .innerJoin(members, eq(members.id, sessions.memberId))
+    .where(
+      and(
+        eq(sessions.tokenHash, hashToken(token)),
+        gt(sessions.lastActiveAt, sql`now() - interval '30 days'`),
+        isNull(members.deactivatedAt),
+      ),
+    );
+  if (!found) throw new ApiError(401, "Sign in to continue.");
+
+  if (!found.needsRenewal) return { member: found.member };
+  await db.update(sessions).set({ lastActiveAt: sql`now()` }).where(eq(sessions.id, found.sessionId));
+  return { member: found.member, cookie: sessionCookie(token) };
+}
+
+export function requireAdmin(member: Member) {
+  if (member.role !== "admin") throw new ApiError(403, "You don't have permission to do that.");
+}
