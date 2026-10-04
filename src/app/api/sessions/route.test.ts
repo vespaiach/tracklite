@@ -83,7 +83,7 @@ it("REQ-047.3: an unknown email gets the same refusal", async () => {
 });
 
 it("REQ-047: a deactivated member with the right password gets the same refusal", async () => {
-  const sam = await createMember({ passwordHash, deactivatedAt: new Date()});
+  const sam = await createMember({ passwordHash, deactivatedAt: new Date() });
 
   await expectRefused(await signIn({ email: sam.email, password }), incorrect, 422);
 });
