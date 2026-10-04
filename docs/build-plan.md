@@ -1,6 +1,6 @@
 # Tracklite: Build plan
 
-Milestones in build order for R1, each split into tasks small enough for one prompt. Behaviour comes from `docs/tracklite-spec.md` (v0.9); the technical design is in `docs/tech-design.md`, referred to below by section number (§).
+Milestones in build order for R1, each split into tasks small enough for one prompt. Behaviour comes from `docs/tracklite-spec.md` (v0.10); the technical design is in `docs/tech-design.md`, referred to below by section number (§).
 
 **Ground rules**
 - A task is done when the examples in its **Done** line have passing tests. Name each test after its example, such as `it("REQ-016.4: concurrent creates get distinct numbers")`, so `grep REQ-016` shows how a requirement is covered. `REQ-047.*` means every `Verify: auto` example of REQ-047.

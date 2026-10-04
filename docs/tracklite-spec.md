@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.9"
+version: "0.10"
 release: "R1"
 status: Ready to build
 updated: "2026-10-03"
@@ -675,7 +675,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 ### 12. Stack and constraints
 
-- **Stack:** Next.js (TypeScript), PostgreSQL via Drizzle ORM (its query builder, with raw SQL only where the builder can't express a query), all on a single VPS. The front end is a single-page app: Next.js serves one HTML shell for every page address, and routing, page transitions and data fetching all happen in the browser, using React Router and Redux Toolkit (RTK Query for server data). Email goes through a transactional email service (API-002). Automated tests are unit and component tests only, using Vitest with React Testing Library on jsdom, run through npm scripts; there are no browser end-to-end tests (DEC-005). Lint uses Biome. UI uses the Hairline Design System, styled with Tailwind CSS v4 and built on React Aria Components.
+- **Stack:** Next.js (TypeScript), PostgreSQL via Drizzle ORM (its query builder, with raw SQL only where the builder can't express a query), all on a single VPS. The front end is a single-page app: Next.js serves one HTML shell for every page address, and routing, page transitions and data fetching all happen in the browser, using React Router and Redux Toolkit (RTK Query for server data). Email goes through a transactional email service (API-002). Automated tests are unit and component tests only, using Vitest with React Testing Library on jsdom, run through npm scripts; there are no browser end-to-end tests (DEC-005). Lint uses Biome. UI uses the Track Lite design system (React components styled by its own CSS classes and design tokens), with React Aria Components for complex interactive widgets.
 - **Commands:** build, test and lint commands live in the npm scripts in `package.json`. AGENTS.md tells agents to use them and doesn't copy them.
 - **Boundaries:**
   - This spec is the source of truth for product behavior.
@@ -721,6 +721,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.10 (2026-10-03):** UI stack in section 12: the Track Lite design system replaces the Hairline Design System. React Aria Components stay for complex interactive widgets; Tailwind CSS is no longer named.
 - **0.9 (2026-10-03):** Review fixes before build, plus the technical-design pass.
   - **From the technical-design pass:** Section 12 names Drizzle ORM instead of postgres.js, reversing the 0.7 change. Reordering a card within its column doesn't change "last updated" (REQ-036, new REQ-036.5). The notification wait is fixed from the first notification, not restarted by later ones (REQ-045, new REQ-045.8). A failed invitation email saves nothing and shows "We couldn't send the email. Try again." (REQ-001, new REQ-001.7, STD-6, STD-9). Mentions are shown highlighted with the full name on hover, not as links (DATA-001, DATA-001.1, REQ-031.1). The wording of every email is defined (section 9, Email content). API-004 lists the invitation, project settings, archived projects and profile pages. Copy added for a password change (REQ-049), the deactivate confirmation (REQ-007) and an empty Archived list (REQ-013). The front end is a single-page app with React Router and Redux Toolkit (section 12).
   - **Contradictions resolved:**

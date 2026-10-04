@@ -1,0 +1,30 @@
+:root {
+  --font-serif: var(--font-source-serif), Georgia, serif;
+  --font-ui: var(--font-archivo), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  --text-h1: 42px;
+  --text-h2: 32px;
+  --text-h3: 25px;
+  --text-h4: 20px;
+  --text-h5: 16px;
+  --text-h6: 13px;
+  --text-body-size: 15px;
+  --leading-body: 1.55;
+  --leading-heading: 1.12;
+  --tracking-heading: -0.015em;
+  --text-issue-title: 27px;
+  --text-dialog-title: 20px;
+  --text-card-title: 17px;
+  --text-bar-title: 16px;
+  --text-row-title: 14px;
+  --text-ui: 13px;
+  --text-ui-sm: 12px;
+  --text-ui-xs: 11px;
+  --text-eyebrow: 10.5px;
+  --text-label: 10px;
+  --tracking-eyebrow: 0.1em;
+  --tracking-label: 0.11em;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+}

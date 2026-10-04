@@ -1,6 +1,6 @@
 # Tracklite: Technical design
 
-Companion to `docs/tracklite-spec.md` (v0.9). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
+Companion to `docs/tracklite-spec.md` (v0.10). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
 
 ## 1. Architecture
 
@@ -90,7 +90,7 @@ All email goes through one `sendEmail()` module with three implementations:
 Strict single-page app, as the Next.js docs define it: the app is served by one HTML document, and every route change, page transition and data fetch happens in the browser, with no full-page reloads.
 
 **The shell.**
-- `src/app/layout.tsx` holds `<html>`, `<body>`, fonts and the Hairline styles.
+- `src/app/layout.tsx` holds `<html>`, `<body>`, the fonts (`next/font/google`, served from the app so the CSP's `font-src 'self'` holds) and the Track Lite stylesheet.
 - One optional catch-all page, `src/app/[[...path]]/page.tsx`, renders `<ClientApp />` through `next/dynamic` with `ssr: false`. It's the same document for every address.
 - `/api`, `/health` and `/webhooks` are more specific routes, so they're never caught by it.
 - `src/proxy.ts` only sets the Content Security Policy (4.9). It doesn't redirect pages; the browser app does.
@@ -137,7 +137,7 @@ PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) drive
 | `role` | `admin`, `member` | — |
 | `issue_status` | `backlog`, `in_progress`, `in_review`, `done`, `canceled` | Postgres sorts enums by declared order, so `ORDER BY status` gives the REQ-017 order for free (REQ-039). |
 | `issue_priority` | `urgent`, `high`, `medium`, `low`, `none` | `ORDER BY priority` gives Urgent first, No priority last (REQ-039, REQ-042). |
-| `label_color` | 8 values, named after Hairline tokens | Names settled in section 6. |
+| `label_color` | 8 values | Each maps to Track Lite colour tokens in section 6.6. |
 | `notification_kind` | `assigned`, `mentioned` | — |
 | `email_state` | `pending`, `sent`, `dropped`, `failed`, `bounced` | — |
 
@@ -541,7 +541,7 @@ The wording of every email is in the spec (§9, "Email content"). That's where t
 
 ## 6. Screens
 
-Behaviour and copy come from the spec; this section only adds the routes, layout and pages the spec doesn't describe. All components come from Hairline (`src/components/ui/hairline/`).
+Behaviour and copy come from the spec; this section only adds the routes, layout and pages the spec doesn't describe. All components come from the Track Lite design system (`src/components/ui/track-lite/`).
 
 ### 6.1 Routes
 
@@ -649,7 +649,7 @@ An archived project's header shows an "Archived" badge, and no create or edit co
 
 ### 6.6 Label colours
 
-The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`. Each maps to a Hairline colour token pair (background and text) that meets WCAG AA contrast (NFR-007). Labels created from the picker are `gray` (REQ-020). Deleting a label asks for confirmation, naming how many issues have it (REQ-021.5).
+The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`. Each maps to a Track Lite colour token pair (background and text) that meets WCAG AA contrast (NFR-007). The tokens don't yet cover all eight hues, so the mapping is settled when labels are built (M3). Labels created from the picker are `gray` (REQ-020). Deleting a label asks for confirmation, naming how many issues have it (REQ-021.5).
 
 ### 6.7 Times
 
@@ -699,3 +699,4 @@ The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, 
 | D-36 | React Aria `GridList` drag and drop | dnd-kit | Already in the stack, and accessible by keyboard and screen reader out of the box. Edge auto-scroll to be confirmed in a spike. |
 | D-37 | New issue: title-only dialog, then go to the issue | A full create form | Matches REQ-016's flow ("enters a title"); everything else is edited on the issue page. |
 | D-38 | Admin-only routes show the STD-2 message, not Not found | Hiding them as Not found | Matches STD-2's wording for actions reached anyway. |
+| D-39 | Track Lite design system, ported from its Claude Design project into `src/components/ui/track-lite/` | Hairline; a component library from npm | Made for this product. Fonts load through `next/font` and icons through `@phosphor-icons/react` instead of the project's CDN links, which the CSP (D-26) would block. |

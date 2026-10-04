@@ -109,7 +109,7 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 - Every timestamp is `timestamptz`.
 - Tokens are stored as sha256 `bytea` hashes.
 
-**UI.** Components are built in-house on `react-aria-components`, styled with Tailwind v4.
+**UI.** Use the Track Lite design system in `src/components/ui/track-lite/` (import from its `index.ts`). Components are styled by plain `tl-*` classes in `styles/components.css` and tokens (`--color-*`, `--font-*`, `--space-*`, `--radius-*`, `--shadow-*`) in `styles/`. `src/app/layout.tsx` loads that stylesheet and the fonts. Read `docs/design-system.md` before building a screen: it covers voice, colour roles, sizes and icons. Icons come from `@phosphor-icons/react` (duotone weight, 15px by default). Never load fonts, icons or styles from a CDN, because the CSP allows only `'self'`. Use `react-aria-components` for complex widgets the kit doesn't cover, such as board drag and drop (D-36).
 
 ## Coding rules
 
