@@ -145,7 +145,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §1.5, §5.1, §5.2, §5.3, §5.6 · spec API-002, §9 "Email content", STD-6
   - Needs: M0.2
   - Done: the reset email in the in-memory outbox matches spec §9 word for word; a dev script delivers one to Mailpit
-- [ ] **M1.5 Password reset API.** `POST /api/password-reset-links`, `/password-reset-lookups` and `/password-resets`, with the reset-request limit.
+- [x] **M1.5 Password reset API.** `POST /api/password-reset-links`, `/password-reset-lookups` and `/password-resets`, with the reset-request limit.
   - Reads: design §3.3, §4.5, §4.6 · spec REQ-050, SEC-001, STD-6
   - Needs: M1.3, M1.4
   - Done: REQ-050.*, SEC-001's reset examples, STD-6's reset example

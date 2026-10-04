@@ -47,9 +47,9 @@ export function readSessionToken(request: Request) {
   return pair?.slice(prefix.length);
 }
 
-export async function createSession(memberId: string) {
+export async function createSession(memberId: string, executor: Pick<typeof db, "insert"> = db) {
   const token = createToken();
-  await db.insert(sessions).values({ memberId, tokenHash: hashToken(token) });
+  await executor.insert(sessions).values({ memberId, tokenHash: hashToken(token) });
   return token;
 }
 
