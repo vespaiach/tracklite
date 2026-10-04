@@ -15,15 +15,11 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-// Design §2. Every timestamp is timestamptz in UTC (DATA-003).
-
 const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
 
 const id = () => uuid("id").primaryKey().defaultRandom();
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
 const createdAt = () => timestamptz("created_at").notNull().defaultNow();
-
-// 2.1 Enums. Declared order is the sort order (REQ-039, REQ-042).
 
 export const role = pgEnum("role", ["admin", "member"]);
 export const issueStatus = pgEnum("issue_status", [
@@ -46,8 +42,6 @@ export const labelColor = pgEnum("label_color", [
 ]);
 export const notificationKind = pgEnum("notification_kind", ["assigned", "mentioned"]);
 export const emailState = pgEnum("email_state", ["pending", "sent", "dropped", "failed", "bounced"]);
-
-// 2.2 Accounts and sign-in. Tokens are stored as sha256 hashes (SEC-003).
 
 export const members = pgTable(
   "members",
@@ -112,8 +106,6 @@ export const sessions = pgTable("sessions", {
   createdAt: createdAt(),
 });
 
-// SEC-001 counters: no id column; email is stored lowercased.
-
 export const signInAttempts = pgTable(
   "sign_in_attempts",
   {
@@ -139,8 +131,6 @@ export const passwordResetRequests = pgTable(
     index("password_reset_requests_ip_idx").on(t.ip, t.createdAt),
   ],
 );
-
-// 2.3 Projects and labels. project_keys is never deleted from, so a key stays reserved (REQ-009.3).
 
 export const projectKeys = pgTable("project_keys", {
   key: text("key").primaryKey(),
@@ -176,8 +166,6 @@ export const labels = pgTable(
   },
   (t) => [uniqueIndex("labels_project_name_key").on(t.projectId, sql`lower(${t.name})`)],
 );
-
-// 2.4 Issues
 
 export const issues = pgTable(
   "issues",
@@ -225,8 +213,6 @@ export const issueLabels = pgTable(
   (t) => [primaryKey({ columns: [t.issueId, t.labelId] })],
 );
 
-// 2.5 Comments and mentions
-
 export const comments = pgTable(
   "comments",
   {
@@ -249,7 +235,6 @@ export const comments = pgTable(
   ],
 );
 
-// Rows mirror the current text: each save inserts new mentions and deletes removed ones (REQ-044).
 export const mentions = pgTable(
   "mentions",
   {
@@ -268,9 +253,6 @@ export const mentions = pgTable(
     uniqueIndex("mentions_member_comment_key").on(t.memberId, t.commentId),
   ],
 );
-
-// 2.6 Notifications. No FKs to issues, projects or comments, so pending emails
-// survive their target being deleted (REQ-045.7); the snapshot columns build the email.
 
 export const notificationEmails = pgTable(
   "notification_emails",
@@ -304,7 +286,6 @@ export const notifications = pgTable("notifications", {
   commentId: uuid("comment_id"),
   dropped: boolean("dropped").notNull().default(false),
   createdAt: createdAt(),
-  // Snapshot; the issue fields are null for a mention in a project description.
   issueRef: text("issue_ref"),
   issueTitle: text("issue_title"),
   projectName: text("project_name").notNull(),
