@@ -1,8 +1,8 @@
 import { ApiError } from "../../../server/api-error";
 import { apiRoute } from "../../../server/api-route";
 
-const signedOut = apiRoute(() => {
-  throw new ApiError(401, "Sign in to continue.");
+const notFound = apiRoute("member", () => {
+  throw new ApiError(404, "Not found");
 });
 
-export { signedOut as DELETE, signedOut as GET, signedOut as PATCH, signedOut as POST, signedOut as PUT };
+export { notFound as DELETE, notFound as GET, notFound as PATCH, notFound as POST, notFound as PUT };

@@ -133,7 +133,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §4.1, §4.2 · spec REQ-048, SEC-003, SEC-008
   - Needs: M0.2
   - Done: REQ-048.*, SEC-003.*, SEC-008.1 (SEC-008.2 needs a member response, so it moved to M1.3)
-- [ ] **M1.2 Sessions.** Creating, looking up and ending sessions; the cookie; the 30-day sliding expiry; `last_active_at` rewritten at most hourly; `requireMember` and `requireAdmin`; the signed-in `404` for unknown `/api` paths.
+- [x] **M1.2 Sessions.** Creating, looking up and ending sessions; the cookie; the 30-day sliding expiry; `last_active_at` rewritten at most hourly; `requireMember` and `requireAdmin`; the signed-in `404` for unknown `/api` paths.
   - Reads: design §2.2, §4.3 · spec REQ-006, SEC-004, SEC-006
   - Needs: M0.3, M1.1
   - Done: REQ-006.*, SEC-004.*, SEC-006.*
