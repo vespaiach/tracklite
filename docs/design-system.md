@@ -19,6 +19,16 @@ Differences from the Claude Design project:
 - `useToasts` was dropped: toasts follow STD-9 through the Redux `toast` slice. `Toasts` shows a dismiss button only when given `onDismiss`.
 - `Status` and `Priority` use the kit's own names (`progress`, `review`, `med`). Map the schema's `in_progress`, `in_review` and `medium` to them where they're used.
 
+## Importing updates from Claude Design
+
+After changing the design system in Claude Design, give Claude Code this prompt (fill in or delete the last sentence):
+
+```text
+Pull the latest Track Lite design system from the Claude Design project linked in docs/design-system.md into src/components/ui/track-lite/. Port it the same way as before: TypeScript with no comments, fonts through next/font and icons through @phosphor-icons/react (no CDN files), and keep every item under "Differences from the Claude Design project". Write tests first for new or changed interactive components, run npm test, npm run lint and npm run typecheck, and update this file plus the spec and tech design if the change touches them. Ask me before resolving any conflict with components the app already uses. What changed: [e.g. new Avatar component, warmer accent colour].
+```
+
+Don't use `/design-sync` for this. It uploads the repo to Claude Design, the opposite direction.
+
 ## Voice and copy
 
 - Plain, specific and matter-of-fact. Help text uses "you"; the product never says "I" or "we".
