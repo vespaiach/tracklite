@@ -43,6 +43,51 @@ A page task's **Needs** names its API tasks after "API description:". The page d
 - The API task doesn't touch those files. Its tests check the response shape against §3.3.
 - **Wire-up:** whichever of the pair merges second runs the page against the real API, fixes any mismatch, and makes each handler's return value `satisfies` the page's response type, so `npm run typecheck` keeps them in step from then on. If §3.3 is too vague to type a response, the page task fixes §3.3 first.
 
+## Tasks with a UI design
+
+A page task can be designed in Claude Design before it is coded. The design is handed over by adding its link to the task's **Reads** line, so the task still runs from the one-line prompt.
+
+**Order**
+1. **Kit first.** If the screen needs a component Track Lite doesn't have, add it to the Track Lite design system project in Claude Design, then import it with the prompt in `docs/design-system.md`. Pages never invent components or styles of their own.
+2. **Design the screen** in a Claude Design project that uses Track Lite as its design system, with prompt 1 below. Design all of a milestone's screens in one project so they stay consistent.
+3. **Hand off** with prompt 2 below.
+
+**Rules**
+- The spec wins. If the design and the spec disagree, fix the spec first (with a changelog line), then the design, then the code.
+- The design gives layout, copy and states. The code builds them from Track Lite components and tokens, never from the design's own markup or inline styles.
+- A Claude Design link in **Reads** is read with the DesignSync tool, like any other listed source.
+
+**Prompt 1: design the screen (in Claude Design).** Fill in the brackets. Paste the rule text itself, not just the IDs, because Claude Design can't read this repo.
+
+```text
+Design the [screen name] screen for Tracklite (build-plan task [M2.5]), using only the Track Lite design system.
+
+What the screen must do:
+[paste each spec rule from the task's Reads, with its numbered examples]
+
+How it is laid out:
+[paste the tech-design §6 paragraph for this screen]
+
+Show each of these as its own frame, using realistic Tracklite data:
+- default, with typical content
+- empty (nothing to show yet)
+- loading
+- a server error, shown as the message the API returns
+- validation errors on every field that can fail
+- what a member who isn't an admin sees, if it differs
+- [any other state the spec examples name]
+
+Constraints: desktop width, keyboard-first, copy follows the Track Lite voice rules. Use existing components only. If one is missing, list it at the end instead of drawing a one-off.
+```
+
+**Prompt 2: hand off (in Claude Code).** Paste the design's link and the task ID.
+
+```text
+Add this Claude Design link to the Reads line of task [M2.5] in docs/build-plan.md: [claude.ai/design/p/…] ([screen name]). Then do task [M2.5] from docs/build-plan.md.
+
+Read the design with the DesignSync tool. Build the page from Track Lite components and tokens, matching the design's layout, copy and states. Use the design's states for the component tests, alongside the Done examples. If the design needs a component Track Lite lacks, or disagrees with the spec, stop and tell me before writing the page.
+```
+
 ---
 
 ## M0 Foundation
