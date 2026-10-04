@@ -20,9 +20,13 @@ The agent then:
 1. Reads the ground rules, this section and the task's entry, and nothing else of this file.
 2. Reads only what **Reads** lists. Find a spec rule with `grep -n "REQ-047" docs/tracklite-spec.md` and read the rule with its examples; find a design section by its heading. Open other sections only when a cited one points there.
 3. Checks that every task in **Needs** is ticked. If one isn't, it stops and says so. Tasks listed after "API description:" don't need to be ticked (see below).
-4. Writes the tests for **Done** first, then the code.
-5. Stops when **Done** passes and the three checks are green. It doesn't start the next task.
-6. Ticks the task's box and commits as `M1.3: sign-in and sign-out API`.
+4. Decides whether the task needs a UI design. It does if it builds or changes something people see in the browser app: a page, dialog, panel, picker or other screen part. API, worker, email-template, operations and throwaway spike tasks don't. If it needs one and **Reads** has no Claude Design link yet, the agent:
+   - reads everything related to the screen: the spec rules and design sections in **Reads** (including any other §6 paragraph they point to), `docs/design-system.md`, and the components in `src/components/ui/track-lite/`;
+   - fills in prompt 1 from **Tasks with a UI design** below, pasting the rule text and the §6 paragraph in full, and lists any component Track Lite lacks;
+   - gives the owner the filled-in prompt and stops without writing tests or code. The task carries on only when the owner hands the design over with prompt 2.
+5. Writes the tests for **Done** first, then the code.
+6. Stops when **Done** passes and the three checks are green. It doesn't start the next task.
+7. Ticks the task's box and commits as `M1.3: sign-in and sign-out API`.
 
 If a task turns out too big for one session, the agent splits it here first (M1.3a, M1.3b, each with its own Reads, Needs and Done) and does only the first part.
 
@@ -45,7 +49,7 @@ A page task's **Needs** names its API tasks after "API description:". The page d
 
 ## Tasks with a UI design
 
-A page task can be designed in Claude Design before it is coded. The design is handed over by adding its link to the task's **Reads** line, so the task still runs from the one-line prompt.
+A task that needs a UI design (step 4 of **Working a task**) is designed in Claude Design before it is coded. The agent writes prompt 1 for it and stops; the design is handed over by adding its link to the task's **Reads** line, so the task still runs from the one-line prompt.
 
 **Order**
 1. **Kit first.** If the screen needs a component Track Lite doesn't have, add it to the Track Lite design system project in Claude Design, then import it with the prompt in `docs/design-system.md`. Pages never invent components or styles of their own.
