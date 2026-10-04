@@ -129,18 +129,18 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 **Run order:** API: **M1.1 ∥ M1.4** → M1.2 → M1.3 → **M1.5 ∥ M1.6**. Pages: **M1.7 ∥ M1.8**, alongside any of the API tasks. M1.4 needs only M0.2, so it can also run alongside M1.2 and M1.3. Shared file: M1.5 and M1.6 both add to the SEC-001 limits module from M1.3.
 
-- [ ] **M1.1 Passwords and tokens.** Argon2id hashing, the password rules, token creation and hashing.
+- [x] **M1.1 Passwords and tokens.** Argon2id hashing, the password rules, token creation and hashing.
   - Reads: design §4.1, §4.2 · spec REQ-048, SEC-003, SEC-008
   - Needs: M0.2
-  - Done: REQ-048.*, SEC-003.*, SEC-008.*
+  - Done: REQ-048.*, SEC-003.*, SEC-008.1 (SEC-008.2 needs a member response, so it moved to M1.3)
 - [ ] **M1.2 Sessions.** Creating, looking up and ending sessions; the cookie; the 30-day sliding expiry; `last_active_at` rewritten at most hourly; `requireMember` and `requireAdmin`; the signed-in `404` for unknown `/api` paths.
   - Reads: design §2.2, §4.3 · spec REQ-006, SEC-004, SEC-006
   - Needs: M0.3, M1.1
   - Done: REQ-006.*, SEC-004.*, SEC-006.*
 - [ ] **M1.3 Sign-in and sign-out API.** `POST /api/sessions`, `DELETE /api/sessions/current`, `GET /api/me`, and the SEC-001 sign-in limit.
-  - Reads: design §3.3 (sign-in table), §3.4 (last bullet), §4.5 · spec REQ-047, REQ-003.3–4, SEC-001
+  - Reads: design §3.3 (sign-in table), §3.4 (last bullet), §4.5 · spec REQ-047, REQ-003.3–4, SEC-001, SEC-008.2
   - Needs: M1.2
-  - Done: REQ-047.*, REQ-003.3–4, SEC-001's sign-in examples
+  - Done: REQ-047.*, REQ-003.3–4, SEC-001's sign-in examples, SEC-008.2 (against `GET /api/me`)
 - [ ] **M1.4 Sending email.** `sendEmail()` with Mailpit, in-memory and Resend implementations; the reset email template.
   - Reads: design §1.5, §5.1, §5.2, §5.3, §5.6 · spec API-002, §9 "Email content", STD-6
   - Needs: M0.2
