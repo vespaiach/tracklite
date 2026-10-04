@@ -1,5 +1,20 @@
 import "server-only";
+import { and, eq, isNull, sql } from "drizzle-orm";
+import { db } from "./db";
+import { members } from "./schema";
 import type { Member } from "./sessions";
+
+export function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+export async function activeMemberByEmail(normalizedEmail: string): Promise<Member | undefined> {
+  const [member] = await db
+    .select()
+    .from(members)
+    .where(and(eq(sql`lower(${members.email})`, normalizedEmail), isNull(members.deactivatedAt)));
+  return member;
+}
 
 function firstCharacter(word: string) {
   return [...word][0] ?? "";
