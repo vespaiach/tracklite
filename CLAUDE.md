@@ -27,6 +27,7 @@ Look rules up by grep rather than reading whole docs: `grep -n "REQ-047" docs/tr
 A prompt like "Do task M1.3 from docs/build-plan.md" means following the **Working a task** section of the build plan exactly. In short:
 - Read only the ground rules, that section, the task entry, and what its **Reads** lists.
 - Stop if any task in **Needs** isn't ticked. Tasks listed after "API description:" are the exception.
+- If the task builds or changes a screen and its **Reads** has no Claude Design link, read the related docs, fill in prompt 1 from **Tasks with a UI design**, give it to the owner and stop until they hand over the design link.
 - Write the **Done** tests first. Name each test after its example, e.g. `it("REQ-016.4: concurrent creates get distinct numbers")`.
 - Stop when Done passes and `npm test`, `npm run lint` and `npm run typecheck` are green. Don't start the next task.
 - Tick the box and commit as `M1.3: <task title>`.
