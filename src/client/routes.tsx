@@ -2,6 +2,7 @@ import { Navigate, type RouteObject } from "react-router";
 import { Shell } from "./Shell";
 
 export const routes: RouteObject[] = [
+  { path: "sign-in", lazy: async () => ({ Component: (await import("./screens/SignIn")).SignIn }) },
   {
     Component: Shell,
     children: [
