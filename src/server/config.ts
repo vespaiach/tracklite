@@ -12,5 +12,8 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
     databaseUrl: env.DATABASE_URL as string,
     appUrl: env.APP_URL as string,
     emailFrom: env.EMAIL_FROM as string,
+    resendApiKey: env.RESEND_API_KEY,
+    mailpitHost: env.MAILPIT_HOST ?? "localhost",
+    mailpitPort: env.MAILPIT_PORT ?? "8025",
   };
 }

@@ -141,7 +141,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §3.3 (sign-in table), §3.4 (last bullet), §4.5 · spec REQ-047, REQ-003.3–4, SEC-001, SEC-008.2
   - Needs: M1.2
   - Done: REQ-047.*, REQ-003.3–4, SEC-001's sign-in examples, SEC-008.2 (against `GET /api/me`)
-- [ ] **M1.4 Sending email.** `sendEmail()` with Mailpit, in-memory and Resend implementations; the reset email template.
+- [x] **M1.4 Sending email.** `sendEmail()` with Mailpit, in-memory and Resend implementations; the reset email template.
   - Reads: design §1.5, §5.1, §5.2, §5.3, §5.6 · spec API-002, §9 "Email content", STD-6
   - Needs: M0.2
   - Done: the reset email in the in-memory outbox matches spec §9 word for word; a dev script delivers one to Mailpit
