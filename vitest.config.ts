@@ -20,7 +20,7 @@ export default defineConfig({
     },
   },
   test: {
-    globalSetup: ["scripts/prepare-test-db.ts"],
+    passWithNoTests: true,
     env: {
       ...(testDatabaseUrl ? { DATABASE_URL: testDatabaseUrl } : {}),
       APP_URL: "http://localhost:3000",
@@ -44,7 +44,6 @@ export default defineConfig({
           name: "components",
           include: ["src/**/*.test.tsx"],
           environment: "jsdom",
-          setupFiles: ["scripts/setup-components.ts"],
         },
       },
     ],

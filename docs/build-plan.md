@@ -49,7 +49,7 @@ A page task's **Needs** names its API tasks after "API description:". The page d
 
 **Run order:** M0.1 → M0.2 → **M0.3 ∥ M0.4** → **M0.5 ∥ M0.6**. M0.3 needs only M0.2, so it can also run alongside M0.5 and M0.6.
 
-- [ ] **M0.1 Schema and first migration.** Drizzle schema for every table and enum, and the first migration.
+- [x] **M0.1 Schema and first migration.** Drizzle schema for every table and enum, and the first migration.
   - Reads: design §2 · spec §8
   - Needs: none
   - Done: the migration applies to an empty database; typecheck passes
