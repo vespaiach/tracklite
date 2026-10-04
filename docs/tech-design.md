@@ -469,7 +469,7 @@ default-src 'self'; script-src 'self' 'nonce-{n}' 'strict-dynamic'; style-src 's
 img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
 ```
 
-Next.js reads the nonce from the request and adds it to its own scripts. A nonce makes the shell render per request instead of being cached, which costs nothing here because there's one small shell.
+It also sets `Referrer-Policy: same-origin`, so SEC-010 holds even without Caddy. Next.js reads the nonce from the request and adds it to its own scripts; the root layout awaits `connection()` so the shell is rendered per request. A nonce makes the shell render per request instead of being cached, which costs nothing here because there's one small shell.
 
 **Access logs (SEC-007).** Caddy's access log uses a `query` filter that deletes the `token` parameter, so `/invite` and `/reset-password` addresses are logged without it.
 

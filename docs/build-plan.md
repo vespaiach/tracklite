@@ -114,7 +114,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §1.7 · spec STD-1, STD-9
   - Needs: M0.4
   - Done: STD-9.*; tests for the `401` redirect and the loading hook; with no session the shell lands on sign-in
-- [ ] **M0.6 Content Security Policy.** `src/proxy.ts` setting the nonce-based CSP, and the nonce passed to Next.js's inline scripts.
+- [x] **M0.6 Content Security Policy.** `src/proxy.ts` setting the nonce-based CSP, and the nonce passed to Next.js's inline scripts.
   - Reads: design §4.9, D-26 in §7 · spec SEC-010 · the Next.js proxy and CSP guides in `node_modules/next/dist/docs/`
   - Needs: M0.4
   - Done: SEC-010.*; the shell loads with no CSP errors in the console

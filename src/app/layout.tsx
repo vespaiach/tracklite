@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
+import { connection } from "next/server";
 import type { ReactNode } from "react";
 import "../components/ui/track-lite/styles/index.css";
 
@@ -15,7 +16,8 @@ export const metadata: Metadata = {
   title: "Tracklite",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  await connection();
   return (
     <html
       lang="en"
