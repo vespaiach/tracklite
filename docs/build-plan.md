@@ -106,7 +106,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §1.2, §3.1, §3.2, §4.4, §4.8 · spec API-001, STD-1…4, STD-7, SEC-004.1, SEC-006, SEC-007, OPS-005
   - Needs: M0.2
   - Done: SEC-004.1, SEC-007.*, OPS-005 (`/health`) pass; tests for the error mapping and the `500` path
-- [ ] **M0.4 Browser entry and router.** The catch-all page and `ClientApp` (browser only), React Router with lazily loaded routes, the Not found page, the app shell with an empty sidebar.
+- [x] **M0.4 Browser entry and router.** The catch-all page and `ClientApp` (browser only), React Router with lazily loaded routes, the Not found page, the app shell with an empty sidebar.
   - Reads: design §1.7, §6.1, §6.2 · spec API-004 · AGENTS.md (read the Next.js guide it names)
   - Needs: M0.2
   - Done: any page address loads the shell; an unknown address shows Not found; moving between two routes doesn't reload the document
