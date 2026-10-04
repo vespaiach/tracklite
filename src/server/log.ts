@@ -10,3 +10,7 @@ type RequestLogLine = {
 export function logRequest(line: RequestLogLine) {
   console.log(JSON.stringify({ time: new Date().toISOString(), event: "request", ...line }));
 }
+
+export function logEmailFailure(line: { status: number; errorName?: string }) {
+  console.log(JSON.stringify({ time: new Date().toISOString(), level: "error", event: "email", ...line }));
+}
