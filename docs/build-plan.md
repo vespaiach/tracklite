@@ -98,7 +98,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2 · spec §8
   - Needs: none
   - Done: the migration applies to an empty database; typecheck passes
-- [ ] **M0.2 Config and test harness.** Environment config checked at startup; a separate test database, migrate-before-tests, data factories, a helper that moves timestamps into the past; the `test`, `lint` and `typecheck` scripts.
+- [x] **M0.2 Config and test harness.** Environment config checked at startup; a separate test database, migrate-before-tests, data factories, a helper that moves timestamps into the past; the `test`, `lint` and `typecheck` scripts.
   - Reads: design §1.1, §1.3, §1.6 · spec §12
   - Needs: M0.1
   - Done: a sample test creates a member with a factory and moves its `created_at` back a day; the app refuses to start with a variable missing

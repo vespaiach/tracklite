@@ -36,6 +36,7 @@ export default defineConfig({
           include: ["src/**/*.test.ts"],
           environment: "node",
           fileParallelism: false,
+          globalSetup: ["src/test/migrate.ts"],
         },
       },
       {
