@@ -44,6 +44,7 @@ npm run lint           # biome check  (auto-fix: npx biome check --write)
 npm run typecheck      # next typegen && tsc --noEmit
 npm run db:generate    # drizzle-kit: write a migration from src/server/schema.ts
 npm run db:studio
+npm run db:seed        # dev members and admins (password in src/server/seed.ts)
 ```
 
 Run one test file, one named test, or one project:
