@@ -1,5 +1,6 @@
 import "server-only";
-import { asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
+import { findMentions } from "../lib/markdown/parse";
 import { ApiError } from "./api-error";
 import { db } from "./db";
 import { memberSummary } from "./members";
@@ -11,6 +12,7 @@ type Executor = typeof db | Transaction;
 type Project = typeof projects.$inferSelect;
 
 const maxNameLength = 50;
+const maxDescriptionLength = 20_000;
 
 function nameError(trimmedName: string) {
   if (trimmedName === "") return "Name required";
@@ -88,6 +90,7 @@ function parseProjectChanges(body: Record<string, unknown>) {
 }
 
 export async function updateProject(member: Member, key: string, body: Record<string, unknown>) {
+  if ("description" in body || "descriptionVersion" in body) return saveDescription(member, key, body);
   if ("key" in body || "name" in body || "archived" in body) requireAdmin(member);
   const { name, archived } = parseProjectChanges(body);
 
@@ -112,8 +115,76 @@ export async function deleteProject(key: string) {
   if (deleted.length === 0) throw new ApiError(404, "Not found");
 }
 
-export async function writableProject(tx: Transaction, key: string) {
-  const [project] = await tx.select().from(projects).where(byKey(key)).for("share");
+function parseDescriptionChange(body: Record<string, unknown>) {
+  const { description, descriptionVersion } = body;
+  const fields: Record<string, string> = {};
+  if (typeof description !== "string") fields.description = "Description required";
+  else if ([...description].length > maxDescriptionLength) fields.description = "Too long (max 20,000)";
+  if (!Number.isInteger(descriptionVersion)) fields.descriptionVersion = "Version required";
+  refuseFields(fields);
+  return { description: description as string, descriptionVersion: descriptionVersion as number };
+}
+
+async function conflict(tx: Transaction, editorId: string | null) {
+  const [editor] = editorId
+    ? await tx.select({ fullName: members.fullName }).from(members).where(eq(members.id, editorId))
+    : [];
+  return new ApiError(
+    409,
+    `This was changed by ${editor?.fullName ?? "someone else"}. Copy your text and reload.`,
+  );
+}
+
+async function replaceProjectMentions(tx: Transaction, projectId: string, text: string) {
+  const usernames = findMentions(text);
+  const mentioned =
+    usernames.length === 0
+      ? []
+      : await tx
+          .select({ id: members.id })
+          .from(members)
+          .where(and(inArray(members.username, usernames), isNull(members.deactivatedAt)));
+  const memberIds = mentioned.map((row) => row.id);
+  await tx
+    .delete(mentions)
+    .where(
+      and(
+        eq(mentions.projectId, projectId),
+        memberIds.length > 0 ? notInArray(mentions.memberId, memberIds) : undefined,
+      ),
+    );
+  if (memberIds.length > 0) {
+    await tx
+      .insert(mentions)
+      .values(memberIds.map((memberId) => ({ memberId, projectId })))
+      .onConflictDoNothing();
+  }
+}
+
+async function saveDescription(member: Member, key: string, body: Record<string, unknown>) {
+  const { description, descriptionVersion } = parseDescriptionChange(body);
+
+  return db.transaction(async (tx) => {
+    const project = await writableProject(tx, key, "update");
+    if (project.descriptionVersion !== descriptionVersion)
+      throw await conflict(tx, project.descriptionEditedBy);
+
+    const [updated] = await tx
+      .update(projects)
+      .set({
+        description,
+        descriptionVersion: sql`${projects.descriptionVersion} + 1`,
+        descriptionEditedBy: member.id,
+      })
+      .where(eq(projects.id, project.id))
+      .returning();
+    await replaceProjectMentions(tx, project.id, description);
+    return projectResponse(tx, updated);
+  });
+}
+
+export async function writableProject(tx: Transaction, key: string, lock: "share" | "update" = "share") {
+  const [project] = await tx.select().from(projects).where(byKey(key)).for(lock);
   if (!project) throw new ApiError(404, "Not found");
   if (project.archivedAt !== null) throw new ApiError(403, "This project is archived");
   return project;

@@ -252,7 +252,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2.3, §2.7, §3.3 (projects table) · spec REQ-009, REQ-010, REQ-011, REQ-013, REQ-014, DATA-002, DEC-001
   - Needs: M1.2
   - Done: REQ-009.*, REQ-010.*, REQ-011.*, REQ-013.1 and REQ-013.3 (project lists), REQ-013.4 (the shared check), REQ-014.1, REQ-014.3, REQ-014.4, DATA-002's project examples
-- [ ] **M3.3 Project description API.** Saves with a version check (`409` on conflict); mentions written as `mentions` rows.
+- [x] **M3.3 Project description API.** Saves with a version check (`409` on conflict); mentions written as `mentions` rows.
   - Reads: design §2.5, §3.2 (409), §3.3 · spec REQ-012, REQ-046.2, STD-8, DATA-001
   - Needs: M3.1, M3.2
   - Done: REQ-012.*, REQ-046.2, STD-8.*

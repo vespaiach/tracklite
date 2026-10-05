@@ -284,3 +284,140 @@ it("DATA-002.1: deleting a project removes everything in it but keeps its key an
   expect(await db.select().from(projectKeys).where(eq(projectKeys.key, project.key))).toHaveLength(1);
   expect(await db.select().from(notifications).where(eq(notifications.emailId, email.id))).toHaveLength(1);
 });
+
+function saveDescription(cookie: string, key: string, description: string, descriptionVersion: number) {
+  return patchWith(cookie, key, { description, descriptionVersion });
+}
+
+async function mentionedMemberIds(projectId: string) {
+  const rows = await db
+    .select({ memberId: mentions.memberId })
+    .from(mentions)
+    .where(eq(mentions.projectId, projectId));
+  return rows.map((row) => row.memberId).sort();
+}
+
+it("REQ-012.1: a member saves a description with a heading and a bullet list", async () => {
+  const { cookie } = await signedIn("member");
+  const project = await createProject();
+  const description = "# Goals\n\n- Faster pages\n- Fewer bugs";
+
+  const response = await saveDescription(cookie, project.key, description, 0);
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ description, descriptionVersion: 1 });
+  expect(await (await getWith(cookie, project.key)).json()).toMatchObject({
+    description,
+    descriptionVersion: 1,
+  });
+});
+
+it("REQ-012: an empty description is allowed", async () => {
+  const { cookie } = await signedIn("member");
+  const project = await createProject({ description: "Old text" });
+
+  const response = await saveDescription(cookie, project.key, "", 0);
+
+  expect(response.status).toBe(200);
+  expect((await storedProject(project.id)).description).toBe("");
+});
+
+it('REQ-012.2: a description of 20,001 characters gets the field error "Too long (max 20,000)"', async () => {
+  const { cookie } = await signedIn("member");
+  const project = await createProject({ description: "Old text" });
+
+  const tooLong = await saveDescription(cookie, project.key, "x".repeat(20_001), 0);
+
+  expect(tooLong.status).toBe(422);
+  expect(await tooLong.json()).toEqual({
+    error: { message: "Check the highlighted fields", fields: { description: "Too long (max 20,000)" } },
+  });
+  expect(await storedProject(project.id)).toMatchObject({ description: "Old text", descriptionVersion: 0 });
+
+  const longest = await saveDescription(cookie, project.key, "x".repeat(20_000), 0);
+  expect(longest.status).toBe(200);
+});
+
+it("REQ-012.3: a description with <script>alert(1)</script> is stored as sent", async () => {
+  const { cookie } = await signedIn("member");
+  const project = await createProject();
+
+  const response = await saveDescription(cookie, project.key, "<script>alert(1)</script>", 0);
+
+  expect(response.status).toBe(200);
+  expect((await storedProject(project.id)).description).toBe("<script>alert(1)</script>");
+});
+
+it("STD-8: a stale description save is refused with 409 naming who saved, and nothing is saved", async () => {
+  const alex = await createMember({ fullName: "Alex Kim" });
+  const alexCookie = `session=${await createSession(alex.id)}`;
+  const { cookie: samCookie } = await signedIn("member");
+  const project = await createProject({ description: "Start" });
+
+  expect((await saveDescription(alexCookie, project.key, "Alex's text", 0)).status).toBe(200);
+  const response = await saveDescription(samCookie, project.key, "Sam's text", 0);
+
+  expect(response.status).toBe(409);
+  expect(await response.json()).toEqual({
+    error: { message: "This was changed by Alex Kim. Copy your text and reload." },
+  });
+  expect(await storedProject(project.id)).toMatchObject({
+    description: "Alex's text",
+    descriptionVersion: 1,
+  });
+});
+
+it("STD-8: a description save without a whole-number descriptionVersion is refused", async () => {
+  const { cookie } = await signedIn("member");
+  const project = await createProject({ description: "Old text" });
+
+  for (const body of [{ description: "New" }, { description: "New", descriptionVersion: "0" }]) {
+    const response = await patchWith(cookie, project.key, body);
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({
+      error: { fields: { descriptionVersion: expect.any(String) } },
+    });
+  }
+  expect((await storedProject(project.id)).description).toBe("Old text");
+});
+
+it("DATA-001: saving a description mentions active members only, outside code", async () => {
+  const { cookie } = await signedIn("member");
+  const sam = await createMember({ fullName: "Sam Lee" });
+  const jo = await createMember({ deactivatedAt: new Date() });
+  const coder = await createMember();
+  const project = await createProject();
+  const description = `Can @${sam.username} help? Also @nobody-here, @${jo.username} and \`@${coder.username}\`.`;
+
+  const response = await saveDescription(cookie, project.key, description, 0);
+
+  expect(response.status).toBe(200);
+  expect(await mentionedMemberIds(project.id)).toEqual([sam.id]);
+  expect((await (await getWith(cookie, project.key)).json()).mentions).toEqual([
+    { username: sam.username, fullName: "Sam Lee", initials: "SL", deactivated: false },
+  ]);
+});
+
+it("DATA-001: mention rows follow the current description text", async () => {
+  const { cookie } = await signedIn("member");
+  const sam = await createMember();
+  const alex = await createMember();
+  const project = await createProject();
+
+  await saveDescription(cookie, project.key, `Hi @${sam.username}`, 0);
+  const response = await saveDescription(cookie, project.key, `Hi @${alex.username}`, 1);
+
+  expect(response.status).toBe(200);
+  expect(await mentionedMemberIds(project.id)).toEqual([alex.id]);
+});
+
+it("REQ-013.4: a description save to an archived project is refused with This project is archived", async () => {
+  const { cookie } = await signedIn("member");
+  const project = await createProject({ description: "Old text", archivedAt: new Date() });
+
+  const response = await saveDescription(cookie, project.key, "New text", 0);
+
+  expect(response.status).toBe(403);
+  expect(await response.json()).toEqual({ error: { message: "This project is archived" } });
+  expect(await storedProject(project.id)).toMatchObject({ description: "Old text", descriptionVersion: 0 });
+});
