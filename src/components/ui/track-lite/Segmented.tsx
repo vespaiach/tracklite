@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import { cx } from "./cx";
 
 export type ChoiceProps = Omit<ComponentProps<"input">, "type"> & { label?: ReactNode };
@@ -69,5 +69,36 @@ export function Segmented<T extends string>({
         </label>
       ))}
     </div>
+  );
+}
+
+export type LinkTabsProps = {
+  label: string;
+  options: {
+    href: string;
+    label: ReactNode;
+    current?: boolean;
+    onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+  }[];
+  className?: string;
+};
+
+export function LinkTabs({ label, options, className }: LinkTabsProps) {
+  return (
+    <nav
+      aria-label={label}
+      className={cx("tl-seg", "tl-seg--compact", className)}>
+      {options.map((option) => (
+        <a
+          key={option.href}
+          href={option.href}
+          onClick={option.onClick}
+          className="tl-seg__opt"
+          data-on={option.current || undefined}
+          aria-current={option.current ? "page" : undefined}>
+          {option.label}
+        </a>
+      ))}
+    </nav>
   );
 }

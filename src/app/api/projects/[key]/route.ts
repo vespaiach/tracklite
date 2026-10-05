@@ -1,16 +1,17 @@
+import type { Project } from "../../../../client/api";
 import { apiRoute } from "../../../../server/api-route";
 import { deleteProject, getProject, updateProject } from "../../../../server/projects";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]">) {
   const { key } = await params;
-  return apiRoute("member", async () => Response.json(await getProject(key)))(request);
+  return apiRoute("member", async () => Response.json((await getProject(key)) satisfies Project))(request);
 }
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/projects/[key]">) {
   const { key } = await params;
   return apiRoute("member", async (memberRequest, member) => {
     const body: Record<string, unknown> = await memberRequest.json();
-    return Response.json(await updateProject(member, key, body));
+    return Response.json((await updateProject(member, key, body)) satisfies Project);
   })(request);
 }
 

@@ -24,6 +24,14 @@ export type Invitation = {
 
 export type InvitationLookup = { email: string };
 
+export type ProjectSummary = { key: string; name: string; archivedAt: string | null };
+
+export type Project = ProjectSummary & {
+  description: string;
+  descriptionVersion: number;
+  mentions: MemberSummary[];
+};
+
 type ApiRequest = string | { path: string; method: "POST" | "PATCH" | "PUT" | "DELETE"; body?: unknown };
 
 const couldNotSave = "Couldn't save. Try again.";
@@ -71,7 +79,7 @@ const baseQuery: BaseQueryFn<ApiRequest, unknown, ApiFailure> = async (request, 
 export const api = createApi({
   baseQuery,
   refetchOnMountOrArgChange: true,
-  tagTypes: ["Me", "Members", "Invitations"],
+  tagTypes: ["Me", "Members", "Invitations", "Projects"],
   endpoints: (build) => ({
     me: build.query<Me, void>({ query: () => "me", providesTags: ["Me"] }),
     signIn: build.mutation<null, { email: string; password: string }>({
@@ -128,6 +136,25 @@ export const api = createApi({
     changePassword: build.mutation<null, { currentPassword: string; newPassword: string }>({
       query: (body) => ({ path: "me/password", method: "PUT", body }),
     }),
+    projects: build.query<ProjectSummary[], { archived: boolean }>({
+      query: ({ archived }) => `projects?archived=${archived}`,
+      providesTags: ["Projects"],
+    }),
+    project: build.query<Project, string>({
+      query: (key) => `projects/${key}`,
+      providesTags: ["Projects"],
+    }),
+    createProject: build.mutation<Project, { name: string; key: string }>({
+      query: (body) => ({ path: "projects", method: "POST", body }),
+      invalidatesTags: ["Projects"],
+    }),
+    updateProject: build.mutation<Project, { key: string; name?: string; archived?: boolean }>({
+      query: ({ key, ...body }) => ({ path: `projects/${key}`, method: "PATCH", body }),
+      invalidatesTags: ["Projects"],
+    }),
+    deleteProject: build.mutation<null, string>({
+      query: (key) => ({ path: `projects/${key}`, method: "DELETE" }),
+    }),
   }),
 });
 
@@ -148,4 +175,9 @@ export const {
   useCreateInvitationMutation,
   useResendInvitationMutation,
   useRevokeInvitationMutation,
+  useProjectsQuery,
+  useProjectQuery,
+  useCreateProjectMutation,
+  useUpdateProjectMutation,
+  useDeleteProjectMutation,
 } = api;
