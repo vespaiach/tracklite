@@ -36,6 +36,22 @@ export const routes: RouteObject[] = [
         path: "settings/members",
         lazy: async () => ({ Component: (await import("./screens/Members")).Members }),
       },
+      {
+        path: "project/:key",
+        lazy: async () => ({ Component: (await import("./screens/Project")).ProjectBoard }),
+      },
+      {
+        path: "project/:key/list",
+        lazy: async () => ({ Component: (await import("./screens/Project")).ProjectList }),
+      },
+      {
+        path: "project/:key/settings",
+        lazy: async () => ({ Component: (await import("./screens/ProjectSettings")).ProjectSettings }),
+      },
+      {
+        path: "projects/archived",
+        lazy: async () => ({ Component: (await import("./screens/ArchivedProjects")).ArchivedProjects }),
+      },
       { path: "*", lazy: async () => ({ Component: (await import("./screens/NotFound")).NotFound }) },
     ],
   },

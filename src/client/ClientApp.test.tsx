@@ -14,7 +14,7 @@ const sam = {
 beforeEach(() => {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => Response.json(sam)),
+    vi.fn(async (url: string) => (url.startsWith("/api/projects") ? Response.json([]) : Response.json(sam))),
   );
 });
 
@@ -22,6 +22,12 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+
+async function notFoundLink() {
+  const links = await screen.findAllByRole("link", { name: "My issues" });
+  const sidebar = screen.getByRole("complementary");
+  return links.find((link) => !sidebar.contains(link)) as HTMLElement;
+}
 
 function renderAt(path: string) {
   window.history.replaceState(null, "", path);
@@ -40,12 +46,13 @@ it("M0.4: any page address loads the app shell", async () => {
 it("STD-4: an unknown address shows Not found with a link to My issues", async () => {
   renderAt("/nope");
   expect(await screen.findByRole("heading", { name: "Not found" })).toBeTruthy();
-  expect(screen.getByRole("link", { name: "My issues" }).getAttribute("href")).toBe("/my-issues");
+  expect((await notFoundLink()).getAttribute("href")).toBe("/my-issues");
 });
 
 it("M0.4: moving between two routes doesn't reload the document", async () => {
   renderAt("/nope");
-  const link = await screen.findByRole("link", { name: "My issues" });
+  await screen.findByRole("heading", { name: "Not found" });
+  const link = await notFoundLink();
   const sidebar = screen.getByRole("complementary");
 
   const notCancelled = fireEvent.click(link);

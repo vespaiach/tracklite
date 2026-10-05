@@ -97,6 +97,8 @@ export async function updateProject(member: Member, key: string, body: Record<st
   return db.transaction(async (tx) => {
     const [project] = await tx.select().from(projects).where(byKey(key)).for("update");
     if (!project) throw new ApiError(404, "Not found");
+    if (name !== undefined && project.archivedAt !== null)
+      throw new ApiError(403, "This project is archived");
 
     const changes = {
       ...(name !== undefined && { name }),

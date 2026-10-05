@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.16"
+version: "0.17"
 release: "R1"
 status: Ready to build
 updated: "2026-10-05"
@@ -209,13 +209,14 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
   - REQ-012.1: Member saves a description with a heading and a bullet list → shown formatted. (Verify: auto)
   - REQ-012.2: Description of 20,001 characters → field error "Too long (max 20,000)". (Verify: auto)
   - REQ-012.3: Description contains `<script>alert(1)</script>` → shown as text; nothing runs. (Verify: auto)
-- **REQ-013** When an admin archives a project, the system shall move it from the sidebar to an Archived list. It shall make its description, issues, comments and labels read-only, and hide its issues from My issues. An admin can unarchive it. With no archived projects, the Archived list shows "No archived projects." (STD-7)
+- **REQ-013** When an admin archives a project, the system shall move it from the sidebar to an Archived list. It shall make its name, description, issues, comments and labels read-only, and hide its issues from My issues. An admin can unarchive it. With no archived projects, the Archived list shows "No archived projects." (STD-7)
   - REQ-013.1: Admin archives `WEB` → it disappears from the sidebar and appears under Archived; `WEB-42` opens read-only, with no edit or comment controls. (Verify: auto)
   - REQ-013.2: `WEB-42` is assigned to Sam → it no longer appears in Sam's My issues. (Verify: auto)
   - REQ-013.3: Admin unarchives `WEB` → it's back in the sidebar and fully editable, and `WEB-42` is back in Sam's My issues. (Verify: auto)
   - REQ-013.4: Sam is editing `WEB-42` when `WEB` is archived → Sam's save fails with the toast "This project is archived" (STD-9), and Sam's text is kept. (Verify: auto)
   - REQ-013.5: `WEB` is archived → its Labels page still lists the labels, with no create, rename, recolor or delete controls. (Verify: auto)
   - REQ-013.6: Sam has `WEB`'s Labels page open when `WEB` is archived, then renames `bug` → the toast "This project is archived" (STD-9), and `bug` is unchanged. (Verify: auto)
+  - REQ-013.7: `WEB` is archived → its settings page shows the name with no Save; a rename request is refused with "This project is archived" and the name is unchanged. (Verify: auto)
 - **REQ-014** When an admin deletes a project, active or archived, the system shall ask them to type the project key to confirm, then permanently delete the project with all its issues and comments (DATA-002). Nothing can be restored.
   - REQ-014.1: Admin types `WEB` and confirms → project gone; opening `WEB-42` shows Not found (STD-4). (Verify: auto)
   - REQ-014.2: Admin types `WEBB` → the Delete button stays disabled. (Verify: auto)
@@ -726,6 +727,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.17 (2026-10-05):** REQ-013: an archived project's name is read-only too (new REQ-013.7).
 - **0.16 (2026-10-05):** REQ-021 names the field errors for a missing or too-long label name and an unknown color.
 - **0.15 (2026-10-05):** REQ-009 names the field errors for a missing or too-long project name, and REQ-010 the field error for a request that changes a project key.
 - **0.14 (2026-10-05):** REQ-051: a deactivated member's only action on the members page is reactivate; role changes wait until they're reactivated.

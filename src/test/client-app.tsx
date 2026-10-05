@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import { vi } from "vitest";
 import ClientApp from "../client/ClientApp";
-import type { Me } from "../client/api";
+import type { Me, Project, ProjectSummary } from "../client/api";
 
 type Handler = (body: unknown) => Response | Promise<Response>;
 
@@ -26,7 +26,8 @@ export const alex: Me = {
 export function mockApi(routes: Record<string, Handler>) {
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     const key = `${init?.method ?? "GET"} ${url}`;
-    const handler = routes[key];
+    const defaults: Record<string, Handler> = { "GET /api/projects?archived=false": () => Response.json([]) };
+    const handler = { ...defaults, ...routes }[key];
     if (!handler) throw new Error(`Unmocked request ${key}`);
     return handler(init?.body ? JSON.parse(String(init.body)) : undefined);
   });
@@ -59,4 +60,14 @@ export function requestsTo(fetchMock: ReturnType<typeof mockApi>, key: string) {
   return fetchMock.mock.calls
     .filter(([url, init]) => `${init?.method ?? "GET"} ${url}` === key)
     .map(([, init]) => (init?.body ? JSON.parse(String(init.body)) : undefined));
+}
+
+export const admin: Me = { ...sam, role: "admin" };
+
+export function project(key: string, name: string, archivedAt: string | null = null): Project {
+  return { key, name, description: "", descriptionVersion: 0, mentions: [], archivedAt };
+}
+
+export function summary({ key, name, archivedAt }: Project): ProjectSummary {
+  return { key, name, archivedAt };
 }

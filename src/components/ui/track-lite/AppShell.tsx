@@ -1,5 +1,5 @@
 import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
-import type { ComponentProps, CSSProperties, MouseEvent, ReactNode, Ref } from "react";
+import type { ComponentProps, CSSProperties, HTMLAttributes, MouseEvent, ReactNode, Ref } from "react";
 import { cx } from "./cx";
 
 export type AppShellProps = {
@@ -80,7 +80,7 @@ export function RailLabelAction({ label, icon, className, ...rest }: RailLabelAc
   );
 }
 
-export type RailItemProps = {
+export type RailItemProps = Omit<HTMLAttributes<HTMLElement>, "title" | "onClick" | "className"> & {
   icon: ReactNode;
   label: string;
   suffix?: string;
@@ -106,6 +106,7 @@ export function RailItem({
   className,
   title,
   ref,
+  ...rest
 }: RailItemProps) {
   const content = (
     <>
@@ -123,6 +124,7 @@ export function RailItem({
     </>
   );
   const shared = {
+    ...rest,
     title: title === undefined ? label + (suffix ?? "") : title || undefined,
     "aria-current": current ? ("page" as const) : undefined,
     onClick,
@@ -182,7 +184,11 @@ export function AppBarTitle({ children }: { children: ReactNode }) {
   return <h1 className="tl-appbar__title">{children}</h1>;
 }
 
-export type Crumb = { label: string; href?: string; onClick?: () => void };
+export type Crumb = {
+  label: string;
+  href?: string;
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+};
 
 export function Crumbs({ items }: { items: Crumb[] }) {
   return (

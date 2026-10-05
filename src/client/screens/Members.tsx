@@ -1,6 +1,5 @@
 import { DotsThree } from "@phosphor-icons/react/dist/csr/DotsThree";
 import { type FormEvent, useState } from "react";
-import { useDispatch } from "react-redux";
 import {
   AppBar,
   AppBarTitle,
@@ -34,7 +33,8 @@ import {
   useRevokeInvitationMutation,
   useUpdateMemberMutation,
 } from "../api";
-import { showToast } from "../toast";
+import { formatDate } from "../dates";
+import { useFailureToast } from "../failure";
 import { useShowLoading } from "../useShowLoading";
 
 export function Members() {
@@ -53,11 +53,6 @@ export function Members() {
       )}
     </>
   );
-}
-
-function useFailureToast() {
-  const dispatch = useDispatch();
-  return (caught: unknown) => dispatch(showToast((caught as ApiFailure).message));
 }
 
 function MembersAdmin() {
@@ -162,16 +157,6 @@ const invitationStates = {
   bounced: { label: "Bounced", tag: "accent-2", when: "Expires" },
   expired: { label: "Expired", tag: "neutral", when: "Expired" },
 } as const;
-
-function formatDate(iso: string) {
-  const date = new Date(iso);
-  const thisYear = date.getFullYear() === new Date().getFullYear();
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: thisYear ? undefined : "numeric",
-  });
-}
 
 function InvitationsSection({ invitations }: { invitations: Invitation[] }) {
   const [resendInvitation] = useResendInvitationMutation();

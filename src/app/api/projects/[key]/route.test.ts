@@ -158,14 +158,15 @@ it("REQ-013.1: archiving sets archivedAt and REQ-013.3: unarchiving clears it", 
   expect(await unarchived.json()).toMatchObject({ archivedAt: null });
 });
 
-it("REQ-013: an admin can still rename an archived project", async () => {
+it("REQ-013.7: renaming an archived project is refused and the name is unchanged", async () => {
   const { cookie } = await signedIn("admin");
   const project = await createProject({ name: "Website", archivedAt: new Date() });
 
   const response = await patchWith(cookie, project.key, { name: "Old website" });
 
-  expect(response.status).toBe(200);
-  expect((await storedProject(project.id)).name).toBe("Old website");
+  expect(response.status).toBe(403);
+  expect(await response.json()).toEqual({ error: { message: "This project is archived" } });
+  expect((await storedProject(project.id)).name).toBe("Website");
 });
 
 it("STD-2: a member can't rename, archive or delete a project", async () => {

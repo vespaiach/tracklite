@@ -260,10 +260,10 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2.3, §3.3, §6.6 · spec REQ-021
   - Needs: M3.2
   - Done: REQ-021.*, REQ-013.5, REQ-013.6 (from M3.2)
-- [ ] **M3.5 Project navigation pages.** Sidebar, New project dialog, project header, project settings, archived list.
-  - Reads: design §6.2, §6.3 (Project settings, Archived projects) · spec REQ-009, REQ-011, REQ-013, REQ-014, REQ-015
+- [x] **M3.5 Project navigation pages.** Sidebar, New project dialog, project header, project settings, archived list; the Projects API refuses renaming an archived project.
+  - Reads: design §6.2, §6.3 (Project settings, Archived projects) · spec REQ-009, REQ-011, REQ-013, REQ-014, REQ-015 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Project+navigation.dc.html (Project navigation)
   - Needs: M0.5 · API description: M3.2
-  - Done: component tests for the typed-key delete and the empty archived list
+  - Done: component tests for the typed-key delete and the empty archived list; REQ-013.7
 - [ ] **M3.6 Project details page.** Formatted description with Edit, Save and Cancel, the `409` message, and the unsaved-description prompt.
   - Reads: design §6.4 (description and unsaved-text bullets) · spec REQ-012, REQ-035, REQ-046, STD-8
   - Needs: M3.5, M3.1 · API description: M3.3
