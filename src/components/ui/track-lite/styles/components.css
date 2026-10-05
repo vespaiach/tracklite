@@ -45,6 +45,16 @@
 .tl-btn--primary:not(:disabled):active {
   background: var(--color-accent-700);
 }
+.tl-btn--danger {
+  background: var(--color-accent-2-700);
+  color: var(--color-paper);
+}
+.tl-btn--danger:not(:disabled):hover {
+  background: var(--color-accent-2-800);
+}
+.tl-btn--danger:not(:disabled):active {
+  background: var(--color-accent-2-900);
+}
 .tl-btn--secondary {
   border-color: var(--color-divider);
 }

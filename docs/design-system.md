@@ -44,6 +44,7 @@ Don't use `/design-sync` for this. It uploads the repo to Claude Design, the opp
 - Paper `--color-paper` is the ground, `--color-surface` is for filled things, and ink `--color-ink` is for text.
 - Clay (`--color-accent`) marks the interactive and the measured: primary buttons, selection, focus, done and review, progress.
 - Terracotta (`--color-accent-2`) marks the exception: urgent, in progress, overdue, destructive, the "today" line. Never use both accents in one small component.
+- `Button variant="danger"` (paper on `--color-accent-2-700`, 5.87:1) is only for the one confirming action in a destructive confirmation dialog, such as "Deactivate" or "Revoke invitation". Pair it with a secondary "Cancel" that takes focus first. Destructive menu items stay `PopItem danger` (terracotta text, no fill).
 - Neutral greys cover backlog, canceled, tracks and the dark surfaces. Process yellow appears only on the warn toast stripe.
 - Text and rules use ink at fixed alphas: `--color-ink-2` (secondary), `--color-ink-3` (muted), `--color-divider` (structural rules), `--color-hair` (between rows), `--color-tint-2` (hover), `--color-tint` (rail, board columns).
 
