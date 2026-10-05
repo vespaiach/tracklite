@@ -57,6 +57,10 @@ export const routes: RouteObject[] = [
         lazy: async () => ({ Component: (await import("./screens/ProjectSettings")).ProjectSettings }),
       },
       {
+        path: "issue/:id",
+        lazy: async () => ({ Component: (await import("./screens/Issue")).IssuePage }),
+      },
+      {
         path: "projects/archived",
         lazy: async () => ({ Component: (await import("./screens/ArchivedProjects")).ArchivedProjects }),
       },

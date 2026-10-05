@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import { vi } from "vitest";
 import ClientApp from "../client/ClientApp";
-import type { Me, Project, ProjectSummary } from "../client/api";
+import type { Issue, Me, MemberSummary, Project, ProjectSummary } from "../client/api";
 
 type Handler = (body: unknown) => Response | Promise<Response>;
 
@@ -70,4 +70,27 @@ export function project(key: string, name: string, archivedAt: string | null = n
 
 export function summary({ key, name, archivedAt }: Project): ProjectSummary {
   return { key, name, archivedAt };
+}
+
+export function memberOf({ username, fullName, initials, deactivated }: Me): MemberSummary {
+  return { username, fullName, initials, deactivated };
+}
+
+export function issue(overrides: Partial<Issue> = {}): Issue {
+  return {
+    id: "WEB-42",
+    title: "Fix login button",
+    description: "",
+    status: "in_progress",
+    priority: "high",
+    assignee: memberOf(alex),
+    createdBy: memberOf(sam),
+    createdAt: "2026-09-20T10:42:00.000Z",
+    updatedAt: "2026-09-20T10:42:00.000Z",
+    labels: [],
+    descriptionVersion: 0,
+    mentions: [],
+    archived: false,
+    ...overrides,
+  };
 }
