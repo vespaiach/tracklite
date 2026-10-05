@@ -279,7 +279,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 **Run order:** API: M4.1 → M4.2 → M4.3. Pages: M4.4 → M4.5, alongside the API tasks.
 
-- [ ] **M4.1 Issue create API.** Numbering by project row lock, and `requestId`.
+- [x] **M4.1 Issue create API.** Numbering by project row lock, and `requestId`.
   - Reads: design §2.4, §3.3 · spec REQ-016, STD-5
   - Needs: M3.2
   - Done: REQ-016.* (including .4, concurrent creates), STD-5.*
