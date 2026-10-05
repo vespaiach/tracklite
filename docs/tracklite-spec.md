@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.15"
+version: "0.16"
 release: "R1"
 status: Ready to build
 updated: "2026-10-05"
@@ -268,7 +268,7 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
   - REQ-020.3: Sam tries to add an 11th label → "Maximum 10 labels". (Verify: auto)
   - REQ-020.4: Sam adds `frontend` just as another member deletes it → the toast "That label no longer exists" (STD-9); Sam's other changes are kept. (Verify: auto)
   - REQ-020.5: Sam types `design` while `Design` exists in `WEB` → `Design` is added; no new label is created. (Verify: auto)
-- **REQ-021** Any member shall be able to create, rename, recolor and delete a project's labels on that project's Labels page. A label has a name of 1 to 30 characters (whitespace at either end is trimmed), unique within its project ignoring capitals, and one of 8 preset colors: Gray, Red, Orange, Yellow, Green, Blue, Purple and Pink. Renaming or deleting a label affects every issue in that project that has it. Deleting a label asks for confirmation, naming how many issues have it.
+- **REQ-021** Any member shall be able to create, rename, recolor and delete a project's labels on that project's Labels page. A label has a name of 1 to 30 characters (whitespace at either end is trimmed), unique within its project ignoring capitals, and one of 8 preset colors: Gray, Red, Orange, Yellow, Green, Blue, Purple and Pink. An empty name gets the field error "Name required", a longer one gets "Too long (max 30)", and any other color gets "Choose a color" (STD-3). Renaming or deleting a label affects every issue in that project that has it. Deleting a label asks for confirmation, naming how many issues have it.
   - REQ-021.1: `bug` is renamed to `defect` → every issue in the project that had `bug` now shows `defect`. (Verify: auto)
   - REQ-021.2: A member creates `BUG` while `bug` exists in the same project → field error "Label already exists". (Verify: auto)
   - REQ-021.3: `frontend` is deleted → it's removed from all of the project's issues, and the issues stay otherwise unchanged. (Verify: auto)
@@ -726,6 +726,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.16 (2026-10-05):** REQ-021 names the field errors for a missing or too-long label name and an unknown color.
 - **0.15 (2026-10-05):** REQ-009 names the field errors for a missing or too-long project name, and REQ-010 the field error for a request that changes a project key.
 - **0.14 (2026-10-05):** REQ-051: a deactivated member's only action on the members page is reactivate; role changes wait until they're reactivated.
 - **0.13 (2026-10-05):** REQ-001 names the field error for an invalid email address.

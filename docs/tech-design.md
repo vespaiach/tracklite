@@ -317,9 +317,9 @@ Changing a field that can't be changed (username, email, project key) gets `422`
 | `GET /api/projects/{KEY}` | → name, key, description, `descriptionVersion`, mentions, `archivedAt` | Member | REQ-046 |
 | `PATCH /api/projects/{KEY}` | `{ name? }` or `{ archived? }` (Admin), `{ description, descriptionVersion }` (Member) | Per field | REQ-011, REQ-012, REQ-013 |
 | `DELETE /api/projects/{KEY}` | → `204`. The typed-key confirmation is checked in the browser | Admin | REQ-014 |
-| `GET /api/projects/{KEY}/labels` | → labels | Member | REQ-021 |
-| `POST /api/projects/{KEY}/labels` | `{ name, color }` → `201` | Member | REQ-020.2, REQ-021 |
-| `PATCH /api/labels/{id}` | `{ name?, color? }` | Member | REQ-021 |
+| `GET /api/projects/{KEY}/labels` | → labels sorted by name ignoring capitals, each `{ id, name, color, issueCount }` | Member | REQ-021, REQ-021.5 |
+| `POST /api/projects/{KEY}/labels` | `{ name, color }` → `201`, the label | Member | REQ-020.2, REQ-021 |
+| `PATCH /api/labels/{id}` | `{ name?, color? }` → the label. A missing label gets `404` "That label no longer exists" | Member | REQ-021 |
 | `DELETE /api/labels/{id}` | → `204` | Member | REQ-021.3 |
 
 **Issues and views**
