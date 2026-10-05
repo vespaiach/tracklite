@@ -46,8 +46,14 @@ export function Prose({ className, ...rest }: ComponentProps<"div">) {
   );
 }
 
-export function Mention({ children }: { children: ReactNode }) {
-  return <span className="tl-mention">{children}</span>;
+export function Mention({ children, title }: { children: ReactNode; title?: string }) {
+  return (
+    <span
+      className="tl-mention"
+      title={title}>
+      {children}
+    </span>
+  );
 }
 
 export function IssueLink({ children, href = "#" }: { children: ReactNode; href?: string }) {
