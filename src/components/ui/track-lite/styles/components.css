@@ -2347,6 +2347,34 @@ a.tl-rail-item {
   font-size: 13px;
   color: var(--color-ink-2);
 }
+.tl-settings__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-hair);
+}
+.tl-settings__row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-height: 40px;
+  padding: 0 5px;
+  border-bottom: 1px solid var(--color-hair);
+}
+.tl-settings__row > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.tl-settings__cell {
+  width: 90px;
+  font-size: 12px;
+  color: var(--color-ink-2);
+}
+.tl-settings__row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+}
 .tl-settings__identity {
   display: flex;
   align-items: center;
@@ -2377,6 +2405,9 @@ a.tl-rail-item {
   padding-top: 30px;
   padding-bottom: 0;
   border-top: 1px solid var(--color-divider);
+}
+.tl-settings__row > .tl-settings__form {
+  padding: 7px 0;
 }
 .tl-settings__actions {
   display: flex;

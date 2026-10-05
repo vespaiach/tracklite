@@ -652,7 +652,7 @@ An archived project's header shows an "Archived" badge, and no create or edit co
 
 ### 6.6 Label colours
 
-The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`. Each maps to a Track Lite colour token pair (background and text) that meets WCAG AA contrast (NFR-007). The tokens don't yet cover all eight hues, so the mapping is settled when labels are built (M3). Labels created from the picker are `gray` (REQ-020). Deleting a label asks for confirmation, naming how many issues have it (REQ-021.5).
+The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`. Each maps to a Track Lite colour token pair (background and text) that meets WCAG AA contrast (NFR-007). The tokens don't yet cover all eight hues, so until the kit adds the eight pairs, the Labels page (M3.7) draws every label as the neutral label pill with its colour name beside it. The name stays as a non-colour cue once the tokens exist. Labels created from the picker are `gray` (REQ-020). Deleting a label asks for confirmation, naming how many issues have it (REQ-021.5).
 
 ### 6.7 Times
 

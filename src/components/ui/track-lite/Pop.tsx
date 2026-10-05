@@ -4,6 +4,7 @@ import {
   Menu as AriaMenu,
   MenuItem as AriaMenuItem,
   type Key,
+  type Selection,
   MenuTrigger,
   Popover,
   Separator,
@@ -73,21 +74,52 @@ export function PopFoot({ children }: { children: ReactNode }) {
   return <div className="tl-pop__foot">{children}</div>;
 }
 
-export type MenuProps = { label: string; icon: ReactNode; onAction: (key: Key) => void; children: ReactNode };
+export type MenuProps = {
+  label: string;
+  icon?: ReactNode;
+  text?: ReactNode;
+  variant?: "quiet" | "secondary";
+  selectedKey?: Key;
+  onAction: (key: Key) => void;
+  children: ReactNode;
+  id?: string;
+  "aria-describedby"?: string;
+};
 
-export function Menu({ label, icon, onAction, children }: MenuProps) {
+export function Menu({
+  label,
+  icon,
+  text,
+  variant = "quiet",
+  selectedKey,
+  onAction,
+  children,
+  id,
+  "aria-describedby": describedBy,
+}: MenuProps) {
   return (
     <MenuTrigger>
       <AriaButton
+        id={id}
         aria-label={label}
-        className="tl-btn tl-btn--sm tl-btn--quiet tl-btn--icon">
-        {icon}
+        aria-describedby={describedBy}
+        className={cx("tl-btn tl-btn--sm", `tl-btn--${variant}`, text === undefined && "tl-btn--icon")}>
+        {text ?? icon}
       </AriaButton>
       <Popover placement="bottom end">
         <AriaMenu
           aria-label={label}
-          onAction={onAction}
-          className="tl-pop">
+          className="tl-pop"
+          {...(selectedKey === undefined
+            ? { onAction }
+            : {
+                selectionMode: "single",
+                disallowEmptySelection: true,
+                selectedKeys: [selectedKey],
+                onSelectionChange: (keys: Selection) => {
+                  if (keys !== "all") for (const key of keys) onAction(key);
+                },
+              })}>
           {children}
         </AriaMenu>
       </Popover>
@@ -99,8 +131,14 @@ export function MenuItem({ id, danger, children }: { id: string; danger?: boolea
   return (
     <AriaMenuItem
       id={id}
+      textValue={children}
       className={cx("tl-pop__item", danger && "tl-pop__item--danger")}>
-      {children}
+      {({ isSelected }) => (
+        <>
+          {children}
+          {isSelected && <span className="tl-pop__check">✓</span>}
+        </>
+      )}
     </AriaMenuItem>
   );
 }
