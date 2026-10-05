@@ -16,3 +16,17 @@ export function passwordResetEmail({ email, token }: { email: string; token: str
       ].join("\n") + signature,
   };
 }
+
+export function invitationEmail({ inviterName, token }: { inviterName: string; token: string }) {
+  return {
+    subject: `${inviterName} invited you to Tracklite`,
+    text:
+      [
+        `${inviterName} invited you to join their team on Tracklite.`,
+        "",
+        `Accept the invitation: ${readConfig().appUrl}/invite?token=${token}`,
+        "",
+        "This link works once and expires in 7 days. If you weren't expecting this, you can ignore this email.",
+      ].join("\n") + signature,
+  };
+}
