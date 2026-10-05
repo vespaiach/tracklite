@@ -68,3 +68,18 @@ it("DATA-001.4: @sam in inline code or a code block is code, not a mention", () 
   expect(container.querySelector(".tl-mention")).toBeNull();
   expect([...container.querySelectorAll("code")].map((c) => c.textContent?.trim())).toEqual(["@sam", "@sam"]);
 });
+
+it("REQ-012.1: a description with a heading and a bullet list is shown formatted", () => {
+  const { container } = render(<Markdown source={"# Goals\n\n- Faster pages\n- Fewer bugs"} />);
+  expect(container.querySelector("h1")?.textContent).toBe("Goals");
+  expect([...container.querySelectorAll("ul > li")].map((li) => li.textContent)).toEqual([
+    "Faster pages",
+    "Fewer bugs",
+  ]);
+});
+
+it("REQ-012.3: <script>alert(1)</script> in a description is shown as text", () => {
+  const { container } = render(<Markdown source="<script>alert(1)</script>" />);
+  expect(container.querySelector("script")).toBeNull();
+  expect(container.textContent).toContain("<script>alert(1)</script>");
+});

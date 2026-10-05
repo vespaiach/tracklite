@@ -174,9 +174,10 @@ Tokens (SEC-003) are 32 random bytes, sent base64url-encoded, and stored as `sha
 
 **`project_keys`**: `key text primary key`. One row is inserted with every project and is **never deleted**. That's what reserves the key forever (REQ-009.3), while the project row itself can be hard-deleted.
 
-**`projects`**: `key` (unique, FK → project_keys), `name`, `description` (default `''`), `description_version int default 0`, `next_issue_number int default 1`, `archived_at`, `created_at`.
+**`projects`**: `key` (unique, FK → project_keys), `name`, `description` (default `''`), `description_version int default 0`, `description_edited_by` (FK → members, null), `next_issue_number int default 1`, `archived_at`, `created_at`.
 - Check that `key` matches `^[A-Z]{2,5}$`.
 - Sidebar order (REQ-015): `order by name, key`.
+- `description_edited_by` is the member who last saved the description, named in the STD-8 conflict message. If you saved from another tab, the message names you.
 
 **`labels`**: `project_id` (FK → projects, cascade), `name`, `color label_color`.
 - Unique index on `(project_id, lower(name))` (REQ-021.2).

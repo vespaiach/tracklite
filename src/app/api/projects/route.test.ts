@@ -195,3 +195,12 @@ it("REQ-013: the Archived list is empty when no project is archived", async () =
 
   expect(await listWith(memberCookie, true)).toEqual([]);
 });
+
+it("REQ-046.2: the project list carries no description", async () => {
+  const cookie = await signedIn("member");
+  const project = await createProject({ description: "Only on the details page" });
+
+  const listed = (await listWith(cookie, false)).find((row) => row.key === project.key);
+
+  expect(listed).toEqual({ key: project.key, name: project.name, archivedAt: null });
+});

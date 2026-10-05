@@ -147,6 +147,7 @@ export const projects = pgTable(
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
     descriptionVersion: integer("description_version").notNull().default(0),
+    descriptionEditedBy: uuid("description_edited_by").references(() => members.id),
     nextIssueNumber: integer("next_issue_number").notNull().default(1),
     archivedAt: timestamptz("archived_at"),
     createdAt: createdAt(),
