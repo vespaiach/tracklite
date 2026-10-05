@@ -217,7 +217,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 **Run order:** API: **M2.1 ∥ M2.3** → M2.2. Pages: **M2.4 ∥ M2.5**, alongside any of the API tasks.
 
-- [ ] **M2.1 Invitation API.** Create (a resend if one is open), resend, revoke, list, look up; the invitation email template; a failed send saves nothing.
+- [x] **M2.1 Invitation API.** Create (a resend if one is open), resend, revoke, list, look up; the invitation email template; a failed send saves nothing.
   - Reads: design §2.2, §3.3, §4.6, §5.3 · spec REQ-001, REQ-051, §9 "Email content"
   - Needs: M1.4, M1.2
   - Done: REQ-001.*

@@ -39,7 +39,7 @@ export function initials(fullName: string) {
   return (firstCharacter(words[0]) + last).toUpperCase();
 }
 
-export function memberResponse(member: Member) {
+export function memberSummary(member: Pick<Member, "username" | "fullName" | "deactivatedAt">) {
   return {
     username: member.username,
     fullName: member.fullName,
@@ -49,7 +49,11 @@ export function memberResponse(member: Member) {
 }
 
 export function profileResponse(member: Member) {
-  return { ...memberResponse(member), email: member.email, role: member.role };
+  return {
+    ...memberSummary(member),
+    email: member.email,
+    role: member.role,
+  };
 }
 
 export async function listMembers(viewer: Member) {
@@ -57,7 +61,7 @@ export async function listMembers(viewer: Member) {
     .select()
     .from(members)
     .orderBy(asc(sql`lower(${members.fullName})`), asc(members.username));
-  return all.map(viewer.role === "admin" ? profileResponse : memberResponse);
+  return all.map(viewer.role === "admin" ? profileResponse : memberSummary);
 }
 
 type Role = Member["role"];

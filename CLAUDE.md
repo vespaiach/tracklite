@@ -121,9 +121,9 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 - **Test-driven development.** Write a failing test first, run it to confirm it fails for the expected reason, then write the minimum code to make it pass, then refactor with the tests green. Two owner checkpoints apply in every coding session:
    - **Before writing tests**, list the test cases you plan to write (name, what it asserts, which R-ID it closes) and ask the owner whether to add or change any. Do not write test code until the owner confirms the list.
    - **After writing the tests** (and confirming they fail for the expected reason), stop and wait for the owner to review and approve them. Do not write implementation code until the owner approves.
-- **No dead or unused code.** Delete unused exports, files, branches and parameters, and don't add code for later. The exception is prebuilt UI components, which may sit unused.
+- **No dead or unused code.** Delete unused feature files, unreachable branches, and abandoned logic. Structural abstractions (e.g., React context providers, middleware boilerplate, base interfaces) and prebuilt UI components are exempt and may include full API signatures, exports, or default handlers required for architectural completeness.
 - **Run the code checks after implementing.** When a task's implementation is done, run these in order and fix any failure before moving on: `npm run typecheck`, `npm run lint`, `npm test`.
-- **Commit, push and open a PR when done.** Once the implementation is done and every check in rule 4 passes, commit, push the branch and open a PR without waiting to be asked.
+- **Commit, push and open a PR when done.** Once the implementation is done and every check in *Run the code checks* passes, commit, push the branch and open a PR without waiting to be asked.
 
 ## Code style
 
