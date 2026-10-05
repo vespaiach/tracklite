@@ -1,4 +1,5 @@
 import { randomBytes, randomInt, randomUUID } from "node:crypto";
+import { generateKeyBetween } from "fractional-indexing";
 import { db } from "../server/db";
 import { issueLabels, issues, labels, members, projectKeys, projects } from "../server/schema";
 
@@ -45,10 +46,12 @@ export async function createLabel(projectId: string, overrides: Partial<NewLabel
 }
 
 let nextIssueNumber = 1;
+let lastPosition: string | null = null;
 
 export async function createIssue(projectId: string, labelIds: string[] = []) {
   const creator = await createMember();
   const number = nextIssueNumber++;
+  lastPosition = generateKeyBetween(lastPosition, null);
   const [issue] = await db
     .insert(issues)
     .values({
@@ -57,7 +60,7 @@ export async function createIssue(projectId: string, labelIds: string[] = []) {
       title: `Issue ${number}`,
       status: "backlog",
       priority: "none",
-      position: `a${number}`,
+      position: lastPosition,
       createdBy: creator.id,
       requestId: randomUUID(),
     })

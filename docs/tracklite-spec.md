@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.17"
+version: "0.18"
 release: "R1"
 status: Ready to build
 updated: "2026-10-05"
@@ -250,7 +250,7 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
 
 **Rules and examples**
 
-- **REQ-016** When a member creates an issue, or edits its title, the system shall require a title of 1 to 200 characters (whitespace at either end is trimmed). A new issue gets the project's next number, starting at 1. No two issues in a project ever share a number, and numbers are never reused. A new issue starts as status Backlog, No priority, unassigned, and the system records who created it and when. The issue's ID is its address, matched ignoring capitals.
+- **REQ-016** When a member creates an issue, or edits its title, the system shall require a title of 1 to 200 characters (whitespace at either end is trimmed; an empty title gets the field error "Title required" and a longer one gets "Too long (max 200)" (STD-3)). A new issue gets the project's next number, starting at 1. No two issues in a project ever share a number, and numbers are never reused. A new issue starts as status Backlog, No priority, unassigned, and the system records who created it and when. The issue's ID is its address, matched ignoring capitals.
   - REQ-016.1: Sam creates "Fix login button" as the first issue in `WEB` → `WEB-1`, Backlog, No priority, unassigned, "Created by Sam Lee". (Verify: auto)
   - REQ-016.2: The latest issue is `WEB-41` and `WEB-40` was deleted → the next new issue is `WEB-42`. (Verify: auto)
   - REQ-016.3: The title is only spaces → field error "Title required" (STD-3). (Verify: auto)
@@ -727,6 +727,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.18 (2026-10-05):** REQ-016 names the field error for a title over 200 characters.
 - **0.17 (2026-10-05):** REQ-013: an archived project's name is read-only too (new REQ-013.7).
 - **0.16 (2026-10-05):** REQ-021 names the field errors for a missing or too-long label name and an unknown color.
 - **0.15 (2026-10-05):** REQ-009 names the field errors for a missing or too-long project name, and REQ-010 the field error for a request that changes a project key.
