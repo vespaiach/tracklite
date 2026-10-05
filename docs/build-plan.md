@@ -244,7 +244,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 **Run order:** API: **M3.1 ∥ M3.2** → **M3.3 ∥ M3.4**. Pages: M3.5 → **M3.6 ∥ M3.7**, alongside the API tasks (M3.6 also waits for M3.1). M3.1 needs only M0.2, so it can start during M1.
 
-- [ ] **M3.1 Markdown module.** Rendering, HTML shown as text, the link filter, mention parsing, text extraction.
+- [x] **M3.1 Markdown module.** Rendering, HTML shown as text, the link filter, mention parsing, text extraction.
   - Reads: design §4.7 · spec SEC-002, DATA-001
   - Needs: M0.2
   - Done: SEC-002.*, DATA-001's parsing examples
