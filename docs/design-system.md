@@ -12,11 +12,12 @@ The visual language is editorial: a warm paper ground, near-black ink, a serif f
 | `styles/colors.css`, `typography.css`, `spacing.css` | Tokens |
 | `styles/base.css` | Body and heading defaults, focus ring, `.tnum`, `.eyebrow`, `.halftone`, `.sr-only` |
 | `styles/components.css` | Every component's `tl-*` class rules |
-| `*.tsx` | `AppShell` (Rail, RailItem, AppBar, Crumbs…), `Button`, `Card`, `CommandMenu` (Filters, FilterRule, Toasts), `Dialog` (AppDialog, TitleInput), `Field` (Input, Textarea, FieldError), `IssueLayout` (Meta, Pick, Prose, Editor, Feed, Comment…), `ListRow` (ListGroup, Board, BoardColumn, BoardCard, Drawer…), `Nav`, `Pill` (Kbd, Tip, Avatar…), `Pop` (PopItem, PopSearch…), `Progress` (Ring, Metric, Spark, Workload, Timeline), `Segmented` (Radio, Checkbox), `Status` (Priority, Glyph), `Table`, `Tag` |
+| `*.tsx` | `AppShell` (Rail, RailItem, AppBar, Crumbs…), `Button`, `Card`, `CommandMenu` (Filters, FilterRule, Toasts), `Dialog` (AppDialog, TitleInput), `Field` (Input, Textarea, FieldError; `help` text under the control), `IssueLayout` (Meta, Pick, Prose, Editor, Feed, Comment…), `ListRow` (ListGroup, Board, BoardColumn, BoardCard, Drawer…), `Nav`, `Pill` (Kbd, Tip, Avatar…), `Pop` (PopItem, PopSearch…), `Progress` (Ring, Metric, Spark, Workload, Timeline), `Segmented` (Radio, Checkbox), `SignedOut` (SignedOutLayout, SignedOutForm, SignedOutHeading, SignedOutFields, SignedOutFormError, SignedOutNote, SignedOutStatus), `Status` (Priority, Glyph), `Table`, `Tag` |
 
 Differences from the Claude Design project:
 - Fonts load through `next/font/google`, and icons through `@phosphor-icons/react`, instead of CDN links (the CSP allows only `'self'`). The project's `Icon` wrapper was dropped.
 - `useToasts` was dropped: toasts follow STD-9 through the Redux `toast` slice. `Toasts` shows a dismiss button only when given `onDismiss`.
+- `SignedOut` and `Field`'s `help` were added in the repo for the signed-out screens (M1.7) and aren't in the Claude Design project yet. Add them there before the next import, or keep them when importing.
 - `Status` and `Priority` use the kit's own names (`progress`, `review`, `med`). Map the schema's `in_progress`, `in_review` and `medium` to them where they're used.
 
 ## Importing updates from Claude Design

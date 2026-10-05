@@ -39,13 +39,15 @@ export type FieldControlProps = { id: string; "aria-invalid"?: true; "aria-descr
 export type FieldProps = {
   label: string;
   error?: string;
+  help?: ReactNode;
   children: (props: FieldControlProps) => ReactNode;
   className?: string;
 };
 
-export function Field({ label, error, children, className }: FieldProps) {
+export function Field({ label, error, help, children, className }: FieldProps) {
   const id = useId();
   const errorId = `${id}-err`;
+  const helpId = `${id}-help`;
   return (
     <div className={className}>
       <label
@@ -53,8 +55,24 @@ export function Field({ label, error, children, className }: FieldProps) {
         className="tl-field__label">
         {label}
       </label>
-      {children(error ? { id, "aria-invalid": true, "aria-describedby": errorId } : { id })}
-      {error && <FieldError id={errorId}>{error}</FieldError>}
+      {children(
+        error
+          ? { id, "aria-invalid": true, "aria-describedby": errorId }
+          : help
+            ? { id, "aria-describedby": helpId }
+            : { id },
+      )}
+      {error ? (
+        <FieldError id={errorId}>{error}</FieldError>
+      ) : (
+        help && (
+          <p
+            id={helpId}
+            className="tl-field__help">
+            {help}
+          </p>
+        )
+      )}
     </div>
   );
 }

@@ -4,6 +4,14 @@ import { Shell } from "./Shell";
 export const routes: RouteObject[] = [
   { path: "sign-in", lazy: async () => ({ Component: (await import("./screens/SignIn")).SignIn }) },
   {
+    path: "forgot-password",
+    lazy: async () => ({ Component: (await import("./screens/ForgotPassword")).ForgotPassword }),
+  },
+  {
+    path: "reset-password",
+    lazy: async () => ({ Component: (await import("./screens/ResetPassword")).ResetPassword }),
+  },
+  {
     Component: Shell,
     children: [
       {
