@@ -225,10 +225,10 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §3.3, §4.6 · spec REQ-002, REQ-003, STD-2
   - Needs: M2.1
   - Done: REQ-002.*, REQ-003.2, STD-2.*
-- [ ] **M2.3 Member admin API.** `GET /api/members` (emails only for admins), `PATCH /api/members/{username}` for role, deactivate and reactivate, and the last-admin guard with its row lock.
+- [x] **M2.3 Member admin API.** `GET /api/members` (emails only for admins), `PATCH /api/members/{username}` for role, deactivate and reactivate, and the last-admin guard with its row lock.
   - Reads: design §2.2, §3.3 · spec REQ-007, REQ-008, REQ-052
   - Needs: M1.2
-  - Done: REQ-007.*, REQ-008.*, REQ-052.*, including two admins demoting each other at once
+  - Done: REQ-007.*, REQ-008.*, REQ-052.*, including two admins demoting each other at once. Issues and pickers don't exist yet, so REQ-007.2 and REQ-008.2 are checked through the `deactivated` flag in `GET /api/members`, REQ-007.4 through a `PATCH /api/me` save, and REQ-052.2 through an admin-only save; the issue parts move to M4.2 (assignee) and M4.3 (description save)
 - [ ] **M2.4 Accept-invitation page.**
   - Reads: design §3.4 (invitation bullet), §6.3 (Accept invitation) · spec REQ-002
   - Needs: M1.7 · API description: M2.2
@@ -286,11 +286,11 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 - [ ] **M4.2 Issue read and update API.** `GET` and `PATCH /api/issues/{ID}`, one field per save; a status change puts the issue at the top of its new column; assignee and 10-label rules.
   - Reads: design §2.4, §3.3, §3.4 · spec REQ-017, REQ-018, REQ-019, REQ-020, REQ-027.4
   - Needs: M4.1, M3.4
-  - Done: REQ-017.*…REQ-020.*, REQ-027.4
+  - Done: REQ-017.*…REQ-020.*, REQ-027.4; the issue parts of REQ-007.2 and REQ-008.2 (from M2.3)
 - [ ] **M4.3 Issue description and delete API.** Description saves with a version check and mention rows; delete by creator or admin.
   - Reads: design §2.5, §2.7 · spec REQ-022, REQ-023, DATA-001, DATA-002
   - Needs: M4.2, M3.1
-  - Done: REQ-022.*, REQ-023.*, DATA-002's issue examples
+  - Done: REQ-022.*, REQ-023.*, DATA-002's issue examples; REQ-007.4 against a description save (from M2.3)
 - [ ] **M4.4 Issue page.** Header with in-place title, side panel pickers (status, priority, assignee), delete, New issue dialog, canonical addresses.
   - Reads: design §6.1, §6.3 (New issue), §6.4 · spec REQ-016…019, REQ-023
   - Needs: M3.5, M3.1 · API description: M4.1, M4.2, M4.3
