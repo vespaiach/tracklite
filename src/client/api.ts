@@ -148,7 +148,10 @@ export const api = createApi({
       query: (body) => ({ path: "projects", method: "POST", body }),
       invalidatesTags: ["Projects"],
     }),
-    updateProject: build.mutation<Project, { key: string; name?: string; archived?: boolean }>({
+    updateProject: build.mutation<
+      Project,
+      { key: string; name?: string; archived?: boolean; description?: string; descriptionVersion?: number }
+    >({
       query: ({ key, ...body }) => ({ path: `projects/${key}`, method: "PATCH", body }),
       invalidatesTags: ["Projects"],
     }),

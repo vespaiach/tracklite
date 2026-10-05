@@ -41,21 +41,21 @@ export type DialogProps = {
   open: boolean;
   onClose: () => void;
   title: string;
-  children: ReactNode;
+  children?: ReactNode;
   actions?: ReactNode;
+  role?: "dialog" | "alertdialog";
 };
 
-export function Dialog({ open, onClose, title, children, actions }: DialogProps) {
+export function Dialog({ open, onClose, title, children, actions, role = "dialog" }: DialogProps) {
   if (!open) return null;
+  const semantics = { role, "aria-modal": true, "aria-label": title };
   return (
     <DialogBackdrop onClose={onClose}>
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
+        {...semantics}
         className="tl-dialog">
         <div className="tl-dialog__title">{title}</div>
-        <div className="tl-dialog__body">{children}</div>
+        {children && <div className="tl-dialog__body">{children}</div>}
         {actions && <div className="tl-dialog__actions">{actions}</div>}
       </div>
     </DialogBackdrop>

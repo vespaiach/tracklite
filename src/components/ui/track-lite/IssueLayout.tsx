@@ -72,16 +72,18 @@ export type EditorProps = {
   placeholder?: string;
   tools?: ReactNode;
   submit?: ReactNode;
+  textarea?: Omit<ComponentProps<"textarea">, "value" | "onChange" | "placeholder">;
 };
 
-export function Editor({ value, onChange, placeholder, tools, submit }: EditorProps) {
+export function Editor({ value, onChange, placeholder, tools, submit, textarea }: EditorProps) {
   return (
     <div className="tl-editor">
       <textarea
+        rows={3}
+        {...textarea}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        rows={3}
       />
       <div className="tl-editor__bar">
         <div className="tl-editor__tools">{tools}</div>
