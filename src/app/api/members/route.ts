@@ -1,3 +1,4 @@
+import type { Me } from "../../../client/api";
 import { ApiError } from "../../../server/api-error";
 import { apiRoute } from "../../../server/api-route";
 import { acceptInvitation } from "../../../server/invitations";
@@ -20,7 +21,7 @@ export const POST = apiRoute("public", async (request) => {
     username: String(body.username ?? ""),
     password: String(body.password ?? ""),
   });
-  return Response.json(profileResponse(member), {
+  return Response.json(profileResponse(member) satisfies Me, {
     status: 201,
     headers: { "set-cookie": sessionCookie(sessionToken) },
   });
