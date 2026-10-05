@@ -283,7 +283,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2.4, §3.3 · spec REQ-016, STD-5
   - Needs: M3.2
   - Done: REQ-016.* (including .4, concurrent creates), STD-5.*
-- [ ] **M4.2 Issue read and update API.** `GET` and `PATCH /api/issues/{ID}`, one field per save; a status change puts the issue at the top of its new column; assignee and 10-label rules.
+- [x] **M4.2 Issue read and update API.** `GET` and `PATCH /api/issues/{ID}`, one field per save; a status change puts the issue at the top of its new column; assignee and 10-label rules.
   - Reads: design §2.4, §3.3, §3.4 · spec REQ-017, REQ-018, REQ-019, REQ-020, REQ-027.4
   - Needs: M4.1, M3.4
   - Done: REQ-017.*…REQ-020.*, REQ-027.4; the issue parts of REQ-007.2 and REQ-008.2 (from M2.3); REQ-013.1's read-only issue and REQ-013.4 against an issue save (from M3.2)

@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.18"
+version: "0.19"
 release: "R1"
 status: Ready to build
 updated: "2026-10-05"
@@ -260,7 +260,7 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
   - REQ-017.1: `WEB-42` is moved from Backlog straight to Done → allowed. (Verify: auto)
 - **REQ-018** The system shall offer these priorities: **No priority, Urgent, High, Medium, Low**.
   - REQ-018.1: Sam sets `WEB-42` to Urgent → `WEB-42` shows Urgent. (Verify: auto)
-- **REQ-019** An issue shall have no assignee or one active member as its assignee.
+- **REQ-019** An issue shall have no assignee or one active member as its assignee. Anyone else gets the field error "Choose an active member" (STD-3).
   - REQ-019.1: Sam assigns `WEB-42` to Alex → shows Alex. (Verify: auto)
   - REQ-019.2: Sam clears the assignee → shows Unassigned. (Verify: auto)
 - **REQ-020** An issue shall have 0 to 10 labels, chosen from its project's labels. In the label picker, typing a name that matches an existing label, ignoring capitals, adds that label; any other name creates the label in the project, colored Gray, and adds it.
@@ -727,6 +727,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.19 (2026-10-05):** REQ-019 names the field error for assigning someone who isn't an active member.
 - **0.18 (2026-10-05):** REQ-016 names the field error for a title over 200 characters.
 - **0.17 (2026-10-05):** REQ-013: an archived project's name is read-only too (new REQ-013.7).
 - **0.16 (2026-10-05):** REQ-021 names the field errors for a missing or too-long label name and an unknown color.
