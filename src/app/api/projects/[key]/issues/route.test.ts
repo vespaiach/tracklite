@@ -56,6 +56,10 @@ it("REQ-016.1: the first issue in WEB is WEB-1, Backlog, No priority, unassigned
     createdBy: memberSummary(sam.member),
     createdAt: expect.any(String),
     updatedAt: expect.any(String),
+    labels: [],
+    descriptionVersion: 0,
+    mentions: [],
+    archived: false,
   });
   expect(memberSummary(sam.member).fullName).toBe("Sam Lee");
 });
