@@ -221,7 +221,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2.2, §3.3, §4.6, §5.3 · spec REQ-001, REQ-051, §9 "Email content"
   - Needs: M1.4, M1.2
   - Done: REQ-001.*
-- [ ] **M2.2 Accept invitation API.** `POST /api/members`: creates the member and signs them in.
+- [x] **M2.2 Accept invitation API.** `POST /api/members`: creates the member and signs them in.
   - Reads: design §3.3, §4.6 · spec REQ-002, REQ-003, STD-2
   - Needs: M2.1
   - Done: REQ-002.*, REQ-003.2, STD-2.*
