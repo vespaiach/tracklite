@@ -24,6 +24,10 @@ export const routes: RouteObject[] = [
         ),
       },
       { path: "my-issues", lazy: async () => ({ Component: (await import("./screens/MyIssues")).MyIssues }) },
+      {
+        path: "settings/profile",
+        lazy: async () => ({ Component: (await import("./screens/Profile")).Profile }),
+      },
       { path: "*", lazy: async () => ({ Component: (await import("./screens/NotFound")).NotFound }) },
     ],
   },
