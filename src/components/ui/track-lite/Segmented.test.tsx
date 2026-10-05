@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { Segmented } from "./Segmented";
+import { LinkTabs, Segmented } from "./Segmented";
 
 afterEach(cleanup);
 
@@ -34,4 +34,19 @@ it("reports the chosen option's value", () => {
   );
   fireEvent.click(screen.getByLabelText("Board"));
   expect(onChange).toHaveBeenCalledWith("board");
+});
+
+it("renders link tabs as navigation with only the current view marked", () => {
+  render(
+    <LinkTabs
+      label="Project views"
+      options={[
+        { href: "/project/WEB/board", label: "Board", current: true },
+        { href: "/project/WEB/list", label: "List" },
+      ]}
+    />,
+  );
+  expect(screen.getByRole("navigation", { name: "Project views" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Board" }).getAttribute("aria-current")).toBe("page");
+  expect(screen.getByRole("link", { name: "List" }).hasAttribute("aria-current")).toBe(false);
 });

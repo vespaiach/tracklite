@@ -1,4 +1,5 @@
-import type { CSSProperties, ReactNode } from "react";
+import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
+import type { ComponentProps, CSSProperties, MouseEvent, ReactNode, Ref } from "react";
 import { cx } from "./cx";
 
 export type AppShellProps = {
@@ -39,36 +40,107 @@ export function RailGroup({ children }: { children: ReactNode }) {
   return <div className="tl-rail-group">{children}</div>;
 }
 
-export function RailLabel({ children, count }: { children: ReactNode; count?: number }) {
+export function RailLabel({
+  children,
+  count,
+  action,
+}: {
+  children: ReactNode;
+  count?: number;
+  action?: ReactNode;
+}) {
   return (
     <div className="tl-rail-label">
       {children}
       {count != null && <span className="tl-rail-label__count">{count}</span>}
+      {action}
     </div>
+  );
+}
+
+export type RailLabelActionProps = Omit<ComponentProps<"button">, "children"> & {
+  label: string;
+  icon?: ReactNode;
+};
+
+export function RailLabelAction({ label, icon, className, ...rest }: RailLabelActionProps) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      className={cx("tl-rail-label__action", className)}
+      {...rest}>
+      {icon ?? (
+        <Plus
+          size={12}
+          weight="bold"
+        />
+      )}
+    </button>
   );
 }
 
 export type RailItemProps = {
   icon: ReactNode;
   label: string;
+  suffix?: string;
   count?: number;
   end?: ReactNode;
   current?: boolean;
-  onClick?: () => void;
+  href?: string;
+  onClick?: (event: MouseEvent<HTMLElement>) => void;
+  className?: string;
+  title?: string;
+  ref?: Ref<HTMLElement>;
 };
 
-export function RailItem({ icon, label, count, end, current, onClick }: RailItemProps) {
-  return (
-    <button
-      type="button"
-      title={label}
-      aria-current={current ? "page" : undefined}
-      onClick={onClick}
-      className="tl-rail-item">
+export function RailItem({
+  icon,
+  label,
+  suffix,
+  count,
+  end,
+  current,
+  href,
+  onClick,
+  className,
+  title,
+  ref,
+}: RailItemProps) {
+  const content = (
+    <>
       {icon}
-      <Lbl>{label}</Lbl>
+      {suffix ? (
+        <span className="tl-lbl tl-rail-item__split">
+          <span className="tl-rail-item__name">{label}</span>
+          <span className="tl-rail-item__suffix">{suffix}</span>
+        </span>
+      ) : (
+        <Lbl>{label}</Lbl>
+      )}
       {count != null && <span className="tl-rail-item__count">{count}</span>}
       {end && <span className="tl-rail-item__end">{end}</span>}
+    </>
+  );
+  const shared = {
+    title: title === undefined ? label + (suffix ?? "") : title || undefined,
+    "aria-current": current ? ("page" as const) : undefined,
+    onClick,
+    className: cx("tl-rail-item", className),
+  };
+  return href ? (
+    <a
+      ref={ref as Ref<HTMLAnchorElement>}
+      href={href}
+      {...shared}>
+      {content}
+    </a>
+  ) : (
+    <button
+      ref={ref as Ref<HTMLButtonElement>}
+      type="button"
+      {...shared}>
+      {content}
     </button>
   );
 }
