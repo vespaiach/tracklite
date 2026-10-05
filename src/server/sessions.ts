@@ -57,10 +57,8 @@ export async function endSession(token: string) {
   await db.delete(sessions).where(eq(sessions.tokenHash, hashToken(token)));
 }
 
-export async function requireMember(request: Request): Promise<{ member: Member; cookie?: string }> {
-  const token = readSessionToken(request);
-  if (!token) throw new ApiError(401, "Sign in to continue.");
-
+async function findSession(token: string | undefined) {
+  if (!token) return undefined;
   const [found] = await db
     .select({
       member: getTableColumns(members),
@@ -76,7 +74,17 @@ export async function requireMember(request: Request): Promise<{ member: Member;
         isNull(members.deactivatedAt),
       ),
     );
-  if (!found) throw new ApiError(401, "Sign in to continue.");
+  return found;
+}
+
+export async function signedInMember(request: Request) {
+  return (await findSession(readSessionToken(request)))?.member;
+}
+
+export async function requireMember(request: Request): Promise<{ member: Member; cookie?: string }> {
+  const token = readSessionToken(request);
+  const found = await findSession(token);
+  if (!token || !found) throw new ApiError(401, "Sign in to continue.");
 
   if (!found.needsRenewal) return { member: found.member };
   await db.update(sessions).set({ lastActiveAt: sql`now()` }).where(eq(sessions.id, found.sessionId));
