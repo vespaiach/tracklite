@@ -16,6 +16,18 @@ export async function activeMemberByEmail(normalizedEmail: string): Promise<Memb
   return member;
 }
 
+const maxFullNameLength = 60;
+
+export function fullNameError(trimmedFullName: string) {
+  if (trimmedFullName === "") return "Name required";
+  if ([...trimmedFullName].length > maxFullNameLength) return `Too long (max ${maxFullNameLength})`;
+  return undefined;
+}
+
+export function usernameError(username: string) {
+  return /^[a-z0-9-]{2,20}$/.test(username) ? undefined : "Use 2 to 20 letters, digits or hyphens";
+}
+
 function firstCharacter(word: string) {
   return [...word][0] ?? "";
 }

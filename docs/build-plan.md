@@ -198,10 +198,10 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §3.3, §4.5, §4.6 · spec REQ-050, SEC-001, STD-6
   - Needs: M1.3, M1.4
   - Done: REQ-050.*, SEC-001's reset examples, STD-6's reset example
-- [ ] **M1.6 Profile API and setup command.** `PATCH /api/me`, `PUT /api/me/password` (a wrong current password counts toward the sign-in limit), and the first-admin setup command.
+- [x] **M1.6 Profile API and setup command.** `PATCH /api/me`, `PUT /api/me/password` (a wrong current password counts toward the sign-in limit), and the first-admin setup command.
   - Reads: design §3.3, §4.5 · spec REQ-003, REQ-049, OPS-001
   - Needs: M1.3
-  - Done: REQ-003.*, REQ-049.*, OPS-001's auto examples
+  - Done: REQ-003.1, REQ-003.3, REQ-003.4, REQ-049.*; OPS-001.1–2 (both `Verify: ops`) against the command's `createFirstAdmin()`. REQ-003.2 moved to M2.2, since setup only runs with no members, so a username can't be taken yet
 - [x] **M1.7 Sign-in pages.** Sign in, forgot password and reset password pages; sign out; return after sign-in limited to this app's pages.
   - Reads: design §1.7, §6.1, §6.3 · spec REQ-047, REQ-050, SEC-009 · design claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Signed-out+screens.dc.html (Signed-out screens)
   - Needs: M0.5 · API description: M1.3, M1.5
@@ -224,7 +224,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 - [ ] **M2.2 Accept invitation API.** `POST /api/members`: creates the member and signs them in.
   - Reads: design §3.3, §4.6 · spec REQ-002, REQ-003, STD-2
   - Needs: M2.1
-  - Done: REQ-002.*, STD-2.*
+  - Done: REQ-002.*, REQ-003.2, STD-2.*
 - [ ] **M2.3 Member admin API.** `GET /api/members` (emails only for admins), `PATCH /api/members/{username}` for role, deactivate and reactivate, and the last-admin guard with its row lock.
   - Reads: design §2.2, §3.3 · spec REQ-007, REQ-008, REQ-052
   - Needs: M1.2

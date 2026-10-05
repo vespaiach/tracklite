@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.11"
+version: "0.12"
 release: "R1"
 status: Ready to build
 updated: "2026-10-04"
@@ -125,7 +125,7 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
   - REQ-002.2: Sam opens the link on day 8, or after already accepting it → "This invitation has expired. Ask an admin for a new one." (Verify: auto)
   - REQ-002.3: Alex, signed in, opens Sam's invitation link → "You're signed in as Alex. Sign out to accept this invitation." (Alex's full name is shown) (Verify: auto)
   - REQ-002.4: The admin revokes the invitation while Sam is filling in the profile → on submit: "This invitation is no longer valid.", no member created. (Verify: auto)
-- **REQ-003** The system shall store each profile as a full name (1 to 60 characters; whitespace at either end is trimmed; a name that is empty or only whitespace gets the field error "Name required", and one over 60 characters after trimming gets "Too long (max 60)" (STD-3)), a unique username (2 to 20 characters: lowercase letters, digits, hyphens; used for @mentions) and the invited email. The avatar is the member's initials. Username and email can't be changed in R1.
+- **REQ-003** The system shall store each profile as a full name (1 to 60 characters; whitespace at either end is trimmed; a name that is empty or only whitespace gets the field error "Name required", and one over 60 characters after trimming gets "Too long (max 60)" (STD-3)), a unique username (2 to 20 characters: lowercase letters, digits, hyphens; used for @mentions; capitals are lowercased, and anything else gets the field error "Use 2 to 20 letters, digits or hyphens") and the invited email. The avatar is the member's initials. Username and email can't be changed in R1.
   - REQ-003.1: Sam enters username `Sam` → saved as `sam`. (Verify: auto)
   - REQ-003.2: Username `sam` is already taken → field error "Username taken" (STD-3). (Verify: auto)
   - REQ-003.3: Sam opens their profile → the full name can be edited and the password changed (REQ-049); username and email are shown but can't be edited, and an API request that changes them is refused. (Verify: auto)
@@ -726,6 +726,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.12 (2026-10-04):** REQ-003 names the field error for an invalid username.
 - **0.11 (2026-10-04):** STD-9 gets numbered examples (STD-9.1 to STD-9.3) so its toast behaviour can be tested.
 - **0.10 (2026-10-03):** UI stack in section 12: the Track Lite design system replaces the Hairline Design System. React Aria Components stay for complex interactive widgets; Tailwind CSS is no longer named.
 - **0.9 (2026-10-03):** Review fixes before build, plus the technical-design pass.
