@@ -53,13 +53,62 @@ A task that needs a UI design (step 4 of **Working a task**) is designed in Clau
 
 **Order**
 1. **Kit first.** If the screen needs a component Track Lite doesn't have, add it to the Track Lite design system project in Claude Design, then import it with the prompt in `docs/design-system.md`. Pages never invent components or styles of their own.
-2. **Design the screen** in a Claude Design project that uses Track Lite as its design system, with prompt 1 below. Design all of a milestone's screens in one project so they stay consistent.
+2. **Design the screen** in a Claude Design project that uses Track Lite as its design system, with prompt 1 below. Design all of a milestone's screens in one project so they stay consistent. Give a new project prompt 0 once, before its first prompt 1.
 3. **Hand off** with prompt 2 below.
 
 **Rules**
 - The spec wins. If the design and the spec disagree, fix the spec first (with a changelog line), then the design, then the code.
 - The design gives layout, copy and states. The code builds them from Track Lite components and tokens, never from the design's own markup or inline styles.
 - A Claude Design link in **Reads** is read with the DesignSync tool, like any other listed source.
+
+**Prompt 0: shared context (in Claude Design, once per project).** Paste it as is. It holds what every screen shares, so prompt 1 only carries the screen's own rules. Keep it in step with spec §3 and §6 (standard behaviors), design §6.2 and `docs/design-system.md`.
+
+```text
+This project designs the screens of Tracklite, release R1. Read this once. Every screen prompt that follows builds on it, and I'll paste each screen's own rules with that prompt.
+
+ABOUT THE PRODUCT
+Tracklite is a small issue tracker for one invite-only team of fewer than about 15 people. They found Linear too complex. It keeps issues inside projects, with comments, a kanban board, a list view, My issues and email notifications. English only. Desktop browsers first: phones work but aren't polished.
+
+Not in R1, so never draw these: keyboard shortcuts, shortcut hints or key caps for shortcuts, a command palette, cycles/sprints/roadmaps, sub-issues or issue links, file attachments or images, in-app notifications or notification settings, activity history, search across projects, public sign-up, multiple workspaces or a workspace switcher, two-factor or "Sign in with Google", integrations, data export, live presence or real-time editing.
+
+"Keyboard-first" here means every screen works from the keyboard alone: a sensible tab order, visible focus, Enter submits forms, Escape closes dialogs and menus. It doesn't mean shortcuts.
+
+DESIGN SYSTEM
+Use only the Track Lite design system attached to this project. Don't invent components, colours, spacing or one-off styles. If a screen needs something the kit lacks, list it at the end of your answer instead of drawing it.
+- Voice: plain, specific, matter-of-fact. Help text uses "you"; the product never says "I" or "we". Sentence case everywhere. Buttons are verbs ("Sign in", "Send link"). Feedback is a past-tense fact. Use the ellipsis character (…) and curly quotes. No exclamation marks, no emoji.
+- Machine values in mono: issue IDs, dates, counts, relative times.
+- There's no logo: the brand is the word Tracklite in the serif at weight 600.
+- Clay accent for interactive and primary. Terracotta only for exceptions: urgent, overdue, destructive. Never both accents in one small component.
+- Separate rows and panels with 1px rules, not boxes. No gradients, imagery, illustrations or motion.
+- Use the exact copy I give in quotes. Server messages appear exactly as written.
+
+DOMAIN VOCABULARY
+- Members have a full name, a username and an email; their avatar is their initials. Role is admin or member. A deactivated member is shown as "(deactivated)".
+- Projects are shown as "Name · KEY", for example "Website · WEB". A project can be archived, which makes it read-only.
+- Issues are addressed by ID, such as WEB-42. Statuses, always in this order: Backlog, In Progress, In Review, Done, Canceled. Priorities: Urgent, High, Medium, Low, No priority.
+
+REALISTIC DATA (use these, not lorem ipsum)
+- Members: Sam Lee (sam@acme.com, username sam, admin), Alex Kim (alex@acme.com, username alex, member). Add others with acme.com emails as needed.
+- Project: Website · WEB. Issues: WEB-42 "Fix login button", WEB-43, WEB-5, WEB-7, WEB-9.
+
+APP STRUCTURE
+- Signed-out screens (Sign in, Forgot password, Reset password, Accept invitation) sit outside the app shell, with no sidebar.
+- Every signed-in screen uses the same shell. The sidebar, top to bottom: My issues; Projects (active projects as "Name · KEY", with a + for admins that opens New project); Archived projects; Members (admins only); and at the bottom the member's initials and name, opening a menu with Profile and Sign out.
+- Project screens (board, list, details, labels) have a header: "Name · KEY" with a details link, Board | List tabs, a Labels link, a settings gear (admins only) and New issue (hidden when archived). Archived projects show an "Archived" badge and no create or edit controls.
+
+STANDARD BEHAVIOURS (every screen follows these, so draw them the same way everywhere)
+- STD-1 Not signed in: redirect to sign-in, then back to the page asked for.
+- STD-2 Not allowed: actions the member can't take are hidden. If reached anyway: "You don't have permission to do that." in the page area.
+- STD-3 Invalid input: the error shows next to the field, the form keeps everything typed, nothing is saved.
+- STD-4 Not found: a "Not found" page with a link to My issues.
+- STD-5 The submit button is disabled while saving.
+- STD-6 If an invitation or password reset email fails: "We couldn't send the email. Try again."
+- STD-7 A loading indicator shows only after 300 ms. Empty states name the next action ("No issues yet. Create one."). A load failure shows "Couldn't load this." beside a Retry button.
+- STD-9 A failed submission not tied to one field shows a toast that disappears after 5 seconds, with no dismiss or pause control. The form keeps what was typed. For a network or server error the toast reads "Couldn't save. Try again."; otherwise it shows the server's message. One toast at a time.
+
+HOW I'LL ASK
+Each screen prompt gives the spec rules with numbered examples, the layout notes and a list of states. Draw each state as its own frame at desktop width, using the data above. Name each frame after its screen and state, for example "Sign in — incorrect password".
+```
 
 **Prompt 1: design the screen (in Claude Design).** Fill in the brackets. Paste the rule text itself, not just the IDs, because Claude Design can't read this repo.
 
@@ -153,8 +202,8 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §3.3, §4.5 · spec REQ-003, REQ-049, OPS-001
   - Needs: M1.3
   - Done: REQ-003.1, REQ-003.3, REQ-003.4, REQ-049.*; OPS-001.1–2 (both `Verify: ops`) against the command's `createFirstAdmin()`. REQ-003.2 moved to M2.2, since setup only runs with no members, so a username can't be taken yet
-- [ ] **M1.7 Sign-in pages.** Sign in, forgot password and reset password pages; sign out; return after sign-in limited to this app's pages.
-  - Reads: design §1.7, §6.1, §6.3 · spec REQ-047, REQ-050, SEC-009
+- [x] **M1.7 Sign-in pages.** Sign in, forgot password and reset password pages; sign out; return after sign-in limited to this app's pages.
+  - Reads: design §1.7, §6.1, §6.3 · spec REQ-047, REQ-050, SEC-009 · design claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Signed-out+screens.dc.html (Signed-out screens)
   - Needs: M0.5 · API description: M1.3, M1.5
   - Done: SEC-009.*; component tests for each page's error and expired states
 - [ ] **M1.8 Profile page.** Full name, the read-only fields and the Change password form with its success message.

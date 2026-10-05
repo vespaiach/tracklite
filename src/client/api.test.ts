@@ -86,3 +86,42 @@ it("baseQuery returns the parsed JSON body on success", async () => {
   expect(result.data).toEqual(me);
   expect(fetch).toHaveBeenCalledWith("/api/me", expect.anything());
 });
+
+it("STD-1: a 401 on a signed-out page doesn't redirect", async () => {
+  respondWith(401, { error: { message: "Sign in to continue." } });
+  for (const path of ["/sign-in?next=%2Fmy-issues", "/forgot-password", "/reset-password?token=abc"]) {
+    const { router, store } = storeAt(path);
+
+    await store.dispatch(api.endpoints.me.initiate());
+
+    expect(router.state.location.pathname + router.state.location.search).toBe(path);
+  }
+});
+
+it("STD-6: a 503 keeps the server's message", async () => {
+  respondWith(503, { error: { message: "We couldn't send the email. Try again." } });
+  const { store } = storeAt("/forgot-password");
+
+  const result = await store.dispatch(api.endpoints.requestResetLink.initiate({ email: "sam@acme.com" }));
+
+  expect(result.error).toEqual({ status: 503, message: "We couldn't send the email. Try again." });
+});
+
+it("baseQuery sends a JSON body with the method and returns null for a 204", async () => {
+  respondWith(204);
+  const { store } = storeAt("/sign-in");
+
+  const result = await store.dispatch(
+    api.endpoints.signIn.initiate({ email: "sam@acme.com", password: "correct-horse-battery" }),
+  );
+
+  expect(result.data).toBeNull();
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/sessions",
+    expect.objectContaining({
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: "sam@acme.com", password: "correct-horse-battery" }),
+    }),
+  );
+});

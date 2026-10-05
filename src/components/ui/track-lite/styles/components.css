@@ -154,6 +154,12 @@ textarea.tl-input {
   font-size: 12px;
   color: color-mix(in srgb, var(--color-ink) 70%, transparent);
 }
+.tl-field__help {
+  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--color-ink-2);
+}
 .tl-field-error {
   display: flex;
   align-items: baseline;
@@ -2097,4 +2103,72 @@ textarea.tl-input {
 }
 .tl-toast__dismiss:hover {
   color: var(--color-paper);
+}
+.tl-signed-out {
+  min-height: 100vh;
+  background: var(--color-paper);
+  font-family: var(--font-ui);
+}
+.tl-signed-out__bar {
+  display: flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 30px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.tl-signed-out__brand {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: -0.015em;
+}
+.tl-signed-out__main,
+.tl-signed-out__form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.tl-signed-out__main {
+  width: 360px;
+  max-width: calc(100% - 30px);
+  margin: 100px auto 0;
+}
+.tl-signed-out__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.tl-signed-out__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.tl-signed-out__title {
+  margin: 0;
+  font-size: 26px;
+}
+.tl-signed-out__lede,
+.tl-signed-out__status {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-ink-2);
+  text-wrap: pretty;
+}
+.tl-signed-out__note {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+.tl-signed-out__link {
+  align-self: flex-start;
+  font-size: 12px;
+}
+.tl-signed-out__form-error {
+  margin-top: -5px;
+}
+.tl-signed-out__form-error .tl-field-error {
+  margin: 0;
 }
