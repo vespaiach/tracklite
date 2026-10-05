@@ -14,6 +14,16 @@ export function IssueTitle({ children }: { children: ReactNode }) {
   return <h1 className="tl-issue-title">{children}</h1>;
 }
 
+export function IssueTitleInput({ className, ...rest }: ComponentProps<"textarea">) {
+  return (
+    <textarea
+      rows={1}
+      className={cx("tl-issue-title", "tl-issue-title--input", className)}
+      {...rest}
+    />
+  );
+}
+
 export function Meta({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="tl-meta">

@@ -3,11 +3,18 @@ import {
   Button as AriaButton,
   Menu as AriaMenu,
   MenuItem as AriaMenuItem,
+  Autocomplete,
+  Input,
   type Key,
-  type Selection,
+  ListBox,
+  ListBoxItem,
   MenuTrigger,
   Popover,
+  SearchField,
+  Select,
+  type Selection,
   Separator,
+  useFilter,
 } from "react-aria-components";
 import { cx } from "./cx";
 
@@ -145,4 +152,89 @@ export function MenuItem({ id, danger, children }: { id: string; danger?: boolea
 
 export function MenuSep() {
   return <Separator className="tl-pop__sep" />;
+}
+
+export type PickerSearch = {
+  label: string;
+  placeholder?: string;
+  filter?: (textValue: string, input: string) => boolean;
+};
+
+export type PickerProps = {
+  label: string;
+  selectedKey: Key;
+  value: ReactNode;
+  empty?: boolean;
+  onChange: (key: Key) => void;
+  search?: PickerSearch;
+  children: ReactNode;
+  "aria-describedby"?: string;
+};
+
+export function Picker({
+  label,
+  selectedKey,
+  value,
+  empty,
+  onChange,
+  search,
+  children,
+  "aria-describedby": describedBy,
+}: PickerProps) {
+  const { contains } = useFilter({ sensitivity: "base" });
+  const list = <ListBox aria-label={label}>{children}</ListBox>;
+  return (
+    <Select
+      aria-label={label}
+      aria-describedby={describedBy}
+      value={selectedKey}
+      onChange={(key) => {
+        if (key !== null) onChange(key);
+      }}>
+      <AriaButton className={cx("tl-pick", empty && "tl-pick--empty")}>{value}</AriaButton>
+      <Popover
+        placement="bottom start"
+        className="tl-pop">
+        {search ? (
+          <Autocomplete filter={search.filter ?? contains}>
+            <SearchField
+              aria-label={search.label}
+              autoFocus
+              className="tl-pop__search">
+              <Input placeholder={search.placeholder} />
+            </SearchField>
+            {list}
+          </Autocomplete>
+        ) : (
+          list
+        )}
+      </Popover>
+    </Select>
+  );
+}
+
+export function PickerItem({ id, textValue, children }: { id: Key; textValue: string; children: ReactNode }) {
+  return (
+    <ListBoxItem
+      id={id}
+      textValue={textValue}
+      className="tl-pop__item">
+      {({ isSelected }) => (
+        <>
+          {children}
+          {isSelected && (
+            <span
+              aria-hidden="true"
+              className="tl-pop__check">
+              ✓
+            </span>
+          )}
+        </>
+      )}
+    </ListBoxItem>
+  );
+}
+
+export function PickValue({ children }: { children: ReactNode }) {
+  return <div className="tl-pick tl-pick--static">{children}</div>;
 }

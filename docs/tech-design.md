@@ -642,7 +642,7 @@ An archived project's header shows an "Archived" badge, and no create or edit co
 - **Main column:**
   - the description, shown formatted, with an **Edit** button that switches to a Markdown text area with **Save** and **Cancel** (STD-8 conflicts appear here);
   - the comments below it (REQ-032), then the comment box.
-- **Side panel:** Status, Priority, Assignee and Labels pickers, each saving as soon as a value is chosen. Then "Created by {name}, {date}", and **Delete issue** for the creator or an admin.
+- **Side panel:** Status, Priority, Assignee and Labels pickers, each saving as soon as a value is chosen. A picker shows the new value once the server accepts it; on a failure it keeps the old value. Then "Created by {name}, {date}", and **Delete issue** for the creator or an admin. After a delete, the app goes to the project's board.
 - **Mention suggestions (DATA-001):** typing `@` in the description editor or comment box opens a list of active members, filtered by username or name as the member types. Choosing one inserts `@username`.
 - **Unsaved text (REQ-035):** a comment box holding text, or a description editor (issue or project) with unsaved changes, blocks in-app navigation with `useBlocker` and its REQ-035 message, and closing or reloading the tab with `beforeunload`.
 

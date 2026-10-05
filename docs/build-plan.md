@@ -291,8 +291,8 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2.5, §2.7 · spec REQ-022, REQ-023, DATA-001, DATA-002
   - Needs: M4.2, M3.1
   - Done: REQ-022.*, REQ-023.*, DATA-002's issue examples; REQ-007.4 against a description save (from M2.3)
-- [ ] **M4.4 Issue page.** Header with in-place title, side panel pickers (status, priority, assignee), delete, New issue dialog, canonical addresses.
-  - Reads: design §6.1, §6.3 (New issue), §6.4 · spec REQ-016…019, REQ-023
+- [x] **M4.4 Issue page.** Header with in-place title, side panel pickers (status, priority, assignee), delete, New issue dialog, canonical addresses.
+  - Reads: design §6.1, §6.3 (New issue), §6.4 · spec REQ-016…019, REQ-023 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Issue+page.dc.html&via=share (Issue page)
   - Needs: M3.5, M3.1 · API description: M4.1, M4.2, M4.3
   - Done: component tests for title edit, each picker and delete
 - [ ] **M4.5 Label picker and description editor.** The label picker that creates new labels; the description editor with the `@` suggestion list (built to be reused by comments).

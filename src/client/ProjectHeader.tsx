@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { AppBar, AppBarTitle, LinkTabs, Tag } from "../components/ui/track-lite";
 import type { ProjectSummary } from "./api";
 import { useRouterClick } from "./links";
+import { NewIssueButton } from "./NewIssueDialog";
 
 export type ProjectView = "board" | "list" | "detail" | "labels";
 
@@ -19,17 +20,20 @@ export function ProjectHeader({ project, view, admin }: ProjectHeaderProps) {
   return (
     <AppBar
       end={
-        admin && (
-          <Link
-            to={`${base}/settings`}
-            aria-label="Project settings"
-            className="tl-btn tl-btn--sm tl-btn--quiet tl-btn--icon">
-            <Gear
-              size={15}
-              weight="duotone"
-            />
-          </Link>
-        )
+        <>
+          {admin && (
+            <Link
+              to={`${base}/settings`}
+              aria-label="Project settings"
+              className="tl-btn tl-btn--sm tl-btn--quiet tl-btn--icon">
+              <Gear
+                size={15}
+                weight="duotone"
+              />
+            </Link>
+          )}
+          {!project.archivedAt && <NewIssueButton project={project} />}
+        </>
       }>
       <AppBarTitle>{`${project.name} · ${project.key}`}</AppBarTitle>
       {project.archivedAt && <Tag variant="neutral">Archived</Tag>}

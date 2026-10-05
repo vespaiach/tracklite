@@ -36,6 +36,34 @@ export type LabelColor = "gray" | "red" | "orange" | "yellow" | "green" | "blue"
 
 export type Label = { id: string; name: string; color: LabelColor; issueCount: number };
 
+export type IssueStatus = "backlog" | "in_progress" | "in_review" | "done" | "canceled";
+
+export type IssuePriority = "none" | "urgent" | "high" | "medium" | "low";
+
+export type IssueLabel = Pick<Label, "id" | "name" | "color">;
+
+export type Issue = {
+  id: string;
+  title: string;
+  description: string;
+  status: IssueStatus;
+  priority: IssuePriority;
+  assignee: MemberSummary | null;
+  createdBy: MemberSummary;
+  createdAt: string;
+  updatedAt: string;
+  labels: IssueLabel[];
+  descriptionVersion: number;
+  mentions: MemberSummary[];
+  archived: boolean;
+};
+
+export type IssueChange =
+  | { title: string }
+  | { status: IssueStatus }
+  | { priority: IssuePriority }
+  | { assignee: string | null };
+
 type ApiRequest = string | { path: string; method: "POST" | "PATCH" | "PUT" | "DELETE"; body?: unknown };
 
 const couldNotSave = "Couldn't save. Try again.";
@@ -83,7 +111,7 @@ const baseQuery: BaseQueryFn<ApiRequest, unknown, ApiFailure> = async (request, 
 export const api = createApi({
   baseQuery,
   refetchOnMountOrArgChange: true,
-  tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels"],
+  tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels", "Issue"],
   endpoints: (build) => ({
     me: build.query<Me, void>({ query: () => "me", providesTags: ["Me"] }),
     signIn: build.mutation<null, { email: string; password: string }>({
@@ -178,6 +206,23 @@ export const api = createApi({
       query: (id) => ({ path: `labels/${id}`, method: "DELETE" }),
       invalidatesTags: (_result, error) => (!error || error.status === 404 ? ["Labels"] : []),
     }),
+    issue: build.query<Issue, string>({ query: (id) => `issues/${id}`, providesTags: ["Issue"] }),
+    createIssue: build.mutation<
+      Issue,
+      { key: string; requestId: string; title: string; status?: IssueStatus }
+    >({
+      query: ({ key, ...body }) => ({ path: `projects/${key}/issues`, method: "POST", body }),
+    }),
+    updateIssue: build.mutation<Issue, { id: string; change: IssueChange }>({
+      query: ({ id, change }) => ({ path: `issues/${id}`, method: "PATCH", body: change }),
+      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+        const saved = await queryFulfilled.catch(() => undefined);
+        if (saved) dispatch(api.util.upsertQueryData("issue", id, saved.data));
+      },
+    }),
+    deleteIssue: build.mutation<null, string>({
+      query: (id) => ({ path: `issues/${id}`, method: "DELETE" }),
+    }),
   }),
 });
 
@@ -207,4 +252,8 @@ export const {
   useCreateLabelMutation,
   useUpdateLabelMutation,
   useDeleteLabelMutation,
+  useIssueQuery,
+  useCreateIssueMutation,
+  useUpdateIssueMutation,
+  useDeleteIssueMutation,
 } = api;

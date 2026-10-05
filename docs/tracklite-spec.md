@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.19"
+version: "0.20"
 release: "R1"
 status: Ready to build
 updated: "2026-10-05"
@@ -278,7 +278,7 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
 - **REQ-022** When a member edits an issue description, the system shall save it as Markdown of up to 20,000 characters (empty allowed) and show it formatted (DEC-001, SEC-002). @mentions follow DATA-001, and two members editing at once is handled by STD-8.
   - REQ-022.1: Sam saves a description with a checklist and a code block → shown formatted. (Verify: auto)
   - REQ-022.2: Description of 20,001 characters → field error "Too long (max 20,000)". (Verify: auto)
-- **REQ-023** When the issue's creator or an admin deletes an issue, the system shall ask for confirmation, then permanently delete it with its comments (DATA-002). Its number is not reused.
+- **REQ-023** When the issue's creator or an admin deletes an issue, the system shall ask for confirmation ("Delete WEB-42?" with "“Fix login button” and its comments will be deleted permanently. You can’t undo this."), then permanently delete it with its comments (DATA-002). Its number is not reused.
   - REQ-023.1: Sam deletes `WEB-42`, which Sam created, and confirms → gone; opening `WEB-42` shows Not found (STD-4). (Verify: auto)
   - REQ-023.2: Alex, a member, views `WEB-42`, which Sam created → no Delete option (STD-2). (Verify: auto)
   - REQ-023.3: Alex is writing a comment on `WEB-42` when it's deleted → on save, the toast "This issue was deleted" (STD-9), and Alex's text stays in the box. (Verify: auto)
@@ -727,6 +727,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.20 (2026-10-05):** REQ-023 names the delete confirmation's copy.
 - **0.19 (2026-10-05):** REQ-019 names the field error for assigning someone who isn't an active member.
 - **0.18 (2026-10-05):** REQ-016 names the field error for a title over 200 characters.
 - **0.17 (2026-10-05):** REQ-013: an archived project's name is read-only too (new REQ-013.7).
