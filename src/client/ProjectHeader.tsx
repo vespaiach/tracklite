@@ -4,7 +4,7 @@ import { AppBar, AppBarTitle, LinkTabs, Tag } from "../components/ui/track-lite"
 import type { ProjectSummary } from "./api";
 import { useRouterClick } from "./links";
 
-export type ProjectView = "board" | "list" | "detail";
+export type ProjectView = "board" | "list" | "detail" | "labels";
 
 export type ProjectHeaderProps = {
   project: ProjectSummary;
@@ -48,6 +48,7 @@ export function ProjectHeader({ project, view, admin }: ProjectHeaderProps) {
       />
       <Link
         to={`${base}/labels`}
+        aria-current={view === "labels" ? "page" : undefined}
         className="tl-navlink">
         Labels
       </Link>

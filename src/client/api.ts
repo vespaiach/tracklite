@@ -32,6 +32,10 @@ export type Project = ProjectSummary & {
   mentions: MemberSummary[];
 };
 
+export type LabelColor = "gray" | "red" | "orange" | "yellow" | "green" | "blue" | "purple" | "pink";
+
+export type Label = { id: string; name: string; color: LabelColor; issueCount: number };
+
 type ApiRequest = string | { path: string; method: "POST" | "PATCH" | "PUT" | "DELETE"; body?: unknown };
 
 const couldNotSave = "Couldn't save. Try again.";
@@ -79,7 +83,7 @@ const baseQuery: BaseQueryFn<ApiRequest, unknown, ApiFailure> = async (request, 
 export const api = createApi({
   baseQuery,
   refetchOnMountOrArgChange: true,
-  tagTypes: ["Me", "Members", "Invitations", "Projects"],
+  tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels"],
   endpoints: (build) => ({
     me: build.query<Me, void>({ query: () => "me", providesTags: ["Me"] }),
     signIn: build.mutation<null, { email: string; password: string }>({
@@ -158,6 +162,22 @@ export const api = createApi({
     deleteProject: build.mutation<null, string>({
       query: (key) => ({ path: `projects/${key}`, method: "DELETE" }),
     }),
+    labels: build.query<Label[], string>({
+      query: (key) => `projects/${key}/labels`,
+      providesTags: ["Labels"],
+    }),
+    createLabel: build.mutation<Label, { key: string; name: string; color: LabelColor }>({
+      query: ({ key, ...body }) => ({ path: `projects/${key}/labels`, method: "POST", body }),
+      invalidatesTags: (result) => (result ? ["Labels"] : []),
+    }),
+    updateLabel: build.mutation<Label, { id: string; name?: string; color?: LabelColor }>({
+      query: ({ id, ...body }) => ({ path: `labels/${id}`, method: "PATCH", body }),
+      invalidatesTags: (result, error) => (result || error?.status === 404 ? ["Labels"] : []),
+    }),
+    deleteLabel: build.mutation<null, string>({
+      query: (id) => ({ path: `labels/${id}`, method: "DELETE" }),
+      invalidatesTags: (_result, error) => (!error || error.status === 404 ? ["Labels"] : []),
+    }),
   }),
 });
 
@@ -183,4 +203,8 @@ export const {
   useCreateProjectMutation,
   useUpdateProjectMutation,
   useDeleteProjectMutation,
+  useLabelsQuery,
+  useCreateLabelMutation,
+  useUpdateLabelMutation,
+  useDeleteLabelMutation,
 } = api;

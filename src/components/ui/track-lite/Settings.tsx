@@ -42,6 +42,28 @@ export function SettingsEmpty({ children }: { children: ReactNode }) {
   return <p className="tl-settings__empty">{children}</p>;
 }
 
+export function SettingsList({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <ul
+      aria-label={label}
+      className="tl-settings__list">
+      {children}
+    </ul>
+  );
+}
+
+export function SettingsRow({ children }: { children: ReactNode }) {
+  return <li className="tl-settings__row">{children}</li>;
+}
+
+export function SettingsCell({ children }: { children: ReactNode }) {
+  return <span className="tl-settings__cell">{children}</span>;
+}
+
+export function SettingsRowActions({ children }: { children: ReactNode }) {
+  return <span className="tl-settings__row-actions">{children}</span>;
+}
+
 export function SettingsIdentity({ initials, name }: { initials: string; name: string }) {
   return (
     <div className="tl-settings__identity">

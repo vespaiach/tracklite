@@ -268,8 +268,8 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §6.4 (description and unsaved-text bullets) · spec REQ-012, REQ-035, REQ-046, STD-8 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Project+details.dc.html&via=share (Project details)
   - Needs: M3.5, M3.1 · API description: M3.3
   - Done: component tests for save, conflict and the leave prompt
-- [ ] **M3.7 Labels page.** List, create, rename, recolour, delete with the issue-count confirmation.
-  - Reads: design §6.6 · spec REQ-021
+- [x] **M3.7 Labels page.** List, create, rename, recolour, delete with the issue-count confirmation.
+  - Reads: design §6.6 · spec REQ-021 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Labels.dc.html (Labels)
   - Needs: M3.5 · API description: M3.4
   - Done: component tests for create and delete confirmation
 

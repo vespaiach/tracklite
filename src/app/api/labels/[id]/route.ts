@@ -1,3 +1,4 @@
+import type { Label } from "../../../../client/api";
 import { apiRoute } from "../../../../server/api-route";
 import { deleteLabel, updateLabel } from "../../../../server/labels";
 
@@ -5,7 +6,7 @@ export async function PATCH(request: Request, { params }: RouteContext<"/api/lab
   const { id } = await params;
   return apiRoute("member", async (memberRequest) => {
     const body: { name?: unknown; color?: unknown } = await memberRequest.json();
-    return Response.json(await updateLabel(id, body));
+    return Response.json((await updateLabel(id, body)) satisfies Label);
   })(request);
 }
 
