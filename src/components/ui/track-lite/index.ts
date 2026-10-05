@@ -11,6 +11,7 @@ export * from "./Pill";
 export * from "./Pop";
 export * from "./Progress";
 export * from "./Segmented";
+export * from "./Settings";
 export * from "./SignedOut";
 export * from "./Status";
 export * from "./Table";

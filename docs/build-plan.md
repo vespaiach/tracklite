@@ -206,8 +206,8 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §1.7, §6.1, §6.3 · spec REQ-047, REQ-050, SEC-009 · design claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Signed-out+screens.dc.html (Signed-out screens)
   - Needs: M0.5 · API description: M1.3, M1.5
   - Done: SEC-009.*; component tests for each page's error and expired states
-- [ ] **M1.8 Profile page.** Full name, the read-only fields and the Change password form with its success message.
-  - Reads: design §6.3 (Profile) · spec REQ-003, REQ-049
+- [x] **M1.8 Profile page.** Full name, the read-only fields and the Change password form with its success message.
+  - Reads: design §6.3 (Profile) · spec REQ-003, REQ-049 · design claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Profile.dc.html (Profile)
   - Needs: M0.5 · API description: M1.6
   - Done: component tests for save, change password and the REQ-049 message
 

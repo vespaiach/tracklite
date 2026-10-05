@@ -12,7 +12,7 @@ export type Me = {
   role: "admin" | "member";
 };
 
-type ApiRequest = string | { path: string; method: "POST" | "DELETE"; body?: unknown };
+type ApiRequest = string | { path: string; method: "POST" | "PATCH" | "PUT" | "DELETE"; body?: unknown };
 
 const couldNotSave = "Couldn't save. Try again.";
 
@@ -78,6 +78,13 @@ export const api = createApi({
     resetPassword: build.mutation<null, { token: string; password: string }>({
       query: (body) => ({ path: "password-resets", method: "POST", body }),
     }),
+    updateProfile: build.mutation<Me, { fullName: string }>({
+      query: (body) => ({ path: "me", method: "PATCH", body }),
+      invalidatesTags: ["Me"],
+    }),
+    changePassword: build.mutation<null, { currentPassword: string; newPassword: string }>({
+      query: (body) => ({ path: "me/password", method: "PUT", body }),
+    }),
   }),
 });
 
@@ -88,4 +95,6 @@ export const {
   useRequestResetLinkMutation,
   useLookUpResetLinkQuery,
   useResetPasswordMutation,
+  useUpdateProfileMutation,
+  useChangePasswordMutation,
 } = api;
