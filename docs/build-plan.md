@@ -229,8 +229,8 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2.2, §3.3 · spec REQ-007, REQ-008, REQ-052
   - Needs: M1.2
   - Done: REQ-007.*, REQ-008.*, REQ-052.*, including two admins demoting each other at once. Issues and pickers don't exist yet, so REQ-007.2 and REQ-008.2 are checked through the `deactivated` flag in `GET /api/members`, REQ-007.4 through a `PATCH /api/me` save, and REQ-052.2 through an admin-only save; the issue parts move to M4.2 (assignee) and M4.3 (description save)
-- [ ] **M2.4 Accept-invitation page.**
-  - Reads: design §3.4 (invitation bullet), §6.3 (Accept invitation) · spec REQ-002
+- [x] **M2.4 Accept-invitation page.**
+  - Reads: design §3.4 (invitation bullet), §6.3 (Accept invitation) · spec REQ-002 · design claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Accept+invitation.dc.html (Accept invitation)
   - Needs: M1.7 · API description: M2.2
   - Done: component tests for the form, expired and no-longer-valid states
 - [ ] **M2.5 Members page.** Invite form, invitations table with Resend and Revoke, members table with the **⋯** menu and the deactivate confirmation.

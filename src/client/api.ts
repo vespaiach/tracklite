@@ -12,11 +12,13 @@ export type Me = {
   role: "admin" | "member";
 };
 
+export type InvitationLookup = { email: string };
+
 type ApiRequest = string | { path: string; method: "POST" | "PATCH" | "PUT" | "DELETE"; body?: unknown };
 
 const couldNotSave = "Couldn't save. Try again.";
 
-const signedOutPaths = ["/sign-in", "/forgot-password", "/reset-password"];
+const signedOutPaths = ["/sign-in", "/forgot-password", "/reset-password", "/invite"];
 
 function fetchApi(request: ApiRequest, signal: AbortSignal) {
   if (typeof request === "string") return fetch(`/api/${request}`, { signal });
@@ -78,6 +80,16 @@ export const api = createApi({
     resetPassword: build.mutation<null, { token: string; password: string }>({
       query: (body) => ({ path: "password-resets", method: "POST", body }),
     }),
+    lookUpInvitation: build.query<InvitationLookup, { token: string }>({
+      query: (body) => ({ path: "invitation-lookups", method: "POST", body }),
+    }),
+    acceptInvitation: build.mutation<
+      Me,
+      { token: string; fullName: string; username: string; password: string }
+    >({
+      query: (body) => ({ path: "members", method: "POST", body }),
+      invalidatesTags: ["Me"],
+    }),
     updateProfile: build.mutation<Me, { fullName: string }>({
       query: (body) => ({ path: "me", method: "PATCH", body }),
       invalidatesTags: ["Me"],
@@ -95,6 +107,8 @@ export const {
   useRequestResetLinkMutation,
   useLookUpResetLinkQuery,
   useResetPasswordMutation,
+  useLookUpInvitationQuery,
+  useAcceptInvitationMutation,
   useUpdateProfileMutation,
   useChangePasswordMutation,
 } = api;
