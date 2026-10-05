@@ -38,12 +38,18 @@ export function initials(fullName: string) {
   return (firstCharacter(words[0]) + last).toUpperCase();
 }
 
-export function profileResponse(member: Member) {
+export function memberSummary(member: Pick<Member, "username" | "fullName" | "deactivatedAt">) {
   return {
     username: member.username,
     fullName: member.fullName,
     initials: initials(member.fullName),
     deactivated: member.deactivatedAt !== null,
+  };
+}
+
+export function profileResponse(member: Member) {
+  return {
+    ...memberSummary(member),
     email: member.email,
     role: member.role,
   };

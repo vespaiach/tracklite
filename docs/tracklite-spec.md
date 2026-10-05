@@ -1,9 +1,9 @@
 ---
 product: "Tracklite"
-version: "0.12"
+version: "0.13"
 release: "R1"
 status: Ready to build
-updated: "2026-10-04"
+updated: "2026-10-05"
 ---
 
 # Tracklite: Spec
@@ -112,7 +112,7 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
 
 **Rules and examples**
 
-- **REQ-001** When an admin invites an email address, the system shall email a single-use invitation link that expires after 7 days, and the admin can resend or revoke it. Emails are compared ignoring capitals. If the email belongs to an active member, the system shall refuse with "Already a member". If it belongs to a deactivated member, it shall refuse with "This person is deactivated. Reactivate them instead." If the email can't be sent, nothing is saved (a resent invitation keeps its previous link) and the admin sees "We couldn't send the email. Try again." (STD-6).
+- **REQ-001** When an admin invites an email address, the system shall email a single-use invitation link that expires after 7 days, and the admin can resend or revoke it. Emails are compared ignoring capitals, and an address that isn't a valid email gets the field error "Enter a valid email". If the email belongs to an active member, the system shall refuse with "Already a member". If it belongs to a deactivated member, it shall refuse with "This person is deactivated. Reactivate them instead." If the email can't be sent, nothing is saved (a resent invitation keeps its previous link) and the admin sees "We couldn't send the email. Try again." (STD-6).
   - REQ-001.1: Admin invites `sam@acme.com` → email sent; the invitation shows as Pending. (Verify: auto)
   - REQ-001.2: Admin invites an existing member's email → "Already a member", no email. (Verify: auto)
   - REQ-001.3: Admin resends Sam's pending invitation → a new link is sent and the old link stops working. (Verify: auto)
@@ -726,6 +726,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.13 (2026-10-05):** REQ-001 names the field error for an invalid email address.
 - **0.12 (2026-10-04):** REQ-003 names the field error for an invalid username.
 - **0.11 (2026-10-04):** STD-9 gets numbered examples (STD-9.1 to STD-9.3) so its toast behaviour can be tested.
 - **0.10 (2026-10-03):** UI stack in section 12: the Track Lite design system replaces the Hairline Design System. React Aria Components stay for complex interactive widgets; Tailwind CSS is no longer named.
