@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.13"
+version: "0.14"
 release: "R1"
 status: Ready to build
 updated: "2026-10-05"
@@ -167,7 +167,7 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
 - **REQ-008** When an admin reactivates a deactivated member, the system shall let them sign in again with their existing profile. They can be assigned and mentioned again.
   - REQ-008.1: Admin reactivates Sam, then Sam signs in with their existing password → signed in with the same username and profile. (Verify: auto)
   - REQ-008.2: `WEB-42` is still assigned to Sam → "(deactivated)" disappears from Sam's name, and Sam is back in the assignee picker. (Verify: auto)
-- **REQ-051** The system shall give admins a members page, `/settings/members`, listing members and invitations. Each member row shows the full name, username, email, role and whether they're deactivated, with actions to deactivate or reactivate (REQ-007, REQ-008) and to make admin or remove admin (REQ-052). Each invitation that's Pending, Bounced or Expired shows the email, who sent it and when it expires or expired, with Resend and Revoke (REQ-001); accepted and revoked invitations aren't listed. Members who aren't admins can't open the page (STD-2).
+- **REQ-051** The system shall give admins a members page, `/settings/members`, listing members and invitations. Each member row shows the full name, username, email, role and whether they're deactivated, with actions to deactivate or reactivate (REQ-007, REQ-008) and to make admin or remove admin (REQ-052). A deactivated member's only action is reactivate. Each invitation that's Pending, Bounced or Expired shows the email, who sent it and when it expires or expired, with Resend and Revoke (REQ-001); accepted and revoked invitations aren't listed. Members who aren't admins can't open the page (STD-2).
   - REQ-051.1: An admin opens `/settings/members` → every member with their role, and Sam's pending invitation with Resend and Revoke. (Verify: auto)
   - REQ-051.2: Alex, a member, opens `/settings/members` → "You don't have permission to do that." (Verify: auto)
   - REQ-051.3: An admin resends Sam's expired invitation → a new link valid for 7 days is sent, and the row shows Pending. (Verify: auto)
@@ -726,6 +726,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.14 (2026-10-05):** REQ-051: a deactivated member's only action on the members page is reactivate; role changes wait until they're reactivated.
 - **0.13 (2026-10-05):** REQ-001 names the field error for an invalid email address.
 - **0.12 (2026-10-04):** REQ-003 names the field error for an invalid username.
 - **0.11 (2026-10-04):** STD-9 gets numbered examples (STD-9.1 to STD-9.3) so its toast behaviour can be tested.

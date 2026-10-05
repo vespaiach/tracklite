@@ -1,4 +1,5 @@
 import { type ComponentProps, type CSSProperties, type ReactNode, useEffect, useRef } from "react";
+import { FocusScope } from "react-aria";
 import { cx } from "./cx";
 
 export type DialogBackdropProps = { onClose?: () => void; children: ReactNode; style?: CSSProperties };
@@ -26,7 +27,12 @@ export function DialogBackdrop({ onClose, children, style }: DialogBackdropProps
       ref={backdrop}
       className="tl-backdrop"
       style={style}>
-      {children}
+      <FocusScope
+        contain
+        restoreFocus
+        autoFocus>
+        {children}
+      </FocusScope>
     </div>
   );
 }

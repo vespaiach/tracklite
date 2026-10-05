@@ -1,11 +1,13 @@
-import type { Me } from "../../../client/api";
+import type { Me, MemberSummary } from "../../../client/api";
 import { ApiError } from "../../../server/api-error";
 import { apiRoute } from "../../../server/api-route";
 import { acceptInvitation } from "../../../server/invitations";
 import { listMembers, profileResponse } from "../../../server/members";
 import { sessionCookie, signedInMember } from "../../../server/sessions";
 
-export const GET = apiRoute("member", async (_request, member) => Response.json(await listMembers(member)));
+export const GET = apiRoute("member", async (_request, member) =>
+  Response.json((await listMembers(member)) satisfies (Me | MemberSummary)[]),
+);
 
 export const POST = apiRoute("public", async (request) => {
   const signedIn = await signedInMember(request);

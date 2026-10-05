@@ -12,13 +12,14 @@ The visual language is editorial: a warm paper ground, near-black ink, a serif f
 | `styles/colors.css`, `typography.css`, `spacing.css` | Tokens |
 | `styles/base.css` | Body and heading defaults, focus ring, `.tnum`, `.eyebrow`, `.halftone`, `.sr-only` |
 | `styles/components.css` | Every component's `tl-*` class rules |
-| `*.tsx` | `AppShell` (Rail, RailItem, AppBar, Crumbs…), `Button`, `Card`, `CommandMenu` (Filters, FilterRule, Toasts), `Dialog` (AppDialog, TitleInput), `Field` (Input, Textarea, FieldError; `help` text under the control), `IssueLayout` (Meta, Pick, Prose, Editor, Feed, Comment…), `ListRow` (ListGroup, Board, BoardColumn, BoardCard, Drawer…), `Nav`, `Pill` (Kbd, Tip, Avatar…), `Pop` (PopItem, PopSearch…), `Progress` (Ring, Metric, Spark, Workload, Timeline), `Segmented` (Radio, Checkbox), `Settings` (SettingsLayout, SettingsIdentity, SettingsForm, SettingsActions, FactList, Fact, FormStatus, FormError), `SignedOut` (SignedOutLayout, SignedOutForm, SignedOutHeading, SignedOutFields, SignedOutFormError, SignedOutNote, SignedOutStatus), `Status` (Priority, Glyph), `Table`, `Tag` |
+| `*.tsx` | `AppShell` (Rail, RailItem, AppBar, Crumbs…), `Button`, `Card`, `CommandMenu` (Filters, FilterRule, Toasts), `Dialog` (AppDialog, TitleInput), `Field` (Input, Textarea, FieldError; `help` text under the control), `IssueLayout` (Meta, Pick, Prose, Editor, Feed, Comment…), `ListRow` (ListGroup, Board, BoardColumn, BoardCard, Drawer…), `Nav`, `Pill` (Kbd, Tip, Avatar…), `Pop` (PopItem, PopSearch, Menu, MenuItem, MenuSep…), `Progress` (Ring, Metric, Spark, Workload, Timeline), `Segmented` (Radio, Checkbox), `Settings` (SettingsLayout, SettingsIdentity, SettingsForm, SettingsSection, SettingsInline, SettingsEmpty, SettingsActions, FactList, Fact, FormStatus, FormError), `SignedOut` (SignedOutLayout, SignedOutForm, SignedOutHeading, SignedOutFields, SignedOutFormError, SignedOutNote, SignedOutStatus), `Status` (Priority, Glyph), `Table`, `Tag` |
 
 Differences from the Claude Design project:
 - Fonts load through `next/font/google`, and icons through `@phosphor-icons/react`, instead of CDN links (the CSP allows only `'self'`). The project's `Icon` wrapper was dropped.
 - `useToasts` was dropped: toasts follow STD-9 through the Redux `toast` slice. `Toasts` shows a dismiss button only when given `onDismiss`.
 - `SignedOut` and `Field`'s `help` were added in the repo for the signed-out screens (M1.7) and aren't in the Claude Design project yet. Add them there before the next import, or keep them when importing.
 - `Settings` was added in the repo for the Profile page (M1.8) and isn't in the Claude Design project yet. The same applies.
+- For the Members page (M2.5), the repo added `SettingsLayout wide` (900px), `SettingsSection` (a titled section with an optional status line), `SettingsInline` (a field beside its button), `SettingsEmpty`, the table cell classes `tl-table__who`, `__mono`, `__muted`, `__note` and `__end`, and `Menu` / `MenuItem` / `MenuSep` in `Pop`. `Menu` is a React Aria menu button styled with the `tl-pop` classes, with `[data-focused]` marking the keyboard-focused item. `Dialog` (and `AppDialog`) now wrap their panel in React Aria's `FocusScope`, so focus moves to the first control on open, stays inside while open, and returns afterwards. None of these are in the Claude Design project yet. The same applies.
 - `Status` and `Priority` use the kit's own names (`progress`, `review`, `med`). Map the schema's `in_progress`, `in_review` and `medium` to them where they're used.
 
 ## Importing updates from Claude Design
@@ -76,7 +77,7 @@ A full-height grid: a 232px rail (52px collapsed) and the body. The app bar and 
 
 ## Icons
 
-- Phosphor through `@phosphor-icons/react`, duotone weight, 13–16px in chrome (15px by default). Use bold for the small "+" in "New issue".
+- Phosphor through `@phosphor-icons/react`, duotone weight, 13–16px in chrome (15px by default). Import each icon from its own module (`@phosphor-icons/react/dist/csr/DotsThree`), not the package root, which loads every icon. Use bold for the small "+" in "New issue".
 - Status, priority and the rail's saved-view marks are drawn in CSS (`Status`, `Priority`, `Glyph`), never with icons.
 - Unicode stands in for icons in a few places: ✓ for selected menu items, × for close and remove, / between breadcrumbs, ⌘ ↑ ↓ ↵ in key caps.
 - There's no logo. The brand is the product name, Tracklite, in the serif at weight 600.

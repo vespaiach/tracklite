@@ -426,6 +426,29 @@ textarea.tl-input {
 .tl-table tbody tr:hover {
   background: color-mix(in srgb, var(--color-ink) 4%, transparent);
 }
+.tl-table__who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tl-table__mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+.tl-table__muted {
+  color: var(--color-ink-2);
+}
+.tl-table__note {
+  font-size: 12px;
+  color: var(--color-ink-2);
+}
+.tl-table__end {
+  text-align: right;
+  white-space: nowrap;
+}
+.tl-table__end > * + * {
+  margin-left: 5px;
+}
 .tl-nav {
   display: flex;
   align-items: center;
@@ -782,6 +805,9 @@ textarea.tl-input {
   font-size: 13px;
   box-sizing: border-box;
 }
+.tl-pop:focus-visible {
+  outline: none;
+}
 .tl-pop__search {
   display: flex;
   align-items: center;
@@ -837,6 +863,10 @@ textarea.tl-input {
 }
 .tl-pop__item:hover {
   background: var(--color-tint-2);
+}
+.tl-pop__item[data-focused] {
+  background: var(--color-tint-2);
+  outline: none;
 }
 .tl-pop__item[aria-selected="true"] {
   background: var(--color-accent-100);
@@ -2190,6 +2220,38 @@ textarea.tl-input {
   padding: 40px 0 60px 40px;
   font-family: var(--font-ui);
 }
+.tl-settings--wide {
+  width: 900px;
+  padding-right: 40px;
+}
+.tl-settings__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tl-settings__section + .tl-settings__section {
+  margin-top: 40px;
+}
+.tl-settings__section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 15px;
+}
+.tl-settings__inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.tl-settings__inline > :first-child {
+  width: 340px;
+}
+.tl-settings__empty {
+  margin: 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-divider);
+  font-size: 13px;
+  color: var(--color-ink-2);
+}
 .tl-settings__identity {
   display: flex;
   align-items: center;
@@ -2225,6 +2287,9 @@ textarea.tl-input {
   display: flex;
   align-items: center;
   gap: 15px;
+}
+.tl-settings__inline > .tl-settings__actions {
+  padding-top: 21px;
 }
 .tl-facts {
   margin: 0;

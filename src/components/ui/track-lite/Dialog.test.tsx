@@ -59,3 +59,33 @@ it("closes on a press outside the panel but not inside it", () => {
   fireEvent.mouseDown(dialog.parentElement as HTMLElement);
   expect(onClose).toHaveBeenCalledOnce();
 });
+
+it("moves focus to the first control when it opens", () => {
+  render(
+    <Dialog
+      open
+      onClose={() => {}}
+      title="Deactivate Alex Kim?"
+      actions={<button type="button">Cancel</button>}>
+      Body
+    </Dialog>,
+  );
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
+});
+
+it("keeps focus inside while open, even when something outside takes it", () => {
+  render(
+    <>
+      <button type="button">Outside</button>
+      <Dialog
+        open
+        onClose={() => {}}
+        title="Deactivate Alex Kim?"
+        actions={<button type="button">Cancel</button>}>
+        Body
+      </Dialog>
+    </>,
+  );
+  screen.getByRole("button", { name: "Outside" }).focus();
+  expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(true);
+});
