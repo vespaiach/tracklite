@@ -12,6 +12,16 @@ export type Me = {
   role: "admin" | "member";
 };
 
+export type MemberSummary = Pick<Me, "username" | "fullName" | "initials" | "deactivated">;
+
+export type Invitation = {
+  id: string;
+  email: string;
+  state: "pending" | "bounced" | "expired";
+  expiresAt: string;
+  invitedBy: MemberSummary;
+};
+
 export type InvitationLookup = { email: string };
 
 type ApiRequest = string | { path: string; method: "POST" | "PATCH" | "PUT" | "DELETE"; body?: unknown };
@@ -61,7 +71,7 @@ const baseQuery: BaseQueryFn<ApiRequest, unknown, ApiFailure> = async (request, 
 export const api = createApi({
   baseQuery,
   refetchOnMountOrArgChange: true,
-  tagTypes: ["Me"],
+  tagTypes: ["Me", "Members", "Invitations"],
   endpoints: (build) => ({
     me: build.query<Me, void>({ query: () => "me", providesTags: ["Me"] }),
     signIn: build.mutation<null, { email: string; password: string }>({
@@ -94,6 +104,27 @@ export const api = createApi({
       query: (body) => ({ path: "me", method: "PATCH", body }),
       invalidatesTags: ["Me"],
     }),
+    members: build.query<Me[], void>({ query: () => "members", providesTags: ["Members"] }),
+    updateMember: build.mutation<Me, { username: string; role?: Me["role"]; deactivated?: boolean }>({
+      query: ({ username, ...body }) => ({ path: `members/${username}`, method: "PATCH", body }),
+      invalidatesTags: ["Members", "Me"],
+    }),
+    invitations: build.query<Invitation[], void>({
+      query: () => "invitations",
+      providesTags: ["Invitations"],
+    }),
+    createInvitation: build.mutation<Invitation, { email: string }>({
+      query: (body) => ({ path: "invitations", method: "POST", body }),
+      invalidatesTags: ["Invitations"],
+    }),
+    resendInvitation: build.mutation<Invitation, string>({
+      query: (id) => ({ path: `invitations/${id}/resend`, method: "POST" }),
+      invalidatesTags: ["Invitations"],
+    }),
+    revokeInvitation: build.mutation<null, string>({
+      query: (id) => ({ path: `invitations/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Invitations"],
+    }),
     changePassword: build.mutation<null, { currentPassword: string; newPassword: string }>({
       query: (body) => ({ path: "me/password", method: "PUT", body }),
     }),
@@ -111,4 +142,10 @@ export const {
   useAcceptInvitationMutation,
   useUpdateProfileMutation,
   useChangePasswordMutation,
+  useMembersQuery,
+  useUpdateMemberMutation,
+  useInvitationsQuery,
+  useCreateInvitationMutation,
+  useResendInvitationMutation,
+  useRevokeInvitationMutation,
 } = api;

@@ -3,8 +3,43 @@ import { cx } from "./cx";
 import { FieldError } from "./Field";
 import { Avatar } from "./Pill";
 
-export function SettingsLayout({ children }: { children: ReactNode }) {
-  return <main className="tl-settings">{children}</main>;
+export function SettingsLayout({ children, wide }: { children: ReactNode; wide?: boolean }) {
+  return <main className={cx("tl-settings", wide && "tl-settings--wide")}>{children}</main>;
+}
+
+export function SettingsSection({
+  title,
+  status,
+  children,
+}: {
+  title: string;
+  status?: ReactNode;
+  children: ReactNode;
+}) {
+  const titleId = useId();
+  return (
+    <section
+      aria-labelledby={titleId}
+      className="tl-settings__section">
+      <div className="tl-settings__section-head">
+        <h2
+          id={titleId}
+          className="tl-settings__title">
+          {title}
+        </h2>
+        {status}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function SettingsInline({ children }: { children: ReactNode }) {
+  return <div className="tl-settings__inline">{children}</div>;
+}
+
+export function SettingsEmpty({ children }: { children: ReactNode }) {
+  return <p className="tl-settings__empty">{children}</p>;
 }
 
 export function SettingsIdentity({ initials, name }: { initials: string; name: string }) {

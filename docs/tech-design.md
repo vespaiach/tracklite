@@ -618,7 +618,7 @@ An archived project's header shows an "Archived" badge, and no create or edit co
 **Members** (admin).
 - **Invite:** an email field and **Send invitation**.
 - **Invitations:** a table of email, invited by and state (Pending, Bounced, or Expired with its date), with **Resend** and **Revoke** actions (REQ-051). Revoke asks for confirmation.
-- **Members:** a table with initials and name, username, email, role and status, sorted by name. Each row has a **⋯** menu with **Make admin** / **Remove admin** and **Deactivate** / **Reactivate**. Deactivate asks for confirmation ("Sam Lee will be signed out and can't sign in until reactivated.").
+- **Members:** a table with initials and name, username, email, role and status, sorted by name. Each row has a **⋯** menu with **Make admin** / **Remove admin** and **Deactivate**; a deactivated member's menu has only **Reactivate** (REQ-051). Deactivate asks for confirmation ("Sam Lee will be signed out and can't sign in until reactivated.").
 - Deactivated members stay in the table, marked "(deactivated)".
 
 **Project settings** (admin).

@@ -32,6 +32,10 @@ export const routes: RouteObject[] = [
         path: "settings/profile",
         lazy: async () => ({ Component: (await import("./screens/Profile")).Profile }),
       },
+      {
+        path: "settings/members",
+        lazy: async () => ({ Component: (await import("./screens/Members")).Members }),
+      },
       { path: "*", lazy: async () => ({ Component: (await import("./screens/NotFound")).NotFound }) },
     ],
   },

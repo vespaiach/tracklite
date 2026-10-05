@@ -233,8 +233,8 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §3.4 (invitation bullet), §6.3 (Accept invitation) · spec REQ-002 · design claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Accept+invitation.dc.html (Accept invitation)
   - Needs: M1.7 · API description: M2.2
   - Done: component tests for the form, expired and no-longer-valid states
-- [ ] **M2.5 Members page.** Invite form, invitations table with Resend and Revoke, members table with the **⋯** menu and the deactivate confirmation.
-  - Reads: design §6.3 (Members) · spec REQ-051, REQ-007, REQ-001
+- [x] **M2.5 Members page.** Invite form, invitations table with Resend and Revoke, members table with the **⋯** menu and the deactivate confirmation.
+  - Reads: design §6.3 (Members) · spec REQ-051, REQ-007, REQ-001 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Members.dc.html (Members)
   - Needs: M1.7 · API description: M2.1, M2.3
   - Done: REQ-051.*; component tests for the confirmations
 
