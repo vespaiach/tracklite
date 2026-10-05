@@ -1,8 +1,8 @@
 import "server-only";
-import { and, asc, eq, inArray, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
-import { findMentions } from "../lib/markdown/parse";
+import { asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { ApiError } from "./api-error";
 import { db } from "./db";
+import { conflict, parseDescriptionChange, replaceMentions } from "./descriptions";
 import { memberSummary } from "./members";
 import { members, mentions, projectKeys, projects } from "./schema";
 import { type Member, requireAdmin } from "./sessions";
@@ -12,7 +12,6 @@ type Executor = typeof db | Transaction;
 type Project = typeof projects.$inferSelect;
 
 const maxNameLength = 50;
-const maxDescriptionLength = 20_000;
 
 function nameError(trimmedName: string) {
   if (trimmedName === "") return "Name required";
@@ -117,52 +116,6 @@ export async function deleteProject(key: string) {
   if (deleted.length === 0) throw new ApiError(404, "Not found");
 }
 
-function parseDescriptionChange(body: Record<string, unknown>) {
-  const { description, descriptionVersion } = body;
-  const fields: Record<string, string> = {};
-  if (typeof description !== "string") fields.description = "Description required";
-  else if ([...description].length > maxDescriptionLength) fields.description = "Too long (max 20,000)";
-  if (!Number.isInteger(descriptionVersion)) fields.descriptionVersion = "Version required";
-  refuseFields(fields);
-  return { description: description as string, descriptionVersion: descriptionVersion as number };
-}
-
-async function conflict(tx: Transaction, editorId: string | null) {
-  const [editor] = editorId
-    ? await tx.select({ fullName: members.fullName }).from(members).where(eq(members.id, editorId))
-    : [];
-  return new ApiError(
-    409,
-    `This was changed by ${editor?.fullName ?? "someone else"}. Copy your text and reload.`,
-  );
-}
-
-async function replaceProjectMentions(tx: Transaction, projectId: string, text: string) {
-  const usernames = findMentions(text);
-  const mentioned =
-    usernames.length === 0
-      ? []
-      : await tx
-          .select({ id: members.id })
-          .from(members)
-          .where(and(inArray(members.username, usernames), isNull(members.deactivatedAt)));
-  const memberIds = mentioned.map((row) => row.id);
-  await tx
-    .delete(mentions)
-    .where(
-      and(
-        eq(mentions.projectId, projectId),
-        memberIds.length > 0 ? notInArray(mentions.memberId, memberIds) : undefined,
-      ),
-    );
-  if (memberIds.length > 0) {
-    await tx
-      .insert(mentions)
-      .values(memberIds.map((memberId) => ({ memberId, projectId })))
-      .onConflictDoNothing();
-  }
-}
-
 async function saveDescription(member: Member, key: string, body: Record<string, unknown>) {
   const { description, descriptionVersion } = parseDescriptionChange(body);
 
@@ -180,7 +133,7 @@ async function saveDescription(member: Member, key: string, body: Record<string,
       })
       .where(eq(projects.id, project.id))
       .returning();
-    await replaceProjectMentions(tx, project.id, description);
+    await replaceMentions(tx, { projectId: project.id }, description);
     return projectResponse(tx, updated);
   });
 }

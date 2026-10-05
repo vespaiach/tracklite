@@ -1,5 +1,5 @@
 import { apiRoute } from "../../../../server/api-route";
-import { getIssue, updateIssue } from "../../../../server/issues";
+import { deleteIssue, getIssue, updateIssue } from "../../../../server/issues";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/issues/[id]">) {
   const { id } = await params;
@@ -8,8 +8,16 @@ export async function GET(request: Request, { params }: RouteContext<"/api/issue
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/issues/[id]">) {
   const { id } = await params;
-  return apiRoute("member", async (memberRequest) => {
+  return apiRoute("member", async (memberRequest, member) => {
     const body: Record<string, unknown> = await memberRequest.json();
-    return Response.json(await updateIssue(id, body));
+    return Response.json(await updateIssue(id, member, body));
+  })(request);
+}
+
+export async function DELETE(request: Request, { params }: RouteContext<"/api/issues/[id]">) {
+  const { id } = await params;
+  return apiRoute("member", async (_memberRequest, member) => {
+    await deleteIssue(id, member);
+    return new Response(null, { status: 204 });
   })(request);
 }

@@ -15,6 +15,13 @@
       "when": 1791216943056,
       "tag": "0001_project_description_edited_by",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791235248729,
+      "tag": "0002_issue_description_edited_by",
+      "breakpoints": true
     }
   ]
 }
