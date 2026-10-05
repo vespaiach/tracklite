@@ -184,7 +184,7 @@ Tokens (SEC-003) are 32 random bytes, sent base64url-encoded, and stored as `sha
 
 ### 2.4 Issues
 
-**`issues`**: `project_id` (FK → projects, cascade), `number`, `title`, `description` (default `''`), `description_version int default 0`, `status`, `priority`, `assignee_id` (FK → members, null), `position text`, `created_by` (FK → members), `created_at`, `updated_at`, `status_changed_at`, `request_id uuid` (unique).
+**`issues`**: `project_id` (FK → projects, cascade), `number`, `title`, `description` (default `''`), `description_version int default 0`, `description_edited_by` (FK → members, null), `status`, `priority`, `assignee_id` (FK → members, null), `position text`, `created_by` (FK → members), `created_at`, `updated_at`, `status_changed_at`, `request_id uuid` (unique).
 - Unique on `(project_id, number)`.
 
 How the less obvious columns work:
@@ -194,6 +194,7 @@ How the less obvious columns work:
 - **`updated_at` (REQ-036).** Set when the title, description, status, priority, assignee or the issue's labels change. Not set by reordering within a column (REQ-036.5), comments, or renaming or recoloring a label on the Labels page.
 - **`status_changed_at`.** Set on every status change, and drives the 14-day Done/Canceled window (REQ-028, REQ-041).
 - **`description_version`.** Incremented on each description save. A save sends the version it started from, and the update runs `where description_version = $sent`. If no row matches, someone else saved first → the STD-8 conflict message. Changes to other fields don't touch it, so a status change by a teammate never blocks your description save. Projects use the same pattern.
+- **`description_edited_by`.** The member who last saved the description, named in the STD-8 conflict message, as for projects (§2.3).
 - **`request_id`.** A create that repeats a `request_id` returns the existing issue (STD-5).
 
 Indexes:

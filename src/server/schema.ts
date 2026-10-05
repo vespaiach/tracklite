@@ -179,6 +179,7 @@ export const issues = pgTable(
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
     descriptionVersion: integer("description_version").notNull().default(0),
+    descriptionEditedBy: uuid("description_edited_by").references(() => members.id),
     status: issueStatus("status").notNull(),
     priority: issuePriority("priority").notNull(),
     assigneeId: uuid("assignee_id").references(() => members.id),

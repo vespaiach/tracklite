@@ -287,7 +287,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2.4, §3.3, §3.4 · spec REQ-017, REQ-018, REQ-019, REQ-020, REQ-027.4
   - Needs: M4.1, M3.4
   - Done: REQ-017.*…REQ-020.*, REQ-027.4; the issue parts of REQ-007.2 and REQ-008.2 (from M2.3); REQ-013.1's read-only issue and REQ-013.4 against an issue save (from M3.2)
-- [ ] **M4.3 Issue description and delete API.** Description saves with a version check and mention rows; delete by creator or admin.
+- [x] **M4.3 Issue description and delete API.** Description saves with a version check and mention rows; delete by creator or admin.
   - Reads: design §2.5, §2.7 · spec REQ-022, REQ-023, DATA-001, DATA-002
   - Needs: M4.2, M3.1
   - Done: REQ-022.*, REQ-023.*, DATA-002's issue examples; REQ-007.4 against a description save (from M2.3)

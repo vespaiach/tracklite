@@ -4,6 +4,7 @@ import { alias, type PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { generateKeyBetween } from "fractional-indexing";
 import { ApiError } from "./api-error";
 import { db } from "./db";
+import { conflict, parseDescriptionChange, replaceMentions } from "./descriptions";
 import { memberSummary } from "./members";
 import { writableProject } from "./projects";
 import {
@@ -254,7 +255,52 @@ async function fieldChange(
   return (await replaceLabels(tx, issue, value)) ? { updatedAt: sql`now()` } : {};
 }
 
-export async function updateIssue(id: string, body: Record<string, unknown>) {
+async function lockedIssue(tx: Transaction, where: SQL) {
+  const [target] = await tx
+    .select({ id: issues.id, projectKey: projects.key })
+    .from(issues)
+    .innerJoin(projects, eq(projects.id, issues.projectId))
+    .where(where);
+  if (!target) throw issueGone();
+  await writableProject(tx, target.projectKey);
+  const [issue] = await tx.select().from(issues).where(eq(issues.id, target.id)).for("update");
+  if (!issue) throw issueGone();
+  return issue;
+}
+
+async function updatedIssue(tx: Transaction, issueId: string) {
+  const updated = await findIssue(tx, eq(issues.id, issueId));
+  if (!updated) throw issueGone();
+  return updated;
+}
+
+async function saveDescription(id: string, member: Member, body: Record<string, unknown>) {
+  const { description, descriptionVersion } = parseDescriptionChange(body);
+  const where = byIssueId(id);
+  if (!where) throw issueGone();
+
+  return db.transaction(async (tx) => {
+    const issue = await lockedIssue(tx, where);
+    if (issue.descriptionVersion !== descriptionVersion) throw await conflict(tx, issue.descriptionEditedBy);
+
+    await tx
+      .update(issues)
+      .set({
+        description,
+        descriptionVersion: sql`${issues.descriptionVersion} + 1`,
+        descriptionEditedBy: member.id,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(issues.id, issue.id));
+    await replaceMentions(tx, { issueId: issue.id }, description);
+    return updatedIssue(tx, issue.id);
+  });
+}
+
+export async function updateIssue(id: string, member: Member, body: Record<string, unknown>) {
+  if ("description" in (body ?? {}) || "descriptionVersion" in (body ?? {})) {
+    return saveDescription(id, member, body);
+  }
   const keys = Object.keys(body ?? {});
   if (keys.length !== 1 || !editableFields.includes(keys[0])) {
     throw new ApiError(422, "Change one field at a time");
@@ -263,16 +309,7 @@ export async function updateIssue(id: string, body: Record<string, unknown>) {
   if (!where) throw issueGone();
 
   return db.transaction(async (tx) => {
-    const [target] = await tx
-      .select({ id: issues.id, projectKey: projects.key })
-      .from(issues)
-      .innerJoin(projects, eq(projects.id, issues.projectId))
-      .where(where);
-    if (!target) throw issueGone();
-    await writableProject(tx, target.projectKey);
-    const [issue] = await tx.select().from(issues).where(eq(issues.id, target.id)).for("update");
-    if (!issue) throw issueGone();
-
+    const issue = await lockedIssue(tx, where);
     const change = await fieldChange(tx, issue, keys[0], body[keys[0]]);
     if (Object.keys(change).length > 0) {
       await tx
@@ -280,8 +317,19 @@ export async function updateIssue(id: string, body: Record<string, unknown>) {
         .set({ ...change, updatedAt: sql`now()` })
         .where(eq(issues.id, issue.id));
     }
-    const updated = await findIssue(tx, eq(issues.id, issue.id));
-    if (!updated) throw issueGone();
-    return updated;
+    return updatedIssue(tx, issue.id);
+  });
+}
+
+export async function deleteIssue(id: string, member: Member) {
+  const where = byIssueId(id);
+  if (!where) throw issueGone();
+
+  await db.transaction(async (tx) => {
+    const issue = await lockedIssue(tx, where);
+    if (issue.createdBy !== member.id && member.role !== "admin") {
+      throw new ApiError(403, "You don't have permission to do that.");
+    }
+    await tx.delete(issues).where(eq(issues.id, issue.id));
   });
 }
