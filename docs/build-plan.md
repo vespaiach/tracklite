@@ -248,10 +248,10 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §4.7 · spec SEC-002, DATA-001
   - Needs: M0.2
   - Done: SEC-002.*, DATA-001's parsing examples
-- [ ] **M3.2 Projects API.** List, create, get, rename, archive, unarchive, delete with its cascade; the reserved-key table; the "This project is archived" check reused by later writes.
+- [x] **M3.2 Projects API.** List, create, get, rename, archive, unarchive, delete with its cascade; the reserved-key table; the "This project is archived" check reused by later writes.
   - Reads: design §2.3, §2.7, §3.3 (projects table) · spec REQ-009, REQ-010, REQ-011, REQ-013, REQ-014, DATA-002, DEC-001
   - Needs: M1.2
-  - Done: REQ-009.*, REQ-010.*, REQ-011.*, REQ-013.*, REQ-014.*, DATA-002's project examples
+  - Done: REQ-009.*, REQ-010.*, REQ-011.*, REQ-013.1 and REQ-013.3 (project lists), REQ-013.4 (the shared check), REQ-014.1, REQ-014.3, REQ-014.4, DATA-002's project examples
 - [ ] **M3.3 Project description API.** Saves with a version check (`409` on conflict); mentions written as `mentions` rows.
   - Reads: design §2.5, §3.2 (409), §3.3 · spec REQ-012, REQ-046.2, STD-8, DATA-001
   - Needs: M3.1, M3.2
@@ -259,7 +259,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 - [ ] **M3.4 Labels API.** List, create, rename, recolour, delete, with the 8 colours.
   - Reads: design §2.3, §3.3, §6.6 · spec REQ-021
   - Needs: M3.2
-  - Done: REQ-021.*
+  - Done: REQ-021.*, REQ-013.5, REQ-013.6 (from M3.2)
 - [ ] **M3.5 Project navigation pages.** Sidebar, New project dialog, project header, project settings, archived list.
   - Reads: design §6.2, §6.3 (Project settings, Archived projects) · spec REQ-009, REQ-011, REQ-013, REQ-014, REQ-015
   - Needs: M0.5 · API description: M3.2
@@ -286,7 +286,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 - [ ] **M4.2 Issue read and update API.** `GET` and `PATCH /api/issues/{ID}`, one field per save; a status change puts the issue at the top of its new column; assignee and 10-label rules.
   - Reads: design §2.4, §3.3, §3.4 · spec REQ-017, REQ-018, REQ-019, REQ-020, REQ-027.4
   - Needs: M4.1, M3.4
-  - Done: REQ-017.*…REQ-020.*, REQ-027.4; the issue parts of REQ-007.2 and REQ-008.2 (from M2.3)
+  - Done: REQ-017.*…REQ-020.*, REQ-027.4; the issue parts of REQ-007.2 and REQ-008.2 (from M2.3); REQ-013.1's read-only issue and REQ-013.4 against an issue save (from M3.2)
 - [ ] **M4.3 Issue description and delete API.** Description saves with a version check and mention rows; delete by creator or admin.
   - Reads: design §2.5, §2.7 · spec REQ-022, REQ-023, DATA-001, DATA-002
   - Needs: M4.2, M3.1
@@ -370,7 +370,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 - [ ] **M8.1 My issues API.** `GET /api/my-issues`: grouped by status, sorted, with the 14-day window.
   - Reads: design §3.3 · spec REQ-041
   - Needs: M4.2
-  - Done: REQ-041.* (API side)
+  - Done: REQ-041.* (API side), REQ-013.2 and REQ-013.3's My issues part (from M3.2)
 - [ ] **M8.2 My issues page.** The page, and sign-in landing there.
   - Reads: design §6.1 · spec REQ-041, REQ-042
   - Needs: M1.7 · API description: M8.1
