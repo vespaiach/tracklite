@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.14"
+version: "0.15"
 release: "R1"
 status: Ready to build
 updated: "2026-10-05"
@@ -195,13 +195,13 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
 
 **Rules and examples**
 
-- **REQ-009** When an admin creates a project, the system shall require a name (1 to 50 characters after whitespace at either end is trimmed; names may repeat) and a key (2 to 5 letters A to Z, stored in uppercase). The key can never have been used by another project, including archived and deleted ones. The new project appears for every member.
+- **REQ-009** When an admin creates a project, the system shall require a name (1 to 50 characters after whitespace at either end is trimmed; names may repeat; an empty name gets the field error "Name required" and a longer one gets "Too long (max 50)" (STD-3)) and a key (2 to 5 letters A to Z, stored in uppercase). The key can never have been used by another project, including archived and deleted ones. The new project appears for every member.
   - REQ-009.1: Admin creates "Website" with key `WEB` → project created, shown in every member's sidebar. (Verify: auto)
   - REQ-009.2: Admin enters key `web` → saved as `WEB`. (Verify: auto)
   - REQ-009.3: Key `WEB` was used by a project that has since been deleted → field error "Key already used" (STD-3). (Verify: auto)
   - REQ-009.4: Key `W`, `WEB1` or `ÉQ` → field error "Key must be 2 to 5 letters". (Verify: auto)
   - REQ-009.5: Admin creates a second project named "Website" with key `SITE` → created. (Verify: auto)
-- **REQ-010** The system shall not let anyone change a project's key after the project is created. Admins rename, archive and delete a project on its settings page, `/project/{KEY}/settings`.
+- **REQ-010** The system shall not let anyone change a project's key after the project is created. A request that changes it gets the field error "Key can't be changed" (STD-3). Admins rename, archive and delete a project on its settings page, `/project/{KEY}/settings`.
   - REQ-010.1: Admin opens project settings → the key is shown but can't be edited; an API request that changes it is refused and the key stays `WEB`. (Verify: auto)
 - **REQ-011** When an admin renames a project, the system shall keep its key and every issue ID unchanged.
   - REQ-011.1: "Website" is renamed to "Marketing site" → `WEB-42` is still `WEB-42`, and old links still work. (Verify: auto)
@@ -726,6 +726,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.15 (2026-10-05):** REQ-009 names the field errors for a missing or too-long project name, and REQ-010 the field error for a request that changes a project key.
 - **0.14 (2026-10-05):** REQ-051: a deactivated member's only action on the members page is reactivate; role changes wait until they're reactivated.
 - **0.13 (2026-10-05):** REQ-001 names the field error for an invalid email address.
 - **0.12 (2026-10-04):** REQ-003 names the field error for an invalid username.
