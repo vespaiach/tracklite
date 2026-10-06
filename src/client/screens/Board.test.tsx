@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   alex,
@@ -7,6 +7,7 @@ import {
   memberOf,
   mockApi,
   networkError,
+  never,
   project,
   renderAppAt,
   requestsTo,
@@ -62,13 +63,13 @@ function mockBoard({
   shown?: Project;
   columns?: Board;
   getBoard?: Answer;
-  move?: (id: string, body: { status: IssueStatus; place: unknown }) => Board | Response;
+  move?: (id: string, body: { status: IssueStatus; place: unknown }) => Board | Response | Promise<Response>;
   post?: Answer;
 } = {}) {
   let current = columns;
   const moveRoute = (id: string) => (body: unknown) => {
     const answer = move?.(id, body as { status: IssueStatus; place: unknown }) ?? current;
-    if (answer instanceof Response) return answer;
+    if (!Array.isArray(answer)) return answer;
     current = answer;
     return Response.json(issue({ id, status: (body as { status: IssueStatus }).status }));
   };
@@ -79,6 +80,8 @@ function mockBoard({
     "GET /api/projects/WEB/board": getBoard ?? (() => Response.json(current)),
     "PUT /api/issues/WEB-42/position": moveRoute("WEB-42"),
     "PUT /api/issues/WEB-5/position": moveRoute("WEB-5"),
+    "PUT /api/issues/WEB-7/position": moveRoute("WEB-7"),
+    "PUT /api/issues/WEB-12/position": moveRoute("WEB-12"),
     "POST /api/projects/WEB/issues":
       post ?? (() => Response.json(issue({ id: "WEB-43", status: "in_review" }), { status: 201 })),
     "GET /api/issues/WEB-43": () => Response.json(issue({ id: "WEB-43", status: "in_review" })),
@@ -113,6 +116,36 @@ async function openSubmenu(menu: HTMLElement) {
 
 async function openMoveTo(id: string) {
   return openSubmenu(await openCardMenu(id));
+}
+
+async function press(key: string) {
+  fireEvent.keyDown(document.activeElement as HTMLElement, { key });
+  fireEvent.keyUp(document.activeElement as HTMLElement, { key });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
+async function dragByKeyboard(title: string, columnName: string, target: string) {
+  const handle = await screen.findByRole("button", { name: `Drag ${title}` });
+  const destination = column(columnName);
+  act(() => handle.focus());
+  for (let step = 0; document.activeElement !== handle; step++) {
+    if (step === 30) throw new Error(`Can't reach the drag button of "${title}"`);
+    if (document.activeElement?.getAttribute("aria-label") === title) act(() => handle.focus());
+    else await press("ArrowDown");
+  }
+  await press("Enter");
+  for (let step = 0; step < 30; step++) {
+    const focused = document.activeElement;
+    const inDestination = focused !== null && destination.contains(focused);
+    if (inDestination && focused.getAttribute("aria-label") === target) {
+      await press("Enter");
+      return;
+    }
+    await press(inDestination ? "ArrowDown" : "Tab");
+  }
+  throw new Error(`No drop target "${target}" in ${columnName}`);
 }
 
 it("REQ-024.1: the board shows one column per status in order, each with its issue count", async () => {
@@ -258,6 +291,151 @@ it("REQ-026.2: a failed move from the menu shows Couldn't move WEB-42 and leaves
   expect(titlesIn("Done")).toEqual([]);
 });
 
+it("REQ-026.1: dragging WEB-42 by keyboard from Backlog to In Progress saves its status and place, and it's still there after a reload", async () => {
+  const fetchMock = mockBoard({
+    move: () => board({ backlog: [web7, web12], in_progress: [web5, web42, web9] }),
+  });
+  renderAppAt("/project/WEB");
+
+  await dragByKeyboard(
+    "Fix login button",
+    "In Progress",
+    "Insert between Email digest sends twice on Mondays and Show the project key in the browser tab title",
+  );
+
+  await waitFor(() =>
+    expect(requestsTo(fetchMock, "PUT /api/issues/WEB-42/position")).toEqual([
+      { status: "in_progress", place: { after: "WEB-5" } },
+    ]),
+  );
+  cleanup();
+  renderAppAt("/project/WEB");
+  await waitFor(() =>
+    expect(titlesIn("In Progress")).toEqual([
+      "Email digest sends twice on Mondays",
+      "Fix login button",
+      "Show the project key in the browser tab title",
+    ]),
+  );
+  expect(titlesIn("Backlog")).not.toContain("Fix login button");
+});
+
+it("NFR-005: a dropped card shows in its new place before the save finishes", async () => {
+  mockBoard({ move: () => never() });
+  renderAppAt("/project/WEB");
+
+  await dragByKeyboard(
+    "Fix login button",
+    "In Progress",
+    "Insert before Email digest sends twice on Mondays",
+  );
+
+  await waitFor(() =>
+    expect(titlesIn("In Progress")).toEqual([
+      "Fix login button",
+      "Email digest sends twice on Mondays",
+      "Show the project key in the browser tab title",
+    ]),
+  );
+  expect(titlesIn("Backlog")).toEqual(["Add password rules to the reset form", "Tidy up footer links"]);
+  expect(column("In Progress").querySelector(".tl-board-col__count")?.textContent).toBe("3");
+  expect(column("Backlog").querySelector(".tl-board-col__count")?.textContent).toBe("2");
+});
+
+it("REQ-026.2: a drag whose save fails puts WEB-42 back in Backlog with the toast Couldn't move WEB-42", async () => {
+  mockBoard({ move: () => networkError() });
+  renderAppAt("/project/WEB");
+
+  await dragByKeyboard(
+    "Fix login button",
+    "In Progress",
+    "Insert before Email digest sends twice on Mondays",
+  );
+
+  expect(await screen.findByText("Couldn't move WEB-42")).toBeTruthy();
+  expect(titlesIn("Backlog")).toEqual([
+    "Fix login button",
+    "Add password rules to the reset form",
+    "Tidy up footer links",
+  ]);
+  expect(titlesIn("In Progress")).not.toContain("Fix login button");
+});
+
+it("REQ-026.4: after a move, the columns involved refresh from the server", async () => {
+  const fetchMock = mockBoard({
+    move: () => board({ backlog: [web12], in_progress: [web5, web9], in_review: [web42], done: [web7] }),
+  });
+  renderAppAt("/project/WEB");
+
+  await dragByKeyboard("Fix login button", "In Review", "Drop on");
+
+  await waitFor(() => expect(titlesIn("Done")).toEqual(["Add password rules to the reset form"]));
+  expect(titlesIn("In Review")).toEqual(["Fix login button"]);
+  expect(titlesIn("Backlog")).toEqual(["Tidy up footer links"]);
+  expect(requestsTo(fetchMock, "GET /api/projects/WEB/board")).toHaveLength(2);
+});
+
+it("REQ-026.5: dragging an issue another member deleted shows This issue was deleted and removes the card", async () => {
+  let deleted = false;
+  mockBoard({
+    getBoard: () =>
+      Response.json(deleted ? board({ backlog: [web7, web12], in_progress: [web5, web9] }) : webBoard),
+    move: () => {
+      deleted = true;
+      return apiError(404, "This issue was deleted");
+    },
+  });
+  renderAppAt("/project/WEB");
+
+  await dragByKeyboard(
+    "Fix login button",
+    "In Progress",
+    "Insert before Email digest sends twice on Mondays",
+  );
+
+  expect(await screen.findByText("This issue was deleted")).toBeTruthy();
+  await waitFor(() =>
+    expect(titlesIn("Backlog")).toEqual(["Add password rules to the reset form", "Tidy up footer links"]),
+  );
+  expect(titlesIn("In Progress")).not.toContain("Fix login button");
+});
+
+it("dropping a card between two cards in its own column saves place { after: <card above> }, and dropping it first saves top", async () => {
+  const fetchMock = mockBoard();
+  renderAppAt("/project/WEB");
+
+  await dragByKeyboard(
+    "Tidy up footer links",
+    "Backlog",
+    "Insert between Fix login button and Add password rules to the reset form",
+  );
+  await waitFor(() =>
+    expect(requestsTo(fetchMock, "PUT /api/issues/WEB-12/position")).toEqual([
+      { status: "backlog", place: { after: "WEB-42" } },
+    ]),
+  );
+
+  await dragByKeyboard("Add password rules to the reset form", "Backlog", "Insert before Fix login button");
+  await waitFor(() =>
+    expect(requestsTo(fetchMock, "PUT /api/issues/WEB-7/position")).toEqual([
+      { status: "backlog", place: "top" },
+    ]),
+  );
+});
+
+it("dropping a card into an empty column saves place top", async () => {
+  const fetchMock = mockBoard();
+  renderAppAt("/project/WEB");
+
+  await dragByKeyboard("Email digest sends twice on Mondays", "Canceled", "Drop on");
+
+  await waitFor(() =>
+    expect(requestsTo(fetchMock, "PUT /api/issues/WEB-5/position")).toEqual([
+      { status: "canceled", place: "top" },
+    ]),
+  );
+});
+
 it("STD-7: empty columns name the next action, and Create one opens New issue in that column's status", async () => {
   mockBoard({ columns: board({}) });
   renderAppAt("/project/WEB");
@@ -276,13 +454,14 @@ it("STD-7: empty columns name the next action, and Create one opens New issue in
   );
 });
 
-it("REQ-024.2: an archived project's board has no + buttons or ⋯ menus, and cards still open", async () => {
+it("REQ-024.2: an archived project's board has no + buttons, ⋯ menus or drag buttons, and cards still open", async () => {
   mockBoard({ shown: archivedWeb });
   renderAppAt("/project/WEB");
 
   await screen.findByRole("region", { name: "Backlog" });
   expect(screen.queryByRole("button", { name: /^New issue in/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /actions$/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Drag / })).toBeNull();
   expect(column("In Review").textContent).toContain("No issues.");
   expect(column("In Review").textContent).not.toContain("Create one.");
   expect(

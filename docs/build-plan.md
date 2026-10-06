@@ -322,7 +322,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §6.5 · spec REQ-024, REQ-025, REQ-029, REQ-030 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Board.dc.html&via=share (Board)
   - Needs: M4.4 · API description: M5.2, M5.3
   - Done: REQ-029.*, REQ-030.* (auto); component tests for the card layout
-- [ ] **M5.5 Drag and drop.** Mouse and keyboard moves using the spike's result; optimistic moves with rollback and a toast.
+- [x] **M5.5 Drag and drop.** Mouse and keyboard moves using the spike's result; optimistic moves with rollback and a toast.
   - Reads: design §1.7 (optimistic moves), §6.5, the M5.1 decision · spec REQ-026, NFR-005
   - Needs: M5.1, M5.4
   - Done: tests for the optimistic update and rollback

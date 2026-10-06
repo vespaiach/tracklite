@@ -1406,6 +1406,12 @@ a.tl-rail-item {
   padding: 0;
   list-style: none;
 }
+.tl-board-col__slot {
+  position: absolute;
+}
+.tl-board-col__slot[data-drop-target] {
+  position: static;
+}
 .tl-board-empty {
   margin: 0;
   padding: 3px;
