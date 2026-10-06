@@ -333,7 +333,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 **Run order:** **M6.1 ∥ M6.2**. M6.1 needs only M4.2, so it can run alongside M4.3–M4.5 and M5.
 
-- [ ] **M6.1 List API.** `pg_trgm` indexes; the search query (every typed word must match, `%` and `_` treated as plain characters); filters, sort, `offset` paging; unknown values ignored.
+- [x] **M6.1 List API.** `pg_trgm` indexes; the search query (every typed word must match, `%` and `_` treated as plain characters); filters, sort, `offset` paging; unknown values ignored.
   - Reads: design §2.4, §3.3, §3.4 (paging) · spec REQ-036…039, NFR-004
   - Needs: M4.2
   - Done: REQ-036.*…REQ-039.*

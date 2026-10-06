@@ -1,5 +1,20 @@
 import "server-only";
-import { and, asc, desc, eq, gt, inArray, isNull, ne, notInArray, or, type SQL, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  notInArray,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { alias, type PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { generateKeyBetween } from "fractional-indexing";
 import { ApiError } from "./api-error";
@@ -25,10 +40,20 @@ type IssueStatus = (typeof issueStatus.enumValues)[number];
 type NewIssue = { requestId?: unknown; title?: unknown; status?: unknown };
 type IssueChange = PgUpdateSetSource<typeof issues>;
 type Place = "top" | "bottom" | { after: string };
+type SortColumn = keyof typeof sortColumns;
 
 const maxLabels = 10;
 const closedStatuses: IssueStatus[] = ["done", "canceled"];
 const editableFields = ["title", "status", "priority", "assignee", "labelIds"];
+
+const listPageSize = 100;
+const unassigned = "-";
+const sortColumns = {
+  id: { column: issues.number, ascending: true },
+  status: { column: issues.status, ascending: true },
+  priority: { column: issues.priority, ascending: true },
+  updated: { column: issues.updatedAt, ascending: false },
+};
 
 const maxTitleLength = 200;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -405,12 +430,33 @@ export async function deleteIssue(id: string, member: Member) {
   });
 }
 
-export async function getBoard(projectKey: string) {
+async function readableProject(projectKey: string) {
   const [project] = await db
     .select({ id: projects.id, key: projects.key })
     .from(projects)
     .where(eq(projects.key, projectKey.toUpperCase()));
   if (!project) throw new ApiError(404, "Not found");
+  return project;
+}
+
+async function labelsOf(issueIds: string[]) {
+  if (issueIds.length === 0) return [];
+  return db
+    .select({ issueId: issueLabels.issueId, id: labels.id, name: labels.name, color: labels.color })
+    .from(issueLabels)
+    .innerJoin(labels, eq(labels.id, issueLabels.labelId))
+    .where(inArray(issueLabels.issueId, issueIds))
+    .orderBy(asc(sql`lower(${labels.name})`), asc(labels.name));
+}
+
+function labelsFor(labelRows: Awaited<ReturnType<typeof labelsOf>>, issueId: string) {
+  return labelRows
+    .filter((label) => label.issueId === issueId)
+    .map(({ id, name, color }) => ({ id, name, color }));
+}
+
+export async function getBoard(projectKey: string) {
+  const project = await readableProject(projectKey);
 
   const rows = await db
     .select({
@@ -438,20 +484,7 @@ export async function getBoard(projectKey: string) {
     )
     .orderBy(asc(issues.status), asc(issues.position), asc(issues.id));
 
-  const labelRows =
-    rows.length === 0
-      ? []
-      : await db
-          .select({ issueId: issueLabels.issueId, id: labels.id, name: labels.name, color: labels.color })
-          .from(issueLabels)
-          .innerJoin(labels, eq(labels.id, issueLabels.labelId))
-          .where(
-            inArray(
-              issueLabels.issueId,
-              rows.map((row) => row.issueId),
-            ),
-          )
-          .orderBy(asc(sql`lower(${labels.name})`), asc(labels.name));
+  const labelRows = await labelsOf(rows.map((row) => row.issueId));
 
   const cards = rows.map((row) => ({
     status: row.status,
@@ -460,13 +493,155 @@ export async function getBoard(projectKey: string) {
       title: row.title,
       priority: row.priority,
       assignee: row.assignee ? memberSummary(row.assignee) : null,
-      labels: labelRows
-        .filter((label) => label.issueId === row.issueId)
-        .map(({ id, name, color }) => ({ id, name, color })),
+      labels: labelsFor(labelRows, row.issueId),
     },
   }));
   return issueStatus.enumValues.map((status) => {
     const column = cards.filter((entry) => entry.status === status).map((entry) => entry.card);
     return { status, count: column.length, cards: column };
   });
+}
+
+function knownValues<T extends string>(values: string[], allowed: readonly T[]) {
+  return allowed.filter((value) => values.includes(value));
+}
+
+function containsText(word: string) {
+  return `%${word.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+}
+
+function searchCondition(projectKey: string, query: string) {
+  const words = query.split(/\s+/).filter((word) => word !== "");
+  return and(
+    ...words.map((word) => {
+      const pattern = containsText(word);
+      return or(
+        ilike(issues.title, pattern),
+        ilike(issues.description, pattern),
+        sql`(${projectKey}::text || '-' || ${issues.number}::text) ilike ${pattern}`,
+      );
+    }),
+  );
+}
+
+async function assigneeCondition(values: string[]) {
+  const usernames = values.filter((value) => value !== unassigned).map((value) => value.toLowerCase());
+  const found =
+    usernames.length === 0
+      ? []
+      : await db.select({ id: members.id }).from(members).where(inArray(members.username, usernames));
+  const conditions = [
+    ...(values.includes(unassigned) ? [isNull(issues.assigneeId)] : []),
+    ...(found.length > 0
+      ? [
+          inArray(
+            issues.assigneeId,
+            found.map((member) => member.id),
+          ),
+        ]
+      : []),
+  ];
+  return conditions.length === 0 ? undefined : or(...conditions);
+}
+
+async function labelCondition(projectId: string, values: string[]) {
+  const names = values.map((value) => value.toLowerCase());
+  const found =
+    names.length === 0
+      ? []
+      : await db
+          .select({ id: labels.id })
+          .from(labels)
+          .where(and(eq(labels.projectId, projectId), inArray(sql`lower(${labels.name})`, names)));
+  if (found.length === 0) return undefined;
+  return inArray(
+    issues.id,
+    db
+      .select({ issueId: issueLabels.issueId })
+      .from(issueLabels)
+      .where(
+        inArray(
+          issueLabels.labelId,
+          found.map((label) => label.id),
+        ),
+      ),
+  );
+}
+
+function listOrder(params: URLSearchParams) {
+  const sortParam = params.get("sort");
+  const sort: SortColumn =
+    sortParam !== null && sortParam in sortColumns ? (sortParam as SortColumn) : "updated";
+  const { column, ascending } = sortColumns[sort];
+  const dir = params.get("dir");
+  const isAscending = dir === "asc" || dir === "desc" ? dir === "asc" : ascending;
+  return [isAscending ? asc(column) : desc(column), desc(issues.updatedAt), asc(issues.id)];
+}
+
+function listOffset(params: URLSearchParams) {
+  const offset = params.get("offset") ?? "";
+  return /^\d{1,9}$/.test(offset) ? Number(offset) : 0;
+}
+
+export async function listIssues(projectKey: string, params: URLSearchParams) {
+  const project = await readableProject(projectKey);
+  const statuses = knownValues(params.getAll("status"), issueStatus.enumValues);
+  const priorities = knownValues(params.getAll("priority"), issuePriority.enumValues);
+
+  const rows = await db
+    .select({
+      issueId: issues.id,
+      number: issues.number,
+      title: issues.title,
+      status: issues.status,
+      priority: issues.priority,
+      updatedAt: issues.updatedAt,
+      assignee: {
+        username: assignees.username,
+        fullName: assignees.fullName,
+        deactivatedAt: assignees.deactivatedAt,
+      },
+    })
+    .from(issues)
+    .leftJoin(assignees, eq(assignees.id, issues.assigneeId))
+    .where(
+      and(
+        eq(issues.projectId, project.id),
+        statuses.length > 0 ? inArray(issues.status, statuses) : undefined,
+        priorities.length > 0 ? inArray(issues.priority, priorities) : undefined,
+        await assigneeCondition(params.getAll("assignee")),
+        await labelCondition(project.id, params.getAll("label")),
+        searchCondition(project.key, params.get("q") ?? ""),
+      ),
+    )
+    .orderBy(...listOrder(params))
+    .limit(listPageSize + 1)
+    .offset(listOffset(params));
+
+  const page = rows.slice(0, listPageSize);
+  const labelRows = await labelsOf(page.map((row) => row.issueId));
+  const deactivatedAssignees = await db
+    .selectDistinct({
+      username: members.username,
+      fullName: members.fullName,
+      deactivatedAt: members.deactivatedAt,
+    })
+    .from(members)
+    .innerJoin(issues, eq(issues.assigneeId, members.id))
+    .where(and(eq(issues.projectId, project.id), isNotNull(members.deactivatedAt)))
+    .orderBy(asc(members.fullName), asc(members.username));
+
+  return {
+    issues: page.map((row) => ({
+      id: `${project.key}-${row.number}`,
+      title: row.title,
+      status: row.status,
+      priority: row.priority,
+      assignee: row.assignee ? memberSummary(row.assignee) : null,
+      labels: labelsFor(labelRows, row.issueId),
+      updatedAt: row.updatedAt.toISOString(),
+    })),
+    hasMore: rows.length > listPageSize,
+    deactivatedAssignees: deactivatedAssignees.map(memberSummary),
+  };
 }
