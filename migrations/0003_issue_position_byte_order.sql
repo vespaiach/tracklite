@@ -1,0 +1,1 @@
+ALTER TABLE "issues" ALTER COLUMN "position" SET DATA TYPE text COLLATE "C";

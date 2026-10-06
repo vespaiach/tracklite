@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
+const byteOrderedText = customType<{ data: string }>({ dataType: () => 'text COLLATE "C"' });
 
 const id = () => uuid("id").primaryKey().defaultRandom();
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
@@ -183,7 +184,7 @@ export const issues = pgTable(
     status: issueStatus("status").notNull(),
     priority: issuePriority("priority").notNull(),
     assigneeId: uuid("assignee_id").references(() => members.id),
-    position: text("position").notNull(),
+    position: byteOrderedText("position").notNull(),
     createdBy: uuid("created_by")
       .notNull()
       .references(() => members.id),
