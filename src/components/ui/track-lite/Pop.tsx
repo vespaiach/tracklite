@@ -1,5 +1,5 @@
 import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
-import { type ComponentProps, type CSSProperties, type ReactNode, useState } from "react";
+import { type ComponentProps, type CSSProperties, createContext, type ReactNode, use, useState } from "react";
 import {
   Button as AriaButton,
   Menu as AriaMenu,
@@ -15,6 +15,7 @@ import {
   Select,
   type Selection,
   Separator,
+  SubmenuTrigger,
   useFilter,
 } from "react-aria-components";
 import { cx } from "./cx";
@@ -95,6 +96,8 @@ export type MenuProps = {
   "aria-describedby"?: string;
 };
 
+const MenuActionContext = createContext<(key: Key) => void>(() => {});
+
 export function Menu({
   label,
   icon,
@@ -107,48 +110,87 @@ export function Menu({
   "aria-describedby": describedBy,
 }: MenuProps) {
   return (
-    <MenuTrigger>
-      <AriaButton
-        id={id}
-        aria-label={label}
-        aria-describedby={describedBy}
-        className={cx("tl-btn tl-btn--sm", `tl-btn--${variant}`, text === undefined && "tl-btn--icon")}>
-        {text ?? icon}
-      </AriaButton>
-      <Popover placement="bottom end">
-        <AriaMenu
+    <MenuActionContext value={onAction}>
+      <MenuTrigger>
+        <AriaButton
+          id={id}
           aria-label={label}
-          className="tl-pop"
-          {...(selectedKey === undefined
-            ? { onAction }
-            : {
-                selectionMode: "single",
-                disallowEmptySelection: true,
-                selectedKeys: [selectedKey],
-                onSelectionChange: (keys: Selection) => {
-                  if (keys !== "all") for (const key of keys) onAction(key);
-                },
-              })}>
-          {children}
-        </AriaMenu>
-      </Popover>
-    </MenuTrigger>
+          aria-describedby={describedBy}
+          className={cx("tl-btn tl-btn--sm", `tl-btn--${variant}`, text === undefined && "tl-btn--icon")}>
+          {text ?? icon}
+        </AriaButton>
+        <Popover placement="bottom end">
+          <AriaMenu
+            aria-label={label}
+            className="tl-pop"
+            {...(selectedKey === undefined
+              ? { onAction }
+              : {
+                  selectionMode: "single",
+                  disallowEmptySelection: true,
+                  selectedKeys: [selectedKey],
+                  onSelectionChange: (keys: Selection) => {
+                    if (keys !== "all") for (const key of keys) onAction(key);
+                  },
+                })}>
+            {children}
+          </AriaMenu>
+        </Popover>
+      </MenuTrigger>
+    </MenuActionContext>
   );
 }
 
-export function MenuItem({ id, danger, children }: { id: string; danger?: boolean; children: string }) {
+export type MenuItemProps = {
+  id: string;
+  danger?: boolean;
+  icon?: ReactNode;
+  checked?: boolean;
+  disabled?: boolean;
+  children: string;
+};
+
+export function MenuItem({ id, danger, icon, checked, disabled, children }: MenuItemProps) {
   return (
     <AriaMenuItem
       id={id}
       textValue={children}
+      isDisabled={disabled}
       className={cx("tl-pop__item", danger && "tl-pop__item--danger")}>
       {({ isSelected }) => (
         <>
+          {icon}
           {children}
-          {isSelected && <span className="tl-pop__check">✓</span>}
+          {(isSelected || checked) && <span className="tl-pop__check">✓</span>}
         </>
       )}
     </AriaMenuItem>
+  );
+}
+
+export function MenuSubmenu({ label, children }: { label: string; children: ReactNode }) {
+  const onAction = use(MenuActionContext);
+  return (
+    <SubmenuTrigger>
+      <AriaMenuItem
+        textValue={label}
+        className="tl-pop__item">
+        {label}
+        <span
+          aria-hidden="true"
+          className="tl-pop__caret">
+          ▸
+        </span>
+      </AriaMenuItem>
+      <Popover placement="end top">
+        <AriaMenu
+          aria-label={label}
+          className="tl-pop"
+          onAction={(key) => onAction(key)}>
+          {children}
+        </AriaMenu>
+      </Popover>
+    </SubmenuTrigger>
   );
 }
 

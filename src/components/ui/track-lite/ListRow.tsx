@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type MouseEvent, type ReactNode, useId } from "react";
 import { cx } from "./cx";
 
 export type ListGroupProps = { label: string; count?: number; icon?: ReactNode; action?: ReactNode };
@@ -52,45 +52,97 @@ export function Board({ children }: { children: ReactNode }) {
   return <div className="tl-board">{children}</div>;
 }
 
-export type BoardColumnProps = { label: string; count?: number; icon?: ReactNode; children: ReactNode };
+export type BoardColumnProps = {
+  label: string;
+  count?: number;
+  icon?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+};
 
-export function BoardColumn({ label, count, icon, children }: BoardColumnProps) {
+export function BoardColumn({ label, count, icon, action, children }: BoardColumnProps) {
   return (
-    <section className="tl-board-col">
+    <section
+      aria-label={label}
+      className="tl-board-col">
       <div className="tl-board-col__head">
         {icon}
         {label}
         {count != null && <span className="tl-board-col__count">{count}</span>}
+        {action}
       </div>
       <div className="tl-board-col__body">{children}</div>
     </section>
   );
 }
 
+export type BoardEmptyProps = { children: ReactNode; action?: string; onAction?: () => void };
+
+export function BoardEmpty({ children, action, onAction }: BoardEmptyProps) {
+  return (
+    <p className="tl-board-empty">
+      {children}
+      {action && (
+        <>
+          {" "}
+          <button
+            type="button"
+            onClick={onAction}
+            className="tl-board-empty__action">
+            {action}
+          </button>
+        </>
+      )}
+    </p>
+  );
+}
+
 export type BoardCardProps = {
   id: string;
   title: string;
-  top?: ReactNode;
+  href: string;
+  onOpen?: (event: MouseEvent<HTMLAnchorElement>) => void;
+  handle?: ReactNode;
+  priority?: ReactNode;
   assignee?: ReactNode;
+  menu?: ReactNode;
   foot?: ReactNode;
   dragging?: boolean;
-  onClick?: () => void;
 };
 
-export function BoardCard({ id, title, top, assignee, foot, dragging, onClick }: BoardCardProps) {
+export function BoardCard({
+  id,
+  title,
+  href,
+  onOpen,
+  handle,
+  priority,
+  assignee,
+  menu,
+  foot,
+  dragging,
+}: BoardCardProps) {
+  const titleId = useId();
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cx("tl-board-card", dragging && "tl-board-card--dragging")}>
+    <article
+      aria-labelledby={titleId}
+      className={cx("tl-board-card", menu && "tl-board-card--menu", dragging && "tl-board-card--dragging")}>
       <span className="tl-board-card__top">
-        {top}
+        {handle}
+        {priority}
         {id}
         {assignee && <span className="tl-board-card__assignee">{assignee}</span>}
       </span>
-      <span className="tl-board-card__title">{title}</span>
+      <a
+        id={titleId}
+        href={href}
+        onClick={onOpen}
+        className="tl-board-card__title">
+        {title}
+      </a>
       {foot && <span className="tl-board-card__foot">{foot}</span>}
-    </button>
+      {menu && <span className="tl-board-card__menu">{menu}</span>}
+    </article>
   );
 }
 

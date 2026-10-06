@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { MentionList, Menu, MenuItem, MultiPicker, Picker, PickerItem, PopItem } from "./Pop";
+import { MentionList, Menu, MenuItem, MenuSubmenu, MultiPicker, Picker, PickerItem, PopItem } from "./Pop";
 
 afterEach(cleanup);
 
@@ -49,6 +49,52 @@ it("Menu with a text trigger shows the text and checks the selected item", async
 
   fireEvent.click(items[2]);
   expect(onAction).toHaveBeenCalledWith("blue");
+});
+
+it("MenuSubmenu opens its items, checks the current one and passes the chosen key to the menu's onAction", async () => {
+  const onAction = vi.fn();
+  render(
+    <Menu
+      label="WEB-42 actions"
+      text="⋯"
+      onAction={onAction}>
+      <MenuSubmenu label="Move to">
+        <MenuItem
+          id="backlog"
+          checked
+          disabled>
+          Backlog
+        </MenuItem>
+        <MenuItem id="in_review">In Review</MenuItem>
+      </MenuSubmenu>
+      <MenuItem
+        id="top"
+        disabled>
+        Move to top
+      </MenuItem>
+      <MenuItem id="bottom">Move to bottom</MenuItem>
+    </Menu>,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "WEB-42 actions" }));
+  const menu = await screen.findByRole("menu");
+  expect(within(menu).getByRole("menuitem", { name: "Move to top" }).getAttribute("aria-disabled")).toBe(
+    "true",
+  );
+
+  const moveTo = within(menu).getByRole("menuitem", { name: "Move to" });
+  moveTo.focus();
+  fireEvent.keyDown(moveTo, { key: "ArrowRight" });
+  const submenu = (await screen.findAllByRole("menu"))[1];
+  const backlog = within(submenu).getByRole("menuitem", { name: /Backlog/ });
+  expect(backlog.getAttribute("aria-disabled")).toBe("true");
+  expect(backlog.textContent).toContain("✓");
+
+  fireEvent.click(backlog);
+  expect(onAction).not.toHaveBeenCalled();
+
+  fireEvent.click(within(submenu).getByRole("menuitem", { name: "In Review" }));
+  expect(onAction).toHaveBeenCalledWith("in_review");
 });
 
 function StatusPicker({ onChange = vi.fn() }: { onChange?: (key: unknown) => void }) {

@@ -58,6 +58,14 @@ export type Issue = {
   archived: boolean;
 };
 
+export type BoardIssue = Pick<Issue, "id" | "title" | "priority" | "assignee" | "labels">;
+
+export type BoardStatusColumn = { status: IssueStatus; count: number; cards: BoardIssue[] };
+
+export type Board = BoardStatusColumn[];
+
+export type BoardPlace = "top" | "bottom" | { after: string };
+
 export type IssueChange =
   | { title: string }
   | { status: IssueStatus }
@@ -113,7 +121,7 @@ const baseQuery: BaseQueryFn<ApiRequest, unknown, ApiFailure> = async (request, 
 export const api = createApi({
   baseQuery,
   refetchOnMountOrArgChange: true,
-  tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels", "Issue"],
+  tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels", "Issue", "Board"],
   endpoints: (build) => ({
     me: build.query<Me, void>({ query: () => "me", providesTags: ["Me"] }),
     signIn: build.mutation<null, { email: string; password: string }>({
@@ -226,6 +234,11 @@ export const api = createApi({
     deleteIssue: build.mutation<null, string>({
       query: (id) => ({ path: `issues/${id}`, method: "DELETE" }),
     }),
+    board: build.query<Board, string>({ query: (key) => `projects/${key}/board`, providesTags: ["Board"] }),
+    moveIssue: build.mutation<Issue, { id: string; status: IssueStatus; place: BoardPlace }>({
+      query: ({ id, ...body }) => ({ path: `issues/${id}/position`, method: "PUT", body }),
+      invalidatesTags: (result) => (result ? ["Board"] : []),
+    }),
   }),
 });
 
@@ -259,4 +272,6 @@ export const {
   useCreateIssueMutation,
   useUpdateIssueMutation,
   useDeleteIssueMutation,
+  useBoardQuery,
+  useMoveIssueMutation,
 } = api;

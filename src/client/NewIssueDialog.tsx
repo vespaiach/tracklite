@@ -1,9 +1,10 @@
 import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
 import { type FormEvent, useId, useState } from "react";
 import { useNavigate } from "react-router";
-import { AppDialog, Button, FieldError, TitleInput } from "../components/ui/track-lite";
-import { type ApiFailure, type ProjectSummary, useCreateIssueMutation } from "./api";
+import { AppDialog, Button, FieldError, Status, TitleInput } from "../components/ui/track-lite";
+import { type ApiFailure, type IssueStatus, type ProjectSummary, useCreateIssueMutation } from "./api";
 import { useFailureToast } from "./failure";
+import { statuses } from "./issue-fields";
 
 export function NewIssueButton({ project }: { project: ProjectSummary }) {
   const [open, setOpen] = useState(false);
@@ -30,7 +31,9 @@ export function NewIssueButton({ project }: { project: ProjectSummary }) {
   );
 }
 
-function NewIssueDialog({ project, onClose }: { project: ProjectSummary; onClose: () => void }) {
+export type NewIssueDialogProps = { project: ProjectSummary; status?: IssueStatus; onClose: () => void };
+
+export function NewIssueDialog({ project, status, onClose }: NewIssueDialogProps) {
   const formId = useId();
   const errorId = useId();
   const navigate = useNavigate();
@@ -44,7 +47,7 @@ function NewIssueDialog({ project, onClose }: { project: ProjectSummary; onClose
     event.preventDefault();
     setError(undefined);
     try {
-      const created = await createIssue({ key: project.key, requestId, title }).unwrap();
+      const created = await createIssue({ key: project.key, requestId, title, status }).unwrap();
       await navigate(`/issue/${created.id}`);
     } catch (caught) {
       const failure = caught as ApiFailure;
@@ -82,6 +85,7 @@ function NewIssueDialog({ project, onClose }: { project: ProjectSummary; onClose
         id={formId}
         noValidate
         onSubmit={submit}>
+        {status && <StartingStatus status={status} />}
         <TitleInput
           aria-label="Title"
           placeholder="Issue title"
@@ -95,5 +99,15 @@ function NewIssueDialog({ project, onClose }: { project: ProjectSummary; onClose
         {error && <FieldError id={errorId}>{error}</FieldError>}
       </form>
     </AppDialog>
+  );
+}
+
+function StartingStatus({ status }: { status: IssueStatus }) {
+  const [, name, kind] = statuses.find(([key]) => key === status) ?? statuses[0];
+  return (
+    <p className="tl-form-status">
+      It starts in <Status status={kind} />
+      {name}.
+    </p>
   );
 }
