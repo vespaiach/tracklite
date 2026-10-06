@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, notInArray, or, type SQL, sql } from "drizzle-orm";
 import { alias, type PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { generateKeyBetween } from "fractional-indexing";
 import { ApiError } from "./api-error";
@@ -26,6 +26,7 @@ type NewIssue = { requestId?: unknown; title?: unknown; status?: unknown };
 type IssueChange = PgUpdateSetSource<typeof issues>;
 
 const maxLabels = 10;
+const closedStatuses: IssueStatus[] = ["done", "canceled"];
 const editableFields = ["title", "status", "priority", "assignee", "labelIds"];
 
 const maxTitleLength = 200;
@@ -331,5 +332,71 @@ export async function deleteIssue(id: string, member: Member) {
       throw new ApiError(403, "You don't have permission to do that.");
     }
     await tx.delete(issues).where(eq(issues.id, issue.id));
+  });
+}
+
+export async function getBoard(projectKey: string) {
+  const [project] = await db
+    .select({ id: projects.id, key: projects.key })
+    .from(projects)
+    .where(eq(projects.key, projectKey.toUpperCase()));
+  if (!project) throw new ApiError(404, "Not found");
+
+  const rows = await db
+    .select({
+      issueId: issues.id,
+      number: issues.number,
+      title: issues.title,
+      status: issues.status,
+      priority: issues.priority,
+      assignee: {
+        username: assignees.username,
+        fullName: assignees.fullName,
+        deactivatedAt: assignees.deactivatedAt,
+      },
+    })
+    .from(issues)
+    .leftJoin(assignees, eq(assignees.id, issues.assigneeId))
+    .where(
+      and(
+        eq(issues.projectId, project.id),
+        or(
+          notInArray(issues.status, closedStatuses),
+          sql`${issues.statusChangedAt} > now() - interval '14 days'`,
+        ),
+      ),
+    )
+    .orderBy(asc(issues.status), asc(issues.position), asc(issues.id));
+
+  const labelRows =
+    rows.length === 0
+      ? []
+      : await db
+          .select({ issueId: issueLabels.issueId, id: labels.id, name: labels.name, color: labels.color })
+          .from(issueLabels)
+          .innerJoin(labels, eq(labels.id, issueLabels.labelId))
+          .where(
+            inArray(
+              issueLabels.issueId,
+              rows.map((row) => row.issueId),
+            ),
+          )
+          .orderBy(asc(sql`lower(${labels.name})`), asc(labels.name));
+
+  const cards = rows.map((row) => ({
+    status: row.status,
+    card: {
+      id: `${project.key}-${row.number}`,
+      title: row.title,
+      priority: row.priority,
+      assignee: row.assignee ? memberSummary(row.assignee) : null,
+      labels: labelRows
+        .filter((label) => label.issueId === row.issueId)
+        .map(({ id, name, color }) => ({ id, name, color })),
+    },
+  }));
+  return issueStatus.enumValues.map((status) => {
+    const column = cards.filter((entry) => entry.status === status).map((entry) => entry.card);
+    return { status, count: column.length, cards: column };
   });
 }
