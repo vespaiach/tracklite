@@ -327,7 +327,7 @@ Changing a field that can't be changed (username, email, project key) gets `422`
 
 | Method and path | Body → result | Who | Spec |
 |---|---|---|---|
-| `GET /api/projects/{KEY}/board` | → 5 columns in order, each with cards and a count. Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-024, REQ-025, REQ-028 |
+| `GET /api/projects/{KEY}/board` | → 5 columns in order, each `{ status, count, cards }`, cards sorted by `(position, id)`. A card is `{ id, title, priority, assignee, labels }`: `assignee` is a member or `null`, and `labels` holds all of the issue's labels as `{ id, name, color }`, sorted by name ignoring capitals (the card trims them to 3 and "+N"). Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-024, REQ-025, REQ-028 |
 | `GET /api/projects/{KEY}/issues` | Query: `status`, `assignee`, `priority`, `label` (each repeatable), `q`, `sort`, `dir`, `offset` → 100 rows plus `hasMore`. Unknown values are ignored | Member | REQ-036…040 |
 | `POST /api/projects/{KEY}/issues` | `{ requestId, title, status? }` → `201`. `status` is used by the column **+** buttons | Member | REQ-016, REQ-029 |
 | `GET /api/issues/{ID}` | → the issue with its labels, assignee, creator, `descriptionVersion` and mentions | Member | REQ-016 |

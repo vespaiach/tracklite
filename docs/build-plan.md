@@ -310,7 +310,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §6.5 · spec REQ-024, REQ-026 · React Aria docs for `GridList` and `useDragAndDrop`
   - Needs: M0.4
   - Done: a decision in §7; the spike code is deleted
-- [ ] **M5.2 Board API.** `GET /api/projects/{KEY}/board`, with the 14-day window for Done and Canceled.
+- [x] **M5.2 Board API.** `GET /api/projects/{KEY}/board`, with the 14-day window for Done and Canceled.
   - Reads: design §2.4, §3.3 · spec REQ-024, REQ-025, REQ-028
   - Needs: M4.2
   - Done: REQ-024.*, REQ-025.*, REQ-028.* (API side)
