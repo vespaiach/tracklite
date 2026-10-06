@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../../../server/db";
 import { memberSummary } from "../../../../../server/members";
 import { issues, projects } from "../../../../../server/schema";
 import { createSession } from "../../../../../server/sessions";
-import { createMember, createProject } from "../../../../../test/factories";
+import { createIssue, createMember, createProject } from "../../../../../test/factories";
 import { jsonRequest } from "../../../../../test/reset-links";
 import { POST } from "./route";
 
@@ -156,4 +156,28 @@ it("REQ-013.4: creating an issue in an archived project is refused", async () =>
   expect(response.status).toBe(403);
   expect(await response.json()).toEqual({ error: { message: "This project is archived" } });
   expect(await issuesOf(project.id)).toHaveLength(0);
+});
+
+it("REQ-027.3: Sam clicks + on Backlog and creates WEB-43 → it's at the top of Backlog", async () => {
+  const sam = await signedIn();
+  const project = await createProject({ nextIssueNumber: 43_000 });
+  const existing = await createIssue(project.id);
+
+  const response = await createWith(sam.cookie, project.key, {
+    requestId: randomUUID(),
+    title: "New card",
+    status: "backlog",
+  });
+
+  expect(response.status).toBe(201);
+  const created = await response.json();
+  const column = await db
+    .select({ number: issues.number })
+    .from(issues)
+    .where(and(eq(issues.projectId, project.id), eq(issues.status, "backlog")))
+    .orderBy(asc(issues.position), asc(issues.id));
+  expect(column.map((row) => `${project.key}-${row.number}`)).toEqual([
+    created.id,
+    `${project.key}-${existing.number}`,
+  ]);
 });
