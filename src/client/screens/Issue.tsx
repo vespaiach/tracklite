@@ -19,9 +19,7 @@ import {
   PickValue,
   Pill,
   Priority,
-  type PriorityKind,
   Status,
-  type StatusKind,
   Tag,
 } from "../../components/ui/track-lite";
 import { Markdown } from "../../lib/markdown/Markdown";
@@ -44,27 +42,12 @@ import {
 import { formatDate } from "../dates";
 import { type DescriptionDraft, DescriptionEditor } from "../DescriptionEditor";
 import { useFailureToast } from "../failure";
+import { priorities, statuses } from "../issue-fields";
 import { LoadFailed, Loading } from "../LoadStates";
 import { useRouterClick } from "../links";
 import { ProjectGate } from "../ProjectGate";
 import { useShowLoading } from "../useShowLoading";
 import { NotFound } from "./NotFound";
-
-const statuses: [IssueStatus, string, StatusKind][] = [
-  ["backlog", "Backlog", "backlog"],
-  ["in_progress", "In Progress", "progress"],
-  ["in_review", "In Review", "review"],
-  ["done", "Done", "done"],
-  ["canceled", "Canceled", "canceled"],
-];
-
-const priorities: [IssuePriority, string, PriorityKind][] = [
-  ["none", "No priority", "none"],
-  ["urgent", "Urgent", "urgent"],
-  ["high", "High", "high"],
-  ["medium", "Medium", "med"],
-  ["low", "Low", "low"],
-];
 
 const unassigned = "_unassigned";
 

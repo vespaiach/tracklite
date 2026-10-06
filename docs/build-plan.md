@@ -318,8 +318,8 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2.4, §3.4 (first bullet) · spec REQ-026, REQ-027, REQ-036.5
   - Needs: M5.2
   - Done: REQ-026.*, REQ-027.*, REQ-036.5
-- [ ] **M5.4 Board page.** Columns that scroll on their own, cards, the **⋯** menu (move by menu), the column **+** buttons.
-  - Reads: design §6.5 · spec REQ-024, REQ-025, REQ-029, REQ-030
+- [x] **M5.4 Board page.** Columns that scroll on their own, cards, the **⋯** menu (move by menu), the column **+** buttons.
+  - Reads: design §6.5 · spec REQ-024, REQ-025, REQ-029, REQ-030 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Board.dc.html&via=share (Board)
   - Needs: M4.4 · API description: M5.2, M5.3
   - Done: REQ-029.*, REQ-030.* (auto); component tests for the card layout
 - [ ] **M5.5 Drag and drop.** Mouse and keyboard moves using the spike's result; optimistic moves with rollback and a toast.
