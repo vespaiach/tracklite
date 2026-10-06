@@ -1,12 +1,23 @@
+import { DotsSixVertical } from "@phosphor-icons/react/dist/csr/DotsSixVertical";
 import { DotsThree } from "@phosphor-icons/react/dist/csr/DotsThree";
 import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
 import { useState } from "react";
-import type { Key } from "react-aria-components";
-import { useDispatch } from "react-redux";
+import {
+  Button as AriaButton,
+  type DropItem,
+  DropIndicator,
+  type DropTarget,
+  GridList,
+  GridListItem,
+  type Key,
+  type TextDropItem,
+  useDragAndDrop,
+} from "react-aria-components";
 import {
   Avatar,
   BoardCard,
   BoardColumn,
+  BoardDrop,
   BoardEmpty,
   Board as BoardLayout,
   Button,
@@ -30,11 +41,11 @@ import { priorities, statuses } from "../issue-fields";
 import { LoadFailed, Loading } from "../LoadStates";
 import { useRouterClick } from "../links";
 import { NewIssueDialog } from "../NewIssueDialog";
-import { showToast } from "../toast";
 import { useShowLoading } from "../useShowLoading";
 
 const labelsShown = 3;
 const closedStatuses: IssueStatus[] = ["done", "canceled"];
+const issueType = "application/x-tracklite-issue";
 
 function statusInfo(status: IssueStatus) {
   return statuses.find(([key]) => key === status) ?? statuses[0];
@@ -72,8 +83,42 @@ export function BoardView({ project }: { project: ProjectSummary }) {
 
 type StatusColumnProps = { column: BoardStatusColumn; archived: boolean; onCreate: () => void };
 
+function draggedId(items: DropItem[]) {
+  return (items[0] as TextDropItem).getText(issueType);
+}
+
+function placeAt(cards: BoardIssue[], id: string, target: DropTarget): BoardPlace {
+  const others = cards.filter((card) => card.id !== id);
+  const index = others.findIndex((card) => target.type === "item" && card.id === target.key);
+  const above = target.type === "item" && target.dropPosition === "after" ? others[index] : others[index - 1];
+  return above ? { after: above.id } : "top";
+}
+
 function StatusColumn({ column, archived, onCreate }: StatusColumnProps) {
   const [, name, kind] = statusInfo(column.status);
+  const [moveIssue] = useMoveIssueMutation();
+  const move = (id: string, place: BoardPlace) => void moveIssue({ id, status: column.status, place });
+  const { dragAndDropHooks } = useDragAndDrop({
+    getItems: (keys) => [...keys].map((key) => ({ [issueType]: String(key) })),
+    acceptedDragTypes: [issueType],
+    getDropOperation: () => "move",
+    onReorder: ({ keys, target }) => {
+      const id = String([...keys][0]);
+      move(id, placeAt(column.cards, id, target));
+    },
+    onInsert: async ({ items, target }) => {
+      const id = await draggedId(items);
+      move(id, placeAt(column.cards, id, target));
+    },
+    onRootDrop: async ({ items }) => move(await draggedId(items), "top"),
+    renderDropIndicator: (target) => (
+      <DropIndicator
+        target={target}
+        className="tl-board-col__slot">
+        {({ isDropTarget }) => isDropTarget && <BoardDrop />}
+      </DropIndicator>
+    ),
+  });
   return (
     <BoardColumn
       label={name}
@@ -95,27 +140,40 @@ function StatusColumn({ column, archived, onCreate }: StatusColumnProps) {
           </Button>
         )
       }>
-      {column.cards.length === 0 ? (
-        <EmptyColumn
-          status={column.status}
-          archived={archived}
-          onCreate={onCreate}
-        />
-      ) : (
-        <ul className="tl-board-col__list">
-          {column.cards.map((card, index) => (
-            <li key={card.id}>
+      <GridList
+        aria-label={name}
+        items={column.cards}
+        keyboardNavigationBehavior="tab"
+        dragAndDropHooks={archived ? undefined : dragAndDropHooks}
+        renderEmptyState={({ isDropTarget }) =>
+          isDropTarget ? (
+            <BoardDrop />
+          ) : (
+            <EmptyColumn
+              status={column.status}
+              archived={archived}
+              onCreate={onCreate}
+            />
+          )
+        }
+        className="tl-board-col__list">
+        {(card) => (
+          <GridListItem
+            id={card.id}
+            textValue={card.title}>
+            {({ isDragging }) => (
               <IssueCard
                 card={card}
                 status={column.status}
-                first={index === 0}
-                last={index === column.cards.length - 1}
+                first={card.id === column.cards[0].id}
+                last={card.id === column.cards[column.cards.length - 1].id}
                 archived={archived}
+                dragging={isDragging}
               />
-            </li>
-          ))}
-        </ul>
-      )}
+            )}
+          </GridListItem>
+        )}
+      </GridList>
     </BoardColumn>
   );
 }
@@ -141,9 +199,10 @@ type IssueCardProps = {
   first: boolean;
   last: boolean;
   archived: boolean;
+  dragging?: boolean;
 };
 
-function IssueCard({ card, status, first, last, archived }: IssueCardProps) {
+function IssueCard({ card, status, first, last, archived, dragging }: IssueCardProps) {
   const href = `/issue/${card.id}`;
   const open = useRouterClick(href);
   const [, , priorityKind] = priorities.find(([key]) => key === card.priority) ?? priorities[0];
@@ -154,6 +213,16 @@ function IssueCard({ card, status, first, last, archived }: IssueCardProps) {
       title={card.title}
       href={href}
       onOpen={open}
+      dragging={dragging}
+      handle={
+        !archived && (
+          <AriaButton
+            slot="drag"
+            className="tl-btn tl-btn--sm tl-btn--quiet tl-btn--icon">
+            <DotsSixVertical size={13} />
+          </AriaButton>
+        )
+      }
       priority={card.priority !== "none" && <Priority priority={priorityKind} />}
       assignee={
         card.assignee && (
@@ -196,16 +265,11 @@ type MoveMenuProps = { id: string; status: IssueStatus; first: boolean; last: bo
 
 function MoveMenu({ id, status, first, last }: MoveMenuProps) {
   const [moveIssue] = useMoveIssueMutation();
-  const dispatch = useDispatch();
 
-  async function move(key: Key) {
+  function move(key: Key) {
     const place: BoardPlace = key === "bottom" ? "bottom" : "top";
     const target = key === "top" || key === "bottom" ? status : (key as IssueStatus);
-    try {
-      await moveIssue({ id, status: target, place }).unwrap();
-    } catch {
-      dispatch(showToast(`Couldn't move ${id}`));
-    }
+    void moveIssue({ id, status: target, place });
   }
 
   return (
@@ -217,7 +281,7 @@ function MoveMenu({ id, status, first, last }: MoveMenuProps) {
           weight="bold"
         />
       }
-      onAction={(key) => void move(key)}>
+      onAction={move}>
       <MenuSubmenu label="Move to">
         {statuses.map(([key, name, kind]) => (
           <MenuItem
