@@ -7,13 +7,14 @@ import {
   issue,
   memberOf,
   mockApi,
+  never,
   noContent,
   project,
   renderAppAt,
   requestsTo,
   sam,
 } from "../../test/client-app";
-import type { Issue, Me, Project } from "../api";
+import type { Issue, IssueLabel, Label, Me, Project } from "../api";
 
 afterEach(() => {
   cleanup();
@@ -27,33 +28,66 @@ const jordan: Me = { ...alex, username: "jordan", fullName: "Jordan Diaz", initi
 const priya: Me = { ...alex, username: "priya", fullName: "Priya Shah", initials: "PS", deactivated: true };
 const team = [alex, jordan, priya, sam];
 
+function label(name: string): Label {
+  return { id: `l-${name.toLowerCase()}`, name, color: "gray", issueCount: 0 };
+}
+
+function onIssue({ id, name, color }: Label): IssueLabel {
+  return { id, name, color };
+}
+
+const webLabels = ["backend", "bug", "Design", "docs", "frontend"].map(label);
+
+function labelled(...names: string[]) {
+  return names.map((name) => onIssue(webLabels.find((candidate) => candidate.name === name) as Label));
+}
+
 function mockIssue({
   me = sam,
   shown = issue(),
   inProject = web,
   patch,
+  labels = () => webLabels,
 }: {
   me?: Me;
   shown?: Issue;
   inProject?: Project;
   patch?: Answer;
+  labels?: () => Label[];
 } = {}) {
   let current: Issue | undefined = shown;
+  const created: Label[] = [];
+  const known = () => [...labels(), ...created];
   return mockApi({
     "GET /api/me": () => Response.json(me),
     "GET /api/members": () => Response.json(team),
     [`GET /api/projects/${inProject.key}`]: () => Response.json(inProject),
+    [`GET /api/projects/${inProject.key}/labels`]: () => Response.json(known()),
+    [`POST /api/projects/${inProject.key}/labels`]: (body) => {
+      const made = { ...label((body as { name: string }).name), id: "l-new" };
+      created.push(made);
+      return Response.json(made, { status: 201 });
+    },
     [`GET /api/issues/${shown.id}`]: () => (current ? Response.json(current) : apiError(404, "Not found")),
     [`PATCH /api/issues/${shown.id}`]:
       patch ??
       ((body) => {
-        const change = body as Partial<Omit<Issue, "assignee">> & { assignee?: string | null };
-        const { assignee, ...rest } = change;
+        const change = body as Partial<Omit<Issue, "assignee">> & {
+          assignee?: string | null;
+          labelIds?: string[];
+        };
+        const { assignee, labelIds, ...rest } = change;
         const member = team.find((candidate) => candidate.username === assignee);
         current = {
           ...(current as Issue),
           ...rest,
           ...(assignee !== undefined && { assignee: member ? memberOf(member) : null }),
+          ...(labelIds && {
+            labels: labelIds.map((labelId) => onIssue(known().find(({ id }) => id === labelId) as Label)),
+          }),
+          ...(rest.description !== undefined && {
+            descriptionVersion: (current as Issue).descriptionVersion + 1,
+          }),
         };
         return Response.json(current);
       }),
@@ -320,4 +354,229 @@ it("REQ-013: an issue in an archived project is read-only", async () => {
   expect(screen.queryByRole("textbox", { name: "Title" })).toBeNull();
   expect(screen.queryByRole("button", { name: /^(Status|Priority|Assignee)/ })).toBeNull();
   expect(screen.queryByRole("button", { name: "Delete issue" })).toBeNull();
+});
+
+function labelsPick() {
+  return screen.findByRole("button", { name: /^Labels/, hidden: true });
+}
+
+function labelOption(name: string) {
+  return within(screen.getByRole("listbox")).getByRole("option", { name: new RegExp(`^${name}`) });
+}
+
+it("REQ-020.1: adding bug and frontend saves each and shows both", async () => {
+  const fetchMock = mockIssue();
+  renderAppAt("/issue/WEB-42");
+
+  await openPicker("Labels");
+  fireEvent.click(labelOption("bug"));
+  await waitFor(async () => expect((await labelsPick()).textContent).toContain("bug"));
+  fireEvent.click(labelOption("frontend"));
+
+  await waitFor(async () => expect((await labelsPick()).textContent).toContain("frontend"));
+  expect((await labelsPick()).textContent).toContain("bug");
+  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([
+    { labelIds: ["l-bug"] },
+    { labelIds: ["l-bug", "l-frontend"] },
+  ]);
+});
+
+it("REQ-020: unchecking a label in the picker removes it", async () => {
+  const fetchMock = mockIssue({ shown: issue({ labels: labelled("bug", "frontend") }) });
+  renderAppAt("/issue/WEB-42");
+
+  const listbox = await openPicker("Labels");
+  expect(
+    within(listbox)
+      .getByRole("option", { name: /^frontend/ })
+      .getAttribute("aria-selected"),
+  ).toBe("true");
+  fireEvent.click(labelOption("frontend"));
+
+  await waitFor(async () => expect((await labelsPick()).textContent).not.toContain("frontend"));
+  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ labelIds: ["l-bug"] }]);
+});
+
+it("REQ-020.2: typing a name that doesn't exist creates it as Gray and adds it", async () => {
+  const fetchMock = mockIssue({ labels: () => webLabels.filter(({ name }) => name !== "Design") });
+  renderAppAt("/issue/WEB-42");
+
+  await openPicker("Labels");
+  fireEvent.change(screen.getByRole("searchbox", { name: "Filter or create labels" }), {
+    target: { value: "Design" },
+  });
+  fireEvent.click(labelOption("Create label “Design”"));
+
+  await waitFor(async () => expect((await labelsPick()).textContent).toContain("Design"));
+  expect(requestsTo(fetchMock, "POST /api/projects/WEB/labels")).toEqual([{ name: "Design", color: "gray" }]);
+  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ labelIds: ["l-new"] }]);
+});
+
+it("REQ-020.5: typing a name that differs only in capitals adds the existing label", async () => {
+  const fetchMock = mockIssue();
+  renderAppAt("/issue/WEB-42");
+
+  await openPicker("Labels");
+  fireEvent.change(screen.getByRole("searchbox", { name: "Filter or create labels" }), {
+    target: { value: "design" },
+  });
+  expect(keysOf(screen.getByRole("listbox"))).toEqual(["l-design"]);
+  fireEvent.click(labelOption("Design"));
+
+  await waitFor(async () => expect((await labelsPick()).textContent).toContain("Design"));
+  expect(requestsTo(fetchMock, "POST /api/projects/WEB/labels")).toEqual([]);
+  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ labelIds: ["l-design"] }]);
+});
+
+it("REQ-020.3: adding an 11th label shows Maximum 10 labels and keeps the labels", async () => {
+  mockIssue({
+    shown: issue({ labels: labelled("bug") }),
+    patch: () => apiError(422, "Check the highlighted fields", { labelIds: "Maximum 10 labels" }),
+  });
+  renderAppAt("/issue/WEB-42");
+
+  await openPicker("Labels");
+  fireEvent.click(labelOption("docs"));
+
+  const error = await screen.findByText("Maximum 10 labels");
+  const labels = await labelsPick();
+  expect(labels.textContent).not.toContain("docs");
+  expect(labels.getAttribute("aria-describedby")).toContain(error.closest("[id]")?.id);
+});
+
+it("REQ-020.4: a label deleted meanwhile shows the toast and keeps the other labels", async () => {
+  let deleted = false;
+  const fetchMock = mockIssue({
+    shown: issue({ labels: labelled("bug", "docs") }),
+    labels: () => webLabels.filter(({ name }) => !(deleted && name === "frontend")),
+    patch: () => {
+      deleted = true;
+      return apiError(404, "That label no longer exists");
+    },
+  });
+  renderAppAt("/issue/WEB-42");
+
+  await openPicker("Labels");
+  fireEvent.click(labelOption("frontend"));
+
+  expect(await screen.findByText("That label no longer exists")).toBeTruthy();
+  const labels = await labelsPick();
+  expect(labels.textContent).toContain("bug");
+  expect(labels.textContent).toContain("docs");
+  await waitFor(() => expect(screen.queryByRole("option", { name: /^frontend/ })).toBeNull());
+  expect(requestsTo(fetchMock, "GET /api/projects/WEB/labels").length).toBeGreaterThan(1);
+});
+
+it("STD-9: a failed label save shows the toast and keeps the old labels", async () => {
+  mockIssue({ shown: issue({ labels: labelled("bug") }), patch: () => apiError(500, "Internal error") });
+  renderAppAt("/issue/WEB-42");
+
+  await openPicker("Labels");
+  fireEvent.click(labelOption("backend"));
+
+  expect(await screen.findByText("Couldn't save. Try again.")).toBeTruthy();
+  expect((await labelsPick()).textContent).not.toContain("backend");
+});
+
+it("REQ-013: an archived issue shows its labels read-only", async () => {
+  mockIssue({
+    shown: issue({ archived: true, labels: labelled("bug") }),
+    inProject: project("WEB", "Website", "2026-10-01T10:00:00.000Z"),
+  });
+  renderAppAt("/issue/WEB-42");
+
+  expect(await screen.findByText("bug")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /^Labels/ })).toBeNull();
+});
+
+async function editDescription() {
+  fireEvent.click(await screen.findByRole("button", { name: "Edit description" }));
+  return (await screen.findByRole("textbox", { name: "Description (Markdown)" })) as HTMLTextAreaElement;
+}
+
+it("REQ-022.1: saving a description with a checklist and a code block shows it formatted", async () => {
+  const fetchMock = mockIssue();
+  renderAppAt("/issue/WEB-42");
+
+  const editor = await editDescription();
+  const text = "- [x] Reproduce in Safari\n\n```js\nsignIn();\n```";
+  fireEvent.change(editor, { target: { value: text } });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(await screen.findByRole("checkbox")).toBeTruthy();
+  expect(document.querySelector("pre")?.textContent).toContain("signIn();");
+  expect(screen.queryByRole("textbox", { name: "Description (Markdown)" })).toBeNull();
+  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([
+    { description: text, descriptionVersion: 0 },
+  ]);
+});
+
+it("REQ-022.2: a description of 20,001 characters shows Too long (max 20,000) and keeps the text", async () => {
+  mockIssue({
+    patch: () => apiError(422, "Check the highlighted fields", { description: "Too long (max 20,000)" }),
+  });
+  renderAppAt("/issue/WEB-42");
+
+  const editor = await editDescription();
+  fireEvent.change(editor, { target: { value: "x".repeat(20001) } });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(await screen.findByText("Too long (max 20,000)")).toBeTruthy();
+  expect(editor.value).toBe("x".repeat(20001));
+  expect(editor.getAttribute("aria-invalid")).toBe("true");
+});
+
+it("STD-8: a stale description save shows the conflict message in the editor and keeps the text", async () => {
+  mockIssue({ patch: () => apiError(409, "This was changed by Alex Kim. Copy your text and reload.") });
+  renderAppAt("/issue/WEB-42");
+
+  const editor = await editDescription();
+  fireEvent.change(editor, { target: { value: "My version" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+  expect((await screen.findByRole("alert")).textContent).toContain(
+    "This was changed by Alex Kim. Copy your text and reload.",
+  );
+  expect(editor.value).toBe("My version");
+  expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(false);
+});
+
+it("STD-5: Save is disabled while the description saves", async () => {
+  mockIssue({ patch: never });
+  renderAppAt("/issue/WEB-42");
+
+  const editor = await editDescription();
+  fireEvent.change(editor, { target: { value: "Saving this" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+  const saving = (await screen.findByRole("button", { name: "Saving…" })) as HTMLButtonElement;
+  expect(saving.disabled).toBe(true);
+});
+
+it("REQ-022: Cancel or Escape discards the description draft", async () => {
+  const fetchMock = mockIssue({ shown: issue({ description: "Old text" }) });
+  renderAppAt("/issue/WEB-42");
+
+  let editor = await editDescription();
+  fireEvent.change(editor, { target: { value: "New text" } });
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(screen.queryByRole("textbox", { name: "Description (Markdown)" })).toBeNull();
+  expect(screen.getByText("Old text")).toBeTruthy();
+
+  editor = await editDescription();
+  fireEvent.change(editor, { target: { value: "New text" } });
+  fireEvent.keyDown(editor, { key: "Escape" });
+  expect(screen.queryByRole("textbox", { name: "Description (Markdown)" })).toBeNull();
+  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([]);
+});
+
+it("REQ-013: an archived issue's description has no Edit button", async () => {
+  mockIssue({
+    shown: issue({ archived: true, description: "Old text" }),
+    inProject: project("WEB", "Website", "2026-10-01T10:00:00.000Z"),
+  });
+  renderAppAt("/issue/WEB-42");
+
+  expect(await screen.findByText("Old text")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Edit description" })).toBeNull();
 });

@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { Menu, MenuItem, Picker, PickerItem, PopItem } from "./Pop";
+import { MentionList, Menu, MenuItem, MultiPicker, Picker, PickerItem, PopItem } from "./Pop";
 
 afterEach(cleanup);
 
@@ -138,4 +138,109 @@ it("Picker with search filters the items as you type", async () => {
     .getAllByRole("option")
     .map((option) => option.textContent?.replace("✓", ""));
   expect(names).toEqual(["Unassigned", "Priya Shah"]);
+});
+
+function LabelPicker({
+  onToggle = vi.fn(),
+  onCreate = vi.fn(),
+}: {
+  onToggle?: (key: unknown) => void;
+  onCreate?: (input: string) => void;
+}) {
+  return (
+    <MultiPicker
+      label="Labels"
+      selectedKeys={["bug", "docs"]}
+      value="bug docs"
+      onToggle={onToggle}
+      search={{ label: "Filter or create labels", placeholder: "Filter or create…" }}
+      createText={(input) => (input === "Perf" ? "Create label “Perf”" : undefined)}
+      onCreate={onCreate}>
+      <PickerItem
+        id="bug"
+        textValue="bug">
+        bug
+      </PickerItem>
+      <PickerItem
+        id="docs"
+        textValue="docs">
+        docs
+      </PickerItem>
+      <PickerItem
+        id="frontend"
+        textValue="frontend">
+        frontend
+      </PickerItem>
+    </MultiPicker>
+  );
+}
+
+it("MultiPicker checks every selected item and reports each toggle without closing", async () => {
+  const onToggle = vi.fn();
+  render(<LabelPicker onToggle={onToggle} />);
+  const pick = screen.getByRole("button", { name: /Labels/ });
+  expect(pick.classList.contains("tl-pick")).toBe(true);
+
+  fireEvent.click(pick);
+  const listbox = await screen.findByRole("listbox");
+  expect(listbox.getAttribute("aria-multiselectable")).toBe("true");
+  const options = within(listbox).getAllByRole("option");
+  expect(options.map((option) => option.getAttribute("aria-selected"))).toEqual(["true", "true", "false"]);
+
+  fireEvent.click(options[2]);
+  expect(onToggle).toHaveBeenLastCalledWith("frontend");
+  fireEvent.click(options[0]);
+  expect(onToggle).toHaveBeenLastCalledWith("bug");
+  expect(screen.getByRole("listbox")).toBeTruthy();
+});
+
+it("MultiPicker shows a create row for the typed text and reports the text when chosen", async () => {
+  const onCreate = vi.fn();
+  render(<LabelPicker onCreate={onCreate} />);
+  fireEvent.click(screen.getByRole("button", { name: /Labels/ }));
+  const search = await screen.findByRole("searchbox", { name: "Filter or create labels" });
+  expect(screen.queryByRole("option", { name: /Create label/ })).toBeNull();
+
+  fireEvent.change(search, { target: { value: "Perf" } });
+  fireEvent.click(screen.getByRole("option", { name: "Create label “Perf”" }));
+  expect(onCreate).toHaveBeenCalledWith("Perf");
+});
+
+const mentionable = [
+  { username: "alex", fullName: "Alex Kim", initials: "AK" },
+  { username: "sam", fullName: "Sam Lee", initials: "SL" },
+];
+
+it("MentionList marks the active member and reports a chosen one", () => {
+  const onChoose = vi.fn();
+  render(
+    <MentionList
+      id="sug"
+      members={mentionable}
+      active={1}
+      empty="No results"
+      onChoose={onChoose}
+    />,
+  );
+  const options = within(screen.getByRole("listbox", { name: "Mention a member" })).getAllByRole("option");
+  expect(options.map((option) => option.id)).toEqual(["sug-alex", "sug-sam"]);
+  expect(options.map((option) => option.getAttribute("aria-selected"))).toEqual(["false", "true"]);
+  expect(options[0].textContent).toContain("alex");
+  expect(options[1].textContent).not.toContain("✓");
+
+  fireEvent.click(options[0]);
+  expect(onChoose).toHaveBeenCalledWith("alex");
+});
+
+it("MentionList shows its empty message when no member matches", () => {
+  render(
+    <MentionList
+      id="sug"
+      members={[]}
+      active={0}
+      empty="No results for “@zz”"
+      onChoose={vi.fn()}
+    />,
+  );
+  expect(screen.getByRole("status").textContent).toBe("No results for “@zz”");
 });

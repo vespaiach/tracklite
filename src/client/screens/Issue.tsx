@@ -9,9 +9,11 @@ import {
   FieldError,
   FormStatus,
   IssueLayout,
+  IssueSection,
   IssueTitle,
   IssueTitleInput,
   Meta,
+  MultiPicker,
   Picker,
   PickerItem,
   PickValue,
@@ -31,13 +33,16 @@ import {
   type IssueStatus,
   type MemberSummary,
   type Project,
+  useCreateLabelMutation,
   useDeleteIssueMutation,
   useIssueQuery,
+  useLabelsQuery,
   useMeQuery,
   useMembersQuery,
   useUpdateIssueMutation,
 } from "../api";
 import { formatDate } from "../dates";
+import { type DescriptionDraft, DescriptionEditor } from "../DescriptionEditor";
 import { useFailureToast } from "../failure";
 import { LoadFailed, Loading } from "../LoadStates";
 import { useRouterClick } from "../links";
@@ -133,16 +138,10 @@ function IssueView({ issue, project }: { issue: Issue; project: Project }) {
         main={
           <>
             {editable ? <TitleEditor issue={issue} /> : <IssueTitle>{issue.title}</IssueTitle>}
-            <section aria-label="Description">
-              {issue.description ? (
-                <Markdown
-                  source={issue.description}
-                  mentions={issue.mentions}
-                />
-              ) : (
-                <FormStatus>No description yet.</FormStatus>
-              )}
-            </section>
+            <Description
+              issue={issue}
+              editable={editable}
+            />
           </>
         }
         side={
@@ -159,19 +158,11 @@ function IssueView({ issue, project }: { issue: Issue; project: Project }) {
               issue={issue}
               editable={editable}
             />
-            <Meta label="Labels">
-              <PickValue>
-                {issue.labels.length > 0
-                  ? issue.labels.map((label) => (
-                      <Pill
-                        key={label.id}
-                        kind="label">
-                        {label.name}
-                      </Pill>
-                    ))
-                  : "None"}
-              </PickValue>
-            </Meta>
+            <LabelsField
+              issue={issue}
+              projectKey={project.key}
+              editable={editable}
+            />
             <FormStatus>
               {`Created by ${issue.createdBy.fullName}, `}
               <time
@@ -395,6 +386,140 @@ function AssigneeField({ issue, editable }: { issue: Issue; editable: boolean })
               </PickerItem>
             ))}
         </Picker>
+      ) : (
+        <PickValue>{value}</PickValue>
+      )}
+      {error && <FieldError id={errorId}>{error}</FieldError>}
+    </Meta>
+  );
+}
+
+function Description({ issue, editable }: { issue: Issue; editable: boolean }) {
+  const [draft, setDraft] = useState<DescriptionDraft>();
+  const [updateIssue] = useUpdateIssueMutation();
+  return (
+    <IssueSection
+      title="Description"
+      action={
+        editable &&
+        !draft && (
+          <Button
+            variant="quiet"
+            size="sm"
+            aria-label="Edit description"
+            onClick={() =>
+              setDraft({
+                text: issue.description,
+                startedFrom: issue.description,
+                version: issue.descriptionVersion,
+              })
+            }>
+            Edit
+          </Button>
+        )
+      }>
+      {draft ? (
+        <DescriptionEditor
+          draft={draft}
+          onChange={(text) => setDraft({ ...draft, text })}
+          onDone={() => setDraft(undefined)}
+          save={(description, descriptionVersion) =>
+            updateIssue({ id: issue.id, change: { description, descriptionVersion } }).unwrap()
+          }
+        />
+      ) : issue.description ? (
+        <Markdown
+          source={issue.description}
+          mentions={issue.mentions}
+        />
+      ) : (
+        <FormStatus>No description yet.</FormStatus>
+      )}
+    </IssueSection>
+  );
+}
+
+function LabelsField({
+  issue,
+  projectKey,
+  editable,
+}: {
+  issue: Issue;
+  projectKey: string;
+  editable: boolean;
+}) {
+  const save = useIssueSave(issue.id);
+  const { data: labels } = useLabelsQuery(projectKey, { skip: !editable });
+  const [createLabel] = useCreateLabelMutation();
+  const toastFailure = useFailureToast();
+  const errorId = useId();
+  const [error, setError] = useState<string>();
+  const selected = issue.labels.map((label) => label.id);
+  const value =
+    issue.labels.length > 0
+      ? issue.labels.map((label) => (
+          <Pill
+            key={label.id}
+            kind="label">
+            {label.name}
+          </Pill>
+        ))
+      : "None";
+
+  async function saveLabels(labelIds: string[]) {
+    const { fieldError } = await save({ labelIds });
+    setError(fieldError);
+  }
+
+  function existing(name: string) {
+    return labels?.find((label) => label.name.toLowerCase() === name.toLowerCase());
+  }
+
+  function createText(input: string) {
+    const name = input.trim();
+    return name && !existing(name) ? `Create label “${name}”` : undefined;
+  }
+
+  async function create(input: string) {
+    try {
+      const made = await createLabel({ key: projectKey, name: input.trim(), color: "gray" }).unwrap();
+      await saveLabels([...selected, made.id]);
+    } catch (caught) {
+      const failure = caught as ApiFailure;
+      const fieldError = failure.status === 422 ? failure.fields?.name : undefined;
+      if (fieldError) setError(fieldError);
+      else toastFailure(failure);
+    }
+  }
+
+  return (
+    <Meta label="Labels">
+      {editable && labels ? (
+        <MultiPicker
+          label="Labels"
+          selectedKeys={selected}
+          value={value}
+          empty={issue.labels.length === 0}
+          aria-describedby={error ? errorId : undefined}
+          onToggle={(key) =>
+            void saveLabels(
+              selected.includes(String(key))
+                ? selected.filter((id) => id !== key)
+                : [...selected, String(key)],
+            )
+          }
+          search={{ label: "Filter or create labels", placeholder: "Filter or create…" }}
+          createText={createText}
+          onCreate={(input) => void create(input)}>
+          {labels.map((label) => (
+            <PickerItem
+              key={label.id}
+              id={label.id}
+              textValue={label.name}>
+              {label.name}
+            </PickerItem>
+          ))}
+        </MultiPicker>
       ) : (
         <PickValue>{value}</PickValue>
       )}

@@ -62,7 +62,9 @@ export type IssueChange =
   | { title: string }
   | { status: IssueStatus }
   | { priority: IssuePriority }
-  | { assignee: string | null };
+  | { assignee: string | null }
+  | { labelIds: string[] }
+  | { description: string; descriptionVersion: number };
 
 type ApiRequest = string | { path: string; method: "POST" | "PATCH" | "PUT" | "DELETE"; body?: unknown };
 
@@ -215,6 +217,7 @@ export const api = createApi({
     }),
     updateIssue: build.mutation<Issue, { id: string; change: IssueChange }>({
       query: ({ id, change }) => ({ path: `issues/${id}`, method: "PATCH", body: change }),
+      invalidatesTags: (_result, error) => (error?.status === 404 ? ["Labels"] : []),
       async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
         const saved = await queryFulfilled.catch(() => undefined);
         if (saved) dispatch(api.util.upsertQueryData("issue", id, saved.data));
