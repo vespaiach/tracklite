@@ -648,7 +648,7 @@ An archived project's header shows an "Archived" badge, and no create or edit co
 
 ### 6.5 Board details
 
-- **Drag and drop:** React Aria Components' `GridList` with `useDragAndDrop`, one list per column, which allows reordering within a column and dropping into another. It comes with keyboard and screen-reader support for free, on top of the **⋯** menu that REQ-030 requires. Automatic scrolling near a column's top or bottom edge (REQ-024) still needs checking in an early spike.
+- **Drag and drop:** React Aria Components' `GridList` with `useDragAndDrop`, one list per column, which allows reordering within a column and dropping into another. It comes with keyboard and screen-reader support for free, on top of the **⋯** menu that REQ-030 requires. The M5.1 spike confirmed it, including automatic scrolling near a column's edges (REQ-024); D-40 lists what the board must do to get there.
 - **Each column scrolls on its own** (REQ-024.3), with the header and counts fixed.
 
 ### 6.6 Label colours
@@ -700,7 +700,8 @@ The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, 
 | D-33 | Plain-text emails only | HTML + text templates | Half the templates; the spec already asks for plain-text excerpts. |
 | D-34 | `fetch` + hand-written signature check | Resend SDK, `svix` package | Two small functions instead of two dependencies. |
 | D-35 | Combined emails: "{n} updates for you" plus each item | One combined sentence | Works for any mix of assigned and mentioned with one rule. |
-| D-36 | React Aria `GridList` drag and drop | dnd-kit | Already in the stack, and accessible by keyboard and screen reader out of the box. Edge auto-scroll to be confirmed in a spike. |
+| D-36 | React Aria `GridList` drag and drop | dnd-kit | Already in the stack, and accessible by keyboard and screen reader out of the box. Edge auto-scroll confirmed by the M5.1 spike (D-40). |
 | D-37 | New issue: title-only dialog, then go to the issue | A full create form | Matches REQ-016's flow ("enters a title"); everything else is edited on the issue page. |
 | D-38 | Admin-only routes show the STD-2 message, not Not found | Hiding them as Not found | Matches STD-2's wording for actions reached anyway. |
 | D-39 | Track Lite design system, ported from its Claude Design project into `src/components/ui/track-lite/` | Hairline; a component library from npm | Made for this product. Fonts load through `next/font` and icons through `@phosphor-icons/react` instead of the project's CDN links, which the CSP (D-26) would block. |
+| D-40 | Keep D-36 with no fallback, after the M5.1 spike. Each column's `GridList` is its own scroll box with `position: relative`; each card has a `<Button slot="drag">` | Writing our own edge auto-scroll; a separate drag library | Mouse drags across 5 columns, into an empty column (`onRootDrop`) and within a column (`onReorder`) all landed in the right place. Near a column's edge, the browser scrolls it natively, or React Aria's `useAutoScroll` does in Safari. Keyboard drags (Enter on the drag button, Tab between columns, arrows, Enter) work and are announced. Without `position: relative`, the hidden keyboard drop targets scroll the whole page instead of the column. Without the drag button, cards that open the issue on click can only be dragged with Alt+Enter. |
