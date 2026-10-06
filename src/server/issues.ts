@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, inArray, isNull, notInArray, or, type SQL, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, ne, notInArray, or, type SQL, sql } from "drizzle-orm";
 import { alias, type PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { generateKeyBetween } from "fractional-indexing";
 import { ApiError } from "./api-error";
@@ -24,6 +24,7 @@ type Executor = typeof db | Transaction;
 type IssueStatus = (typeof issueStatus.enumValues)[number];
 type NewIssue = { requestId?: unknown; title?: unknown; status?: unknown };
 type IssueChange = PgUpdateSetSource<typeof issues>;
+type Place = "top" | "bottom" | { after: string };
 
 const maxLabels = 10;
 const closedStatuses: IssueStatus[] = ["done", "canceled"];
@@ -318,6 +319,75 @@ export async function updateIssue(id: string, member: Member, body: Record<strin
         .set({ ...change, updatedAt: sql`now()` })
         .where(eq(issues.id, issue.id));
     }
+    return updatedIssue(tx, issue.id);
+  });
+}
+
+function checkMove(body: Record<string, unknown>) {
+  const fields: Record<string, string> = {};
+  const status = issueStatus.enumValues.find((option) => option === body?.status);
+  if (!status) fields.status = "Choose a status";
+  const place = body?.place;
+  const validPlace =
+    place === "top" ||
+    place === "bottom" ||
+    (typeof place === "object" && place !== null && typeof (place as { after?: unknown }).after === "string");
+  if (!validPlace) fields.place = "Choose a place";
+  if (!status || !validPlace) throw new ApiError(422, "Check the highlighted fields", fields);
+  return { status, place: place as Place };
+}
+
+async function positionIn(
+  tx: Transaction,
+  issue: typeof issues.$inferSelect,
+  status: IssueStatus,
+  place: Place,
+) {
+  const otherCards = and(
+    eq(issues.projectId, issue.projectId),
+    eq(issues.status, status),
+    ne(issues.id, issue.id),
+  );
+  if (place === "bottom") {
+    const [last] = await tx
+      .select({ position: issues.position })
+      .from(issues)
+      .where(otherCards)
+      .orderBy(desc(issues.position), desc(issues.id))
+      .limit(1);
+    return generateKeyBetween(last?.position ?? null, null);
+  }
+  const afterId = place === "top" ? undefined : byIssueId(place.after);
+  const [after] = afterId
+    ? await tx
+        .select({ position: issues.position })
+        .from(issues)
+        .innerJoin(projects, eq(projects.id, issues.projectId))
+        .where(and(otherCards, afterId))
+    : [];
+  const [next] = await tx
+    .select({ position: issues.position })
+    .from(issues)
+    .where(after ? and(otherCards, gt(issues.position, after.position)) : otherCards)
+    .orderBy(asc(issues.position), asc(issues.id))
+    .limit(1);
+  return generateKeyBetween(after?.position ?? null, next?.position ?? null);
+}
+
+export async function moveIssue(id: string, body: Record<string, unknown>) {
+  const { status, place } = checkMove(body);
+  const where = byIssueId(id);
+  if (!where) throw issueGone();
+
+  return db.transaction(async (tx) => {
+    const issue = await lockedIssue(tx, where);
+    const position = await positionIn(tx, issue, status, place);
+    const statusChange: IssueChange =
+      status === issue.status ? {} : { status, statusChangedAt: sql`now()`, updatedAt: sql`now()` };
+    await tx
+      .update(issues)
+      .set({ position, ...statusChange })
+      .where(eq(issues.id, issue.id));
     return updatedIssue(tx, issue.id);
   });
 }

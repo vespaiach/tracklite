@@ -314,7 +314,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2.4, §3.3 · spec REQ-024, REQ-025, REQ-028
   - Needs: M4.2
   - Done: REQ-024.*, REQ-025.*, REQ-028.* (API side)
-- [ ] **M5.3 Position API.** `PUT /api/issues/{ID}/position` with fractional keys; `updated_at` unchanged for moves within a column.
+- [x] **M5.3 Position API.** `PUT /api/issues/{ID}/position` with fractional keys; `updated_at` unchanged for moves within a column.
   - Reads: design §2.4, §3.4 (first bullet) · spec REQ-026, REQ-027, REQ-036.5
   - Needs: M5.2
   - Done: REQ-026.*, REQ-027.*, REQ-036.5
