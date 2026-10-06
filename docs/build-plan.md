@@ -306,7 +306,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 **Run order:** API: M5.2 → M5.3. Pages: M5.4 → M5.5, alongside the API tasks (M5.5 also waits for M5.1). M5.1 needs only M0.4, so the spike can run as early as M1, which settles the drag-and-drop risk before any board code exists.
 
-- [ ] **M5.1 Drag-and-drop spike.** A throwaway page: React Aria `GridList` drag and drop across 5 columns, including automatic scrolling near a column's edges. Record the result as a decision in design §7; if it falls short, record the fallback.
+- [x] **M5.1 Drag-and-drop spike.** A throwaway page: React Aria `GridList` drag and drop across 5 columns, including automatic scrolling near a column's edges. Record the result as a decision in design §7; if it falls short, record the fallback.
   - Reads: design §6.5 · spec REQ-024, REQ-026 · React Aria docs for `GridList` and `useDragAndDrop`
   - Needs: M0.4
   - Done: a decision in §7; the spike code is deleted
