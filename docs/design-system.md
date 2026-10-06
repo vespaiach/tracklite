@@ -82,7 +82,7 @@ A full-height grid: a 232px rail (52px collapsed) and the body. The app bar and 
 
 ## Icons
 
-- Phosphor through `@phosphor-icons/react`, duotone weight, 13–16px in chrome (15px by default). Import each icon from its own module (`@phosphor-icons/react/dist/csr/DotsThree`), not the package root, which loads every icon. Use bold for the small "+" in "New issue".
+- Phosphor through `@phosphor-icons/react`, duotone weight, 13–16px in chrome (15px by default). Import each icon from its own module (`@phosphor-icons/react/dist/csr/DotsThree`), not the package root, which loads every icon. Use bold for the small "+" in "New issue" and the board card's **⋯**, whose duotone dots are too faint at 15px.
 - Status, priority and the rail's saved-view marks are drawn in CSS (`Status`, `Priority`, `Glyph`), never with icons.
 - Unicode stands in for icons in a few places: ✓ for selected menu items, × for close and remove, / between breadcrumbs, ⌘ ↑ ↓ ↵ in key caps.
 - There's no logo. The brand is the product name, Tracklite, in the serif at weight 600.

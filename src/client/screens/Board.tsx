@@ -214,7 +214,7 @@ function MoveMenu({ id, status, first, last }: MoveMenuProps) {
       icon={
         <DotsThree
           size={15}
-          weight="duotone"
+          weight="bold"
         />
       }
       onAction={(key) => void move(key)}>
