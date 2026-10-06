@@ -1,0 +1,144 @@
+import { type FormEvent, type KeyboardEvent, useEffect, useId, useState } from "react";
+import { useBlocker } from "react-router";
+import { Button, Dialog, Editor, FieldError, SettingsActions } from "../components/ui/track-lite";
+import type { ApiFailure } from "./api";
+import { useFailureToast } from "./failure";
+import { useMentions } from "./useMentions";
+
+export type DescriptionDraft = { text: string; startedFrom: string; version: number };
+
+export function DescriptionEditor({
+  draft,
+  onChange,
+  onDone,
+  save,
+}: {
+  draft: DescriptionDraft;
+  onChange: (text: string) => void;
+  onDone: () => void;
+  save: (description: string, descriptionVersion: number) => Promise<unknown>;
+}) {
+  const toastFailure = useFailureToast();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string>();
+  const [conflict, setConflict] = useState<string>();
+  const messageId = useId();
+  const mentions = useMentions({ value: draft.text, onChange });
+  const unsaved = draft.text !== draft.startedFrom;
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(undefined);
+    setConflict(undefined);
+    setSaving(true);
+    try {
+      await save(draft.text, draft.version);
+      onDone();
+    } catch (caught) {
+      const failure = caught as ApiFailure;
+      if (failure.status === 422) setError(failure.fields?.description ?? failure.message);
+      else if (failure.status === 409) setConflict(failure.message);
+      else toastFailure(failure);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    mentions.textarea.onKeyDown(event);
+    if (event.key === "Escape" && !event.defaultPrevented) onDone();
+  }
+
+  return (
+    <form
+      aria-label="Edit description"
+      noValidate
+      onSubmit={submit}>
+      <LeaveGuard unsaved={unsaved} />
+      <Editor
+        mono
+        invalid={Boolean(error)}
+        value={draft.text}
+        onChange={mentions.onChange}
+        overlay={mentions.list}
+        textarea={{
+          ...mentions.textarea,
+          onKeyDown,
+          "aria-label": "Description (Markdown)",
+          "aria-invalid": error ? true : undefined,
+          "aria-describedby": messageId,
+          readOnly: saving,
+          rows: 16,
+          autoFocus: true,
+        }}
+        tools={
+          conflict && (
+            <div role="alert">
+              <FieldError>{conflict}</FieldError>
+            </div>
+          )
+        }
+        submit={
+          <SettingsActions>
+            <Button
+              size="sm"
+              onClick={onDone}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              type="submit"
+              disabled={saving}
+              aria-busy={saving || undefined}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </SettingsActions>
+        }
+      />
+      {error ? (
+        <FieldError id={messageId}>{error}</FieldError>
+      ) : (
+        <p
+          id={messageId}
+          className="tl-field__help">
+          Markdown. Up to <span className="tl-table__mono">20,000</span> characters.
+        </p>
+      )}
+    </form>
+  );
+}
+
+function LeaveGuard({ unsaved }: { unsaved: boolean }) {
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) => unsaved && currentLocation.pathname !== nextLocation.pathname,
+  );
+
+  useEffect(() => {
+    if (!unsaved) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [unsaved]);
+
+  return (
+    blocker.state === "blocked" && (
+      <Dialog
+        open
+        role="alertdialog"
+        title="You have unsaved changes. Leave anyway?"
+        onClose={blocker.reset}
+        actions={
+          <>
+            <Button onClick={blocker.reset}>Cancel</Button>
+            <Button
+              variant="danger"
+              onClick={blocker.proceed}>
+              Leave
+            </Button>
+          </>
+        }
+      />
+    )
+  );
+}

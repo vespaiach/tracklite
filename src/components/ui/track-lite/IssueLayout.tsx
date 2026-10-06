@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import { type ComponentProps, type ReactNode, useId } from "react";
 import { cx } from "./cx";
 
 export function IssueLayout({ main, side }: { main: ReactNode; side: ReactNode }) {
@@ -7,6 +7,33 @@ export function IssueLayout({ main, side }: { main: ReactNode; side: ReactNode }
       <div className="tl-issue-layout__main">{main}</div>
       <aside className="tl-issue-layout__side">{side}</aside>
     </div>
+  );
+}
+
+export function IssueSection({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <section
+      aria-labelledby={headingId}
+      className="tl-issue-section">
+      <div className="tl-issue-section__head">
+        <h2
+          id={headingId}
+          className="tl-meta__label">
+          {title}
+        </h2>
+        {action}
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -78,6 +105,9 @@ export function IssueLink({ children, href = "#" }: { children: ReactNode; href?
 
 export type EditorProps = {
   value: string;
+  mono?: boolean;
+  invalid?: boolean;
+  overlay?: ReactNode;
   onChange: (value: string) => void;
   placeholder?: string;
   tools?: ReactNode;
@@ -85,16 +115,29 @@ export type EditorProps = {
   textarea?: Omit<ComponentProps<"textarea">, "value" | "onChange" | "placeholder">;
 };
 
-export function Editor({ value, onChange, placeholder, tools, submit, textarea }: EditorProps) {
+export function Editor({
+  value,
+  mono,
+  invalid,
+  overlay,
+  onChange,
+  placeholder,
+  tools,
+  submit,
+  textarea,
+}: EditorProps) {
   return (
-    <div className="tl-editor">
-      <textarea
-        rows={3}
-        {...textarea}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-      />
+    <div className={cx("tl-editor", mono && "tl-editor--mono", invalid && "tl-editor--invalid")}>
+      <div className="tl-editor__field">
+        <textarea
+          rows={3}
+          {...textarea}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+        />
+        {overlay}
+      </div>
       <div className="tl-editor__bar">
         <div className="tl-editor__tools">{tools}</div>
         <div className="tl-editor__submit">{submit}</div>

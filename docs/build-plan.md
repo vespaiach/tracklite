@@ -295,8 +295,8 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §6.1, §6.3 (New issue), §6.4 · spec REQ-016…019, REQ-023 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Issue+page.dc.html&via=share (Issue page)
   - Needs: M3.5, M3.1 · API description: M4.1, M4.2, M4.3
   - Done: component tests for title edit, each picker and delete
-- [ ] **M4.5 Label picker and description editor.** The label picker that creates new labels; the description editor with the `@` suggestion list (built to be reused by comments).
-  - Reads: design §6.4 (mention suggestions), §6.6 · spec REQ-020, REQ-022, DATA-001
+- [x] **M4.5 Label picker and description editor.** The label picker that creates new labels; the description editor with the `@` suggestion list (built to be reused by comments).
+  - Reads: design §6.4 (mention suggestions), §6.6 · spec REQ-020, REQ-022, DATA-001 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Issue+page.dc.html&via=share (Issue page) · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Issue+page+-+labels+and+description.dc.html&via=share (Label picker and description editor)
   - Needs: M4.4 · API description: M4.2, M4.3
   - Done: component tests for creating a label from the picker, the 10-label limit, and inserting `@username`
 

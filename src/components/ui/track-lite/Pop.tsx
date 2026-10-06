@@ -1,4 +1,5 @@
-import type { ComponentProps, ReactNode } from "react";
+import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
+import { type ComponentProps, type CSSProperties, type ReactNode, useState } from "react";
 import {
   Button as AriaButton,
   Menu as AriaMenu,
@@ -17,6 +18,7 @@ import {
   useFilter,
 } from "react-aria-components";
 import { cx } from "./cx";
+import { Avatar } from "./Pill";
 
 export function Pop({ className, ...rest }: ComponentProps<"div">) {
   return (
@@ -237,4 +239,135 @@ export function PickerItem({ id, textValue, children }: { id: Key; textValue: st
 
 export function PickValue({ children }: { children: ReactNode }) {
   return <div className="tl-pick tl-pick--static">{children}</div>;
+}
+
+export type MultiPickerProps = {
+  label: string;
+  selectedKeys: Key[];
+  value: ReactNode;
+  empty?: boolean;
+  onToggle: (key: Key) => void;
+  search: PickerSearch;
+  createText?: (input: string) => string | undefined;
+  onCreate?: (input: string) => void;
+  children: ReactNode;
+  "aria-describedby"?: string;
+};
+
+const createKey = "_create";
+
+export function MultiPicker({
+  label,
+  selectedKeys,
+  value,
+  empty,
+  onToggle,
+  search,
+  createText,
+  onCreate,
+  children,
+  "aria-describedby": describedBy,
+}: MultiPickerProps) {
+  const { contains } = useFilter({ sensitivity: "base" });
+  const [input, setInput] = useState("");
+  const create = createText?.(input);
+  return (
+    <Select
+      aria-label={label}
+      aria-describedby={describedBy}
+      selectionMode="multiple"
+      value={selectedKeys}
+      onOpenChange={(open) => {
+        if (!open) setInput("");
+      }}
+      onChange={(keys) => {
+        const added = keys.find((key) => !selectedKeys.includes(key));
+        if (added === createKey) onCreate?.(input);
+        else {
+          const toggled = added ?? selectedKeys.find((key) => !keys.includes(key));
+          if (toggled !== undefined) onToggle(toggled);
+        }
+      }}>
+      <AriaButton className={cx("tl-pick tl-pick--multi", empty && "tl-pick--empty")}>{value}</AriaButton>
+      <Popover
+        placement="bottom start"
+        className="tl-pop">
+        <Autocomplete
+          filter={(text, typed) => text === typed || (search.filter ?? contains)(text, typed)}
+          inputValue={input}
+          onInputChange={setInput}>
+          <SearchField
+            aria-label={search.label}
+            autoFocus
+            className="tl-pop__search">
+            <Input placeholder={search.placeholder} />
+          </SearchField>
+          <ListBox aria-label={label}>
+            {children}
+            {create && (
+              <ListBoxItem
+                id={createKey}
+                textValue={input}
+                aria-label={create}
+                className="tl-pop__item">
+                <Plus
+                  aria-hidden="true"
+                  size={12}
+                  weight="bold"
+                />
+                {create}
+              </ListBoxItem>
+            )}
+          </ListBox>
+        </Autocomplete>
+      </Popover>
+    </Select>
+  );
+}
+
+export type MentionOption = { username: string; fullName: string; initials: string };
+
+export type MentionListProps = {
+  id: string;
+  members: MentionOption[];
+  active: number;
+  empty: string;
+  onChoose: (username: string) => void;
+  style?: CSSProperties;
+};
+
+export function MentionList({ id, members, active, empty, onChoose, style }: MentionListProps) {
+  return (
+    <Pop
+      id={id}
+      aria-label="Mention a member"
+      className="tl-mention-list"
+      style={style}>
+      {members.map((member, index) => (
+        <PopItem
+          key={member.username}
+          id={`${id}-${member.username}`}
+          data-key={member.username}
+          tabIndex={-1}
+          aria-selected={index === active}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onChoose(member.username)}>
+          <Avatar
+            size="sm"
+            tone="neutral"
+            initials={member.initials}
+          />
+          {member.fullName}
+          <span className="tl-mention-list__user">{member.username}</span>
+        </PopItem>
+      ))}
+      {members.length === 0 && (
+        <div
+          role="status"
+          className="tl-pop__item tl-pop__item--note">
+          {empty}
+        </div>
+      )}
+    </Pop>
+  );
 }
