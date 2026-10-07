@@ -1,6 +1,8 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { CommandMenu } from "./CommandMenu";
+import { CommandMenu, FilterPicker } from "./CommandMenu";
+import { PickerItem } from "./Pop";
 
 afterEach(cleanup);
 
@@ -92,4 +94,63 @@ it("focuses the search box when opened as an overlay", () => {
     />,
   );
   expect(document.activeElement).toBe(screen.getByRole("textbox"));
+});
+
+const statusNames: Record<string, string> = { in_progress: "In Progress", in_review: "In Review" };
+
+function StatusFilter() {
+  const [chosen, setChosen] = useState<string[]>([]);
+  return (
+    <FilterPicker
+      field="Status"
+      values={chosen.map((key) => statusNames[key])}
+      selectedKeys={chosen}
+      onToggle={(key) =>
+        setChosen((keys) =>
+          keys.includes(String(key)) ? keys.filter((each) => each !== key) : [...keys, String(key)],
+        )
+      }
+      onClear={() => setChosen([])}>
+      {Object.entries(statusNames).map(([key, name]) => (
+        <PickerItem
+          key={key}
+          id={key}
+          textValue={name}>
+          {name}
+        </PickerItem>
+      ))}
+    </FilterPicker>
+  );
+}
+
+function trigger() {
+  return screen.getByRole("button", { name: /^Status/, hidden: true });
+}
+
+it("a filter is a button while empty and opens a multi-select list, marked open", async () => {
+  render(<StatusFilter />);
+  expect(trigger().getAttribute("aria-expanded")).toBe("false");
+  expect(trigger().classList.contains("tl-filter-add")).toBe(true);
+
+  fireEvent.click(trigger());
+  const listbox = await screen.findByRole("listbox");
+  expect(listbox.getAttribute("aria-multiselectable")).toBe("true");
+  expect(trigger().getAttribute("aria-expanded")).toBe("true");
+});
+
+it("with values it becomes a rule reading “is” or “is any of”, and × clears it", async () => {
+  render(<StatusFilter />);
+  fireEvent.click(trigger());
+  fireEvent.click(within(await screen.findByRole("listbox")).getByRole("option", { name: "In Progress" }));
+  expect(trigger().closest(".tl-filter-rule")?.textContent).toContain("StatusisIn Progress");
+
+  fireEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name: "In Review" }));
+  expect(trigger().closest(".tl-filter-rule")?.textContent).toContain(
+    "Statusis any ofIn Progress, In Review",
+  );
+
+  fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+  fireEvent.click(screen.getByRole("button", { name: "Clear status filter" }));
+  expect(trigger().classList.contains("tl-filter-add")).toBe(true);
 });

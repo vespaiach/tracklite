@@ -1,11 +1,11 @@
-import type { Issue } from "../../../../../client/api";
+import type { Issue, IssueListPage } from "../../../../../client/api";
 import { apiRoute } from "../../../../../server/api-route";
 import { createIssue, listIssues } from "../../../../../server/issues";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]/issues">) {
   const { key } = await params;
   return apiRoute("member", async () =>
-    Response.json(await listIssues(key, new URL(request.url).searchParams)),
+    Response.json((await listIssues(key, new URL(request.url).searchParams)) satisfies IssueListPage),
   )(request);
 }
 

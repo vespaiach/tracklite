@@ -1,13 +1,17 @@
+import { CaretDown } from "@phosphor-icons/react/dist/csr/CaretDown";
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Button as AriaButton, type Key, ListBox, Popover, Select } from "react-aria-components";
 import { cx } from "./cx";
 import { Kbd } from "./Pill";
 
-export function Filters({ children, end }: { children: ReactNode; end?: ReactNode }) {
+export function Filters({ children, end, label }: { children: ReactNode; end?: ReactNode; label: string }) {
   return (
-    <div className="tl-filters">
+    <search
+      aria-label={label}
+      className="tl-filters">
       {children}
       {end && <div className="tl-filters__end">{end}</div>}
-    </div>
+    </search>
   );
 }
 
@@ -51,6 +55,74 @@ export function FilterAdd({ children, onClick }: { children: ReactNode; onClick?
       className="tl-filter-add">
       {children}
     </button>
+  );
+}
+
+export type FilterPickerProps = {
+  field: string;
+  values: string[];
+  selectedKeys: Key[];
+  onToggle: (key: Key) => void;
+  onClear: () => void;
+  children: ReactNode;
+};
+
+export function FilterPicker({
+  field,
+  values,
+  selectedKeys,
+  onToggle,
+  onClear,
+  children,
+}: FilterPickerProps) {
+  const rule = values.length > 0;
+  return (
+    <span className={cx("tl-filter-slot", rule && "tl-filter-rule")}>
+      {rule && <span className="tl-filter-rule__seg tl-filter-rule__field">{field}</span>}
+      {rule && (
+        <span className="tl-filter-rule__seg tl-filter-rule__op">
+          {values.length > 1 ? "is any of" : "is"}
+        </span>
+      )}
+      <Select
+        aria-label={field}
+        selectionMode="multiple"
+        value={selectedKeys}
+        onChange={(keys) => {
+          const toggled =
+            keys.find((key) => !selectedKeys.includes(key)) ??
+            selectedKeys.find((key) => !keys.includes(key));
+          if (toggled !== undefined) onToggle(toggled);
+        }}>
+        <AriaButton className={rule ? "tl-filter-rule__seg tl-filter-rule__value" : "tl-filter-add"}>
+          {rule ? (
+            values.join(", ")
+          ) : (
+            <>
+              {field}
+              <CaretDown
+                aria-hidden="true"
+                size={11}
+              />
+            </>
+          )}
+        </AriaButton>
+        <Popover
+          placement="bottom start"
+          className="tl-pop">
+          <ListBox aria-label={field}>{children}</ListBox>
+        </Popover>
+      </Select>
+      {rule && (
+        <button
+          type="button"
+          aria-label={`Clear ${field.toLowerCase()} filter`}
+          onClick={onClear}
+          className="tl-filter-rule__seg tl-filter-rule__remove">
+          ×
+        </button>
+      )}
+    </span>
   );
 }
 
