@@ -56,7 +56,7 @@ const sortColumns = {
 };
 
 const maxTitleLength = 200;
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const issueIdPattern = /^([A-Za-z]{2,5})-([1-9]\d{0,8})$/;
 
 const creators = alias(members, "creators");
@@ -126,7 +126,7 @@ function fieldError(field: string, message: string) {
   return new ApiError(422, "Check the highlighted fields", { [field]: message });
 }
 
-function issueGone() {
+export function issueGone() {
   return new ApiError(404, "This issue was deleted");
 }
 
@@ -141,7 +141,7 @@ function checkTitle(value: unknown) {
   return { title, error: undefined };
 }
 
-function byIssueId(id: string) {
+export function byIssueId(id: string) {
   const match = issueIdPattern.exec(id);
   return match
     ? and(eq(projects.key, match[1].toUpperCase()), eq(issues.number, Number(match[2])))

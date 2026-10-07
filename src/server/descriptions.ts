@@ -6,7 +6,7 @@ import type { db } from "./db";
 import { members, mentions } from "./schema";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type MentionSource = { projectId: string } | { issueId: string };
+type MentionSource = { projectId: string } | { issueId: string } | { commentId: string };
 
 const maxDescriptionLength = 20_000;
 
@@ -41,7 +41,11 @@ export async function replaceMentions(tx: Transaction, source: MentionSource, te
           .where(and(inArray(members.username, usernames), isNull(members.deactivatedAt)));
   const memberIds = mentioned.map((row) => row.id);
   const ofSource =
-    "projectId" in source ? eq(mentions.projectId, source.projectId) : eq(mentions.issueId, source.issueId);
+    "projectId" in source
+      ? eq(mentions.projectId, source.projectId)
+      : "issueId" in source
+        ? eq(mentions.issueId, source.issueId)
+        : eq(mentions.commentId, source.commentId);
   await tx
     .delete(mentions)
     .where(and(ofSource, memberIds.length > 0 ? notInArray(mentions.memberId, memberIds) : undefined));

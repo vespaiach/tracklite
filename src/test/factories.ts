@@ -1,7 +1,7 @@
 import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import { generateKeyBetween } from "fractional-indexing";
 import { db } from "../server/db";
-import { issueLabels, issues, labels, members, projectKeys, projects } from "../server/schema";
+import { comments, issueLabels, issues, labels, members, projectKeys, projects } from "../server/schema";
 
 type NewMember = typeof members.$inferInsert;
 type NewProject = typeof projects.$inferInsert;
@@ -69,4 +69,14 @@ export async function createIssue(projectId: string, labelIds: string[] = []) {
     await db.insert(issueLabels).values(labelIds.map((labelId) => ({ issueId: issue.id, labelId })));
   }
   return issue;
+}
+
+type CommentParent = { issueId: string } | { projectId: string };
+
+export async function createComment(parent: CommentParent, authorId: string, body = "A comment") {
+  const [comment] = await db
+    .insert(comments)
+    .values({ ...parent, authorId, body, requestId: randomUUID() })
+    .returning();
+  return comment;
 }
