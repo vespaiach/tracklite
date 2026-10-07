@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import { Button, FormStatus, SettingsLayout, SettingsSection } from "../../components/ui/track-lite";
 import { Markdown } from "../../lib/markdown/Markdown";
 import { type Project, useMeQuery, useUpdateProjectMutation } from "../api";
+import { CommentThread } from "../CommentThread";
 import { type DescriptionDraft, DescriptionEditor } from "../DescriptionEditor";
 import { ProjectGate } from "../ProjectGate";
 import { ProjectHeader } from "../ProjectHeader";
@@ -21,6 +22,12 @@ export function ProjectDetail() {
           />
           <SettingsLayout wide>
             <Description project={project} />
+            <SettingsSection title="Comments">
+              <CommentThread
+                threadPath={`projects/${project.key}/comments`}
+                editable={project.archivedAt === null}
+              />
+            </SettingsSection>
           </SettingsLayout>
         </>
       )}

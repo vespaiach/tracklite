@@ -188,17 +188,35 @@ export function FeedTime({ children, className }: { children: ReactNode; classNa
   return <span className={cx("tl-feed-time", className)}>{children}</span>;
 }
 
-export type CommentProps = { avatar: ReactNode; author: string; time: string; children: ReactNode };
+export type CommentProps = {
+  avatar: ReactNode;
+  author: string;
+  time: ReactNode;
+  edited?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+};
 
-export function Comment({ avatar, author, time, children }: CommentProps) {
+export function Comment({ avatar, author, time, edited, actions, children }: CommentProps) {
   return (
-    <div className="tl-comment">
+    <article className="tl-comment">
       <div className="tl-comment__head">
         {avatar}
         <b>{author}</b>
+        <span
+          aria-hidden="true"
+          className="tl-comment__dot">
+          ·
+        </span>
         <FeedTime>{time}</FeedTime>
+        {edited && <span className="tl-comment__edited">{edited}</span>}
+        {actions && <span className="tl-comment__actions">{actions}</span>}
       </div>
-      <Prose>{children}</Prose>
-    </div>
+      {children}
+    </article>
   );
+}
+
+export function CommentList({ children }: { children: ReactNode }) {
+  return <div className="tl-comments">{children}</div>;
 }

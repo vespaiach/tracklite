@@ -1957,12 +1957,25 @@ a.tl-rail-item {
 .tl-comment__head b {
   font-weight: 500;
 }
-.tl-comment__head .tl-feed-time {
+.tl-comment__dot {
+  color: var(--color-ink-3);
+}
+.tl-comment__edited {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-ink-3);
+}
+.tl-comment__actions {
   margin-left: auto;
 }
 .tl-comment .tl-prose {
   font-size: 13.5px;
   line-height: 1.55;
+  min-width: 0;
+}
+.tl-comments {
+  display: grid;
+  gap: 10px;
 }
 .tl-progress {
   display: flex;
