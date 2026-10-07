@@ -67,6 +67,22 @@ export type Board = BoardStatusColumn[];
 
 export type BoardPlace = "top" | "bottom" | { after: string };
 
+export type ListIssue = Pick<
+  Issue,
+  "id" | "title" | "status" | "priority" | "assignee" | "labels" | "updatedAt"
+>;
+
+export type IssueListPage = { issues: ListIssue[]; hasMore: boolean; deactivatedAssignees: MemberSummary[] };
+
+const issueListPageSize = 100;
+
+function issueListPath(key: string, query: string, offset: number) {
+  const params = new URLSearchParams(query);
+  if (offset > 0) params.set("offset", String(offset));
+  const search = params.toString();
+  return `projects/${key}/issues${search ? `?${search}` : ""}`;
+}
+
 export type IssueChange =
   | { title: string }
   | { status: IssueStatus }
@@ -254,6 +270,14 @@ export const api = createApi({
     deleteIssue: build.mutation<null, string>({
       query: (id) => ({ path: `issues/${id}`, method: "DELETE" }),
     }),
+    issueList: build.infiniteQuery<IssueListPage, { key: string; query: string }, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.hasMore ? lastOffset + issueListPageSize : undefined,
+      },
+      query: ({ queryArg, pageParam }) => issueListPath(queryArg.key, queryArg.query, pageParam),
+    }),
     board: build.query<Board, string>({ query: (key) => `projects/${key}/board`, providesTags: ["Board"] }),
     moveIssue: build.mutation<Issue, { id: string; status: IssueStatus; place: BoardPlace }>({
       query: ({ id, ...body }) => ({ path: `issues/${id}/position`, method: "PUT", body }),
@@ -304,6 +328,7 @@ export const {
   useCreateIssueMutation,
   useUpdateIssueMutation,
   useDeleteIssueMutation,
+  useIssueListInfiniteQuery,
   useBoardQuery,
   useMoveIssueMutation,
 } = api;

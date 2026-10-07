@@ -2658,3 +2658,122 @@ a.tl-rail-item {
 .tl-form-error .tl-field-error {
   margin: 0;
 }
+.tl-table--fixed {
+  table-layout: fixed;
+}
+.tl-table--sticky th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: color-mix(in srgb, var(--color-paper) 96%, var(--color-ink));
+}
+.tl-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.tl-table__sort:hover,
+.tl-table__sort--on {
+  color: var(--color-ink);
+}
+.tl-table-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.tl-table__row {
+  position: relative;
+  cursor: pointer;
+}
+.tl-table__row .tl-tipwrap {
+  position: static;
+}
+.tl-table__row .tl-tipwrap__tip {
+  top: calc(100% + 2px);
+  left: auto;
+}
+.tl-table__link {
+  display: block;
+  min-width: 0;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  color: var(--color-ink);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tl-table__link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.tl-table__cell {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: 12.5px;
+}
+.tl-table__cell > :last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tl-table__message {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px 0 30px;
+  font-size: 13px;
+}
+.tl-table tbody tr.tl-table__message-row:hover {
+  background: transparent;
+}
+.tl-table__message-row td {
+  border-bottom: 0;
+}
+.tl-tip.tl-tip--wide {
+  max-width: 520px;
+}
+.tl-filter-slot:not(.tl-filter-rule) {
+  display: contents;
+}
+.tl-filter-add[aria-expanded="true"],
+.tl-filter-rule__value[aria-expanded="true"] {
+  background: var(--color-tint-2);
+}
+.tl-filters__search {
+  flex: none;
+  width: 260px;
+  margin-right: 4px;
+}
+.tl-input--compact {
+  min-height: 28px;
+  padding: 3px 8px;
+  font-size: 13px;
+}
+.tl-input-wrap {
+  position: relative;
+  display: block;
+}
+.tl-input-wrap__icon {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  display: flex;
+  color: var(--color-ink-3);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.tl-input.tl-input--icon {
+  padding-left: 27px;
+}

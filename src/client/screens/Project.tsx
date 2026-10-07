@@ -3,6 +3,7 @@ import { useMeQuery } from "../api";
 import { ProjectGate } from "../ProjectGate";
 import { ProjectHeader, type ProjectView } from "../ProjectHeader";
 import { BoardView } from "./Board";
+import { ListView } from "./List";
 
 function ProjectPage({ view }: { view: ProjectView }) {
   const { key = "" } = useParams();
@@ -17,6 +18,7 @@ function ProjectPage({ view }: { view: ProjectView }) {
             admin={me?.role === "admin"}
           />
           {view === "board" && <BoardView project={project} />}
+          {view === "list" && <ListView project={project} />}
         </>
       )}
     </ProjectGate>

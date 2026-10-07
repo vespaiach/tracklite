@@ -1,12 +1,25 @@
 import { type ComponentProps, type ReactNode, useId } from "react";
 import { cx } from "./cx";
 
-export function Input({ className, ...rest }: ComponentProps<"input">) {
-  return (
+export type InputProps = ComponentProps<"input"> & { compact?: boolean; icon?: ReactNode };
+
+export function Input({ className, compact, icon, ...rest }: InputProps) {
+  const input = (
     <input
-      className={cx("tl-input", className)}
+      className={cx("tl-input", compact && "tl-input--compact", icon && "tl-input--icon", !icon && className)}
       {...rest}
     />
+  );
+  if (!icon) return input;
+  return (
+    <span className={cx("tl-input-wrap", className)}>
+      <span
+        aria-hidden="true"
+        className="tl-input-wrap__icon">
+        {icon}
+      </span>
+      {input}
+    </span>
   );
 }
 

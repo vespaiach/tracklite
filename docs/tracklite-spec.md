@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.20"
+version: "0.21"
 release: "R1"
 status: Ready to build
 updated: "2026-10-05"
@@ -357,11 +357,11 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
   - REQ-036.3: `WEB` is archived → the list, filters, search and sort all work; rows open read-only (REQ-013). (Verify: auto)
   - REQ-036.4: A 200-character title → one line ending in "…"; hovering shows the full title. (Verify: manual)
   - REQ-036.5: Sam drags `WEB-9` above `WEB-5` within In Progress → `WEB-9`'s last updated is unchanged; dragging it to In Review does change it. (Verify: auto)
-- **REQ-037** The system shall offer filters for status, assignee, priority and label. The assignee filter lists Unassigned, active members, and any deactivated member who still has issues in the project, marked "(deactivated)". Several values within one filter match any of them. Different filters must all match.
+- **REQ-037** The system shall offer filters for status, assignee, priority and label. The assignee filter lists Unassigned, active members, and any deactivated member who still has issues in the project, marked "(deactivated)". Several values within one filter match any of them. Different filters must all match. **Clear filters** removes every filter and the search.
   - REQ-037.1: Status = In Progress and In Review, and Assignee = Sam → only Sam's issues that are in either status. (Verify: auto)
   - REQ-037.2: Assignee = Unassigned → only issues with no assignee. (Verify: auto)
   - REQ-037.3: Label = `bug` and `frontend` → issues with either label. (Verify: auto)
-  - REQ-037.4: Nothing matches → "No issues match these filters", with a **Clear filters** button (STD-7). (Verify: auto)
+  - REQ-037.4: Nothing matches → "No issues match these filters", with a **Clear filters** button (STD-7) that also empties the search box. (Verify: auto)
   - REQ-037.5: Jo is deactivated and still assigned to `WEB-7` → the assignee filter offers "Jo Park (deactivated)", and choosing it shows `WEB-7`. (Verify: auto)
 - **REQ-038** When a member types in the search box, the system shall update the list 300 ms after they stop typing. It shows issues whose ID, title or description contains every word typed, ignoring capitals. Everything typed is plain text, with no wildcards or query syntax. Comments aren't searched.
   - REQ-038.1: "login button" → `WEB-1` "Fix login button", plus any issue whose description has both words. (Verify: auto)
@@ -727,6 +727,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.21 (2026-10-06):** REQ-037: **Clear filters** clears the search as well as the filters (REQ-037.4).
 - **0.20 (2026-10-05):** REQ-023 names the delete confirmation's copy.
 - **0.19 (2026-10-05):** REQ-019 names the field error for assigning someone who isn't an active member.
 - **0.18 (2026-10-05):** REQ-016 names the field error for a title over 200 characters.

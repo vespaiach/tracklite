@@ -337,8 +337,8 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2.4, §3.3, §3.4 (paging) · spec REQ-036…039, NFR-004
   - Needs: M4.2
   - Done: REQ-036.*…REQ-039.*
-- [ ] **M6.2 List page.** Filters and sort kept in the URL, search after a 300 ms pause, more rows loaded on scroll.
-  - Reads: design §1.7 · spec REQ-037…040
+- [x] **M6.2 List page.** Filters and sort kept in the URL, search after a 300 ms pause, more rows loaded on scroll.
+  - Reads: design §1.7 · spec REQ-037…040 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=List.dc.html&via=share (List)
   - Needs: M4.4 · API description: M6.1
   - Done: REQ-040.*; component tests for URL round-trip and the search pause
 

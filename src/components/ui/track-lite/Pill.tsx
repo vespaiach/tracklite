@@ -56,13 +56,13 @@ export function Kbds({ keys, onDark }: { keys: string[]; onDark?: boolean }) {
   );
 }
 
-export type TipProps = ComponentProps<"span"> & { keys?: string[] };
+export type TipProps = ComponentProps<"span"> & { keys?: string[]; wide?: boolean };
 
-export function Tip({ children, keys, className, ...rest }: TipProps) {
+export function Tip({ children, keys, wide, className, ...rest }: TipProps) {
   return (
     <span
       role="tooltip"
-      className={cx("tl-tip", className)}
+      className={cx("tl-tip", wide && "tl-tip--wide", className)}
       {...rest}>
       {children}
       {keys && (
@@ -88,12 +88,13 @@ export type TipTriggerProps = {
   tip: ReactNode;
   keys?: string[];
   block?: boolean;
+  wide?: boolean;
   open?: boolean;
   className?: string;
   children: ReactElement<TipTriggerChildProps>;
 };
 
-export function TipTrigger({ tip, keys, block, open: forced, className, children }: TipTriggerProps) {
+export function TipTrigger({ tip, keys, block, wide, open: forced, className, children }: TipTriggerProps) {
   const id = useId();
   const [open, setOpen] = useState(false);
   const child = Children.only(children);
@@ -130,6 +131,7 @@ export function TipTrigger({ tip, keys, block, open: forced, className, children
       <Tip
         id={id}
         keys={keys}
+        wide={wide}
         hidden={!shown}
         className="tl-tipwrap__tip">
         {tip}
