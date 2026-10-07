@@ -352,8 +352,8 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2.5, §3.3 (comments table) · spec REQ-031…034, REQ-046.1, DATA-001
   - Needs: M4.3, M3.3
   - Done: REQ-031.*…REQ-034.*, REQ-046.1
-- [ ] **M7.2 Comment thread.** Thread and comment box on the issue page and project details page; edit, delete, "(edited)", highlighted mentions; reuses the M4.5 suggestion list.
-  - Reads: design §6.4 · spec REQ-031…034, DATA-001
+- [x] **M7.2 Comment thread.** Thread and comment box on the issue page and project details page; edit, delete, "(edited)", highlighted mentions; reuses the M4.5 suggestion list.
+  - Reads: design §6.4 · spec REQ-031…034, DATA-001 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Comments.dc.html&via=share (Comments)
   - Needs: M4.5, M3.6 · API description: M7.1
   - Done: component tests for post, edit and delete
 - [ ] **M7.3 Comment extras.** The unsent-comment guard (`useBlocker` and `beforeunload`); time formatting; scrolling to `#comment-{id}`.

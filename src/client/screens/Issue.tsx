@@ -39,6 +39,7 @@ import {
   useMembersQuery,
   useUpdateIssueMutation,
 } from "../api";
+import { CommentThread } from "../CommentThread";
 import { formatDate } from "../dates";
 import { type DescriptionDraft, DescriptionEditor } from "../DescriptionEditor";
 import { useFailureToast } from "../failure";
@@ -125,6 +126,12 @@ function IssueView({ issue, project }: { issue: Issue; project: Project }) {
               issue={issue}
               editable={editable}
             />
+            <IssueSection title="Comments">
+              <CommentThread
+                threadPath={`issues/${issue.id}/comments`}
+                editable={editable}
+              />
+            </IssueSection>
           </>
         }
         side={

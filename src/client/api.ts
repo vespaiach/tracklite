@@ -83,6 +83,16 @@ function issueListPath(key: string, query: string, offset: number) {
   return `projects/${key}/issues${search ? `?${search}` : ""}`;
 }
 
+export type ThreadComment = {
+  id: string;
+  body: string;
+  author: MemberSummary;
+  createdAt: string;
+  editedAt: string | null;
+  version: number;
+  mentions: MemberSummary[];
+};
+
 export type IssueChange =
   | { title: string }
   | { status: IssueStatus }
@@ -157,7 +167,7 @@ const baseQuery: BaseQueryFn<ApiRequest, unknown, ApiFailure> = async (request, 
 export const api = createApi({
   baseQuery,
   refetchOnMountOrArgChange: true,
-  tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels", "Issue", "Board"],
+  tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels", "Issue", "Board", "Comments"],
   endpoints: (build) => ({
     me: build.query<Me, void>({ query: () => "me", providesTags: ["Me"] }),
     signIn: build.mutation<null, { email: string; password: string }>({
@@ -295,6 +305,22 @@ export const api = createApi({
         }
       },
     }),
+    comments: build.query<ThreadComment[], string>({
+      query: (threadPath) => threadPath,
+      providesTags: ["Comments"],
+    }),
+    postComment: build.mutation<ThreadComment, { threadPath: string; requestId: string; body: string }>({
+      query: ({ threadPath, ...body }) => ({ path: threadPath, method: "POST", body }),
+      invalidatesTags: (result) => (result ? ["Comments"] : []),
+    }),
+    editComment: build.mutation<ThreadComment, { id: string; body: string; version: number }>({
+      query: ({ id, ...body }) => ({ path: `comments/${id}`, method: "PATCH", body }),
+      invalidatesTags: (result) => (result ? ["Comments"] : []),
+    }),
+    deleteComment: build.mutation<null, string>({
+      query: (id) => ({ path: `comments/${id}`, method: "DELETE" }),
+      invalidatesTags: (_result, error) => (!error || error.status === 404 ? ["Comments"] : []),
+    }),
   }),
 });
 
@@ -331,4 +357,8 @@ export const {
   useIssueListInfiniteQuery,
   useBoardQuery,
   useMoveIssueMutation,
+  useCommentsQuery,
+  usePostCommentMutation,
+  useEditCommentMutation,
+  useDeleteCommentMutation,
 } = api;
