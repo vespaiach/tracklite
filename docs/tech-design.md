@@ -341,9 +341,11 @@ Changing a field that can't be changed (username, email, project key) gets `422`
 | Method and path | Body → result | Who | Spec |
 |---|---|---|---|
 | `GET /api/issues/{ID}/comments`, `GET /api/projects/{KEY}/comments` | → every comment, oldest first, each with its mentions | Member | REQ-032 |
-| `POST /api/issues/{ID}/comments`, `POST /api/projects/{KEY}/comments` | `{ requestId, body }` → `201` | Member | REQ-031 |
-| `PATCH /api/comments/{id}` | `{ body, version }` | Author | REQ-033 |
+| `POST /api/issues/{ID}/comments`, `POST /api/projects/{KEY}/comments` | `{ requestId, body }` → `201` and the comment; a repeated `requestId` → `200` and the original (STD-5) | Member | REQ-031 |
+| `PATCH /api/comments/{id}` | `{ body, version }` → the comment; a stale `version` → `409` (STD-8); a deleted comment → `404` "This comment was deleted" | Author | REQ-033 |
 | `DELETE /api/comments/{id}` | → `204` | Author or Admin | REQ-034 |
+
+A comment is `{ id, body, author, createdAt, editedAt, version, mentions }`: `author` is a member as in 3.1, `editedAt` is `null` until the first edit, and `mentions` lists the members it mentions. The body is stored as sent; it must have something other than spaces ("Comment required") and at most 10,000 characters ("Too long (max 10,000)").
 
 **Outside `/api`**
 

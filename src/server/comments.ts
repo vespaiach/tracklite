@@ -1,0 +1,200 @@
+import "server-only";
+import { asc, eq, inArray, type SQL, sql } from "drizzle-orm";
+import { ApiError } from "./api-error";
+import { db } from "./db";
+import { conflict, replaceMentions } from "./descriptions";
+import { byIssueId, issueGone, uuidPattern } from "./issues";
+import { memberSummary } from "./members";
+import { writableProject } from "./projects";
+import { comments, issues, members, mentions, projects } from "./schema";
+import type { Member } from "./sessions";
+
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type Executor = typeof db | Transaction;
+type CommentParent = { issueId: string } | { projectId: string };
+type NewComment = { requestId?: unknown; body?: unknown };
+type CommentChange = { body?: unknown; version?: unknown };
+
+const maxBodyLength = 10_000;
+
+function commentGone() {
+  return new ApiError(404, "This comment was deleted");
+}
+
+function notAllowed() {
+  return new ApiError(403, "You don't have permission to do that.");
+}
+
+function bodyError(value: unknown) {
+  if (typeof value !== "string" || value.trim() === "") return "Comment required";
+  if ([...value].length > maxBodyLength) return "Too long (max 10,000)";
+  return undefined;
+}
+
+function refuseInvalid(checks: Record<string, string | undefined>) {
+  const fields: Record<string, string> = {};
+  for (const [field, error] of Object.entries(checks)) if (error) fields[field] = error;
+  if (Object.keys(fields).length > 0) throw new ApiError(422, "Check the highlighted fields", fields);
+}
+
+async function findComments(executor: Executor, where: SQL) {
+  const rows = await executor
+    .select({
+      id: comments.id,
+      body: comments.body,
+      version: comments.version,
+      createdAt: comments.createdAt,
+      editedAt: comments.editedAt,
+      author: {
+        username: members.username,
+        fullName: members.fullName,
+        deactivatedAt: members.deactivatedAt,
+      },
+    })
+    .from(comments)
+    .innerJoin(members, eq(members.id, comments.authorId))
+    .where(where)
+    .orderBy(asc(comments.createdAt), asc(comments.id));
+  const mentioned =
+    rows.length === 0
+      ? []
+      : await executor
+          .select({
+            commentId: mentions.commentId,
+            username: members.username,
+            fullName: members.fullName,
+            deactivatedAt: members.deactivatedAt,
+          })
+          .from(mentions)
+          .innerJoin(members, eq(members.id, mentions.memberId))
+          .where(
+            inArray(
+              mentions.commentId,
+              rows.map((row) => row.id),
+            ),
+          )
+          .orderBy(asc(members.username));
+  return rows.map((row) => ({
+    id: row.id,
+    body: row.body,
+    author: memberSummary(row.author),
+    createdAt: row.createdAt.toISOString(),
+    editedAt: row.editedAt?.toISOString() ?? null,
+    version: row.version,
+    mentions: mentioned.filter((mention) => mention.commentId === row.id).map(memberSummary),
+  }));
+}
+
+async function oneComment(executor: Executor, id: string) {
+  const [comment] = await findComments(executor, eq(comments.id, id));
+  if (!comment) throw commentGone();
+  return comment;
+}
+
+async function issueOf(executor: Executor, id: string) {
+  const where = byIssueId(id);
+  if (!where) return undefined;
+  const [issue] = await executor
+    .select({ id: issues.id, projectKey: projects.key })
+    .from(issues)
+    .innerJoin(projects, eq(projects.id, issues.projectId))
+    .where(where);
+  return issue;
+}
+
+export async function listIssueComments(id: string) {
+  const issue = await issueOf(db, id);
+  if (!issue) throw new ApiError(404, "Not found");
+  return findComments(db, eq(comments.issueId, issue.id));
+}
+
+export async function listProjectComments(key: string) {
+  const [project] = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .where(eq(projects.key, key.toUpperCase()));
+  if (!project) throw new ApiError(404, "Not found");
+  return findComments(db, eq(comments.projectId, project.id));
+}
+
+async function postComment(
+  member: Member,
+  body: NewComment,
+  parentOf: (tx: Transaction) => Promise<CommentParent>,
+) {
+  const { requestId, body: text } = body ?? {};
+  refuseInvalid({
+    requestId: typeof requestId === "string" && uuidPattern.test(requestId) ? undefined : "Invalid request",
+    body: bodyError(text),
+  });
+
+  return db.transaction(async (tx) => {
+    const parent = await parentOf(tx);
+    const [repeated] = await findComments(tx, eq(comments.requestId, requestId as string));
+    if (repeated) return { comment: repeated, created: false };
+
+    const [inserted] = await tx
+      .insert(comments)
+      .values({ ...parent, authorId: member.id, body: text as string, requestId: requestId as string })
+      .returning({ id: comments.id });
+    await replaceMentions(tx, { commentId: inserted.id }, text as string);
+    return { comment: await oneComment(tx, inserted.id), created: true };
+  });
+}
+
+export function postIssueComment(id: string, member: Member, body: NewComment) {
+  return postComment(member, body, async (tx) => {
+    const issue = await issueOf(tx, id);
+    if (!issue) throw issueGone();
+    await writableProject(tx, issue.projectKey);
+    return { issueId: issue.id };
+  });
+}
+
+export function postProjectComment(key: string, member: Member, body: NewComment) {
+  return postComment(member, body, async (tx) => ({ projectId: (await writableProject(tx, key)).id }));
+}
+
+async function lockedComment(tx: Transaction, id: string) {
+  if (!uuidPattern.test(id)) throw commentGone();
+  const [target] = await tx
+    .select({ id: comments.id, projectKey: projects.key })
+    .from(comments)
+    .leftJoin(issues, eq(issues.id, comments.issueId))
+    .innerJoin(projects, eq(projects.id, sql`coalesce(${comments.projectId}, ${issues.projectId})`))
+    .where(eq(comments.id, id));
+  if (!target) throw commentGone();
+  await writableProject(tx, target.projectKey);
+  const [comment] = await tx.select().from(comments).where(eq(comments.id, target.id)).for("update");
+  if (!comment) throw commentGone();
+  return comment;
+}
+
+export async function editComment(id: string, member: Member, change: CommentChange) {
+  const { body, version } = change ?? {};
+  refuseInvalid({
+    body: bodyError(body),
+    version: Number.isInteger(version) ? undefined : "Version required",
+  });
+
+  return db.transaction(async (tx) => {
+    const comment = await lockedComment(tx, id);
+    if (comment.authorId !== member.id) throw notAllowed();
+    if (comment.version !== version) throw await conflict(tx, comment.authorId);
+
+    await tx
+      .update(comments)
+      .set({ body: body as string, version: sql`${comments.version} + 1`, editedAt: sql`now()` })
+      .where(eq(comments.id, comment.id));
+    await replaceMentions(tx, { commentId: comment.id }, body as string);
+    return oneComment(tx, comment.id);
+  });
+}
+
+export async function deleteComment(id: string, member: Member) {
+  await db.transaction(async (tx) => {
+    const comment = await lockedComment(tx, id);
+    if (comment.authorId !== member.id && member.role !== "admin") throw notAllowed();
+    await tx.delete(comments).where(eq(comments.id, comment.id));
+  });
+}

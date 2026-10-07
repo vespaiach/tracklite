@@ -348,7 +348,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 **Run order:** **M7.1 ∥ M7.2** → M7.3.
 
-- [ ] **M7.1 Comments API.** List, post (with `requestId`), edit (with a version check), delete, for issues and projects; mentions written as `mentions` rows.
+- [x] **M7.1 Comments API.** List, post (with `requestId`), edit (with a version check), delete, for issues and projects; mentions written as `mentions` rows.
   - Reads: design §2.5, §3.3 (comments table) · spec REQ-031…034, REQ-046.1, DATA-001
   - Needs: M4.3, M3.3
   - Done: REQ-031.*…REQ-034.*, REQ-046.1
