@@ -394,7 +394,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §5.3 · spec §9 "Email content"
   - Needs: M9.2
   - Done: the remaining REQ-045.*; templates match spec §9 word for word
-- [ ] **M9.4 Bounce webhook.** `POST /webhooks/email` with the signature check, marking notifications and invitations as bounced.
+- [x] **M9.4 Bounce webhook.** `POST /webhooks/email` with the signature check, marking notifications and invitations as bounced.
   - Reads: design §5.4 · spec API-003, REQ-051
   - Needs: M9.2, M2.1
   - Done: API-003.*; a bounced invitation shows as Bounced in the list API
