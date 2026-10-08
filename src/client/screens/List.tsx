@@ -1,7 +1,7 @@
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/csr/MagnifyingGlass";
-import { type FocusEvent, type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { Key } from "react-aria-components";
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import {
   Avatar,
   BoardEmpty,
@@ -10,14 +10,12 @@ import {
   Filters,
   Input,
   PickerItem,
-  Pill,
   Priority,
   SettingsLayout,
   Status,
   Table,
   TableSortHead,
   type TableSort,
-  TipTrigger,
 } from "../../components/ui/track-lite";
 import {
   type ListIssue,
@@ -27,7 +25,7 @@ import {
   useLabelsQuery,
   useMembersQuery,
 } from "../api";
-import { formatUpdated } from "../dates";
+import { LabelPills, TitleLink, UpdatedAt } from "../IssueCells";
 import { priorities, statuses } from "../issue-fields";
 import { LoadFailed, Loading } from "../LoadStates";
 import { NewIssueDialog } from "../NewIssueDialog";
@@ -55,7 +53,6 @@ const columns = {
   labels: "210px",
   updated: "140px",
 };
-const labelsShown = 2;
 const unassigned = "-";
 const searchPause = 300;
 
@@ -371,7 +368,6 @@ function AssigneeAvatar({ initials }: { initials: string }) {
 function IssueRow({ issue }: { issue: ListIssue }) {
   const [, statusName, statusKind] = statuses.find(([key]) => key === issue.status) ?? statuses[0];
   const [, priorityName, priorityKind] = priorities.find(([key]) => key === issue.priority) ?? priorities[0];
-  const hidden = issue.labels.slice(labelsShown);
   return (
     <tr className="tl-table__row">
       <td>
@@ -411,52 +407,12 @@ function IssueRow({ issue }: { issue: ListIssue }) {
         </span>
       </td>
       <td>
-        <span className="tl-table__cell">
-          {issue.labels.slice(0, labelsShown).map((label) => (
-            <Pill
-              key={label.id}
-              kind="label">
-              {label.name}
-            </Pill>
-          ))}
-          {hidden.length > 0 && (
-            <Pill
-              kind="est"
-              title={hidden.map((label) => label.name).join(", ")}>
-              {`+${hidden.length}`}
-            </Pill>
-          )}
-        </span>
+        <LabelPills labels={issue.labels} />
       </td>
       <td>
-        <span
-          className="tl-list-date"
-          title={new Date(issue.updatedAt).toLocaleString()}>
-          {formatUpdated(issue.updatedAt)}
-        </span>
+        <UpdatedAt at={issue.updatedAt} />
       </td>
     </tr>
-  );
-}
-
-function TitleLink({ issue }: { issue: ListIssue }) {
-  const [cut, setCut] = useState(false);
-  const measure = (event: MouseEvent<HTMLElement> | FocusEvent<HTMLElement>) =>
-    setCut(event.currentTarget.scrollWidth > event.currentTarget.clientWidth);
-  return (
-    <TipTrigger
-      tip={issue.title}
-      wide
-      block
-      open={cut ? undefined : false}>
-      <Link
-        to={`/issue/${issue.id}`}
-        onMouseEnter={measure}
-        onFocus={measure}
-        className="tl-table__link">
-        {issue.title}
-      </Link>
-    </TipTrigger>
   );
 }
 

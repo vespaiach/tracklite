@@ -371,8 +371,8 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §3.3 · spec REQ-041
   - Needs: M4.2
   - Done: REQ-041.* (API side), REQ-013.2 and REQ-013.3's My issues part (from M3.2)
-- [ ] **M8.2 My issues page.** The page, and sign-in landing there.
-  - Reads: design §6.1 · spec REQ-041, REQ-042
+- [x] **M8.2 My issues page.** The page, and sign-in landing there.
+  - Reads: design §6.1 · spec REQ-041, REQ-042 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=My+issues.dc.html&via=share (My issues)
   - Needs: M1.7 · API description: M8.1
   - Done: REQ-042.* (auto); component tests for the groups
 

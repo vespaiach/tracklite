@@ -74,6 +74,12 @@ export type ListIssue = Pick<
 
 export type IssueListPage = { issues: ListIssue[]; hasMore: boolean; deactivatedAssignees: MemberSummary[] };
 
+export type MyIssue = Pick<Issue, "id" | "title" | "priority" | "labels" | "updatedAt"> & {
+  projectName: string;
+};
+
+export type MyIssueGroup = { status: IssueStatus; count: number; issues: MyIssue[] };
+
 const issueListPageSize = 100;
 
 function issueListPath(key: string, query: string, offset: number) {
@@ -288,6 +294,7 @@ export const api = createApi({
       },
       query: ({ queryArg, pageParam }) => issueListPath(queryArg.key, queryArg.query, pageParam),
     }),
+    myIssues: build.query<MyIssueGroup[], void>({ query: () => "my-issues" }),
     board: build.query<Board, string>({ query: (key) => `projects/${key}/board`, providesTags: ["Board"] }),
     moveIssue: build.mutation<Issue, { id: string; status: IssueStatus; place: BoardPlace }>({
       query: ({ id, ...body }) => ({ path: `issues/${id}/position`, method: "PUT", body }),
@@ -355,6 +362,7 @@ export const {
   useUpdateIssueMutation,
   useDeleteIssueMutation,
   useIssueListInfiniteQuery,
+  useMyIssuesQuery,
   useBoardQuery,
   useMoveIssueMutation,
   useCommentsQuery,
