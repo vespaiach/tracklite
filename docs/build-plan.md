@@ -409,7 +409,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 **Run order:** M10.1 → **M10.2 ∥ M10.3 ∥ M10.4**. All three change the same VPS, so make each one's changes in its own script or config file.
 
-- [ ] **M10.1 Server.** PostgreSQL; Caddy with TLS, HSTS, security headers, `X-Forwarded-For` and an access log without `token`; systemd units for web and worker; journald keeping 14 days; `/etc/tracklite/env` with secrets.
+- [x] **M10.1 Server.** PostgreSQL; Caddy with TLS, HSTS, security headers, `X-Forwarded-For` and an access log without `token`; systemd units for web and worker; journald keeping 14 days; `/etc/tracklite/env` with secrets.
   - Reads: design §1.1, §4.9 · spec SEC-005, OPS-006
   - Needs: M9.2
   - Done: the app serves over HTTPS; SEC-005.1 checked by hand
