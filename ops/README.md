@@ -44,3 +44,71 @@ Replace `tracklite.example.com` with the real domain.
 - **SEC-005.1.** `curl -sI http://tracklite.example.com/my-issues` answers a `308` redirect with `location: https://tracklite.example.com/my-issues`.
 - **SEC-007.2.** Open `https://tracklite.example.com/reset-password?token=abc`, then run `sudo journalctl -u caddy -n 5`. The logged `uri` is `/reset-password` with no `token`.
 - **Logs.** `systemctl status tracklite-web tracklite-worker` shows both as active. `journalctl -u tracklite-web` shows the app's log lines.
+
+# Backups (M10.3)
+
+Every day at 03:00 UTC a systemd timer dumps the database, encrypts the dump with [age](https://age-encryption.org) and uploads it to a Cloudflare R2 bucket with rclone, keeping the newest 14 (OPS-003). If the backup fails, the owner gets an email through Resend.
+
+| File in `ops/backup/` | Installed as | What it does |
+|---|---|---|
+| `backup.sh` | `/opt/tracklite/backup/` | `pg_dump` → `age` → R2, then deletes all but the newest 14 |
+| `notify-failure.sh` | `/opt/tracklite/backup/` | emails `OWNER_EMAIL` with the last log lines (OPS-003.3) |
+| `restore.sh` | `/opt/tracklite/backup/` | downloads, decrypts and restores a backup into a database (OPS-003.1) |
+| `tracklite-backup.service` | `/etc/systemd/system/` | runs `backup.sh` as `postgres`; `OnFailure=` starts the unit below |
+| `tracklite-backup-failed.service` | `/etc/systemd/system/` | runs `notify-failure.sh` |
+| `tracklite-backup.timer` | `/etc/systemd/system/` | `03:00 UTC` daily; `Persistent=` catches up after downtime |
+| `backup.env.example` | `/etc/tracklite/backup.env` (mode 600) | owner email, age public key, R2 bucket and token |
+
+Backups are encrypted to an age public key. The private key never goes on the VPS, so a stolen VPS or a leaked R2 token can't read old backups. Losing the private key means losing every backup, so keep it in two places (for example, the team password manager and an offline copy).
+
+## Set-up
+
+1. On your own machine, make the key pair. Store `tracklite-backup.key` safely, and copy the `age1…` public key it prints:
+
+   ```bash
+   age-keygen -o tracklite-backup.key
+   ```
+
+2. In Cloudflare, create an R2 bucket (for example `tracklite-backups`) and an R2 API token with **Object Read & Write** on that bucket only. Note the account ID, access key ID and secret.
+3. On the VPS, after `ops/provision.sh`:
+
+   ```bash
+   sudo ops/backup/install.sh
+   ```
+
+4. Fill in `/etc/tracklite/backup.env`:
+
+   ```bash
+   sudo editor /etc/tracklite/backup.env
+   ```
+
+5. Take the first backup now, then check it worked:
+
+   ```bash
+   sudo systemctl start tracklite-backup.service
+   ```
+
+   ```bash
+   sudo journalctl -u tracklite-backup.service -n 5
+   ```
+
+## Restore
+
+On any machine with `rclone`, `age` and PostgreSQL 18's `pg_restore`, export the R2 lines from `backup.env` into the shell, create an empty database, and restore into it. Leave out the backup name to restore the newest one.
+
+```bash
+createdb tracklite_restore
+```
+
+```bash
+ops/backup/restore.sh tracklite-backup.key postgres://localhost/tracklite_restore
+```
+
+After losing the VPS (OPS-003.1): provision a new one, deploy, stop `tracklite-web` and `tracklite-worker`, restore into the empty `tracklite` database as its owner, then start them again.
+
+## Checks by hand
+
+- **A backup restores into a scratch database (M10.3 Done, and the pre-launch restore test).** Run the two restore commands above, then `psql tracklite_restore -c 'select count(*) from issues'` matches the live count from the time of the backup.
+- **OPS-003.2.** `rclone lsf r2:$R2_BUCKET` lists at most 14 `tracklite-*.dump.age` files once the timer has run 15 times. To check sooner, run `sudo systemctl start tracklite-backup.service` 15 times and count again.
+- **OPS-003.3.** Set `R2_BUCKET` to a bucket that doesn't exist, run `sudo systemctl start tracklite-backup.service`, and check that `OWNER_EMAIL` gets "Tracklite backup failed". Then put the right value back.
+- **Timer.** `systemctl list-timers tracklite-backup.timer` shows the next run at 03:00 UTC.
