@@ -17,6 +17,7 @@ import {
   summary,
 } from "../test/client-app";
 import type { Me, Project, ThreadComment } from "./api";
+import { formatExact } from "./dates";
 
 afterEach(() => {
   cleanup();
@@ -56,6 +57,7 @@ function mockThread({
   patch,
   remove,
   on = "issue",
+  alsoInSidebar = [],
 }: {
   me?: Me;
   inProject?: Project;
@@ -65,6 +67,7 @@ function mockThread({
   patch?: Answer;
   remove?: Answer;
   on?: "issue" | "project";
+  alsoInSidebar?: Project[];
 } = {}) {
   let current = comments;
   const listPath = on === "issue" ? "/api/issues/WEB-42/comments" : "/api/projects/WEB/comments";
@@ -72,7 +75,7 @@ function mockThread({
     "GET /api/me": () => Response.json(me),
     "GET /api/members": () => Response.json([alex, sam]),
     "GET /api/projects?archived=false": () =>
-      Response.json(inProject.archivedAt === null ? [summary(inProject)] : []),
+      Response.json([...(inProject.archivedAt === null ? [inProject] : []), ...alsoInSidebar].map(summary)),
     "GET /api/projects/WEB": () => Response.json(inProject),
     "GET /api/projects/WEB/labels": () => Response.json([]),
     "GET /api/issues/WEB-42": () => Response.json(issue({ archived: inProject.archivedAt !== null })),
@@ -413,4 +416,106 @@ it("STD-7: a failed load shows “Couldn't load this.” with Retry and no comme
   expect(await within(section).findByText("Couldn't load this.")).toBeTruthy();
   expect(within(section).getByRole("button", { name: "Retry" })).toBeTruthy();
   expect(screen.queryByRole("textbox", { name: "Comment (Markdown)" })).toBeNull();
+});
+
+it("REQ-035.1: leaving with an unsent comment asks first; Cancel keeps the text", async () => {
+  mockThread({ alsoInSidebar: [project("MOB", "Mobile")] });
+  openIssue();
+  await type("Half a thought");
+
+  fireEvent.click(await screen.findByRole("link", { name: /Mobile/ }));
+  const prompt = await screen.findByRole("alertdialog", {
+    name: "You have an unsent comment. Leave anyway?",
+  });
+  fireEvent.click(within(prompt).getByRole("button", { name: "Cancel" }));
+
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect(window.location.pathname).toBe("/issue/WEB-42");
+  expect((await commentBox()).value).toBe("Half a thought");
+});
+
+it("REQ-035.2: an empty comment box leaves without asking", async () => {
+  mockThread();
+  openIssue();
+  await type("   ");
+
+  fireEvent.click(await screen.findByRole("link", { name: "My issues" }));
+
+  await waitFor(() => expect(window.location.pathname).toBe("/my-issues"));
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+});
+
+it("REQ-035: closing the tab with an unsent comment asks the browser to confirm", async () => {
+  mockThread();
+  openIssue();
+  await commentBox();
+
+  const empty = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(empty);
+  expect(empty.defaultPrevented).toBe(false);
+
+  await type("Half a thought");
+  const typed = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(typed);
+  expect(typed.defaultPrevented).toBe(true);
+});
+
+it("REQ-035: a posted comment no longer holds back leaving", async () => {
+  mockThread();
+  openIssue();
+  await type("Verified on staging.");
+  post();
+  await commentWith("Verified on staging.");
+
+  fireEvent.click(await screen.findByRole("link", { name: "My issues" }));
+
+  await waitFor(() => expect(window.location.pathname).toBe("/my-issues"));
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+});
+
+it("REQ-031: hovering a comment's time shows the exact date and time", async () => {
+  const createdAt = minutesAgo(180);
+  mockThread({ comments: [comment({ body: "Reproduced on Safari 17.4.", createdAt })] });
+  openIssue();
+
+  const shown = await commentWith("Reproduced on Safari 17.4.");
+  expect(within(shown).getByText("3 hours ago").getAttribute("title")).toBe(formatExact(createdAt));
+});
+
+it("REQ-033: hovering “(edited)” shows the edit time", async () => {
+  const editedAt = minutesAgo(20);
+  mockThread({ comments: [comment({ body: "Console output", editedAt })] });
+  openIssue();
+
+  const shown = await commentWith("Console output");
+  expect(within(shown).getByText("(edited)").getAttribute("title")).toBe(`Edited ${formatExact(editedAt)}`);
+});
+
+it("§6.1: an address ending in #comment-{id} scrolls to that comment and highlights it briefly", async () => {
+  const scrollIntoView = vi.fn();
+  Element.prototype.scrollIntoView = scrollIntoView;
+  mockThread({
+    comments: [comment({ id: "c-1", body: "First" }), comment({ id: "c-7", body: "Linked from email" })],
+  });
+  renderAppAt("/issue/WEB-42#comment-c-7");
+
+  const linked = await commentWith("Linked from email");
+  expect(linked.id).toBe("comment-c-7");
+  await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+  expect(scrollIntoView.mock.contexts[0]).toBe(linked);
+  expect(linked.classList.contains("tl-comment--highlighted")).toBe(true);
+  await waitFor(() => expect(linked.classList.contains("tl-comment--highlighted")).toBe(false), {
+    timeout: 3000,
+  });
+});
+
+it("§6.1: a #comment-{id} for a comment that's gone leaves the page at the top", async () => {
+  const scrollIntoView = vi.fn();
+  Element.prototype.scrollIntoView = scrollIntoView;
+  mockThread({ comments: [comment({ id: "c-1", body: "First" })] });
+  renderAppAt("/issue/WEB-42#comment-c-9");
+
+  await commentWith("First");
+  expect(scrollIntoView).not.toHaveBeenCalled();
+  expect(document.querySelector(".tl-comment--highlighted")).toBeNull();
 });

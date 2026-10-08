@@ -22,3 +22,16 @@ export function formatUpdated(iso: string, now = new Date()) {
   if (elapsed < 7 * day) return relative.format(-Math.floor(elapsed / day), "day");
   return formatDate(iso, now);
 }
+
+export function formatExact(iso: string, timeZone?: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZoneName: "short",
+    timeZone,
+  });
+}

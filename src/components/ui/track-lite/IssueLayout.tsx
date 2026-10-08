@@ -189,6 +189,8 @@ export function FeedTime({ children, className }: { children: ReactNode; classNa
 }
 
 export type CommentProps = {
+  id?: string;
+  highlighted?: boolean;
   avatar: ReactNode;
   author: string;
   time: ReactNode;
@@ -197,9 +199,11 @@ export type CommentProps = {
   children: ReactNode;
 };
 
-export function Comment({ avatar, author, time, edited, actions, children }: CommentProps) {
+export function Comment({ id, highlighted, avatar, author, time, edited, actions, children }: CommentProps) {
   return (
-    <article className="tl-comment">
+    <article
+      id={id}
+      className={cx("tl-comment", highlighted && "tl-comment--highlighted")}>
       <div className="tl-comment__head">
         {avatar}
         <b>{author}</b>
