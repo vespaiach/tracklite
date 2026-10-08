@@ -61,7 +61,7 @@ it("REQ-016.1: creating an issue opens it as Backlog, No priority and unassigned
   expect(body.requestId).toMatch(/^[0-9a-f-]{36}$/);
   expect((await screen.findByRole("button", { name: /^Status/ })).textContent).toContain("Backlog");
   expect(screen.getByRole("button", { name: /^Priority/ }).textContent).toContain("No priority");
-  expect(screen.getByRole("button", { name: /^Assignee/ }).textContent).toContain("Unassigned");
+  expect((await screen.findByRole("button", { name: /^Assignee/ })).textContent).toContain("Unassigned");
   expect(screen.getByText(/Created by Sam Lee/)).toBeTruthy();
 });
 
