@@ -9,14 +9,11 @@ import { notify } from "./notifications";
 import { writableProject } from "./projects";
 import { comments, issues, members, mentions, projects } from "./schema";
 import type { Member } from "./sessions";
+import type { CommentEdit, NewComment } from "../schemas/comment";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | Transaction;
 type CommentParent = { issueId: string } | { projectId: string };
-type NewComment = { requestId?: unknown; body?: unknown };
-type CommentChange = { body?: unknown; version?: unknown };
-
-const maxBodyLength = 10_000;
 
 function commentGone() {
   return new ApiError(404, "This comment was deleted");
@@ -24,18 +21,6 @@ function commentGone() {
 
 function notAllowed() {
   return new ApiError(403, "You don't have permission to do that.");
-}
-
-function bodyError(value: unknown) {
-  if (typeof value !== "string" || value.trim() === "") return "Comment required";
-  if ([...value].length > maxBodyLength) return "Too long (max 10,000)";
-  return undefined;
-}
-
-function refuseInvalid(checks: Record<string, string | undefined>) {
-  const fields: Record<string, string> = {};
-  for (const [field, error] of Object.entries(checks)) if (error) fields[field] = error;
-  if (Object.keys(fields).length > 0) throw new ApiError(422, "Check the highlighted fields", fields);
 }
 
 async function findComments(executor: Executor, where: SQL) {
@@ -120,31 +105,25 @@ export async function listProjectComments(key: string) {
 
 async function postComment(
   member: Member,
-  body: NewComment,
+  { requestId, body: text }: NewComment,
   parentOf: (tx: Transaction) => Promise<CommentParent>,
 ) {
-  const { requestId, body: text } = body ?? {};
-  refuseInvalid({
-    requestId: typeof requestId === "string" && uuidPattern.test(requestId) ? undefined : "Invalid request",
-    body: bodyError(text),
-  });
-
   return db.transaction(async (tx) => {
     const parent = await parentOf(tx);
-    const [repeated] = await findComments(tx, eq(comments.requestId, requestId as string));
+    const [repeated] = await findComments(tx, eq(comments.requestId, requestId));
     if (repeated) return { comment: repeated, created: false };
 
     const [inserted] = await tx
       .insert(comments)
-      .values({ ...parent, authorId: member.id, body: text as string, requestId: requestId as string })
+      .values({ ...parent, authorId: member.id, body: text, requestId })
       .returning({ id: comments.id });
-    const mentioned = await replaceMentions(tx, { commentId: inserted.id }, text as string);
+    const mentioned = await replaceMentions(tx, { commentId: inserted.id }, text);
     await notify(tx, mentioned, {
       kind: "mentioned",
       actorId: member.id,
       target: parent,
       commentId: inserted.id,
-      text: text as string,
+      text,
     });
     return { comment: await oneComment(tx, inserted.id), created: true };
   });
@@ -178,13 +157,7 @@ async function lockedComment(tx: Transaction, id: string) {
   return comment;
 }
 
-export async function editComment(id: string, member: Member, change: CommentChange) {
-  const { body, version } = change ?? {};
-  refuseInvalid({
-    body: bodyError(body),
-    version: Number.isInteger(version) ? undefined : "Version required",
-  });
-
+export async function editComment(id: string, member: Member, { body, version }: CommentEdit) {
   return db.transaction(async (tx) => {
     const comment = await lockedComment(tx, id);
     if (comment.authorId !== member.id) throw notAllowed();
@@ -192,15 +165,15 @@ export async function editComment(id: string, member: Member, change: CommentCha
 
     await tx
       .update(comments)
-      .set({ body: body as string, version: sql`${comments.version} + 1`, editedAt: sql`now()` })
+      .set({ body, version: sql`${comments.version} + 1`, editedAt: sql`now()` })
       .where(eq(comments.id, comment.id));
-    const mentioned = await replaceMentions(tx, { commentId: comment.id }, body as string);
+    const mentioned = await replaceMentions(tx, { commentId: comment.id }, body);
     await notify(tx, mentioned, {
       kind: "mentioned",
       actorId: member.id,
       target: comment.issueId ? { issueId: comment.issueId } : { projectId: comment.projectId as string },
       commentId: comment.id,
-      text: body as string,
+      text: body,
     });
     return oneComment(tx, comment.id);
   });

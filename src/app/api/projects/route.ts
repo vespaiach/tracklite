@@ -1,6 +1,7 @@
 import type { Project, ProjectSummary } from "../../../client/api";
 import { apiRoute } from "../../../server/api-route";
-import { createProject, listProjects, NewProject } from "../../../server/projects";
+import { NewProject } from "../../../schemas/project";
+import { createProject, listProjects } from "../../../server/projects";
 
 export const GET = apiRoute("member", async (request) => {
   const archived = new URL(request.url).searchParams.get("archived") === "true";

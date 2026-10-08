@@ -1,64 +1,17 @@
 import "server-only";
 import { asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import * as v from "valibot";
 import { ApiError } from "./api-error";
-import { maxCharacters } from "./characters";
 import { db } from "./db";
-import { conflict, descriptionText, descriptionVersion, replaceMentions } from "./descriptions";
+import { conflict, replaceMentions } from "./descriptions";
 import { memberSummary } from "./members";
 import { notify } from "./notifications";
 import { members, mentions, projectKeys, projects } from "./schema";
 import { type Member, requireAdmin } from "./sessions";
+import type { NewProject, ProjectChanges } from "../schemas/project";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | Transaction;
 type Project = typeof projects.$inferSelect;
-
-const maxNameLength = 50;
-
-const projectName = v.pipe(
-  v.string("Name required"),
-  v.trim(),
-  v.nonEmpty("Name required"),
-  maxCharacters(maxNameLength, `Too long (max ${maxNameLength})`),
-);
-
-export const NewProject = v.object({
-  name: projectName,
-  key: v.pipe(
-    v.string("Key must be 2 to 5 letters"),
-    v.regex(/^[A-Za-z]{2,5}$/, "Key must be 2 to 5 letters"),
-    v.toUpperCase(),
-  ),
-});
-export type NewProject = v.InferOutput<typeof NewProject>;
-
-export const ProjectChanges = v.pipe(
-  v.object({
-    key: v.optional(v.never("Key can't be changed")),
-    name: v.optional(projectName),
-    archived: v.optional(v.boolean("Choose true or false")),
-    description: v.optional(descriptionText),
-    descriptionVersion: v.optional(descriptionVersion),
-  }),
-  v.forward(
-    v.partialCheck(
-      [["description"], ["descriptionVersion"]],
-      (changes) => changes.description === undefined || changes.descriptionVersion !== undefined,
-      "Version required",
-    ),
-    ["descriptionVersion"],
-  ),
-  v.forward(
-    v.partialCheck(
-      [["description"], ["descriptionVersion"]],
-      (changes) => changes.descriptionVersion === undefined || changes.description !== undefined,
-      "Description required",
-    ),
-    ["description"],
-  ),
-);
-export type ProjectChanges = v.InferOutput<typeof ProjectChanges>;
 
 function refuseFields(fields: Record<string, string>) {
   if (Object.keys(fields).length > 0) throw new ApiError(422, "Check the highlighted fields", fields);

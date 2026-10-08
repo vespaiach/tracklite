@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../server/db";
@@ -177,7 +177,7 @@ it("REQ-041: a row carries id, title, project name, priority, labels (sorted by 
   const [stored] = await db
     .select({ updatedAt: issues.updatedAt })
     .from(issues)
-    .where(eq(issues.number, Number(id.split("-")[1])));
+    .where(and(eq(issues.projectId, web.id), eq(issues.number, Number(id.split("-")[1]))));
 
   const [group] = await myIssuesOf(cookie);
 

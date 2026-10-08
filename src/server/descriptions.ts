@@ -1,32 +1,12 @@
 import "server-only";
 import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
-import * as v from "valibot";
 import { findMentions } from "../lib/markdown/parse";
 import { ApiError } from "./api-error";
-import { maxCharacters } from "./characters";
 import type { db } from "./db";
 import { members, mentions } from "./schema";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type MentionSource = { projectId: string } | { issueId: string } | { commentId: string };
-
-const maxDescriptionLength = 20_000;
-
-export const descriptionText = v.pipe(
-  v.string("Description required"),
-  maxCharacters(maxDescriptionLength, "Too long (max 20,000)"),
-);
-export const descriptionVersion = v.pipe(v.number("Version required"), v.integer("Version required"));
-
-export function parseDescriptionChange(body: Record<string, unknown>) {
-  const { description, descriptionVersion } = body;
-  const fields: Record<string, string> = {};
-  if (typeof description !== "string") fields.description = "Description required";
-  else if ([...description].length > maxDescriptionLength) fields.description = "Too long (max 20,000)";
-  if (!Number.isInteger(descriptionVersion)) fields.descriptionVersion = "Version required";
-  if (Object.keys(fields).length > 0) throw new ApiError(422, "Check the highlighted fields", fields);
-  return { description: description as string, descriptionVersion: descriptionVersion as number };
-}
 
 export async function conflict(tx: Transaction, editorId: string | null) {
   const [editor] = editorId
