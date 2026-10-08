@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import * as v from "valibot";
 import { afterEach, beforeEach, expect, it, type MockInstance, vi } from "vitest";
 import { createMember } from "../test/factories";
 import { ApiError } from "./api-error";
@@ -172,12 +173,13 @@ it("SEC-007: a 500 is logged at error level with the error class", async () => {
   ]);
 });
 
-async function signedInRequest(role: "admin" | "member") {
+async function signedInRequest(role: "admin" | "member", body?: unknown) {
   const member = await createMember({ role });
   const token = await createSession(member.id);
   const request = new Request(`${appOrigin}/api/projects/WEB`, {
     method: "DELETE",
     headers: { Origin: appOrigin, Cookie: `session=${token}` },
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   return { member, request };
 }
@@ -205,5 +207,114 @@ it("REQ-052: a role removed after sign-in applies on the next request", async ()
   await db.update(members).set({ role: "member" }).where(eq(members.id, member.id));
   const response = await apiRoute("admin", handler)(request);
   expect(response.status).toBe(403);
+  expect(handler).not.toHaveBeenCalled();
+});
+
+const NewThing = v.object({
+  name: v.pipe(
+    v.string("Name required"),
+    v.trim(),
+    v.nonEmpty("Name required"),
+    v.regex(/^[a-z ]+$/i, "Letters only"),
+  ),
+  key: v.pipe(
+    v.string("Key must be 2 to 5 letters"),
+    v.minLength(2, "Key must be 2 to 5 letters"),
+    v.regex(/^[a-z]+$/i, "Letters only"),
+    v.toUpperCase(),
+  ),
+});
+
+function postWith(body: string) {
+  return new Request(`${appOrigin}/api/things`, { method: "POST", headers: { Origin: appOrigin }, body });
+}
+
+it("a body that isn't valid JSON gets 422 \"Couldn't read the request.\" with no fields", async () => {
+  const handler = vi.fn(ok);
+  const response = await apiRoute("public", NewThing, handler)(postWith("{ name: "));
+  expect(response.status).toBe(422);
+  expect(await response.json()).toEqual({ error: { message: "Couldn't read the request." } });
+  expect(handler).not.toHaveBeenCalled();
+});
+
+it("a JSON body that isn't an object gets 422 \"Couldn't read the request.\"", async () => {
+  const handler = vi.fn(ok);
+  for (const body of ["[]", "null", '"text"']) {
+    const response = await apiRoute("public", NewThing, handler)(postWith(body));
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({ error: { message: "Couldn't read the request." } });
+  }
+  expect(handler).not.toHaveBeenCalled();
+});
+
+it("STD-3: a schema failure gets 422 with the first message for each failing field", async () => {
+  const handler = vi.fn(ok);
+  const response = await apiRoute(
+    "public",
+    NewThing,
+    handler,
+  )(postWith(JSON.stringify({ name: "  ", key: "1" })));
+  expect(response.status).toBe(422);
+  expect(await response.json()).toEqual({
+    error: {
+      message: "Check the highlighted fields",
+      fields: { name: "Name required", key: "Key must be 2 to 5 letters" },
+    },
+  });
+  expect(handler).not.toHaveBeenCalled();
+});
+
+it("the handler receives the schema's output", async () => {
+  const handler = vi.fn(ok);
+  const request = postWith(JSON.stringify({ name: "  Website ", key: "web", extra: "dropped" }));
+  const response = await apiRoute("public", NewThing, handler)(request);
+  expect(response.status).toBe(204);
+  expect(handler).toHaveBeenCalledWith(request, { name: "Website", key: "WEB" });
+});
+
+it("STD-1: a signed-out request with an invalid body gets 401", async () => {
+  const handler = vi.fn(ok);
+  const response = await apiRoute("member", NewThing, handler)(postWith(JSON.stringify({ name: "" })));
+  expect(response.status).toBe(401);
+  expect(handler).not.toHaveBeenCalled();
+});
+
+it("SEC-004: a cross-site write with an invalid body gets 403", async () => {
+  const handler = vi.fn(ok);
+  const response = await apiRoute(
+    "public",
+    NewThing,
+    handler,
+  )(
+    new Request(`${appOrigin}/api/things`, {
+      method: "POST",
+      headers: { Origin: "https://evil.example" },
+      body: "{ name: ",
+    }),
+  );
+  expect(response.status).toBe(403);
+  expect(handler).not.toHaveBeenCalled();
+});
+
+it("SEC-007: a validation 422 is logged at info level without the body", async () => {
+  await apiRoute("public", NewThing, ok)(postWith(JSON.stringify({ name: "body-secret", key: "1" })));
+  const [line] = log.mock.calls.map(([raw]) => raw as string);
+  expect(JSON.parse(line)).toMatchObject({ level: "info", method: "POST", path: "/api/things", status: 422 });
+  expect(line).not.toContain("body-secret");
+});
+
+it("a route without a schema can still read the body itself", async () => {
+  const response = await apiRoute("public", async (request) => Response.json(await request.json()))(
+    postWith(JSON.stringify({ name: "Website" })),
+  );
+  expect(await response.json()).toEqual({ name: "Website" });
+});
+
+it("a member's invalid body on an admin-only route gets 422, and a valid one gets 403", async () => {
+  const handler = vi.fn(ok);
+  const invalid = await signedInRequest("member", { name: "" });
+  expect((await apiRoute("admin", NewThing, handler)(invalid.request)).status).toBe(422);
+  const valid = await signedInRequest("member", { name: "Website", key: "WEB" });
+  expect((await apiRoute("admin", NewThing, handler)(valid.request)).status).toBe(403);
   expect(handler).not.toHaveBeenCalled();
 });

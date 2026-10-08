@@ -1,8 +1,10 @@
 import "server-only";
 import { asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import * as v from "valibot";
 import { ApiError } from "./api-error";
+import { maxCharacters } from "./characters";
 import { db } from "./db";
-import { conflict, parseDescriptionChange, replaceMentions } from "./descriptions";
+import { conflict, descriptionText, descriptionVersion, replaceMentions } from "./descriptions";
 import { memberSummary } from "./members";
 import { notify } from "./notifications";
 import { members, mentions, projectKeys, projects } from "./schema";
@@ -14,11 +16,49 @@ type Project = typeof projects.$inferSelect;
 
 const maxNameLength = 50;
 
-function nameError(trimmedName: string) {
-  if (trimmedName === "") return "Name required";
-  if ([...trimmedName].length > maxNameLength) return `Too long (max ${maxNameLength})`;
-  return undefined;
-}
+const projectName = v.pipe(
+  v.string("Name required"),
+  v.trim(),
+  v.nonEmpty("Name required"),
+  maxCharacters(maxNameLength, `Too long (max ${maxNameLength})`),
+);
+
+export const NewProject = v.object({
+  name: projectName,
+  key: v.pipe(
+    v.string("Key must be 2 to 5 letters"),
+    v.regex(/^[A-Za-z]{2,5}$/, "Key must be 2 to 5 letters"),
+    v.toUpperCase(),
+  ),
+});
+export type NewProject = v.InferOutput<typeof NewProject>;
+
+export const ProjectChanges = v.pipe(
+  v.object({
+    key: v.optional(v.never("Key can't be changed")),
+    name: v.optional(projectName),
+    archived: v.optional(v.boolean("Choose true or false")),
+    description: v.optional(descriptionText),
+    descriptionVersion: v.optional(descriptionVersion),
+  }),
+  v.forward(
+    v.partialCheck(
+      [["description"], ["descriptionVersion"]],
+      (changes) => changes.description === undefined || changes.descriptionVersion !== undefined,
+      "Version required",
+    ),
+    ["descriptionVersion"],
+  ),
+  v.forward(
+    v.partialCheck(
+      [["description"], ["descriptionVersion"]],
+      (changes) => changes.descriptionVersion === undefined || changes.description !== undefined,
+      "Description required",
+    ),
+    ["description"],
+  ),
+);
+export type ProjectChanges = v.InferOutput<typeof ProjectChanges>;
 
 function refuseFields(fields: Record<string, string>) {
   if (Object.keys(fields).length > 0) throw new ApiError(422, "Check the highlighted fields", fields);
@@ -60,15 +100,7 @@ export async function getProject(key: string) {
   return projectResponse(db, project);
 }
 
-export async function createProject(body: { name?: unknown; key?: unknown }) {
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  const key = typeof body.key === "string" && /^[A-Za-z]{2,5}$/.test(body.key) ? body.key.toUpperCase() : "";
-  const fields: Record<string, string> = {};
-  const nameProblem = nameError(name);
-  if (nameProblem) fields.name = nameProblem;
-  if (key === "") fields.key = "Key must be 2 to 5 letters";
-  refuseFields(fields);
-
+export async function createProject({ name, key }: NewProject) {
   return db.transaction(async (tx) => {
     const reserved = await tx.insert(projectKeys).values({ key }).onConflictDoNothing().returning();
     if (reserved.length === 0) refuseFields({ key: "Key already used" });
@@ -77,22 +109,11 @@ export async function createProject(body: { name?: unknown; key?: unknown }) {
   });
 }
 
-function parseProjectChanges(body: Record<string, unknown>) {
-  const { name, archived } = body;
-  const fields: Record<string, string> = {};
-  if ("key" in body) fields.key = "Key can't be changed";
-  const trimmedName = typeof name === "string" ? name.trim() : name === undefined ? undefined : "";
-  const nameProblem = trimmedName === undefined ? undefined : nameError(trimmedName);
-  if (nameProblem) fields.name = nameProblem;
-  if (archived !== undefined && typeof archived !== "boolean") fields.archived = "Choose true or false";
-  refuseFields(fields);
-  return { name: trimmedName, archived: archived as boolean | undefined };
-}
-
-export async function updateProject(member: Member, key: string, body: Record<string, unknown>) {
-  if ("description" in body || "descriptionVersion" in body) return saveDescription(member, key, body);
-  if ("key" in body || "name" in body || "archived" in body) requireAdmin(member);
-  const { name, archived } = parseProjectChanges(body);
+export async function updateProject(member: Member, key: string, changes: ProjectChanges) {
+  const { name, archived, description, descriptionVersion } = changes;
+  if (description !== undefined && descriptionVersion !== undefined)
+    return saveDescription(member, key, description, descriptionVersion);
+  if (name !== undefined || archived !== undefined) requireAdmin(member);
 
   return db.transaction(async (tx) => {
     const [project] = await tx.select().from(projects).where(byKey(key)).for("update");
@@ -117,9 +138,7 @@ export async function deleteProject(key: string) {
   if (deleted.length === 0) throw new ApiError(404, "Not found");
 }
 
-async function saveDescription(member: Member, key: string, body: Record<string, unknown>) {
-  const { description, descriptionVersion } = parseDescriptionChange(body);
-
+async function saveDescription(member: Member, key: string, description: string, descriptionVersion: number) {
   return db.transaction(async (tx) => {
     const project = await writableProject(tx, key, "update");
     if (project.descriptionVersion !== descriptionVersion)
