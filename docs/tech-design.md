@@ -246,7 +246,7 @@ How the parts fit:
 
 - **Deleting a project (DATA-002):** cascades to issues, labels, issue_labels, comments (both issue and project comments) and mentions. `project_keys` and notifications stay.
 - **Deleting an issue:** cascades to issue_labels, comments and mentions.
-- **DATA-004 cleanup:** a daily job deletes rows older than their retention period, using `now() - interval`. These are among the few queries written in raw SQL.
+- **DATA-004 cleanup:** an hourly job deletes rows older than their retention period, using `now() - interval`. These are among the few queries written in raw SQL.
 
 ## 3. API
 

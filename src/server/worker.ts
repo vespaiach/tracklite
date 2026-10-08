@@ -1,6 +1,7 @@
 import "server-only";
 import { setTimeout as sleep } from "node:timers/promises";
 import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
+import { deleteExpiredRows } from "./cleanup";
 import { db } from "./db";
 import { sendEmail } from "./email/send";
 import { notificationEmail } from "./email/templates";
@@ -14,10 +15,16 @@ type Item = Awaited<ReturnType<typeof itemsOf>>[number];
 const batchSize = 10;
 const pollIntervalMs = 5_000;
 const retryDelaysMinutes = [1, 4, 10];
+const cleanupIntervalMs = 60 * 60_000;
 
 export async function runWorker({ signal }: { signal: AbortSignal }) {
+  let nextCleanupAt = 0;
   do {
     await sendDueEmails();
+    if (performance.now() >= nextCleanupAt) {
+      await deleteExpiredRows();
+      nextCleanupAt = performance.now() + cleanupIntervalMs;
+    }
     await sleep(pollIntervalMs, undefined, { signal }).catch(() => {});
   } while (!signal.aborted);
 }

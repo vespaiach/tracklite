@@ -398,7 +398,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §5.4 · spec API-003, REQ-051
   - Needs: M9.2, M2.1
   - Done: API-003.*; a bounced invitation shows as Bounced in the list API
-- [ ] **M9.5 Cleanup job.**
+- [x] **M9.5 Cleanup job.**
   - Reads: design §1.4, §2.7 · spec DATA-004
   - Needs: M9.2
   - Done: DATA-004.*
