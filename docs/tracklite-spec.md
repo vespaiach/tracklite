@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.22"
+version: "0.23"
 release: "R1"
 status: Ready to build
 updated: "2026-10-07"
@@ -578,6 +578,14 @@ There are no private projects. Nobody, including admins, can see or set another 
 | API-003 | `POST /webhooks/email` (bounce reports from the email service) | Marking notifications as Bounced (REQ-045.6). It accepts only requests signed by the email service; anything else gets `401`. |
 | API-004 | Page addresses: `/sign-in`, `/forgot-password`, `/reset-password?token=…`, `/invite?token=…`, `/my-issues`, `/project/{KEY}` (board), `/project/{KEY}/list`, `/project/{KEY}/detail`, `/project/{KEY}/labels`, `/project/{KEY}/settings`, `/projects/archived`, `/issue/{ID}`, `/settings/profile`, `/settings/members` | Links in emails and between members. Keys and IDs are matched ignoring capitals (REQ-016.5). The list view's filters go in the query string (REQ-040). |
 
+API-003 examples:
+  - API-003.1: The email service reports a bounce for a notification email sent to Sam → that email shows as Bounced and the bounce is logged; the webhook answers `200`. (Verify: auto)
+  - API-003.2: The email service reports a bounce for Sam's invitation email → the invitation shows as Bounced on the members page. (Verify: auto)
+  - API-003.3: A report with a missing or wrong signature → `401`; nothing changes. (Verify: auto)
+  - API-003.4: A correctly signed report whose timestamp is more than 5 minutes old → `401`; nothing changes. (Verify: auto)
+  - API-003.5: A signed report of another kind, such as "delivered" → `200`; nothing changes. (Verify: auto)
+  - API-003.6: A signed bounce for an email the app doesn't track, such as a password reset → `200`; the bounce is logged as untracked. (Verify: auto)
+
 **Email content (API-002)**
 
 All emails are plain text. `{…}` are filled in when the email is sent, `{APP_URL}` is the app's address, links are full addresses, and every body ends with a blank line and `— Tracklite`.
@@ -730,6 +738,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.23 (2026-10-07):** API-003 gets numbered examples for bounces, bad signatures, stale timestamps and ignored events (API-003.1 to API-003.6).
 - **0.22 (2026-10-07):** REQ-044 gets the examples the 0.9 changes cite: a mention in a project description (REQ-044.6) and a re-added mention emailing again (REQ-044.7). Section 9 adds the email for a mention in a project description.
 - **0.21 (2026-10-06):** REQ-037: **Clear filters** clears the search as well as the filters (REQ-037.4).
 - **0.20 (2026-10-05):** REQ-023 names the delete confirmation's copy.

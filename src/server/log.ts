@@ -15,6 +15,10 @@ export function logEmailFailure(line: { status: number; errorName?: string }) {
   console.log(JSON.stringify({ time: new Date().toISOString(), level: "error", event: "email", ...line }));
 }
 
+export function logEmailBounce(message: string) {
+  console.log(JSON.stringify({ time: new Date().toISOString(), level: "info", event: "email", message }));
+}
+
 export function logNotificationFailure(line: { emailId: string }) {
   console.log(
     JSON.stringify({
