@@ -7,4 +7,4 @@ const { providerMessageId } = await sendEmail({
   to,
   ...passwordResetEmail({ email: to, token: createToken() }),
 });
-console.log(`Sent a password reset email to ${to} (Mailpit ID ${providerMessageId})`);
+console.log(`Sent a password reset email to ${to} (message ID ${providerMessageId})`);

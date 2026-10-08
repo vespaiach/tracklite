@@ -35,6 +35,7 @@ One Debian 13 VPS runs Caddy, `tracklite-web`, `tracklite-worker` and PostgreSQL
    ```
 
 5. Deploy a release (M10.2), then create the first admin with `npm run setup` (OPS-001).
+6. Set up the uptime check and the email domain: see [monitoring-and-email.md](monitoring-and-email.md) (M10.4).
 
 ## Checks by hand
 

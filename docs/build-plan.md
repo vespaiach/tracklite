@@ -421,7 +421,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: spec OPS-003
   - Needs: M10.1
   - Done: a backup has been restored into a scratch database
-- [ ] **M10.4 Monitoring and email domain.** External uptime check on `/health`; Resend domain set-up (SPF, DKIM, DMARC, the webhook).
+- [x] **M10.4 Monitoring and email domain.** External uptime check on `/health`; Resend domain set-up (SPF, DKIM, DMARC, the webhook).
   - Reads: design §5.5 · spec OPS-005
   - Needs: M10.1, M9.4
   - Done: the uptime check alerts when the web service is stopped; a test email passes SPF and DKIM
