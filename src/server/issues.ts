@@ -455,6 +455,13 @@ function labelsFor(labelRows: Awaited<ReturnType<typeof labelsOf>>, issueId: str
     .map(({ id, name, color }) => ({ id, name, color }));
 }
 
+function recentlyClosedOrOpen() {
+  return or(
+    notInArray(issues.status, closedStatuses),
+    sql`${issues.statusChangedAt} > now() - interval '14 days'`,
+  );
+}
+
 export async function getBoard(projectKey: string) {
   const project = await readableProject(projectKey);
 
@@ -473,15 +480,7 @@ export async function getBoard(projectKey: string) {
     })
     .from(issues)
     .leftJoin(assignees, eq(assignees.id, issues.assigneeId))
-    .where(
-      and(
-        eq(issues.projectId, project.id),
-        or(
-          notInArray(issues.status, closedStatuses),
-          sql`${issues.statusChangedAt} > now() - interval '14 days'`,
-        ),
-      ),
-    )
+    .where(and(eq(issues.projectId, project.id), recentlyClosedOrOpen()))
     .orderBy(asc(issues.status), asc(issues.position), asc(issues.id));
 
   const labelRows = await labelsOf(rows.map((row) => row.issueId));
@@ -644,4 +643,38 @@ export async function listIssues(projectKey: string, params: URLSearchParams) {
     hasMore: rows.length > listPageSize,
     deactivatedAssignees: deactivatedAssignees.map(memberSummary),
   };
+}
+
+export async function getMyIssues(member: Member) {
+  const rows = await db
+    .select({
+      issueId: issues.id,
+      projectKey: projects.key,
+      number: issues.number,
+      title: issues.title,
+      projectName: projects.name,
+      status: issues.status,
+      priority: issues.priority,
+      updatedAt: issues.updatedAt,
+    })
+    .from(issues)
+    .innerJoin(projects, eq(projects.id, issues.projectId))
+    .where(and(eq(issues.assigneeId, member.id), isNull(projects.archivedAt), recentlyClosedOrOpen()))
+    .orderBy(asc(issues.status), asc(issues.priority), desc(issues.updatedAt), asc(issues.id));
+
+  const labelRows = await labelsOf(rows.map((row) => row.issueId));
+
+  return issueStatus.enumValues.flatMap((status) => {
+    const group = rows
+      .filter((row) => row.status === status)
+      .map((row) => ({
+        id: `${row.projectKey}-${row.number}`,
+        title: row.title,
+        projectName: row.projectName,
+        priority: row.priority,
+        labels: labelsFor(labelRows, row.issueId),
+        updatedAt: row.updatedAt.toISOString(),
+      }));
+    return group.length === 0 ? [] : [{ status, count: group.length, issues: group }];
+  });
 }

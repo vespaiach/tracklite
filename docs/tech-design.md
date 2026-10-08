@@ -334,7 +334,7 @@ Changing a field that can't be changed (username, email, project key) gets `422`
 | `PATCH /api/issues/{ID}` | One of `{ title }`, `{ status }`, `{ priority }`, `{ assignee }` (username or `null`), `{ labelIds }`, or `{ description, descriptionVersion }` | Member | REQ-016…022, REQ-027.4 |
 | `PUT /api/issues/{ID}/position` | `{ status, place: "top" \| "bottom" \| { after: "WEB-5" } }` | Member | REQ-026, REQ-027, REQ-030 |
 | `DELETE /api/issues/{ID}` | → `204` | Creator or Admin | REQ-023 |
-| `GET /api/my-issues` | → the member's issues, grouped by status | Member | REQ-041, REQ-042 |
+| `GET /api/my-issues` | → the member's issues in active projects, as groups `{ status, count, issues }` in status order with empty groups left out (so nothing assigned is `[]`). A row is `{ id, title, projectName, priority, labels, updatedAt }` with labels as on the board, sorted by priority from Urgent down, then most recently updated. Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-041, REQ-042 |
 
 **Comments**
 
