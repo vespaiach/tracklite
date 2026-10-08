@@ -386,7 +386,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §2.6 · spec REQ-043, REQ-044, REQ-045, §8 Notification
   - Needs: M4.3, M7.1
   - Done: REQ-043.*, REQ-044.*, REQ-045's grouping examples
-- [ ] **M9.2 Worker.** The polling loop with `SKIP LOCKED`, the drop checks, retries, a clean stop on `SIGTERM`.
+- [x] **M9.2 Worker.** The polling loop with `SKIP LOCKED`, the drop checks, retries, a clean stop on `SIGTERM`.
   - Reads: design §1.4, §5.2 · spec REQ-045, STD-6
   - Needs: M9.1, M1.4
   - Done: REQ-045's timing and retry examples, STD-6's notification examples

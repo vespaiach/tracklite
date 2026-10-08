@@ -14,3 +14,15 @@ export function logRequest(line: RequestLogLine) {
 export function logEmailFailure(line: { status: number; errorName?: string }) {
   console.log(JSON.stringify({ time: new Date().toISOString(), level: "error", event: "email", ...line }));
 }
+
+export function logNotificationFailure(line: { emailId: string }) {
+  console.log(
+    JSON.stringify({
+      time: new Date().toISOString(),
+      level: "error",
+      event: "notification",
+      message: "email failed",
+      ...line,
+    }),
+  );
+}
