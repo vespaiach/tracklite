@@ -1,13 +1,12 @@
 import type { Project, ProjectSummary } from "../../../client/api";
 import { apiRoute } from "../../../server/api-route";
-import { createProject, listProjects } from "../../../server/projects";
+import { createProject, listProjects, NewProject } from "../../../server/projects";
 
 export const GET = apiRoute("member", async (request) => {
   const archived = new URL(request.url).searchParams.get("archived") === "true";
   return Response.json((await listProjects(archived)) satisfies ProjectSummary[]);
 });
 
-export const POST = apiRoute("admin", async (request) => {
-  const body: { name?: unknown; key?: unknown } = await request.json();
-  return Response.json((await createProject(body)) satisfies Project, { status: 201 });
-});
+export const POST = apiRoute("admin", NewProject, async (_request, _member, project) =>
+  Response.json((await createProject(project)) satisfies Project, { status: 201 }),
+);

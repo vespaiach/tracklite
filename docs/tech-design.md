@@ -34,10 +34,12 @@ Using systemd for all four means no extra process manager. Logs go to journald, 
 **API.** Each handler is wrapped in `apiRoute`, which runs these steps in order:
 
 1. Reject cross-site writes with `403` (SEC-004).
-2. Validate the session with `requireMember`, then the role with `requireAdmin` where needed. Together these are the single permission layer (spec §12).
-3. Call one domain function in `src/server/`, passing a transaction. The action and any notification rows it creates commit together (spec §12).
-4. Map a thrown `ApiError` to `401`/`403`/`404`/`422`/`429`/`503` with `{ error: { message, fields? } }`. Map anything else to `500`.
-5. Write one JSON log line per request, without bodies or tokens (SEC-007).
+2. Validate the session with `requireMember`.
+3. If the route declares a body schema, parse the JSON body and validate it with Valibot (D-42), failing fast with `422`. The schema checks shape and format only, with the spec's own messages, and passes the parsed, trimmed values on.
+4. Check the role with `requireAdmin` where needed. Together with step 2 this is the single permission layer (spec §12).
+5. Call one domain function in `src/server/`, passing a transaction. It first checks the rules that need the database or the member (a key already used, the last admin), then writes. The action and any notification rows it creates commit together (spec §12).
+6. Map a thrown `ApiError` to `401`/`403`/`404`/`422`/`429`/`503` with `{ error: { message, fields? } }`. Map anything else to `500`.
+7. Write one JSON log line per request, without bodies or tokens (SEC-007).
 
 **Markdown.** The API returns the stored Markdown together with the list of members it mentions. The browser renders it with one shared component (SEC-002). The renderer highlights `@username` only when that username is in the mention list, so it doesn't need to look up members itself.
 
@@ -288,6 +290,8 @@ Every error body is `{ error: { message, fields? } }`, and the browser shows `me
 | `500` | Anything else | Toast "Couldn't save. Try again." or the "Couldn't load this." state (DEC-006) |
 
 Changing a field that can't be changed (username, email, project key) gets `422` with a field error. The stored value stays as it was (REQ-003.3, REQ-010.1).
+
+A body schema failure gets `422` with "Check the highlighted fields" and the first failing rule's message for each field (STD-3). A field missing from the body gets the field error "Required". A body that isn't valid JSON, or isn't a JSON object, gets `422` "Couldn't read the request." with no `fields`. The browser never sends either, so this only keeps such requests from becoming a `500`. Query strings and path segments aren't covered by schemas.
 
 ### 3.3 Endpoints
 
@@ -718,3 +722,4 @@ The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, 
 | D-39 | Track Lite design system, ported from its Claude Design project into `src/components/ui/track-lite/` | Hairline; a component library from npm | Made for this product. Fonts load through `next/font` and icons through `@phosphor-icons/react` instead of the project's CDN links, which the CSP (D-26) would block. |
 | D-40 | Keep D-36 with no fallback, after the M5.1 spike. Each column's `GridList` is its own scroll box with `position: relative`; each card has a `<Button slot="drag">` | Writing our own edge auto-scroll; a separate drag library | Mouse drags across 5 columns, into an empty column (`onRootDrop`) and within a column (`onReorder`) all landed in the right place. Near a column's edge, the browser scrolls it natively, or React Aria's `useAutoScroll` does in Safari. Keyboard drags (Enter on the drag button, Tab between columns, arrows, Enter) work and are announced. Without `position: relative`, the hidden keyboard drop targets scroll the whole page instead of the column. Without the drag button, cards that open the issue on click can only be dragged with Alt+Enter. |
 | D-41 | Daily `pg_dump`, encrypted with `age` and copied to Cloudflare R2 with `rclone`, from a systemd timer | restic; Backblaze B2; a Hetzner Storage Box | Owner's choice. One plain encrypted file per day is easy to inspect and restore by hand, R2's free tier keeps the cost at zero (NFR-009), and the timer's `OnFailure=` gives the failure email with no extra service. |
+| D-42 | Valibot body schemas declared per route and run by `apiRoute`; each schema lives in the domain module that uses it, and the domain function takes its typed output | Hand-written `typeof` checks in each domain function; Zod; parsing at the start of each domain function | One path turns invalid input into STD-3's `422`, domain functions get typed and already-trimmed input instead of `unknown`, and a malformed body stops being a `500`. Order: session, then schema, then role, then database rules, then the write. A signed-out caller always gets `401` and learns nothing about the body; invalid input fails before the role check and any domain query. A signed-in member without the role who sends an invalid body therefore gets `422`, not `403`; the schema reveals only the request's shape, which the browser code already shows. Lengths count characters (code points) as the spec and Postgres do, not UTF-16 units. |

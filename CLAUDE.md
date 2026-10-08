@@ -84,10 +84,12 @@ There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks
 
 **API request flow (§1.2).** Every handler is wrapped in `apiRoute`, which in order:
 1. rejects cross-site writes with `403`;
-2. runs `requireMember`, then `requireAdmin` where needed. This is the only permission layer;
-3. calls one domain function in `src/server/` inside a transaction, so the action and its notification rows commit together;
-4. maps a thrown `ApiError` to `{ error: { message, fields? } }` with 401/403/404/422/429/503, and anything else to 500;
-5. writes one JSON log line, with no bodies, tokens or query strings.
+2. runs `requireMember`;
+3. parses the JSON body against the route's Valibot schema, if it declares one, and fails fast with `422` (D-42). Schemas check shape and format only;
+4. runs `requireAdmin` where needed. Steps 2 and 4 are the only permission layer;
+5. calls one domain function in `src/server/` inside a transaction. It checks the rules that need the database first, then writes, so the action and its notification rows commit together;
+6. maps a thrown `ApiError` to `{ error: { message, fields? } }` with 401/403/404/422/429/503, and anything else to 500;
+7. writes one JSON log line, with no bodies, tokens or query strings.
 
 The browser shows `message` as-is, so all user-facing copy for server outcomes lives on the server.
 

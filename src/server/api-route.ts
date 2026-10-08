@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import { ApiError } from "./api-error";
 import { readConfig } from "./config";
 import { logRequest } from "./log";
@@ -16,17 +17,48 @@ function errorResponse(status: number, message: string, fields?: Record<string, 
   return Response.json({ error: fields ? { message, fields } : { message } }, { status });
 }
 
-type Handler<Args extends unknown[]> = (...args: Args) => Response | Promise<Response>;
+async function readInput(request: Request, schema: v.GenericSchema) {
+  const unreadable = new ApiError(422, "Couldn't read the request.");
+  const body: unknown = await request.json().catch(() => {
+    throw unreadable;
+  });
+  if (typeof body !== "object" || body === null || Array.isArray(body)) throw unreadable;
+  const result = v.safeParse(schema, body, { abortPipeEarly: true });
+  if (result.success) return result.output;
+  const issues = result.issues.map((issue) =>
+    issue.type === "object" && issue.input === undefined ? { ...issue, message: "Required" } : issue,
+  ) as typeof result.issues;
+  const { root, nested } = v.flatten(issues);
+  if (root || !nested) throw unreadable;
+  const fields = Object.fromEntries(
+    Object.entries(nested).flatMap(([field, messages]) => (messages ? [[field, messages[0]]] : [])),
+  );
+  throw new ApiError(422, "Check the highlighted fields", fields);
+}
 
-export function apiRoute(
+type Handler<Args extends unknown[]> = (...args: Args) => Response | Promise<Response>;
+type AnyHandler = Handler<never[]>;
+type Route = (request: Request) => Promise<Response>;
+
+export function apiRoute(access: "public", handler: Handler<[Request]>): Route;
+export function apiRoute<Schema extends v.GenericSchema>(
   access: "public",
-  handler: Handler<[Request]>,
-): (request: Request) => Promise<Response>;
-export function apiRoute(
+  schema: Schema,
+  handler: Handler<[Request, v.InferOutput<Schema>]>,
+): Route;
+export function apiRoute(access: "member" | "admin", handler: Handler<[Request, Member]>): Route;
+export function apiRoute<Schema extends v.GenericSchema>(
   access: "member" | "admin",
-  handler: Handler<[Request, Member]>,
-): (request: Request) => Promise<Response>;
-export function apiRoute(access: "public" | "member" | "admin", handler: Handler<[Request, Member]>) {
+  schema: Schema,
+  handler: Handler<[Request, Member, v.InferOutput<Schema>]>,
+): Route;
+export function apiRoute(
+  access: "public" | "member" | "admin",
+  schemaOrHandler: v.GenericSchema | AnyHandler,
+  schemaHandler?: AnyHandler,
+) {
+  const schema = schemaHandler ? (schemaOrHandler as v.GenericSchema) : undefined;
+  const handler = (schemaHandler ?? schemaOrHandler) as Handler<unknown[]>;
   return async (request: Request) => {
     const started = performance.now();
     let response: Response;
@@ -37,12 +69,14 @@ export function apiRoute(access: "public" | "member" | "admin", handler: Handler
         throw new ApiError(403, "You don't have permission to do that.");
       }
       if (access === "public") {
-        response = await (handler as Handler<[Request]>)(request);
+        const input = schema ? [await readInput(request, schema)] : [];
+        response = await handler(request, ...input);
       } else {
         const session = await requireMember(request);
         renewedCookie = session.cookie;
+        const input = schema ? [await readInput(request, schema)] : [];
         if (access === "admin") requireAdmin(session.member);
-        response = await handler(request, session.member);
+        response = await handler(request, session.member, ...input);
       }
     } catch (error) {
       if (error instanceof ApiError) {
