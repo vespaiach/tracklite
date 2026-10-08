@@ -413,7 +413,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §1.1, §4.9 · spec SEC-005, OPS-006
   - Needs: M9.2
   - Done: the app serves over HTTPS; SEC-005.1 checked by hand
-- [ ] **M10.2 Deploy and rollback.** One deploy command (migrate, then switch, keeping the previous release) and one rollback command.
+- [x] **M10.2 Deploy and rollback.** One deploy command (migrate, then switch, keeping the previous release) and one rollback command.
   - Reads: design §1.1 · spec OPS-002, OPS-004
   - Needs: M10.1
   - Done: a deploy from `main` and a rollback both work
