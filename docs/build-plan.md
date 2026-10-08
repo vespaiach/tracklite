@@ -457,3 +457,28 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 - [ ] **M11.5 Production checks.** SEC-005.1 and the OPS-001…005 examples run on the production VPS; confirm the team's headcount against spec §3's assumptions, and check NFR-008 in Resend's delivery logs and the first month's bills against NFR-009.
 
 **Done when:** every box above is ticked. That's R1.
+
+## M12 Input validation
+
+**Run order:** M12.1 → **M12.2 ∥ M12.3 ∥ M12.4**. M12.1 adds `valibot` to `package.json`; the others only touch their own route and domain files.
+
+Every task in this milestone keeps behaviour as it is: the existing route tests are the check, and messages come from the spec unchanged. Each task deletes the hand-written checks its schemas replace. Lengths count characters (`v.maxGraphemes` or an equivalent check), as the current code does, not UTF-16 units.
+
+- [ ] **M12.1 Body schemas in `apiRoute`, with projects as the pilot.** Add `valibot`. `apiRoute` takes an optional schema, parses and validates the body after `requireMember` and before `requireAdmin`, and passes the output to the handler; issues become STD-3's `422`; a malformed or non-object body gets `422` "Couldn't read the request.". Migrate `POST /api/projects` and `PATCH /api/projects/[key]` (a union of the description save and the settings change).
+  - Reads: design §1.2, §3.2, §3.3 (projects table), D-42 · spec STD-3, REQ-009, REQ-010, REQ-011, REQ-012
+  - Needs: M0.3, M3.3
+  - Done: `api-route` tests for a malformed body, a non-object body, one message per field, parsed output reaching the handler, the cross-site `403` and signed-out `401` before validation, an invalid body getting `422` before the admin `403`, and routes without a schema unchanged; the existing REQ-009.*, REQ-010.*, REQ-011.*, REQ-012.* tests pass
+- [ ] **M12.2 Account inputs.** Schemas for sessions, invitations, invitation and reset-link lookups, accepting an invitation, password-reset links and resets, `PATCH /api/me` and `/api/me/password`. The password rule (REQ-048) is one schema exported from `passwords.ts`, and the profile rules (REQ-003) one set used by accepting an invitation and editing the profile.
+  - Reads: design §3.2, §4.1, §4.6, D-42 · spec REQ-001, REQ-002, REQ-003, REQ-048, REQ-049, REQ-050, SEC-001
+  - Needs: M12.1
+  - Done: the existing tests for those REQs pass
+- [ ] **M12.3 Label and comment inputs.** Schemas for creating and editing labels and comments, including project comments.
+  - Reads: design §3.3, §6.6, D-42 · spec REQ-021, REQ-031, REQ-033, REQ-034, STD-5, STD-8
+  - Needs: M12.1
+  - Done: the existing REQ-021.*, REQ-031.*, REQ-033.* and REQ-034.* tests pass
+- [ ] **M12.4 Issue inputs.** Schemas for creating an issue, the per-field `PATCH` (a union, one field per request, including the description save) and the board position.
+  - Reads: design §3.1, §3.3 (issues table), D-42 · spec REQ-016…REQ-020, REQ-022, REQ-026, STD-5, STD-8
+  - Needs: M12.1
+  - Done: the existing issue and board API tests pass
+
+**Done when:** no route reads `request.json()` itself, and no domain function takes `unknown` input.
