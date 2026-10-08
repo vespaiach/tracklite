@@ -1,9 +1,9 @@
 ---
 product: "Tracklite"
-version: "0.21"
+version: "0.22"
 release: "R1"
 status: Ready to build
-updated: "2026-10-05"
+updated: "2026-10-07"
 ---
 
 # Tracklite: Spec
@@ -477,6 +477,8 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
   - REQ-044.3: Alex edits a comment that already mentions `@sam` and adds `@jo` → only Jo is emailed. (Verify: auto)
   - REQ-044.4: One comment mentions `@sam` twice → Sam gets one email. (Verify: auto)
   - REQ-044.5: Alex mentions `@sam` in a comment on project `WEB` → the email links to the `WEB` project details page. (Verify: auto)
+  - REQ-044.6: Alex mentions `@sam` in the `WEB` project description → Sam gets the email, linking to the `WEB` project details page. (Verify: auto)
+  - REQ-044.7: Alex mentions `@sam` in a comment, edits the mention out, then adds it back → Sam gets a second email. (Verify: auto)
 - **REQ-045** The system shall send a notification 2 minutes after it's created. Further notifications for the same member about the same issue or project, created before that email goes out, join it in one email; they don't restart the wait. A notification is dropped if, within that time, the assignment is undone, the mention is edited out, the comment holding it is deleted, or the recipient is deactivated. A failed send is retried as in STD-6. A bounce reported by the email service is logged and not retried; the action in the app is unaffected. Notifications for issues or projects deleted during the wait are still sent.
   - REQ-045.1: Within 1 minute, Alex assigns `WEB-42` to Sam and mentions `@sam` in a comment on it → Sam gets one email covering both. (Verify: auto)
   - REQ-045.2: Alex assigns `WEB-42` to Sam, then reassigns it to Jo 30 seconds later → Sam gets nothing; Jo gets one email. (Verify: auto)
@@ -609,6 +611,7 @@ All emails are plain text. `{…}` are filled in when the email is sent, `{APP_U
 | Assigned | `[WEB-42] Fix login button: assigned to you by Alex Kim` | `Alex Kim assigned WEB-42 to you in Website.` + blank line + link to the issue |
 | Mentioned in a description | `[WEB-42] Fix login button: Alex Kim mentioned you` | `Alex Kim mentioned you in the description of WEB-42 (Website):` + blank line + excerpt + blank line + link to the issue |
 | Mentioned in an issue comment | same as above | `…in a comment on WEB-42 (Website):` + excerpt + link to `/issue/WEB-42#comment-{id}` |
+| Mentioned in a project description | `[WEB] Website: Alex Kim mentioned you` | `Alex Kim mentioned you in the description of project Website:` + blank line + excerpt + blank line + link to `/project/WEB/detail` (REQ-044.6) |
 | Mentioned in a project comment | `[WEB] Website: Alex Kim mentioned you` | `…in a comment on project Website:` + excerpt + link to `/project/WEB/detail#comment-{id}` (REQ-044.5) |
 
 **Notification, combined** (REQ-045, several items in one email)
@@ -727,6 +730,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.22 (2026-10-07):** REQ-044 gets the examples the 0.9 changes cite: a mention in a project description (REQ-044.6) and a re-added mention emailing again (REQ-044.7). Section 9 adds the email for a mention in a project description.
 - **0.21 (2026-10-06):** REQ-037: **Clear filters** clears the search as well as the filters (REQ-037.4).
 - **0.20 (2026-10-05):** REQ-023 names the delete confirmation's copy.
 - **0.19 (2026-10-05):** REQ-019 names the field error for assigning someone who isn't an active member.

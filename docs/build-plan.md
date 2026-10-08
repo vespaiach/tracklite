@@ -382,7 +382,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 **Run order:** M9.1 → M9.2 → **M9.3 ∥ M9.4 ∥ M9.5**. Shared file: M9.3 and M9.5 both hook into the worker loop from M9.2.
 
-- [ ] **M9.1 Creating notifications.** In the same transaction as assignments and new mentions, joining an existing email or creating one.
+- [x] **M9.1 Creating notifications.** In the same transaction as assignments and new mentions, joining an existing email or creating one.
   - Reads: design §2.6 · spec REQ-043, REQ-044, REQ-045, §8 Notification
   - Needs: M4.3, M7.1
   - Done: REQ-043.*, REQ-044.*, REQ-045's grouping examples

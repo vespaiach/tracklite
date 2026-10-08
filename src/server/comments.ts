@@ -5,6 +5,7 @@ import { db } from "./db";
 import { conflict, replaceMentions } from "./descriptions";
 import { byIssueId, issueGone, uuidPattern } from "./issues";
 import { memberSummary } from "./members";
+import { notify } from "./notifications";
 import { writableProject } from "./projects";
 import { comments, issues, members, mentions, projects } from "./schema";
 import type { Member } from "./sessions";
@@ -137,7 +138,14 @@ async function postComment(
       .insert(comments)
       .values({ ...parent, authorId: member.id, body: text as string, requestId: requestId as string })
       .returning({ id: comments.id });
-    await replaceMentions(tx, { commentId: inserted.id }, text as string);
+    const mentioned = await replaceMentions(tx, { commentId: inserted.id }, text as string);
+    await notify(tx, mentioned, {
+      kind: "mentioned",
+      actorId: member.id,
+      target: parent,
+      commentId: inserted.id,
+      text: text as string,
+    });
     return { comment: await oneComment(tx, inserted.id), created: true };
   });
 }
@@ -186,7 +194,14 @@ export async function editComment(id: string, member: Member, change: CommentCha
       .update(comments)
       .set({ body: body as string, version: sql`${comments.version} + 1`, editedAt: sql`now()` })
       .where(eq(comments.id, comment.id));
-    await replaceMentions(tx, { commentId: comment.id }, body as string);
+    const mentioned = await replaceMentions(tx, { commentId: comment.id }, body as string);
+    await notify(tx, mentioned, {
+      kind: "mentioned",
+      actorId: member.id,
+      target: comment.issueId ? { issueId: comment.issueId } : { projectId: comment.projectId as string },
+      commentId: comment.id,
+      text: body as string,
+    });
     return oneComment(tx, comment.id);
   });
 }

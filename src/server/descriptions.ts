@@ -49,10 +49,11 @@ export async function replaceMentions(tx: Transaction, source: MentionSource, te
   await tx
     .delete(mentions)
     .where(and(ofSource, memberIds.length > 0 ? notInArray(mentions.memberId, memberIds) : undefined));
-  if (memberIds.length > 0) {
-    await tx
-      .insert(mentions)
-      .values(memberIds.map((memberId) => ({ memberId, ...source })))
-      .onConflictDoNothing();
-  }
+  if (memberIds.length === 0) return [];
+  const added = await tx
+    .insert(mentions)
+    .values(memberIds.map((memberId) => ({ memberId, ...source })))
+    .onConflictDoNothing()
+    .returning({ memberId: mentions.memberId });
+  return added.map((row) => row.memberId);
 }
