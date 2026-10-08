@@ -32,6 +32,26 @@ Root is used only to set the server up and to change secrets. Deploys and the ap
 
 `tracklite` doesn't own its code, so a bug in the web process can't rewrite the app it runs.
 
+### Folders and who creates them
+
+You don't make these by hand: the scripts create them with the right owner and mode, and fix them again on a re-run. The only exception is `/home/deployer/.ssh`, which you make when you add your key.
+
+```
+/etc/tracklite/                   root:deployer      750  provision.sh
+├── env                           root:deployer      640  provision.sh
+└── backup.env                    root:root          600  backup/install.sh
+
+/opt/tracklite/                   deployer:deployer  755  provision.sh
+├── repo/                         deployer                deploy.sh (first run)
+├── releases/                     deployer                provision.sh
+│   └── <UTC time>-<commit>/      deployer                deploy.sh (each run)
+├── current  -> releases/…        deployer                deploy.sh
+└── previous -> releases/…        deployer                deploy.sh (from the second deploy)
+
+/usr/local/lib/tracklite-backup/  root:root          755  backup/install.sh
+/home/deployer/.ssh/              deployer:deployer  700  you (see below)
+```
+
 ### Set up the deployer account
 
 `provision.sh` creates `deployer` with no password, so it can only log in with an SSH key.
