@@ -34,12 +34,26 @@ export function invitationEmail({ inviterName, token }: { inviterName: string; t
 type NotificationItem = {
   kind: "assigned" | "mentioned";
   actorName: string;
+  commentId: string | null;
   issueRef: string | null;
   issueTitle: string | null;
   projectName: string;
   projectKey: string;
   linkPath: string;
+  excerpt: string;
 };
+
+function notificationBody(item: NotificationItem) {
+  const link = `${readConfig().appUrl}${item.linkPath}`;
+  if (item.kind === "assigned") {
+    return [`${item.actorName} assigned ${item.issueRef} to you in ${item.projectName}.`, "", link].join(
+      "\n",
+    );
+  }
+  const place = item.commentId ? "a comment on" : "the description of";
+  const target = item.issueRef ? `${item.issueRef} (${item.projectName})` : `project ${item.projectName}`;
+  return [`${item.actorName} mentioned you in ${place} ${target}:`, "", item.excerpt, "", link].join("\n");
+}
 
 export function notificationEmail(items: NotificationItem[]) {
   const newest = items[items.length - 1];
@@ -54,6 +68,6 @@ export function notificationEmail(items: NotificationItem[]) {
         : `${newest.actorName} mentioned you`;
   return {
     subject: `${heading}: ${update}`,
-    text: items.map((item) => `${readConfig().appUrl}${item.linkPath}`).join("\n---\n") + signature,
+    text: items.map(notificationBody).join("\n\n---\n\n") + signature,
   };
 }

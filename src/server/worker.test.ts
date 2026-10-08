@@ -127,7 +127,23 @@ it("REQ-045.1: assign + mention within the wait → Sam gets one email covering 
 
   expect(mailTo(sam)).toHaveLength(1);
   expect(mailTo(sam)[0].subject).toBe(`[${issueRef}] Fix login button: 2 updates for you`);
-  expect(mailTo(sam)[0].text).toContain(`/issue/${issueRef}#comment-${posted.id}`);
+  expect(mailTo(sam)[0].text).toBe(
+    [
+      `${alex.fullName} assigned ${issueRef} to you in Website.`,
+      "",
+      `http://localhost:3000/issue/${issueRef}`,
+      "",
+      "---",
+      "",
+      `${alex.fullName} mentioned you in a comment on ${issueRef} (Website):`,
+      "",
+      `@${sam.username} over to you`,
+      "",
+      `http://localhost:3000/issue/${issueRef}#comment-${posted.id}`,
+      "",
+      "— Tracklite",
+    ].join("\n"),
+  );
 });
 
 it("REQ-045.2: reassigned to Jo during the wait → Sam gets nothing; Jo gets one email", async () => {
@@ -202,6 +218,9 @@ it("REQ-045.7: WEB-42 deleted during the wait → Sam still gets the email", asy
 
   expect(mailTo(sam)).toHaveLength(1);
   expect(mailTo(sam)[0].subject).toBe(`[${issueRef}] Fix login button: 2 updates for you`);
+  expect(mailTo(sam)[0].text).toContain(
+    `${alex.fullName} assigned ${issueRef} to you in Website.\n\nhttp://localhost:3000/issue/${issueRef}\n`,
+  );
   expect((await emailsOf(sam)).map((email) => email.state)).toEqual(["sent"]);
 });
 

@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.23"
+version: "0.24"
 release: "R1"
 status: Ready to build
 updated: "2026-10-07"
@@ -624,7 +624,7 @@ All emails are plain text. `{…}` are filled in when the email is sent, `{APP_U
 
 **Notification, combined** (REQ-045, several items in one email)
 - Subject: `[WEB-42] Fix login button: {n} updates for you`. Or `[WEB] Website: {n} updates for you` for a project.
-- Body: each item's body from the table above, oldest first, separated by a line holding `---`.
+- Body: each item's body from the table above, oldest first, separated by a line holding `---` with a blank line before and after it. The `— Tracklite` ending comes once, after the last item.
 - The subject uses the issue title and project name from the **newest** item, so a title renamed during the wait shows its latest version.
 
 **The excerpt** (REQ-044): the text with Markdown formatting stripped and whitespace collapsed, cut at 500 characters, with `…` added if it was cut. It's taken when the notification is created, so later edits don't change it.
@@ -738,6 +738,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.24 (2026-10-07):** Section 9: the combined notification email puts a blank line before and after each `---` separator, and ends with `— Tracklite` once.
 - **0.23 (2026-10-07):** API-003 gets numbered examples for bounces, bad signatures, stale timestamps and ignored events (API-003.1 to API-003.6).
 - **0.22 (2026-10-07):** REQ-044 gets the examples the 0.9 changes cite: a mention in a project description (REQ-044.6) and a re-added mention emailing again (REQ-044.7). Section 9 adds the email for a mention in a project description.
 - **0.21 (2026-10-06):** REQ-037: **Clear filters** clears the search as well as the filters (REQ-037.4).
