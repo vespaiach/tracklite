@@ -29,7 +29,8 @@ async function readInput(request: Request, schema: v.GenericSchema) {
     issue.type === "object" && issue.input === undefined ? { ...issue, message: "Required" } : issue,
   ) as typeof result.issues;
   const { root, nested } = v.flatten(issues);
-  if (root || !nested) throw unreadable;
+  if (root) throw new ApiError(422, root[0]);
+  if (!nested) throw unreadable;
   const fields = Object.fromEntries(
     Object.entries(nested).flatMap(([field, messages]) => (messages ? [[field, messages[0]]] : [])),
   );

@@ -264,6 +264,22 @@ it("STD-3: a schema failure gets 422 with the first message for each failing fie
   expect(handler).not.toHaveBeenCalled();
 });
 
+it("STD-3: a schema's whole-body check gets 422 with its message and no fields", async () => {
+  const handler = vi.fn(ok);
+  const OneChange = v.pipe(
+    v.looseObject({}),
+    v.check((body) => Object.keys(body).length === 1, "Change one field at a time"),
+  );
+  const response = await apiRoute(
+    "public",
+    OneChange,
+    handler,
+  )(postWith(JSON.stringify({ title: "New", priority: "high" })));
+  expect(response.status).toBe(422);
+  expect(await response.json()).toEqual({ error: { message: "Change one field at a time" } });
+  expect(handler).not.toHaveBeenCalled();
+});
+
 it("the handler receives the schema's output", async () => {
   const handler = vi.fn(ok);
   const request = postWith(JSON.stringify({ name: "  Website ", key: "web", extra: "dropped" }));

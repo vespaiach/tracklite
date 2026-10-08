@@ -19,7 +19,7 @@ import { alias, type PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { generateKeyBetween } from "fractional-indexing";
 import { ApiError } from "./api-error";
 import { db } from "./db";
-import { conflict, parseDescriptionChange, replaceMentions } from "./descriptions";
+import { conflict, replaceMentions } from "./descriptions";
 import { memberSummary } from "./members";
 import { notify } from "./notifications";
 import { writableProject } from "./projects";
@@ -34,18 +34,15 @@ import {
   projects,
 } from "./schema";
 import type { Member } from "./sessions";
+import type { IssueChange, IssueMove, NewIssue } from "../schemas/issue";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | Transaction;
 type IssueStatus = (typeof issueStatus.enumValues)[number];
-type NewIssue = { requestId?: unknown; title?: unknown; status?: unknown };
-type IssueChange = PgUpdateSetSource<typeof issues>;
-type Place = "top" | "bottom" | { after: string };
+type IssueUpdate = PgUpdateSetSource<typeof issues>;
 type SortColumn = keyof typeof sortColumns;
 
-const maxLabels = 10;
 const closedStatuses: IssueStatus[] = ["done", "canceled"];
-const editableFields = ["title", "status", "priority", "assignee", "labelIds"];
 
 const listPageSize = 100;
 const unassigned = "-";
@@ -56,7 +53,6 @@ const sortColumns = {
   updated: { column: issues.updatedAt, ascending: false },
 };
 
-const maxTitleLength = 200;
 export const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const issueIdPattern = /^([A-Za-z]{2,5})-([1-9]\d{0,8})$/;
 
@@ -135,30 +131,11 @@ function labelGone() {
   return new ApiError(404, "That label no longer exists");
 }
 
-function checkTitle(value: unknown) {
-  const title = typeof value === "string" ? value.trim() : "";
-  if (title === "") return { title, error: "Title required" };
-  if ([...title].length > maxTitleLength) return { title, error: `Too long (max ${maxTitleLength})` };
-  return { title, error: undefined };
-}
-
 export function byIssueId(id: string) {
   const match = issueIdPattern.exec(id);
   return match
     ? and(eq(projects.key, match[1].toUpperCase()), eq(issues.number, Number(match[2])))
     : undefined;
-}
-
-function checkNewIssue(body: NewIssue) {
-  const fields: Record<string, string> = {};
-  const requestId =
-    typeof body.requestId === "string" && uuidPattern.test(body.requestId) ? body.requestId : "";
-  if (requestId === "") fields.requestId = "Invalid request";
-  const { title, error } = checkTitle(body.title);
-  if (error) fields.title = error;
-  if (Object.keys(fields).length > 0) throw new ApiError(422, "Check the highlighted fields", fields);
-  const status: IssueStatus = issueStatus.enumValues.find((value) => value === body.status) ?? "backlog";
-  return { requestId, title, status };
 }
 
 async function topOfColumn(tx: Transaction, projectId: string, status: IssueStatus) {
@@ -171,10 +148,13 @@ async function topOfColumn(tx: Transaction, projectId: string, status: IssueStat
   return generateKeyBetween(null, first?.position ?? null);
 }
 
-export async function createIssue(projectKey: string, member: Member, body: NewIssue) {
+export async function createIssue(
+  projectKey: string,
+  member: Member,
+  { requestId, title, status }: NewIssue,
+) {
   return db.transaction(async (tx) => {
     const project = await writableProject(tx, projectKey, "update");
-    const { requestId, title, status } = checkNewIssue(body);
 
     const repeated = await findIssue(tx, eq(issues.requestId, requestId));
     if (repeated) return { issue: repeated, created: false };
@@ -210,9 +190,8 @@ export async function getIssue(id: string) {
   return issue;
 }
 
-async function activeAssigneeId(tx: Transaction, value: unknown) {
-  if (value === null) return null;
-  const username = typeof value === "string" ? value.toLowerCase() : "";
+async function activeAssigneeId(tx: Transaction, username: string | null) {
+  if (username === null) return null;
   const [assignee] = await tx
     .select({ id: members.id })
     .from(members)
@@ -221,12 +200,7 @@ async function activeAssigneeId(tx: Transaction, value: unknown) {
   return assignee.id;
 }
 
-async function replaceLabels(tx: Transaction, issue: typeof issues.$inferSelect, value: unknown) {
-  if (!Array.isArray(value) || !value.every((labelId) => typeof labelId === "string")) {
-    throw fieldError("labelIds", "Choose labels");
-  }
-  const labelIds = [...new Set(value.map((labelId) => labelId.toLowerCase()))];
-  if (labelIds.length > maxLabels) throw fieldError("labelIds", `Maximum ${maxLabels} labels`);
+async function replaceLabels(tx: Transaction, issue: typeof issues.$inferSelect, labelIds: string[]) {
   if (!labelIds.every((labelId) => uuidPattern.test(labelId))) throw labelGone();
 
   const found =
@@ -257,30 +231,20 @@ async function replaceLabels(tx: Transaction, issue: typeof issues.$inferSelect,
 async function fieldChange(
   tx: Transaction,
   issue: typeof issues.$inferSelect,
-  field: string,
-  value: unknown,
-): Promise<IssueChange> {
-  if (field === "title") {
-    const { title, error } = checkTitle(value);
-    if (error) throw fieldError("title", error);
-    return title === issue.title ? {} : { title };
-  }
-  if (field === "status") {
-    const status = issueStatus.enumValues.find((option) => option === value);
-    if (!status) throw fieldError("status", "Choose a status");
+  { title, status, priority, assignee, labelIds }: IssueChange,
+): Promise<IssueUpdate> {
+  if (title !== undefined) return title === issue.title ? {} : { title };
+  if (status !== undefined) {
     if (status === issue.status) return {};
     return { status, position: await topOfColumn(tx, issue.projectId, status), statusChangedAt: sql`now()` };
   }
-  if (field === "priority") {
-    const priority = issuePriority.enumValues.find((option) => option === value);
-    if (!priority) throw fieldError("priority", "Choose a priority");
-    return priority === issue.priority ? {} : { priority };
-  }
-  if (field === "assignee") {
-    const assigneeId = await activeAssigneeId(tx, value);
+  if (priority !== undefined) return priority === issue.priority ? {} : { priority };
+  if (assignee !== undefined) {
+    const assigneeId = await activeAssigneeId(tx, assignee);
     return assigneeId === issue.assigneeId ? {} : { assigneeId };
   }
-  return (await replaceLabels(tx, issue, value)) ? { updatedAt: sql`now()` } : {};
+  if (labelIds !== undefined && (await replaceLabels(tx, issue, labelIds))) return { updatedAt: sql`now()` };
+  return {};
 }
 
 async function lockedIssue(tx: Transaction, where: SQL) {
@@ -302,8 +266,7 @@ async function updatedIssue(tx: Transaction, issueId: string) {
   return updated;
 }
 
-async function saveDescription(id: string, member: Member, body: Record<string, unknown>) {
-  const { description, descriptionVersion } = parseDescriptionChange(body);
+async function saveDescription(id: string, member: Member, description: string, descriptionVersion: number) {
   const where = byIssueId(id);
   if (!where) throw issueGone();
 
@@ -331,28 +294,24 @@ async function saveDescription(id: string, member: Member, body: Record<string, 
   });
 }
 
-export async function updateIssue(id: string, member: Member, body: Record<string, unknown>) {
-  if ("description" in (body ?? {}) || "descriptionVersion" in (body ?? {})) {
-    return saveDescription(id, member, body);
-  }
-  const keys = Object.keys(body ?? {});
-  if (keys.length !== 1 || !editableFields.includes(keys[0])) {
-    throw new ApiError(422, "Change one field at a time");
+export async function updateIssue(id: string, member: Member, change: IssueChange) {
+  if (change.description !== undefined && change.descriptionVersion !== undefined) {
+    return saveDescription(id, member, change.description, change.descriptionVersion);
   }
   const where = byIssueId(id);
   if (!where) throw issueGone();
 
   return db.transaction(async (tx) => {
     const issue = await lockedIssue(tx, where);
-    const change = await fieldChange(tx, issue, keys[0], body[keys[0]]);
-    if (Object.keys(change).length > 0) {
+    const update = await fieldChange(tx, issue, change);
+    if (Object.keys(update).length > 0) {
       await tx
         .update(issues)
-        .set({ ...change, updatedAt: sql`now()` })
+        .set({ ...update, updatedAt: sql`now()` })
         .where(eq(issues.id, issue.id));
     }
-    if (typeof change.assigneeId === "string") {
-      await notify(tx, [change.assigneeId], {
+    if (typeof update.assigneeId === "string") {
+      await notify(tx, [update.assigneeId], {
         kind: "assigned",
         actorId: member.id,
         target: { issueId: issue.id },
@@ -362,25 +321,11 @@ export async function updateIssue(id: string, member: Member, body: Record<strin
   });
 }
 
-function checkMove(body: Record<string, unknown>) {
-  const fields: Record<string, string> = {};
-  const status = issueStatus.enumValues.find((option) => option === body?.status);
-  if (!status) fields.status = "Choose a status";
-  const place = body?.place;
-  const validPlace =
-    place === "top" ||
-    place === "bottom" ||
-    (typeof place === "object" && place !== null && typeof (place as { after?: unknown }).after === "string");
-  if (!validPlace) fields.place = "Choose a place";
-  if (!status || !validPlace) throw new ApiError(422, "Check the highlighted fields", fields);
-  return { status, place: place as Place };
-}
-
 async function positionIn(
   tx: Transaction,
   issue: typeof issues.$inferSelect,
   status: IssueStatus,
-  place: Place,
+  place: IssueMove["place"],
 ) {
   const otherCards = and(
     eq(issues.projectId, issue.projectId),
@@ -413,15 +358,14 @@ async function positionIn(
   return generateKeyBetween(after?.position ?? null, next?.position ?? null);
 }
 
-export async function moveIssue(id: string, body: Record<string, unknown>) {
-  const { status, place } = checkMove(body);
+export async function moveIssue(id: string, { status, place }: IssueMove) {
   const where = byIssueId(id);
   if (!where) throw issueGone();
 
   return db.transaction(async (tx) => {
     const issue = await lockedIssue(tx, where);
     const position = await positionIn(tx, issue, status, place);
-    const statusChange: IssueChange =
+    const statusChange: IssueUpdate =
       status === issue.status ? {} : { status, statusChangedAt: sql`now()`, updatedAt: sql`now()` };
     await tx
       .update(issues)

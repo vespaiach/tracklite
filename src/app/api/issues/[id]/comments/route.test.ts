@@ -74,11 +74,16 @@ it("REQ-031: an empty or all-spaces comment is refused", async () => {
   const project = await createProject();
   const issue = await issueIn(project);
 
-  for (const body of ["", "   \n  ", undefined]) {
+  const cases: [string | undefined, string][] = [
+    ["", "Comment required"],
+    ["   \n  ", "Comment required"],
+    [undefined, "Required"],
+  ];
+  for (const [body, message] of cases) {
     const response = await postWith(cookie, issue.displayId, { requestId: randomUUID(), body });
     expect(response.status).toBe(422);
     expect(await response.json()).toEqual({
-      error: { message: "Check the highlighted fields", fields: { body: "Comment required" } },
+      error: { message: "Check the highlighted fields", fields: { body: message } },
     });
   }
   expect(await storedComments(issue.id)).toEqual([]);
