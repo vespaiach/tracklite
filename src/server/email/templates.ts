@@ -30,3 +30,30 @@ export function invitationEmail({ inviterName, token }: { inviterName: string; t
       ].join("\n") + signature,
   };
 }
+
+type NotificationItem = {
+  kind: "assigned" | "mentioned";
+  actorName: string;
+  issueRef: string | null;
+  issueTitle: string | null;
+  projectName: string;
+  projectKey: string;
+  linkPath: string;
+};
+
+export function notificationEmail(items: NotificationItem[]) {
+  const newest = items[items.length - 1];
+  const heading = newest.issueRef
+    ? `[${newest.issueRef}] ${newest.issueTitle}`
+    : `[${newest.projectKey}] ${newest.projectName}`;
+  const update =
+    items.length > 1
+      ? `${items.length} updates for you`
+      : newest.kind === "assigned"
+        ? `assigned to you by ${newest.actorName}`
+        : `${newest.actorName} mentioned you`;
+  return {
+    subject: `${heading}: ${update}`,
+    text: items.map((item) => `${readConfig().appUrl}${item.linkPath}`).join("\n---\n") + signature,
+  };
+}
