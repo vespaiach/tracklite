@@ -151,8 +151,8 @@ Then run the checks in [section 3](#3-verify). Never commit real values; `ops/en
 
 Do these once, in order. Each step links to its details.
 
-1. DNS `A`/`AAAA` records point at the VPS, and ports 80 and 443 are open.
-2. Copy `ops/` to the VPS and run `sudo ops/provision.sh tracklite.example.com` ([README.md → First set-up](README.md#first-set-up)).
+1. In Cloudflare, DNS `A`/`AAAA` records point at the VPS with the proxy on, SSL/TLS mode is **Full (strict)**, and an origin certificate is created. Ports 80 and 443 are open on the VPS.
+2. Copy `ops/` to the VPS, run `sudo ops/provision.sh tracklite.example.com` and install the origin certificate in `/etc/caddy/certs/` ([README.md → First set-up](README.md#first-set-up)).
 3. Set up the Resend domain, API key and webhook, then fill in `/etc/tracklite/env` ([monitoring-and-email.md → Email domain](monitoring-and-email.md#email-domain-design-55)).
 4. Run the first deploy **from the copied folder**, because `/opt/tracklite/current` doesn't exist yet: `sudo ops/deploy.sh`. Later deploys use `/opt/tracklite/current/ops/deploy.sh`.
 5. Create the first admin (OPS-001):

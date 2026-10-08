@@ -20,7 +20,7 @@ Companion to `docs/tracklite-spec.md` (v0.10). The spec says *what* the product 
 
 | Process | What it does | Managed by |
 |---|---|---|
-| **Caddy** | Gets and renews TLS certificates, redirects HTTP to HTTPS and sends HSTS (SEC-005). It also sets `X-Forwarded-For`, and the app reads the rightmost entry for SEC-001's per-IP limit. That closes the accepted limitation in spec §10. | systemd |
+| **Caddy** | Sits behind Cloudflare's proxy, which terminates the browser's TLS. Caddy serves a Cloudflare Origin CA certificate (SSL/TLS mode Full (strict)), redirects HTTP to HTTPS and sends HSTS (SEC-005). It trusts `CF-Connecting-IP` only from Cloudflare's published address ranges and writes that client address as the only `X-Forwarded-For` entry, which the app reads for SEC-001's per-IP limit. That closes the accepted limitation in spec §10. | systemd |
 | **tracklite-web** | `next start`: the single-page-app shell (1.7), `/api/…`, `/health`, `/webhooks/email`. | systemd, `Restart=always` |
 | **tracklite-worker** | A small Node entry point in `scripts/` built from the same codebase. It sends notification emails and runs cleanup (1.4). | systemd, `Restart=always` |
 | **PostgreSQL** | All state, including the notification queue. | systemd (distro package) |
@@ -428,7 +428,7 @@ Anything else gets `403`. `SameSite=Lax` is a second layer of protection. The on
 **Reset request** (`POST /api/password-reset-links`): the same count against `password_reset_requests` (5 per email, 20 per IP), but **every** request is recorded, not just failures. The email is sent only if the address belongs to an active member.
 
 **Details:**
-- **IP address.** Taken from the rightmost `X-Forwarded-For` entry, which Caddy sets (1.1). In development without Caddy, it falls back to `127.0.0.1`.
+- **IP address.** Taken from the rightmost `X-Forwarded-For` entry, which Caddy sets from Cloudflare's `CF-Connecting-IP` (1.1). In development without Caddy, it falls back to `127.0.0.1`.
 - **Races.** Two requests arriving at the same moment can both pass the count, so a limit can be exceeded by one. That's accepted rather than adding a lock.
 
 ### 4.6 Invitation and reset links

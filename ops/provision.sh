@@ -43,6 +43,7 @@ fi
 
 echo "== Caddy for $domain"
 install -m 644 "$here/Caddyfile" /etc/caddy/Caddyfile
+install -d -m 750 -o root -g caddy /etc/caddy/certs
 install -d /etc/systemd/system/caddy.service.d
 printf '[Service]\nEnvironment=TRACKLITE_DOMAIN=%s\n' "$domain" > /etc/systemd/system/caddy.service.d/tracklite.conf
 
@@ -50,7 +51,11 @@ echo "== systemd units"
 install -m 644 "$here/systemd/tracklite-web.service" "$here/systemd/tracklite-worker.service" /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable postgresql caddy tracklite-web tracklite-worker
-systemctl restart caddy
+if [ -f /etc/caddy/certs/origin.pem ] && [ -f /etc/caddy/certs/origin.key ]; then
+  systemctl restart caddy
+else
+  echo "No Cloudflare origin certificate yet. Put it in /etc/caddy/certs/origin.pem and origin.key, then: systemctl restart caddy"
+fi
 if [ -e /opt/tracklite/current ]; then
   systemctl restart tracklite-web tracklite-worker
 else

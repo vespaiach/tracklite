@@ -1,7 +1,22 @@
 # Installed as /etc/caddy/Caddyfile. TRACKLITE_DOMAIN comes from the caddy.service drop-in that
-# provision.sh writes. Caddy gets the TLS certificate and redirects HTTP to HTTPS on its own (SEC-005).
+# provision.sh writes. Browsers reach Caddy only through Cloudflare's proxy (orange cloud), with the
+# zone's SSL/TLS mode set to "Full (strict)".
+
+{
+	servers {
+		# Cloudflare's edge addresses, from https://www.cloudflare.com/ips/ (checked 2026-10-08).
+		# Only a request from one of these may name the client with CF-Connecting-IP; anything else
+		# is treated as the client itself. Refresh this list when Cloudflare changes it.
+		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+		client_ip_headers CF-Connecting-IP
+	}
+}
 
 {$TRACKLITE_DOMAIN} {
+	# Cloudflare Origin CA certificate, so Caddy asks no public CA for one. Cloudflare terminates
+	# the browser's TLS with its own edge certificate. Caddy still redirects HTTP to HTTPS (SEC-005).
+	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
+
 	encode zstd gzip
 
 	# Design §4.9.
@@ -12,10 +27,11 @@
 		-Server
 	}
 
-	# Overwrite any client-sent X-Forwarded-For, so the rightmost entry the app reads for
-	# SEC-001's per-IP limit is always the real client.
+	# Overwrite any client-sent X-Forwarded-For with the real client (the trusted CF-Connecting-IP,
+	# else the peer), so the rightmost entry the app reads for SEC-001's per-IP limit is never a
+	# Cloudflare edge address or a value the client chose.
 	reverse_proxy 127.0.0.1:3000 {
-		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-For {client_ip}
 	}
 
 	# Access log to journald (kept 14 days, OPS-006), with the token left out of

@@ -4,7 +4,7 @@ One Debian 13 VPS runs Caddy, `tracklite-web`, `tracklite-worker` and PostgreSQL
 
 | File in `ops/` | Installed as | What it does |
 |---|---|---|
-| `Caddyfile` | `/etc/caddy/Caddyfile` | TLS, HTTP→HTTPS redirect, HSTS and the §4.9 headers, `X-Forwarded-For`, access log without `token` |
+| `Caddyfile` | `/etc/caddy/Caddyfile` | TLS with the Cloudflare origin certificate, HTTP→HTTPS redirect, HSTS and the §4.9 headers, `X-Forwarded-For` from Cloudflare's `CF-Connecting-IP`, access log without `token` |
 | `systemd/tracklite-web.service` | `/etc/systemd/system/` | `next start` on `127.0.0.1:3000`, from `/opt/tracklite/current` |
 | `systemd/tracklite-worker.service` | `/etc/systemd/system/` | `scripts/worker.ts`, from `/opt/tracklite/current` |
 | `journald/tracklite.conf` | `/etc/systemd/journald.conf.d/` | journald keeps 14 days (OPS-006) |
@@ -17,38 +17,51 @@ For the step-by-step procedure for each production deploy, see [runbook.md](runb
 
 ## First set-up
 
-1. Point the domain's `A`/`AAAA` records at the VPS and open ports 80 and 443.
-2. Copy this repository's `ops/` folder to the VPS and run:
+1. In Cloudflare, point the domain's `A`/`AAAA` records at the VPS with the proxy on (orange cloud), and open ports 80 and 443 on the VPS.
+2. In Cloudflare, set **SSL/TLS → Overview** to **Full (strict)**. Then under **SSL/TLS → Origin Server**, create an origin certificate for the domain (RSA or ECC, PEM). Keep the certificate and the private key; Cloudflare shows the key only once.
+3. Copy this repository's `ops/` folder to the VPS and run:
 
    ```bash
    sudo ops/provision.sh tracklite.example.com
    ```
 
-3. Fill in `EMAIL_FROM`, `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` in `/etc/tracklite/env`:
+4. Install the origin certificate from step 2, then start Caddy:
+
+   ```bash
+   sudo editor /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
+   ```
+
+   ```bash
+   sudo chown root:caddy /etc/caddy/certs/origin.* && sudo chmod 640 /etc/caddy/certs/origin.* && sudo systemctl restart caddy
+   ```
+
+5. Fill in `EMAIL_FROM`, `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` in `/etc/tracklite/env`:
 
    ```bash
    sudo editor /etc/tracklite/env
    ```
 
-4. Check the Caddy config:
+6. Check the Caddy config:
 
    ```bash
    sudo TRACKLITE_DOMAIN=tracklite.example.com caddy validate --config /etc/caddy/Caddyfile
    ```
 
-5. Deploy the first release from the copied folder with `sudo ops/deploy.sh` (see below), then create the first admin (OPS-001):
+7. Deploy the first release from the copied folder with `sudo ops/deploy.sh` (see below), then create the first admin (OPS-001):
 
    ```bash
    cd /opt/tracklite/current && sudo bash -c 'set -a; . /etc/tracklite/env; set +a; runuser -u tracklite -- npm run setup'
    ```
-6. Set up the uptime check and the email domain: see [monitoring-and-email.md](monitoring-and-email.md) (M10.4).
+8. Set up the uptime check and the email domain: see [monitoring-and-email.md](monitoring-and-email.md) (M10.4).
 
 ## Checks by hand
 
 Replace `tracklite.example.com` with the real domain.
 
 - **The app serves over HTTPS.** `curl -sI https://tracklite.example.com/health` answers `200` with `strict-transport-security: max-age=31536000`, `x-content-type-options: nosniff` and `referrer-policy: same-origin`.
-- **SEC-005.1.** `curl -sI http://tracklite.example.com/my-issues` answers a `308` redirect with `location: https://tracklite.example.com/my-issues`.
+- **SEC-005.1.** `curl -sI http://tracklite.example.com/my-issues` answers a redirect with `location: https://tracklite.example.com/my-issues`: a `308` from Caddy, or a `301` if Cloudflare's **Always Use HTTPS** is on.
+- **Cloudflare is in front.** The same `curl -sI https://…/health` shows `server: cloudflare` and a `cf-ray` header.
+- **SEC-001 sees the real client.** Sign in once with a wrong password, then run `sudo journalctl -u caddy -n 5`. The `client_ip` is your own address, not a Cloudflare one.
 - **SEC-007.2.** Open `https://tracklite.example.com/reset-password?token=abc`, then run `sudo journalctl -u caddy -n 5`. The logged `uri` is `/reset-password` with no `token`.
 - **Logs.** `systemctl status tracklite-web tracklite-worker` shows both as active. `journalctl -u tracklite-web` shows the app's log lines.
 
