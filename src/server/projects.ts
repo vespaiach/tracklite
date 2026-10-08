@@ -4,6 +4,7 @@ import { ApiError } from "./api-error";
 import { db } from "./db";
 import { conflict, parseDescriptionChange, replaceMentions } from "./descriptions";
 import { memberSummary } from "./members";
+import { notify } from "./notifications";
 import { members, mentions, projectKeys, projects } from "./schema";
 import { type Member, requireAdmin } from "./sessions";
 
@@ -133,7 +134,13 @@ async function saveDescription(member: Member, key: string, body: Record<string,
       })
       .where(eq(projects.id, project.id))
       .returning();
-    await replaceMentions(tx, { projectId: project.id }, description);
+    const mentioned = await replaceMentions(tx, { projectId: project.id }, description);
+    await notify(tx, mentioned, {
+      kind: "mentioned",
+      actorId: member.id,
+      target: { projectId: project.id },
+      text: description,
+    });
     return projectResponse(tx, updated);
   });
 }

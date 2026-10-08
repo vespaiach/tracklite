@@ -21,6 +21,7 @@ import { ApiError } from "./api-error";
 import { db } from "./db";
 import { conflict, parseDescriptionChange, replaceMentions } from "./descriptions";
 import { memberSummary } from "./members";
+import { notify } from "./notifications";
 import { writableProject } from "./projects";
 import {
   issueLabels,
@@ -319,7 +320,13 @@ async function saveDescription(id: string, member: Member, body: Record<string, 
         updatedAt: sql`now()`,
       })
       .where(eq(issues.id, issue.id));
-    await replaceMentions(tx, { issueId: issue.id }, description);
+    const mentioned = await replaceMentions(tx, { issueId: issue.id }, description);
+    await notify(tx, mentioned, {
+      kind: "mentioned",
+      actorId: member.id,
+      target: { issueId: issue.id },
+      text: description,
+    });
     return updatedIssue(tx, issue.id);
   });
 }
@@ -343,6 +350,13 @@ export async function updateIssue(id: string, member: Member, body: Record<strin
         .update(issues)
         .set({ ...change, updatedAt: sql`now()` })
         .where(eq(issues.id, issue.id));
+    }
+    if (typeof change.assigneeId === "string") {
+      await notify(tx, [change.assigneeId], {
+        kind: "assigned",
+        actorId: member.id,
+        target: { issueId: issue.id },
+      });
     }
     return updatedIssue(tx, issue.id);
   });
