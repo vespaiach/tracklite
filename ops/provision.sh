@@ -8,7 +8,7 @@ here="$(cd "$(dirname "$0")" && pwd)"
 
 echo "== Packages: PostgreSQL 18 (PGDG), Caddy, Node 24"
 apt-get update
-apt-get install -y curl gnupg openssl debian-keyring debian-archive-keyring apt-transport-https postgresql-common
+apt-get install -y sudo curl gnupg openssl debian-keyring debian-archive-keyring apt-transport-https postgresql-common
 /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
 curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key \
   | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
@@ -21,25 +21,37 @@ install -D -m 644 "$here/journald/tracklite.conf" /etc/systemd/journald.conf.d/t
 install -m 644 "$here/logrotate/postgresql-common" /etc/logrotate.d/postgresql-common
 systemctl restart systemd-journald
 
-echo "== App user and release directory"
+echo "== Users: tracklite runs the app, deployer owns and deploys the releases"
 id tracklite >/dev/null 2>&1 \
   || useradd --system --home-dir /opt/tracklite --shell /usr/sbin/nologin tracklite
-install -d -o tracklite -g tracklite /opt/tracklite /opt/tracklite/releases
+id deployer >/dev/null 2>&1 || useradd --create-home --shell /bin/bash deployer
+usermod -aG systemd-journal deployer
+install -m 440 "$here/sudoers/tracklite-deployer" /etc/sudoers.d/tracklite-deployer
+visudo -cf /etc/sudoers.d/tracklite-deployer
 
-echo "== Database and /etc/tracklite/env"
+echo "== Release directory, owned by deployer and read-only to tracklite"
+install -d -m 755 -o deployer -g deployer /opt/tracklite /opt/tracklite/releases
+chown -R deployer:deployer /opt/tracklite/releases
+[ ! -d /opt/tracklite/repo ] || chown -R deployer:deployer /opt/tracklite/repo
+for link in /opt/tracklite/current /opt/tracklite/previous; do
+  [ ! -L "$link" ] || chown -h deployer:deployer "$link"
+done
+
+echo "== Database and /etc/tracklite/env (deployer reads it to build and migrate; only root edits it)"
+install -d -m 750 -o root -g deployer /etc/tracklite
 if [ ! -f /etc/tracklite/env ]; then
   password="$(openssl rand -hex 24)"
   sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
 create role tracklite login password '$password';
 create database tracklite owner tracklite;
 SQL
-  install -d -m 700 /etc/tracklite
-  sed -e "s|^DATABASE_URL=.*|DATABASE_URL=postgres://tracklite:$password@localhost:5432/tracklite|" \
+  (umask 077 && sed -e "s|^DATABASE_URL=.*|DATABASE_URL=postgres://tracklite:$password@localhost:5432/tracklite|" \
       -e "s|^APP_URL=.*|APP_URL=https://$domain|" \
-      "$here/env.example" > /etc/tracklite/env
-  chmod 600 /etc/tracklite/env
+      "$here/env.example" > /etc/tracklite/env)
   echo "Wrote /etc/tracklite/env. Fill in EMAIL_FROM, RESEND_API_KEY and RESEND_WEBHOOK_SECRET."
 fi
+chown root:deployer /etc/tracklite/env
+chmod 640 /etc/tracklite/env
 
 echo "== Caddy for $domain"
 install -m 644 "$here/Caddyfile" /etc/caddy/Caddyfile

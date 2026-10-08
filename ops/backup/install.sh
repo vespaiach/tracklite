@@ -8,9 +8,10 @@ here="$(cd "$(dirname "$0")" && pwd)"
 echo "== Packages: age, rclone"
 apt-get install -y age rclone
 
-echo "== Scripts in /opt/tracklite/backup"
-install -d -m 755 /opt/tracklite/backup
-install -m 755 "$here/backup.sh" "$here/notify-failure.sh" "$here/restore.sh" /opt/tracklite/backup/
+echo "== Scripts in /usr/local/lib/tracklite-backup, owned by root because systemd runs them"
+install -d -m 755 /usr/local/lib/tracklite-backup
+install -m 755 "$here/backup.sh" "$here/notify-failure.sh" "$here/restore.sh" /usr/local/lib/tracklite-backup/
+rm -rf /opt/tracklite/backup
 
 echo "== /etc/tracklite/backup.env"
 if [ ! -f /etc/tracklite/backup.env ]; then

@@ -6,10 +6,12 @@ The scripts and the one-time server set-up are described in [README.md](README.m
 
 ## At a glance
 
-| What | Command (on the VPS) |
+Run everything here as `deployer` (see [README.md → Accounts](README.md#accounts)). Only [Changing settings](#changing-settings) needs your admin account.
+
+| What | Command (on the VPS, as `deployer`) |
 |---|---|
-| Deploy the latest `main` | `sudo /opt/tracklite/current/ops/deploy.sh` |
-| Roll back one release | `sudo /opt/tracklite/current/ops/rollback.sh` |
+| Deploy the latest `main` | `/opt/tracklite/current/ops/deploy.sh` |
+| Roll back one release | `/opt/tracklite/current/ops/rollback.sh` |
 | Which release is live | `readlink /opt/tracklite/current` |
 | Which release rollback goes to | `readlink /opt/tracklite/previous` |
 | Service state | `systemctl status tracklite-web tracklite-worker caddy postgresql` |
@@ -38,7 +40,7 @@ Check each item. If any fails, don't deploy.
 4. **Take a backup first if the release has a migration that changes or deletes data:**
 
    ```bash
-   sudo systemctl start tracklite-backup.service && sudo journalctl -u tracklite-backup.service -n 5
+   sudo systemctl start tracklite-backup.service && journalctl -u tracklite-backup.service -n 5
    ```
 
 5. **Pick a quiet moment.** `tracklite-web` restarts during the switch, so requests fail for a few seconds. Pending notification emails are safe: they stay in `notification_emails`, and the worker finishes its current batch before it stops.
@@ -46,11 +48,11 @@ Check each item. If any fails, don't deploy.
 ## 2. Deploy
 
 ```bash
-ssh <you>@tracklite.example.com
+ssh -i ~/.ssh/tracklite-deployer deployer@tracklite.example.com
 ```
 
 ```bash
-sudo /opt/tracklite/current/ops/deploy.sh
+/opt/tracklite/current/ops/deploy.sh
 ```
 
 It takes a few minutes, mostly `npm ci` and `next build`. The output goes through these stages in order:
@@ -105,7 +107,7 @@ The deploy deletes the new release and exits non-zero. The old release keeps ser
 The output says `Deployed <sha>, but /health doesn't answer 200.` **The new release is live and unhealthy.** Roll back straight away, then investigate:
 
 ```bash
-sudo /opt/tracklite/current/ops/rollback.sh
+/opt/tracklite/current/ops/rollback.sh
 ```
 
 ```bash
@@ -122,7 +124,7 @@ After the rollback, `/health` should answer `ok`. Then find the cause in `journa
 Roll back if users are affected, then fix forward on `main`:
 
 ```bash
-sudo /opt/tracklite/current/ops/rollback.sh
+/opt/tracklite/current/ops/rollback.sh
 ```
 
 The rollback finishes in seconds (OPS-004.1 allows 2 minutes) and doesn't touch the database.
@@ -135,7 +137,7 @@ The rollback finishes in seconds (OPS-004.1 allows 2 minutes) and doesn't touch 
 
 ## Changing settings
 
-`/etc/tracklite/env` is read by systemd (for the services) and by bash (during `deploy.sh`). Keep each line as plain `NAME=value`, with no spaces, quotes or `export`. For `EMAIL_FROM`, use a bare address such as `notifications@mail.tracklite.example.com`.
+Only your admin account can change `/etc/tracklite/env`; `deployer` can read it but not write it. The file is read by systemd (for the services) and by bash (during `deploy.sh`). Keep each line as plain `NAME=value`, with no spaces, quotes or `export`. For `EMAIL_FROM`, use a bare address such as `notifications@mail.tracklite.example.com`.
 
 ```bash
 sudo editor /etc/tracklite/env
@@ -152,30 +154,29 @@ Then run the checks in [section 3](#3-verify). Never commit real values; `ops/en
 Do these once, in order. Each step links to its details.
 
 1. DNS `A`/`AAAA` records point at the VPS, and ports 80 and 443 are open.
-2. Copy `ops/` to the VPS and run `sudo ops/provision.sh tracklite.example.com` ([README.md → First set-up](README.md#first-set-up)).
+2. Copy `ops/` to the VPS and, as your admin account, run `sudo ops/provision.sh tracklite.example.com` ([README.md → First set-up](README.md#first-set-up)). Then give `deployer` your SSH key ([README.md → Set up the deployer account](README.md#set-up-the-deployer-account)).
 3. Set up the Resend domain, API key and webhook, then fill in `/etc/tracklite/env` ([monitoring-and-email.md → Email domain](monitoring-and-email.md#email-domain-design-55)).
-4. Run the first deploy **from the copied folder**, because `/opt/tracklite/current` doesn't exist yet: `sudo ops/deploy.sh`. Later deploys use `/opt/tracklite/current/ops/deploy.sh`.
-5. Create the first admin (OPS-001):
+4. As `deployer`, run the first deploy **from a copy of `ops/` in its home**, because `/opt/tracklite/current` doesn't exist yet: `ops/deploy.sh`. Later deploys use `/opt/tracklite/current/ops/deploy.sh`.
+5. As `deployer`, create the first admin (OPS-001):
 
    ```bash
-   cd /opt/tracklite/current && sudo bash -c 'set -a; . /etc/tracklite/env; set +a; runuser -u tracklite -- npm run setup'
+   cd /opt/tracklite/current && (set -a; . /etc/tracklite/env; set +a; npm run setup)
    ```
 
-6. Install backups, take the first one and restore it into a scratch database ([README.md → Backups](README.md#backups-m103)).
+6. As your admin account, install backups, take the first one and restore it into a scratch database ([README.md → Backups](README.md#backups-m103)).
 7. Set up the uptime check on `/health` ([monitoring-and-email.md → Uptime check](monitoring-and-email.md#uptime-check-ops-005)).
 8. Run the checks by hand in both docs: HTTPS and the redirect, the token-free access log, SPF/DKIM/DMARC, the bounce webhook and the uptime alert.
 
 ## How a deploy works
 
 ```
-/opt/tracklite/
+/opt/tracklite/                    owned by deployer; tracklite can only read it
 ├── repo/                          bare git repo; main is fetched here
 ├── releases/
 │   ├── 20261001120000-abc1234/    ← previous
 │   └── 20261008090000-def5678/    ← current
 ├── current  -> releases/…-def5678 what systemd runs (WorkingDirectory, ExecStart)
-├── previous -> releases/…-abc1234 what rollback.sh switches to
-└── backup/                        backup scripts (M10.3)
+└── previous -> releases/…-abc1234 what rollback.sh switches to
 ```
 
-`deploy.sh` builds the new release next to the live one, migrates, and only then moves `current`. Every deploy deletes all releases except `current` and `previous`. Settings live outside the releases, in `/etc/tracklite/env` (mode `600`), so a switch never changes them.
+`deploy.sh` builds the new release next to the live one, migrates, and only then moves `current`. Every deploy deletes all releases except `current` and `previous`. Settings live outside the releases, in `/etc/tracklite/env` (`root:deployer`, mode `640`), so a switch never changes them.

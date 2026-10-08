@@ -81,7 +81,7 @@ All email goes through one `sendEmail()` module with three implementations:
 
 ### 1.6 Configuration
 
-- Settings come from environment variables: `.env.local` in development, and `/etc/tracklite/env` on the VPS (mode `600`, outside the release directory, OPS-006).
+- Settings come from environment variables: `.env.local` in development, and `/etc/tracklite/env` on the VPS (`root:deployer`, mode `640`, outside the release directory, OPS-006). The `deployer` account reads it to build and migrate; only root changes it.
 - Both processes check them at startup and refuse to start if any are missing.
 - Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5).
 - `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.6).

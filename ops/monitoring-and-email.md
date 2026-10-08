@@ -40,10 +40,10 @@ Mail is sent from a subdomain, so the app's sending reputation is kept apart fro
 ## Checks by hand
 
 - **The uptime check alerts (OPS-005.1).** Run `sudo systemctl stop tracklite-web`. Within about 10 minutes the owner gets "Tracklite is down". Run `sudo systemctl start tracklite-web` afterwards. To check the database case, stop `postgresql` instead: `/health` answers `503`, and the alert follows the same way.
-- **A test email passes SPF and DKIM.** On the VPS, send a password-reset email to a Gmail address you can read. `systemd-run` reads `/etc/tracklite/env` the same way the services do:
+- **A test email passes SPF and DKIM.** As `deployer` on the VPS, send a password-reset email to a Gmail address you can read, with the same settings the services use:
 
   ```bash
-  sudo systemd-run --quiet --wait --pipe --uid=tracklite --gid=tracklite -p EnvironmentFile=/etc/tracklite/env -p Environment=NODE_ENV=production -p WorkingDirectory=/opt/tracklite/current /opt/tracklite/current/node_modules/.bin/tsx --conditions=react-server scripts/send-dev-email.ts you@gmail.com
+  cd /opt/tracklite/current && (set -a; . /etc/tracklite/env; set +a; NODE_ENV=production node_modules/.bin/tsx --conditions=react-server scripts/send-dev-email.ts you@gmail.com)
   ```
 
   In Gmail, open the message and choose **⋮ → Show original**. `SPF`, `DKIM` and `DMARC` all read `PASS`.

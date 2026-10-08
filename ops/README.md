@@ -9,16 +9,111 @@ One Debian 13 VPS runs Caddy, `tracklite-web`, `tracklite-worker` and PostgreSQL
 | `systemd/tracklite-worker.service` | `/etc/systemd/system/` | `scripts/worker.ts`, from `/opt/tracklite/current` |
 | `journald/tracklite.conf` | `/etc/systemd/journald.conf.d/` | journald keeps 14 days (OPS-006) |
 | `logrotate/postgresql-common` | `/etc/logrotate.d/` | PostgreSQL's own log files keep 14 days (OPS-006) |
-| `env.example` | `/etc/tracklite/env` (mode 600) | secrets and settings (§1.6); real values never go in the repository |
+| `env.example` | `/etc/tracklite/env` (`root:deployer`, mode 640) | secrets and settings (§1.6); real values never go in the repository |
+| `sudoers/tracklite-deployer` | `/etc/sudoers.d/` (mode 440) | the only root commands `deployer` may run: restart web and worker, start a backup |
 
 `/opt/tracklite/current` points at the live release. `ops/deploy.sh` creates releases and switches that link (M10.2).
 
 For the step-by-step procedure for each production deploy, see [runbook.md](runbook.md).
 
+## Accounts
+
+Root is used only to set the server up and to change secrets. Deploys and the app run without it.
+
+| Account | Logs in? | What it does | Root? |
+|---|---|---|---|
+| your admin account | SSH | runs `provision.sh` and `backup/install.sh`, edits `/etc/tracklite/*` | full `sudo` |
+| `deployer` | SSH, key only | owns `/opt/tracklite`, runs `deploy.sh`, `rollback.sh` and `npm run setup`, reads the logs | only the commands in `sudoers/tracklite-deployer` |
+| `tracklite` | no | runs `tracklite-web` and `tracklite-worker`; can read the releases but not change them | no |
+| `postgres` | no | runs PostgreSQL and the daily backup | no |
+| `caddy` | no | runs Caddy (from its Debian package) | no |
+
+`deployer` can read `/etc/tracklite/env`, because builds and migrations need `DATABASE_URL`, but only root can change it. `deployer` can't read `/etc/tracklite/backup.env`, so it never sees the R2 token.
+
+`tracklite` doesn't own its code, so a bug in the web process can't rewrite the app it runs.
+
+### Folders and who creates them
+
+You don't make these by hand: the scripts create them with the right owner and mode, and fix them again on a re-run. The only exception is `/home/deployer/.ssh`, which you make when you add your key.
+
+```
+/etc/tracklite/                   root:deployer      750  provision.sh
+├── env                           root:deployer      640  provision.sh
+└── backup.env                    root:root          600  backup/install.sh
+
+/opt/tracklite/                   deployer:deployer  755  provision.sh
+├── repo/                         deployer                deploy.sh (first run)
+├── releases/                     deployer                provision.sh
+│   └── <UTC time>-<commit>/      deployer                deploy.sh (each run)
+├── current  -> releases/…        deployer                deploy.sh
+└── previous -> releases/…        deployer                deploy.sh (from the second deploy)
+
+/usr/local/lib/tracklite-backup/  root:root          755  backup/install.sh
+/home/deployer/.ssh/              deployer:deployer  700  you (see below)
+```
+
+### Set up the deployer account
+
+`provision.sh` creates `deployer` with no password, so it can only log in with an SSH key.
+
+1. On your own machine, make a key for deploying if you don't have one:
+
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/tracklite-deployer -C tracklite-deployer
+   ```
+
+2. On the VPS, as your admin account, give `deployer` that public key. Paste the contents of `~/.ssh/tracklite-deployer.pub` when `tee` waits for input, then press Ctrl-D:
+
+   ```bash
+   sudo install -d -m 700 -o deployer -g deployer /home/deployer/.ssh
+   ```
+
+   ```bash
+   sudo tee -a /home/deployer/.ssh/authorized_keys
+   ```
+
+   ```bash
+   sudo chown deployer:deployer /home/deployer/.ssh/authorized_keys && sudo chmod 600 /home/deployer/.ssh/authorized_keys
+   ```
+
+3. From your machine, check that the login and the sudo rule work. The last command lists the two allowed commands and nothing else:
+
+   ```bash
+   ssh -i ~/.ssh/tracklite-deployer deployer@tracklite.example.com
+   ```
+
+   ```bash
+   sudo -n -l
+   ```
+
+4. Optional but recommended: turn off root and password logins over SSH. **Keep your current SSH session open** until a new admin login works, so a mistake can't lock you out:
+
+   ```bash
+   printf 'PermitRootLogin no\nPasswordAuthentication no\n' | sudo tee /etc/ssh/sshd_config.d/10-tracklite.conf
+   ```
+
+   ```bash
+   sudo sshd -t && sudo systemctl reload ssh
+   ```
+
+### Moving an existing server off root deploys
+
+Pull the new `ops/` folder onto the VPS and re-run, as your admin account:
+
+```bash
+sudo ops/provision.sh tracklite.example.com
+```
+
+```bash
+sudo ops/backup/install.sh
+```
+
+`provision.sh` creates `deployer`, gives it `/opt/tracklite` and makes `/etc/tracklite/env` readable by it. `backup/install.sh` moves the backup scripts from `/opt/tracklite/backup` to `/usr/local/lib/tracklite-backup`, out of the directory `deployer` owns. Then set up the SSH key as above and deploy once as `deployer` to check it.
+
 ## First set-up
 
 1. Point the domain's `A`/`AAAA` records at the VPS and open ports 80 and 443.
-2. Copy this repository's `ops/` folder to the VPS and run:
+2. Copy this repository's `ops/` folder to the VPS and run it as your admin account:
 
    ```bash
    sudo ops/provision.sh tracklite.example.com
@@ -30,18 +125,30 @@ For the step-by-step procedure for each production deploy, see [runbook.md](runb
    sudo editor /etc/tracklite/env
    ```
 
-4. Check the Caddy config:
+4. Give `deployer` your SSH key: see [Set up the deployer account](#set-up-the-deployer-account).
+5. Check the Caddy config:
 
    ```bash
    sudo TRACKLITE_DOMAIN=tracklite.example.com caddy validate --config /etc/caddy/Caddyfile
    ```
 
-5. Deploy the first release from the copied folder with `sudo ops/deploy.sh` (see below), then create the first admin (OPS-001):
+6. As `deployer`, deploy the first release from a copy of `ops/`, because `/opt/tracklite/current` doesn't exist yet. From your machine:
 
    ```bash
-   cd /opt/tracklite/current && sudo bash -c 'set -a; . /etc/tracklite/env; set +a; runuser -u tracklite -- npm run setup'
+   scp -r -i ~/.ssh/tracklite-deployer ops deployer@tracklite.example.com:
    ```
-6. Set up the uptime check and the email domain: see [monitoring-and-email.md](monitoring-and-email.md) (M10.4).
+
+   ```bash
+   ssh -i ~/.ssh/tracklite-deployer deployer@tracklite.example.com ops/deploy.sh
+   ```
+
+7. Still as `deployer` on the VPS, create the first admin (OPS-001):
+
+   ```bash
+   cd /opt/tracklite/current && (set -a; . /etc/tracklite/env; set +a; npm run setup)
+   ```
+
+8. Set up the uptime check and the email domain: see [monitoring-and-email.md](monitoring-and-email.md) (M10.4).
 
 ## Checks by hand
 
@@ -58,18 +165,22 @@ Each release lives in `/opt/tracklite/releases/<UTC time>-<commit>`. `current` p
 
 ## Deploy
 
+As `deployer`, without `sudo` (the script refuses to run as root):
+
 ```bash
-sudo /opt/tracklite/current/ops/deploy.sh
+/opt/tracklite/current/ops/deploy.sh
 ```
 
-It fetches `main` from GitHub, runs `npm ci` and `npm run build` in a new release directory, then runs `npm run db:migrate`. All pending migrations run in one transaction. If they fail, the command deletes the new release, prints the error and exits non-zero, and the old release keeps running (OPS-002.2). If they succeed, it switches `current`, restarts `tracklite-web` and `tracklite-worker`, and waits for `/health` to answer `200` (OPS-002.1).
+It fetches `main` from GitHub, runs `npm ci` and `npm run build` in a new release directory, then runs `npm run db:migrate`. All pending migrations run in one transaction. If they fail, the command deletes the new release, prints the error and exits non-zero, and the old release keeps running (OPS-002.2). If they succeed, it switches `current`, restarts `tracklite-web` and `tracklite-worker` through the `sudo` rule, and waits for `/health` to answer `200` (OPS-002.1).
 
 `/etc/tracklite/env` is read both by systemd and, during a deploy, by the shell, so keep each line as plain `NAME=value` with no spaces or quotes.
 
 ## Rollback
 
+As `deployer`:
+
 ```bash
-sudo /opt/tracklite/current/ops/rollback.sh
+/opt/tracklite/current/ops/rollback.sh
 ```
 
 It points `current` back at `previous` and restarts web and worker, without touching the database (OPS-004). That only works because every release's migrations must also work with the previous release's code: add columns and tables, don't drop or rename them in the same release that stops using them. A second rollback in a row refuses, because the previous release is gone once you've switched back to it.
@@ -86,11 +197,11 @@ Every day at 03:00 UTC a systemd timer dumps the database, encrypts the dump wit
 
 | File in `ops/backup/` | Installed as | What it does |
 |---|---|---|
-| `backup.sh` | `/opt/tracklite/backup/` | `pg_dump` → `age` → R2, then deletes all but the newest 14 |
-| `notify-failure.sh` | `/opt/tracklite/backup/` | emails `OWNER_EMAIL` with the last log lines (OPS-003.3) |
-| `restore.sh` | `/opt/tracklite/backup/` | downloads, decrypts and restores a backup into a database (OPS-003.1) |
+| `backup.sh` | `/usr/local/lib/tracklite-backup/` | `pg_dump` → `age` → R2, then deletes all but the newest 14 |
+| `notify-failure.sh` | `/usr/local/lib/tracklite-backup/` | emails `OWNER_EMAIL` with the last log lines (OPS-003.3) |
+| `restore.sh` | `/usr/local/lib/tracklite-backup/` | downloads, decrypts and restores a backup into a database (OPS-003.1) |
 | `tracklite-backup.service` | `/etc/systemd/system/` | runs `backup.sh` as `postgres`; `OnFailure=` starts the unit below |
-| `tracklite-backup-failed.service` | `/etc/systemd/system/` | runs `notify-failure.sh` |
+| `tracklite-backup-failed.service` | `/etc/systemd/system/` | runs `notify-failure.sh` as a throwaway user (`DynamicUser=`) that can read the journal |
 | `tracklite-backup.timer` | `/etc/systemd/system/` | `03:00 UTC` daily; `Persistent=` catches up after downtime |
 | `backup.env.example` | `/etc/tracklite/backup.env` (mode 600) | owner email, age public key, R2 bucket and token |
 
@@ -105,7 +216,7 @@ Backups are encrypted to an age public key. The private key never goes on the VP
    ```
 
 2. In Cloudflare, create an R2 bucket (for example `tracklite-backups`) and an R2 API token with **Object Read & Write** on that bucket only. Note the account ID, access key ID and secret.
-3. On the VPS, after `ops/provision.sh`:
+3. On the VPS, as your admin account, after `ops/provision.sh`:
 
    ```bash
    sudo ops/backup/install.sh

@@ -15,7 +15,7 @@ import { basename, join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 const stubs = {
-  runuser: 'while [ "$1" != "--" ]; do shift; done\nshift\nexec "$@"',
+  sudo: 'exec "$@"',
   systemctl: 'echo "systemctl $*" >> "$STUB_LOG"',
   curl: 'echo "curl $*" >> "$STUB_LOG"',
   npm: [
