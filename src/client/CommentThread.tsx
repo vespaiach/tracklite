@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useLocation } from "react-router";
 import {
   Avatar,
   Button,
@@ -31,13 +32,15 @@ import {
   useMeQuery,
   usePostCommentMutation,
 } from "./api";
-import { formatUpdated } from "./dates";
+import { formatExact, formatUpdated } from "./dates";
 import { useFailureToast } from "./failure";
+import { LeaveGuard } from "./LeaveGuard";
 import { useMentions } from "./useMentions";
 import { useShowLoading } from "./useShowLoading";
 
 export function CommentThread({ threadPath, editable }: { threadPath: string; editable: boolean }) {
   const query = useCommentsQuery(threadPath);
+  const linked = useLinkedComment(query.data !== undefined);
   const showLoading = useShowLoading(query.isLoading);
   if (query.isError && !query.data) {
     return (
@@ -62,6 +65,7 @@ export function CommentThread({ threadPath, editable }: { threadPath: string; ed
           key={comment.id}
           comment={comment}
           editable={editable}
+          highlighted={comment.id === linked}
         />
       ))}
       {editable && <CommentBox threadPath={threadPath} />}
@@ -69,11 +73,39 @@ export function CommentThread({ threadPath, editable }: { threadPath: string; ed
   );
 }
 
+const linkPrefix = "#comment-";
+
+function useLinkedComment(loaded: boolean) {
+  const { hash } = useLocation();
+  const [highlighted, setHighlighted] = useState<string>();
+
+  useEffect(() => {
+    if (!loaded || !hash.startsWith(linkPrefix)) return;
+    const id = hash.slice(linkPrefix.length);
+    const target = document.getElementById(`comment-${id}`);
+    if (!target) return;
+    target.scrollIntoView({ block: "center" });
+    setHighlighted(id);
+    const fade = setTimeout(() => setHighlighted(undefined), 2000);
+    return () => clearTimeout(fade);
+  }, [loaded, hash]);
+
+  return highlighted;
+}
+
 function authorName({ author }: ThreadComment) {
   return author.deactivated ? `${author.fullName} (deactivated)` : author.fullName;
 }
 
-function CommentItem({ comment, editable }: { comment: ThreadComment; editable: boolean }) {
+function CommentItem({
+  comment,
+  editable,
+  highlighted,
+}: {
+  comment: ThreadComment;
+  editable: boolean;
+  highlighted: boolean;
+}) {
   const { data: me } = useMeQuery();
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -92,6 +124,8 @@ function CommentItem({ comment, editable }: { comment: ThreadComment; editable: 
 
   return (
     <Comment
+      id={`comment-${comment.id}`}
+      highlighted={highlighted}
       avatar={
         <Avatar
           size="sm"
@@ -100,8 +134,14 @@ function CommentItem({ comment, editable }: { comment: ThreadComment; editable: 
         />
       }
       author={authorName(comment)}
-      time={<time dateTime={comment.createdAt}>{formatUpdated(comment.createdAt)}</time>}
-      edited={comment.editedAt && "(edited)"}
+      time={
+        <time
+          dateTime={comment.createdAt}
+          title={formatExact(comment.createdAt)}>
+          {formatUpdated(comment.createdAt)}
+        </time>
+      }
+      edited={comment.editedAt && <span title={`Edited ${formatExact(comment.editedAt)}`}>(edited)</span>}
       actions={
         canDelete && (
           <Menu
@@ -267,25 +307,31 @@ function CommentBox({ threadPath }: { threadPath: string }) {
   }
 
   return (
-    <CommentForm
-      label="Comment (Markdown)"
-      placeholder="Leave a comment…"
-      text={text}
-      onChange={setText}
-      onSubmit={post}
-      saving={isLoading}
-      error={error}
-      actions={
-        <Button
-          size="sm"
-          variant="primary"
-          type="submit"
-          disabled={isLoading || text.trim() === ""}
-          aria-busy={isLoading || undefined}>
-          {isLoading ? "Posting…" : "Post"}
-        </Button>
-      }
-    />
+    <>
+      <LeaveGuard
+        unsaved={text.trim() !== ""}
+        message="You have an unsent comment. Leave anyway?"
+      />
+      <CommentForm
+        label="Comment (Markdown)"
+        placeholder="Leave a comment…"
+        text={text}
+        onChange={setText}
+        onSubmit={post}
+        saving={isLoading}
+        error={error}
+        actions={
+          <Button
+            size="sm"
+            variant="primary"
+            type="submit"
+            disabled={isLoading || text.trim() === ""}
+            aria-busy={isLoading || undefined}>
+            {isLoading ? "Posting…" : "Post"}
+          </Button>
+        }
+      />
+    </>
   );
 }
 

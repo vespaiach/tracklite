@@ -356,7 +356,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §6.4 · spec REQ-031…034, DATA-001 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Comments.dc.html&via=share (Comments)
   - Needs: M4.5, M3.6 · API description: M7.1
   - Done: component tests for post, edit and delete
-- [ ] **M7.3 Comment extras.** The unsent-comment guard (`useBlocker` and `beforeunload`); time formatting; scrolling to `#comment-{id}`.
+- [x] **M7.3 Comment extras.** The unsent-comment guard (`useBlocker` and `beforeunload`); time formatting; scrolling to `#comment-{id}`.
   - Reads: design §6.4 (unsaved text), §6.7 · spec REQ-035, DATA-003
   - Needs: M7.2
   - Done: REQ-035.*, DATA-003.*; tests for the time formats

@@ -1,8 +1,8 @@
-import { type FormEvent, type KeyboardEvent, useEffect, useId, useState } from "react";
-import { useBlocker } from "react-router";
-import { Button, Dialog, Editor, FieldError, SettingsActions } from "../components/ui/track-lite";
+import { type FormEvent, type KeyboardEvent, useId, useState } from "react";
+import { Button, Editor, FieldError, SettingsActions } from "../components/ui/track-lite";
 import type { ApiFailure } from "./api";
 import { useFailureToast } from "./failure";
+import { LeaveGuard } from "./LeaveGuard";
 import { useMentions } from "./useMentions";
 
 export type DescriptionDraft = { text: string; startedFrom: string; version: number };
@@ -54,7 +54,10 @@ export function DescriptionEditor({
       aria-label="Edit description"
       noValidate
       onSubmit={submit}>
-      <LeaveGuard unsaved={unsaved} />
+      <LeaveGuard
+        unsaved={unsaved}
+        message="You have unsaved changes. Leave anyway?"
+      />
       <Editor
         mono
         invalid={Boolean(error)}
@@ -106,39 +109,5 @@ export function DescriptionEditor({
         </p>
       )}
     </form>
-  );
-}
-
-function LeaveGuard({ unsaved }: { unsaved: boolean }) {
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) => unsaved && currentLocation.pathname !== nextLocation.pathname,
-  );
-
-  useEffect(() => {
-    if (!unsaved) return;
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [unsaved]);
-
-  return (
-    blocker.state === "blocked" && (
-      <Dialog
-        open
-        role="alertdialog"
-        title="You have unsaved changes. Leave anyway?"
-        onClose={blocker.reset}
-        actions={
-          <>
-            <Button onClick={blocker.reset}>Cancel</Button>
-            <Button
-              variant="danger"
-              onClick={blocker.proceed}>
-              Leave
-            </Button>
-          </>
-        }
-      />
-    )
   );
 }
