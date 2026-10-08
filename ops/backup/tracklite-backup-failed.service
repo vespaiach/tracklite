@@ -1,0 +1,8 @@
+[Unit]
+Description=Email the owner that the Tracklite backup failed (OPS-003.3)
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/tracklite/env
+EnvironmentFile=/etc/tracklite/backup.env
+ExecStart=/opt/tracklite/backup/notify-failure.sh

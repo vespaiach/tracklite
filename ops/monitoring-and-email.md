@@ -1,0 +1,50 @@
+# Monitoring and email domain (M10.4)
+
+One-time set-up before launch. Replace `tracklite.example.com` with the real domain and `mail.tracklite.example.com` with the sending subdomain.
+
+## Uptime check (OPS-005)
+
+A Google Apps Script outside the VPS calls `/health` every 5 minutes. When the check fails twice in a row, it emails the Google account that owns the script. It sends one email per outage and resets once `/health` answers `200` again.
+
+1. Sign in to the owner's Google account and create a new project at <https://script.google.com>.
+2. Replace the editor's contents with [`uptime/health-check.gs`](uptime/health-check.gs), and set `healthUrl` to `https://tracklite.example.com/health`.
+3. Choose `installTrigger` in the function menu and click **Run**. Grant the permissions it asks for: external requests, sending email as you, and managing triggers.
+4. **Triggers** (the clock icon) should list one trigger: `checkHealth`, time-driven, every 5 minutes.
+
+## Email domain (design §5.5)
+
+Mail is sent from a subdomain, so the app's sending reputation is kept apart from the team's normal email.
+
+1. In Resend, go to **Domains → Add domain** and add `mail.tracklite.example.com`.
+2. At the DNS provider, add exactly the SPF and DKIM records Resend lists, plus a DMARC record:
+
+   | Type | Name | Value |
+   |---|---|---|
+   | `TXT` | `_dmarc.mail.tracklite.example.com` | `v=DMARC1; p=none; rua=mailto:owner@example.com` |
+
+3. Click **Verify** in Resend and wait until the domain shows **Verified**.
+4. In Resend, go to **API Keys** and create a key with **Sending access** for this domain only.
+5. Go to **Webhooks → Add endpoint**, enter `https://tracklite.example.com/webhooks/email` and select only `email.bounced`. Copy the signing secret (`whsec_…`).
+6. Fill in `/etc/tracklite/env`, then restart both services:
+
+   ```
+   EMAIL_FROM=Tracklite <notifications@mail.tracklite.example.com>
+   RESEND_API_KEY=re_…
+   RESEND_WEBHOOK_SECRET=whsec_…
+   ```
+
+   ```bash
+   sudo systemctl restart tracklite-web tracklite-worker
+   ```
+
+## Checks by hand
+
+- **The uptime check alerts (OPS-005.1).** Run `sudo systemctl stop tracklite-web`. Within about 10 minutes the owner gets "Tracklite is down". Run `sudo systemctl start tracklite-web` afterwards. To check the database case, stop `postgresql` instead: `/health` answers `503`, and the alert follows the same way.
+- **A test email passes SPF and DKIM.** On the VPS, send a password-reset email to a Gmail address you can read. `systemd-run` reads `/etc/tracklite/env` the same way the services do:
+
+  ```bash
+  sudo systemd-run --quiet --wait --pipe --uid=tracklite --gid=tracklite -p EnvironmentFile=/etc/tracklite/env -p Environment=NODE_ENV=production -p WorkingDirectory=/opt/tracklite/current /opt/tracklite/current/node_modules/.bin/tsx --conditions=react-server scripts/send-dev-email.ts you@gmail.com
+  ```
+
+  In Gmail, open the message and choose **⋮ → Show original**. `SPF`, `DKIM` and `DMARC` all read `PASS`.
+- **The bounce webhook works.** Run the same command with `bounced@resend.dev`, Resend's address that always bounces. Within a minute, `journalctl -u tracklite-web | grep "email bounced"` shows `email bounced, untracked`. If nothing shows up, check the webhook's deliveries in Resend: a `401` means `RESEND_WEBHOOK_SECRET` doesn't match.

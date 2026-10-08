@@ -86,6 +86,7 @@ All email goes through one `sendEmail()` module with three implementations:
 - Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5).
 - `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.6).
 - Tests run against `TEST_DATABASE_URL`, which must differ from `DATABASE_URL`. Before each run its schema is dropped and the migrations applied afresh.
+- The backup (1.8) isn't part of the app. Its settings (`OWNER_EMAIL`, the age public key and the R2 token) live in `/etc/tracklite/backup.env`, also mode `600`.
 
 ### 1.7 Browser app (single-page app)
 
@@ -127,6 +128,15 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 **Request IDs (STD-5).** A create form generates `crypto.randomUUID()` once, when the form opens or is reset, and reuses it for every retry of that submit.
 
 **Loading states (STD-7).** One shared hook shows the loading indicator only after a request has been pending for 300 ms.
+
+### 1.8 Backups (OPS-003)
+
+- A systemd timer runs `ops/backup/backup.sh` daily at 03:00 UTC as the `postgres` user: `pg_dump --format=custom`, encrypted with `age` to a public key, uploaded with `rclone` to a Cloudflare R2 bucket as `tracklite-<UTC time>.dump.age`.
+- After a successful upload it deletes all but the newest 14 (OPS-003.2). A failed run deletes nothing.
+- The private age key is kept off the VPS, so neither the VPS nor the R2 token can read a backup.
+- A failure triggers the unit's `OnFailure=`, which emails `OWNER_EMAIL` through the Resend HTTP API (OPS-003.3).
+- R2's free tier (10 GB, no egress fees) holds 14 dumps of a small team's database at no cost (NFR-009).
+- `ops/backup/restore.sh` restores a backup into any database. `ops/README.md` has the steps.
 
 ## 2. Schema
 
@@ -707,3 +717,4 @@ The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, 
 | D-38 | Admin-only routes show the STD-2 message, not Not found | Hiding them as Not found | Matches STD-2's wording for actions reached anyway. |
 | D-39 | Track Lite design system, ported from its Claude Design project into `src/components/ui/track-lite/` | Hairline; a component library from npm | Made for this product. Fonts load through `next/font` and icons through `@phosphor-icons/react` instead of the project's CDN links, which the CSP (D-26) would block. |
 | D-40 | Keep D-36 with no fallback, after the M5.1 spike. Each column's `GridList` is its own scroll box with `position: relative`; each card has a `<Button slot="drag">` | Writing our own edge auto-scroll; a separate drag library | Mouse drags across 5 columns, into an empty column (`onRootDrop`) and within a column (`onReorder`) all landed in the right place. Near a column's edge, the browser scrolls it natively, or React Aria's `useAutoScroll` does in Safari. Keyboard drags (Enter on the drag button, Tab between columns, arrows, Enter) work and are announced. Without `position: relative`, the hidden keyboard drop targets scroll the whole page instead of the column. Without the drag button, cards that open the issue on click can only be dragged with Alt+Enter. |
+| D-41 | Daily `pg_dump`, encrypted with `age` and copied to Cloudflare R2 with `rclone`, from a systemd timer | restic; Backblaze B2; a Hetzner Storage Box | Owner's choice. One plain encrypted file per day is easy to inspect and restore by hand, R2's free tier keeps the cost at zero (NFR-009), and the timer's `OnFailure=` gives the failure email with no extra service. |
