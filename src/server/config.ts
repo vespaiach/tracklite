@@ -13,6 +13,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
     appUrl: env.APP_URL as string,
     emailFrom: env.EMAIL_FROM as string,
     resendApiKey: env.RESEND_API_KEY,
+    resendWebhookSecret: env.RESEND_WEBHOOK_SECRET,
     mailpitHost: env.MAILPIT_HOST ?? "localhost",
     mailpitPort: env.MAILPIT_PORT ?? "8025",
   };
