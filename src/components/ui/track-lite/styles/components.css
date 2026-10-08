@@ -2710,6 +2710,13 @@ a.tl-rail-item {
   position: relative;
   cursor: pointer;
 }
+.tl-table__row:has(.tl-table__link:focus-visible) {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+.tl-table__row .tl-table__link:focus-visible {
+  outline: none;
+}
 .tl-table__row .tl-tipwrap {
   position: static;
 }
