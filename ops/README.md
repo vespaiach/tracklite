@@ -13,6 +13,8 @@ One Debian 13 VPS runs Caddy, `tracklite-web`, `tracklite-worker` and PostgreSQL
 
 `/opt/tracklite/current` points at the live release. `ops/deploy.sh` creates releases and switches that link (M10.2).
 
+For the step-by-step procedure for each production deploy, see [runbook.md](runbook.md).
+
 ## First set-up
 
 1. Point the domain's `A`/`AAAA` records at the VPS and open ports 80 and 443.
