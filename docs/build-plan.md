@@ -430,14 +430,28 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 ## M11 Launch check
 
-**Run order:** **M11.1 ∥ M11.3 ∥ M11.4 ∥ M11.5** → M11.2. M11.3–M11.5 are hand checks, not agent tasks.
+**Run order:** **M11.1 ∥ M11.3 ∥ M11.4 ∥ M11.5** → M11.2a → M11.2b. M11.3–M11.5 are hand checks, not agent tasks.
 
 - [x] **M11.1 Seed data.** A script for the NFR-001 test data (50 projects, 10,000 issues, 50,000 comments).
   - Reads: spec NFR-001
   - Needs: M9
-- [ ] **M11.2 Performance.** Measure NFR-002…005 on the seed data, and fix anything over its target (one task per fix if needed).
+- [x] **M11.2a Performance: measure.** Measure NFR-002…005 on the seed data, and add a task for each target missed.
   - Reads: spec NFR-002…005
   - Needs: M11.1
+  - Done: results recorded below; every missed target has its own fix task
+
+  Results (2026-10-08). A production build (`next start`) on localhost with the M11.1 data, driven by headless Chrome emulating 30 ms latency and 50 Mbps. Production latency is checked separately in M11.5.
+
+  | Target | Measured | Verdict |
+  |---|---|---|
+  | NFR-002 page usable within 1.5 s | Full page load: board LAA (378-card Backlog) 830–910 ms, My issues (300 assigned) ~430 ms, list ~470 ms, issue ~520 ms. Switching pages inside the app: 100–480 ms | Pass |
+  | NFR-003 reads < 300 ms, writes < 500 ms (p95) | Server timing log, 40 rounds of every main endpoint: 688 reads p95 11 ms (max 81); 241 writes p95 9 ms (max 23) | Pass |
+  | NFR-004 list updates within 500 ms of the typing pause | 28–99 ms after the 300 ms pause | Pass |
+  | NFR-005 dropped card shown within 100 ms | 290–480 ms from click to next paint, with the save held back. One move re-renders all ~690 board cards (about 460 ms of React work); memoizing columns and cards only gets to about 290 ms | Fails: M11.2b |
+- [ ] **M11.2b Performance: board virtualization.** Each board column renders only the cards in view (react-aria `Virtualizer` with `ListLayout`), so a move re-renders a few cards instead of every card on the board. The column's list becomes its scroll container; the scrolling styles go in `styles/components.css`. A trial cut a move to 32–48 ms.
+  - Reads: spec NFR-005, REQ-026 · `src/client/screens/Board.tsx`
+  - Needs: M11.2a
+  - Done: `NFR-005: a 300-card column renders only the cards in view` (with element sizes mocked, far fewer than 300 cards are in the page); `NFR-005: moving a card in a 300-card column shows it in its new place before the save finishes`; the existing REQ-026 and NFR-005 Board tests pass unchanged; re-measured as in M11.2a, a move shows within 100 ms
 - [ ] **M11.3 Manual checks.** REQ-015.2, REQ-024.3, REQ-030.3, REQ-031.5, REQ-036.4, REQ-041.6, REQ-042.3.
 - [ ] **M11.4 Browsers and accessibility.** Browsers (NFR-006); keyboard pass and axe contrast scan (NFR-007).
 - [ ] **M11.5 Production checks.** SEC-005.1 and the OPS-001…005 examples run on the production VPS; confirm the team's headcount against spec §3's assumptions, and check NFR-008 in Resend's delivery logs and the first month's bills against NFR-009.
