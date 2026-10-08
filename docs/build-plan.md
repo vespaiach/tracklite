@@ -432,7 +432,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 **Run order:** **M11.1 ∥ M11.3 ∥ M11.4 ∥ M11.5** → M11.2. M11.3–M11.5 are hand checks, not agent tasks.
 
-- [ ] **M11.1 Seed data.** A script for the NFR-001 test data (50 projects, 10,000 issues, 50,000 comments).
+- [x] **M11.1 Seed data.** A script for the NFR-001 test data (50 projects, 10,000 issues, 50,000 comments).
   - Reads: spec NFR-001
   - Needs: M9
 - [ ] **M11.2 Performance.** Measure NFR-002…005 on the seed data, and fix anything over its target (one task per fix if needed).

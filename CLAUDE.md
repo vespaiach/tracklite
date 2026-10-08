@@ -45,6 +45,7 @@ npm run typecheck      # next typegen && tsc --noEmit
 npm run db:generate    # drizzle-kit: write a migration from src/server/schema.ts
 npm run db:studio
 npm run db:seed        # dev members and admins (password in src/server/seed.ts)
+npm run db:seed:load   # NFR-001 load data: 50 projects, 10,000 issues, 50,000 comments
 npm run db:reset       # drop the local dev database, re-run migrations, then db:seed
 ```
 
