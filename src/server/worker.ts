@@ -56,6 +56,7 @@ function itemsOf(tx: Transaction, emailId: string) {
       projectName: notifications.projectName,
       projectKey: notifications.projectKey,
       linkPath: notifications.linkPath,
+      excerpt: notifications.excerpt,
     })
     .from(notifications)
     .innerJoin(members, eq(members.id, notifications.actorId))

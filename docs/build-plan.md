@@ -390,7 +390,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §1.4, §5.2 · spec REQ-045, STD-6
   - Needs: M9.1, M1.4
   - Done: REQ-045's timing and retry examples, STD-6's notification examples
-- [ ] **M9.3 Notification templates.** Single and combined emails; excerpts.
+- [x] **M9.3 Notification templates.** Single and combined emails; excerpts.
   - Reads: design §5.3 · spec §9 "Email content"
   - Needs: M9.2
   - Done: the remaining REQ-045.*; templates match spec §9 word for word
