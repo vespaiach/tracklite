@@ -39,7 +39,7 @@ it("STD-2: a member can't invite", async () => {
   const member = await createMember();
   const email = uniqueEmail();
 
-  await expect(createInvitation(member, email)).rejects.toMatchObject(forbidden);
+  await expect(createInvitation(member, { email })).rejects.toMatchObject(forbidden);
 
   expect(await db.select().from(invitations).where(eq(invitations.email, email))).toHaveLength(0);
   expect(outbox.sent).toEqual([]);

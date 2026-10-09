@@ -4,11 +4,12 @@ import { ApiError } from "./api-error";
 import { db } from "./db";
 import { sendEmail } from "./email/send";
 import { invitationEmail } from "./email/templates";
-import { fullNameError, memberSummary, normalizeEmail, usernameError } from "./members";
+import { fullNameError, memberSummary, usernameError } from "./members";
 import { hashPassword, passwordError } from "./passwords";
 import { invitations, members } from "./schema";
 import { assertAdmin, createSession, type Member } from "./sessions";
 import { createToken, hashToken } from "./tokens";
+import type { NewInvitation } from "../schemas/invitation";
 
 type Executor = Pick<typeof db, "select" | "update">;
 
@@ -20,10 +21,6 @@ function notFound() {
 
 function isUuid(id: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-}
-
-function isEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function openInvitations(executor: Pick<typeof db, "select">) {
@@ -84,28 +81,23 @@ async function sendLink(executor: Executor, inviter: Member, invitation: { id: s
   await executor.update(invitations).set({ providerMessageId }).where(eq(invitations.id, invitation.id));
 }
 
-export async function createInvitation(actor: Member, email: unknown) {
+export async function createInvitation(actor: Member, { email }: NewInvitation) {
   assertAdmin(actor);
-  const normalizedEmail = typeof email === "string" ? normalizeEmail(email) : "";
-  if (!isEmail(normalizedEmail)) {
-    throw new ApiError(422, "Check the highlighted fields", { email: "Enter a valid email" });
-  }
-
   const [member] = await db
     .select({ deactivatedAt: members.deactivatedAt })
     .from(members)
-    .where(eq(sql`lower(${members.email})`, normalizedEmail));
+    .where(eq(sql`lower(${members.email})`, email));
   if (member?.deactivatedAt) throw new ApiError(422, "This person is deactivated. Reactivate them instead.");
   if (member) throw new ApiError(422, "Already a member");
 
   const id = await db.transaction(async (tx) => {
     const [opened] = await tx.execute<{ id: string }>(sql`
       insert into ${invitations} (email, invited_by, token_hash, expires_at)
-      values (${normalizedEmail}, ${actor.id}, ${hashToken(createToken())}, now() + interval '7 days')
+      values (${email}, ${actor.id}, ${hashToken(createToken())}, now() + interval '7 days')
       on conflict (lower(email)) where accepted_at is null and revoked_at is null
       do update set email = excluded.email
       returning id`);
-    await sendLink(tx, actor, { id: opened.id, email: normalizedEmail });
+    await sendLink(tx, actor, { id: opened.id, email });
     return opened.id;
   });
   return openInvitation(id);

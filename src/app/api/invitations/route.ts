@@ -1,4 +1,5 @@
 import type { Invitation } from "../../../client/api";
+import { NewInvitation } from "../../../schemas/invitation";
 import { apiRoute } from "../../../server/api-route";
 import { createInvitation, listInvitations } from "../../../server/invitations";
 
@@ -6,7 +7,6 @@ export const GET = apiRoute("member", async (_request, member) =>
   Response.json((await listInvitations(member)) satisfies Invitation[]),
 );
 
-export const POST = apiRoute("member", async (request, member) => {
-  const body: { email?: unknown } = await request.json();
-  return Response.json((await createInvitation(member, body.email)) satisfies Invitation, { status: 201 });
-});
+export const POST = apiRoute("member", NewInvitation, async (_request, member, invitation) =>
+  Response.json((await createInvitation(member, invitation)) satisfies Invitation, { status: 201 }),
+);
