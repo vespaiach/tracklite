@@ -129,12 +129,7 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 
 ### 1.8 Backups (OPS-003)
 
-- A systemd timer runs `ops/backup/backup.sh` daily at 03:00 UTC as the `postgres` user: `pg_dump --format=custom`, encrypted with `age` to a public key, uploaded with `rclone` to a Cloudflare R2 bucket as `tracklite-<UTC time>.dump.age`.
-- After a successful upload it deletes all but the newest 14 (OPS-003.2). A failed run deletes nothing.
-- The private age key is kept off the VPS, so neither the VPS nor the R2 token can read a backup.
-- A failure triggers the unit's `OnFailure=`, which emails `OWNER_EMAIL` through the Resend HTTP API (OPS-003.3).
-- R2's free tier (10 GB, no egress fees) holds 14 dumps of a small team's database at no cost (NFR-009).
-- `ops/backup/restore.sh` restores a backup into any database. `ops/README.md` has the steps.
+A systemd timer runs a daily `pg_dump`, encrypts it with `age` to a public key and uploads it with `rclone` to Cloudflare R2, keeping the newest 14 (OPS-003). The private age key is kept off the VPS, so neither the VPS nor the R2 token can read a backup. A failure triggers the unit's `OnFailure=`, which emails `OWNER_EMAIL` through Resend (OPS-003.3). R2's free tier holds 14 dumps at no cost (NFR-009). Set-up and restore steps are in `ops/README.md`.
 
 ## 2. Schema
 
@@ -514,9 +509,7 @@ The wording of every email is in the spec (§9, "Email content"). That's where t
 
 ### 5.5 Domain setup (one-time, before launch)
 
-- Send from a subdomain such as `mail.example.com`, so the app's sending reputation is kept apart from the team's normal email.
-- Add the SPF and DKIM records Resend gives you, plus a DMARC record (`v=DMARC1; p=none; rua=mailto:…`) to start.
-- Register the webhook URL `https://{host}/webhooks/email` for `email.bounced` and copy its secret into `RESEND_WEBHOOK_SECRET`.
+Mail is sent from a subdomain, so the app's sending reputation is kept apart from the team's normal email. The SPF, DKIM and DMARC records and the webhook registration are in `ops/monitoring-and-email.md`.
 
 ### 5.6 Development and tests
 
