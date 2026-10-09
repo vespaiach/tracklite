@@ -1,4 +1,5 @@
 import type { Me, MemberSummary } from "../../../client/api";
+import { InvitationAcceptance } from "../../../schemas/invitation";
 import { ApiError } from "../../../server/api-error";
 import { apiRoute } from "../../../server/api-route";
 import { acceptInvitation } from "../../../server/invitations";
@@ -9,20 +10,13 @@ export const GET = apiRoute("member", async (_request, member) =>
   Response.json((await listMembers(member)) satisfies (Me | MemberSummary)[]),
 );
 
-export const POST = apiRoute("public", async (request) => {
+export const POST = apiRoute("public", InvitationAcceptance, async (request, acceptance) => {
   const signedIn = await signedInMember(request);
   if (signedIn) {
     throw new ApiError(403, `You're signed in as ${signedIn.fullName}. Sign out to accept this invitation.`);
   }
 
-  const body: { token?: unknown; fullName?: unknown; username?: unknown; password?: unknown } =
-    await request.json();
-  const { member, sessionToken } = await acceptInvitation({
-    token: String(body.token ?? ""),
-    fullName: String(body.fullName ?? ""),
-    username: String(body.username ?? ""),
-    password: String(body.password ?? ""),
-  });
+  const { member, sessionToken } = await acceptInvitation(acceptance);
   return Response.json(profileResponse(member) satisfies Me, {
     status: 201,
     headers: { "set-cookie": sessionCookie(sessionToken) },

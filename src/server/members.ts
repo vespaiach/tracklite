@@ -1,5 +1,6 @@
 import "server-only";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import type { MemberChanges } from "../schemas/member";
 import { ApiError } from "./api-error";
 import { db } from "./db";
 import { members, sessions } from "./schema";
@@ -15,18 +16,6 @@ export async function activeMemberByEmail(normalizedEmail: string): Promise<Memb
     .from(members)
     .where(and(eq(sql`lower(${members.email})`, normalizedEmail), isNull(members.deactivatedAt)));
   return member;
-}
-
-const maxFullNameLength = 60;
-
-export function fullNameError(trimmedFullName: string) {
-  if (trimmedFullName === "") return "Name required";
-  if ([...trimmedFullName].length > maxFullNameLength) return `Too long (max ${maxFullNameLength})`;
-  return undefined;
-}
-
-export function usernameError(username: string) {
-  return /^[a-z0-9-]{2,20}$/.test(username) ? undefined : "Use 2 to 20 letters, digits or hyphens";
 }
 
 function firstCharacter(word: string) {
@@ -64,22 +53,7 @@ export async function listMembers(viewer: Member) {
   return all.map(viewer.role === "admin" ? profileResponse : memberSummary);
 }
 
-type Role = Member["role"];
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-function isRole(value: unknown): value is Role {
-  return value === "admin" || value === "member";
-}
-
-function parseMemberChanges(body: Record<string, unknown>) {
-  const { role, deactivated } = body;
-  const fields: Record<string, string> = {};
-  if (role !== undefined && !isRole(role)) fields.role = "Choose admin or member";
-  if (deactivated !== undefined && typeof deactivated !== "boolean")
-    fields.deactivated = "Choose true or false";
-  if (Object.keys(fields).length > 0) throw new ApiError(422, "Check the highlighted fields", fields);
-  return { role: role as Role | undefined, deactivated: deactivated as boolean | undefined };
-}
 
 async function keepLastAdmin(tx: Transaction, target: Member) {
   const activeAdmins = await tx
@@ -92,9 +66,7 @@ async function keepLastAdmin(tx: Transaction, target: Member) {
   }
 }
 
-export async function updateMember(username: string, body: Record<string, unknown>) {
-  const { role, deactivated } = parseMemberChanges(body);
-
+export async function updateMember(username: string, { role, deactivated }: MemberChanges) {
   return db.transaction(async (tx) => {
     const [target] = await tx.select().from(members).where(eq(members.username, username.toLowerCase()));
     if (!target) throw new ApiError(404, "Not found");

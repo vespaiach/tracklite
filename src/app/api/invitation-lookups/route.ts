@@ -1,8 +1,8 @@
 import type { InvitationLookup } from "../../../client/api";
+import { InvitationLinkLookup } from "../../../schemas/invitation";
 import { apiRoute } from "../../../server/api-route";
 import { lookUpInvitation } from "../../../server/invitations";
 
-export const POST = apiRoute("public", async (request) => {
-  const body: { token?: unknown } = await request.json();
-  return Response.json((await lookUpInvitation(String(body.token ?? ""))) satisfies InvitationLookup);
-});
+export const POST = apiRoute("public", InvitationLinkLookup, async (_request, { token }) =>
+  Response.json((await lookUpInvitation(token)) satisfies InvitationLookup),
+);

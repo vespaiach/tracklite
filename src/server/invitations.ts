@@ -4,8 +4,9 @@ import { ApiError } from "./api-error";
 import { db } from "./db";
 import { sendEmail } from "./email/send";
 import { invitationEmail } from "./email/templates";
-import { fullNameError, memberSummary, normalizeEmail, usernameError } from "./members";
-import { hashPassword, passwordError } from "./passwords";
+import type { InvitationAcceptance } from "../schemas/invitation";
+import { memberSummary } from "./members";
+import { hashPassword } from "./passwords";
 import { invitations, members } from "./schema";
 import { createSession, type Member } from "./sessions";
 import { createToken, hashToken } from "./tokens";
@@ -20,10 +21,6 @@ function notFound() {
 
 function isUuid(id: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-}
-
-function isEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function openInvitations(executor: Pick<typeof db, "select">) {
@@ -83,12 +80,7 @@ async function sendLink(executor: Executor, inviter: Member, invitation: { id: s
   await executor.update(invitations).set({ providerMessageId }).where(eq(invitations.id, invitation.id));
 }
 
-export async function createInvitation(inviter: Member, email: unknown) {
-  const normalizedEmail = typeof email === "string" ? normalizeEmail(email) : "";
-  if (!isEmail(normalizedEmail)) {
-    throw new ApiError(422, "Check the highlighted fields", { email: "Enter a valid email" });
-  }
-
+export async function createInvitation(inviter: Member, normalizedEmail: string) {
   const [member] = await db
     .select({ deactivatedAt: members.deactivatedAt })
     .from(members)
@@ -158,24 +150,13 @@ export async function lookUpInvitation(token: string) {
   return { email: usableInvitation(invitation).email };
 }
 
-type Acceptance = { token: string; fullName: string; username: string; password: string };
-
-export async function acceptInvitation(acceptance: Acceptance) {
+export async function acceptInvitation({ token, fullName, username, password }: InvitationAcceptance) {
   return db.transaction(async (tx) => {
-    const [found] = await invitationByToken(tx, acceptance.token).for("update");
+    const [found] = await invitationByToken(tx, token).for("update");
     const invitation = usableInvitation(found);
 
-    const fullName = acceptance.fullName.trim();
-    const username = acceptance.username.trim().toLowerCase();
     const [taken] = await tx.select({ id: members.id }).from(members).where(eq(members.username, username));
-    const errors = {
-      fullName: fullNameError(fullName),
-      username: usernameError(username) ?? (taken ? "Username taken" : undefined),
-      password: passwordError(acceptance.password),
-    };
-    const fields: Record<string, string> = {};
-    for (const [field, error] of Object.entries(errors)) if (error) fields[field] = error;
-    if (Object.keys(fields).length > 0) throw new ApiError(422, "Check the highlighted fields", fields);
+    if (taken) throw new ApiError(422, "Check the highlighted fields", { username: "Username taken" });
 
     const [member] = await tx
       .insert(members)
@@ -183,7 +164,7 @@ export async function acceptInvitation(acceptance: Acceptance) {
         email: invitation.email,
         fullName,
         username,
-        passwordHash: await hashPassword(acceptance.password),
+        passwordHash: await hashPassword(password),
         role: "member",
       })
       .returning();

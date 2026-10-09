@@ -1,30 +1,17 @@
 import "server-only";
 import { and, eq, ne } from "drizzle-orm";
+import type { PasswordChange } from "../schemas/account";
+import type { ProfileChanges } from "../schemas/profile";
 import { ApiError } from "./api-error";
 import { db } from "./db";
 import { recordFailedSignIn, signInLimitReached, tooManyAttempts } from "./limits";
-import { fullNameError, normalizeEmail } from "./members";
-import { hashPassword, passwordError, verifyPassword } from "./passwords";
+import { normalizeEmail } from "./members";
+import { hashPassword, verifyPassword } from "./passwords";
 import { members, sessions } from "./schema";
 import type { Member } from "./sessions";
 import { hashToken } from "./tokens";
 
-const fixedFields = ["username", "email"];
-
-function invalidFields(fields: Record<string, string>) {
-  return new ApiError(422, "Check the highlighted fields", fields);
-}
-
-export async function updateProfile(member: Member, changes: Record<string, unknown>) {
-  const fixed = fixedFields.filter((field) => field in changes);
-  if (fixed.length > 0) {
-    throw invalidFields(Object.fromEntries(fixed.map((field) => [field, "Can't be changed"])));
-  }
-
-  const fullName = String(changes.fullName ?? "").trim();
-  const error = fullNameError(fullName);
-  if (error) throw invalidFields({ fullName: error });
-
+export async function updateProfile(member: Member, { fullName }: ProfileChanges) {
   const [updated] = await db.update(members).set({ fullName }).where(eq(members.id, member.id)).returning();
   return updated;
 }
@@ -32,8 +19,7 @@ export async function updateProfile(member: Member, changes: Record<string, unkn
 export async function changePassword(
   member: Member,
   sessionToken: string,
-  currentPassword: string,
-  newPassword: string,
+  { currentPassword, newPassword }: PasswordChange,
   ip: string,
 ) {
   const email = normalizeEmail(member.email);
@@ -41,11 +27,8 @@ export async function changePassword(
 
   if (!(await verifyPassword(member.passwordHash, currentPassword))) {
     await recordFailedSignIn(email, ip);
-    throw invalidFields({ currentPassword: "Incorrect password" });
+    throw new ApiError(422, "Check the highlighted fields", { currentPassword: "Incorrect password" });
   }
-
-  const error = passwordError(newPassword);
-  if (error) throw invalidFields({ newPassword: error });
 
   const passwordHash = await hashPassword(newPassword);
   await db.transaction(async (tx) => {
