@@ -8,10 +8,11 @@ import { notify } from "./notifications";
 import { members, mentions, projectKeys, projects } from "./schema";
 import { assertAdmin, type Member } from "./sessions";
 import type { NewProject, ProjectChanges } from "../schemas/project";
+import type { Project } from "../contract";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | Transaction;
-type Project = typeof projects.$inferSelect;
+type ProjectRow = typeof projects.$inferSelect;
 
 function refuseFields(fields: Record<string, string>) {
   if (Object.keys(fields).length > 0) throw new ApiError(422, "Check the highlighted fields", fields);
@@ -21,7 +22,7 @@ function byKey(key: string) {
   return eq(projects.key, key.toUpperCase());
 }
 
-async function projectResponse(executor: Executor, project: Project) {
+async function projectResponse(executor: Executor, project: ProjectRow): Promise<Project> {
   const mentioned = await executor
     .select({ username: members.username, fullName: members.fullName, deactivatedAt: members.deactivatedAt })
     .from(mentions)
