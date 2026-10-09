@@ -530,26 +530,11 @@ Behaviour and copy come from the spec; this section only adds the routes, layout
 
 ### 6.1 Routes
 
-The API-004 addresses.
-
-| Route | Screen | Who | Notes |
-|---|---|---|---|
-| `/sign-in` | Sign in | Signed out | Signed in → `/my-issues`. |
-| `/forgot-password` | Request a reset link | Signed out | Signed in → `/my-issues`. |
-| `/reset-password?token=…` | Choose a new password | Anyone | Signed in → sign-out prompt (REQ-050.8). |
-| `/invite?token=…` | Accept an invitation | Anyone | Signed in → sign-out prompt (REQ-002.3). |
-| `/` | — | — | → `/my-issues` (or sign-in). |
-| `/my-issues` | My issues | Member | F-007. |
-| `/project/{KEY}` | Board | Member | F-004. |
-| `/project/{KEY}/list` | List | Member | F-005. Filters in the query string. |
-| `/project/{KEY}/detail` | Project details | Member | REQ-046. |
-| `/project/{KEY}/labels` | Labels | Member | REQ-021. |
-| `/project/{KEY}/settings` | Project settings | Admin | 6.3. |
-| `/projects/archived` | Archived projects | Member | 6.3. |
-| `/issue/{ID}` | Issue | Member | 6.4. |
-| `/settings/profile` | Profile | Member | 6.3. |
-| `/settings/members` | Members and invitations | Admin | 6.3. |
-| anything else | Not found (STD-4) | Anyone | |
+The routes are API-004's addresses (`src/client/routes.tsx`).
+- `/sign-in` and `/forgot-password` send a signed-in member to `/my-issues`, and `/` goes there too (or to sign-in).
+- `/reset-password` and `/invite` show a signed-in member a sign-out prompt (REQ-050.8, REQ-002.3).
+- `/project/{KEY}/settings` and `/settings/members` are admin-only.
+- Any other address shows Not found (STD-4).
 
 **Permissions.**
 - A member who reaches an admin-only route sees "You don't have permission to do that." (STD-2) in the page area; the links to it are hidden.
@@ -580,42 +565,15 @@ An archived project's header shows an "Archived" badge, and no create or edit co
 
 ### 6.3 Pages the spec doesn't describe
 
-**Sign in.** Email, password, **Sign in**, and a **Forgot password?** link. Errors appear beside the form (REQ-047, SEC-001).
+The spec gives the copy for these pages; these are the layout choices it leaves open.
 
-**Forgot password.** Email and **Send link**, then "Check your email" (REQ-050).
-
-**Reset password.**
-- A new-password field and **Set password**.
-- The expired state shows "This link has expired" with a **Request a new link** button that goes to `/forgot-password` (REQ-050.4).
-
-**Accept invitation.**
-- The invited email, shown and not editable.
-- Full name, username, password, and **Join Tracklite**.
-- Expired and "no longer valid" states show their REQ-002 messages, with no form.
-
-**Profile.**
-- Full name with **Save**.
-- Username and email shown, not editable.
-- A **Change password** form: current password, new password, **Change password**. On success: "Password changed. You've been signed out everywhere else."
-
-**Members** (admin).
-- **Invite:** an email field and **Send invitation**.
-- **Invitations:** a table of email, invited by and state (Pending, Bounced, or Expired with its date), with **Resend** and **Revoke** actions (REQ-051). Revoke asks for confirmation.
-- **Members:** a table with initials and name, username, email, role and status, sorted by name. Each row has a **⋯** menu with **Make admin** / **Remove admin** and **Deactivate**; a deactivated member's menu has only **Reactivate** (REQ-051). Deactivate asks for confirmation ("Sam Lee will be signed out and can't sign in until reactivated.").
-- Deactivated members stay in the table, marked "(deactivated)".
-
-**Project settings** (admin).
-- Name with **Save**; the key shown, not editable.
-- **Archive project** / **Unarchive project**.
-- **Delete project:** a confirmation dialog where the Delete button stays disabled until the key is typed exactly (REQ-014).
-
-**Archived projects.**
-- A list of archived projects: "Name · KEY" and the archived date. Clicking one opens its board, which is read-only.
-- The empty state reads "No archived projects."
-
-**New issue.**
-- A dialog with only a title field and **Create**, opened from **New issue** or a column's **+** (REQ-029).
-- On success, it goes to the new issue's page, so the description and fields can be filled in straight away.
+- **Reset password:** the expired state has a **Request a new link** button that goes to `/forgot-password` (REQ-050.4).
+- **Accept invitation:** the invited email is shown, not editable. The expired and revoked states show no form (REQ-002).
+- **Profile:** full name with **Save**; username and email read-only; a separate **Change password** form.
+- **Members** (admin): the invite field, then the invitations table, then the members table sorted by name. Each row's actions are in a **⋯** menu (REQ-051); Revoke and Deactivate ask for confirmation.
+- **Project settings** (admin): name with **Save**, the key read-only, **Archive** / **Unarchive**, and **Delete** in a dialog whose button stays disabled until the key is typed exactly (REQ-014).
+- **Archived projects:** each one opens its board, read-only.
+- **New issue:** a dialog with only a title, opened from **New issue** or a column's **+** (REQ-029). On success it goes to the new issue's page (D-37).
 
 ### 6.4 Issue page
 
