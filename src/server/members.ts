@@ -1,10 +1,10 @@
 import "server-only";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import type { MemberChanges } from "../schemas/member";
 import { ApiError } from "./api-error";
 import { db } from "./db";
 import { members, sessions } from "./schema";
 import { assertAdmin, type Member } from "./sessions";
-import type { MemberChanges } from "../schemas/member";
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -16,18 +16,6 @@ export async function activeMemberByEmail(normalizedEmail: string): Promise<Memb
     .from(members)
     .where(and(eq(sql`lower(${members.email})`, normalizedEmail), isNull(members.deactivatedAt)));
   return member;
-}
-
-const maxFullNameLength = 60;
-
-export function fullNameError(trimmedFullName: string) {
-  if (trimmedFullName === "") return "Name required";
-  if ([...trimmedFullName].length > maxFullNameLength) return `Too long (max ${maxFullNameLength})`;
-  return undefined;
-}
-
-export function usernameError(username: string) {
-  return /^[a-z0-9-]{2,20}$/.test(username) ? undefined : "Use 2 to 20 letters, digits or hyphens";
 }
 
 function firstCharacter(word: string) {
@@ -80,7 +68,6 @@ async function keepLastAdmin(tx: Transaction, target: Member) {
 
 export async function updateMember(actor: Member, username: string, { role, deactivated }: MemberChanges) {
   assertAdmin(actor);
-
   return db.transaction(async (tx) => {
     const [target] = await tx.select().from(members).where(eq(members.username, username.toLowerCase()));
     if (!target) throw new ApiError(404, "Not found");

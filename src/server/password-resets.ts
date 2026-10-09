@@ -5,8 +5,8 @@ import { db } from "./db";
 import { sendEmail } from "./email/send";
 import { passwordResetEmail } from "./email/templates";
 import { recordResetRequest, resetRequestLimitReached, tooManyAttempts } from "./limits";
-import { activeMemberByEmail, normalizeEmail } from "./members";
-import { hashPassword, passwordError } from "./passwords";
+import { activeMemberByEmail } from "./members";
+import { hashPassword } from "./passwords";
 import { members, passwordResetTokens, sessions } from "./schema";
 import { createSession } from "./sessions";
 import { createToken, hashToken } from "./tokens";
@@ -15,8 +15,7 @@ function expiredLink() {
   return new ApiError(410, "This link has expired");
 }
 
-export async function requestResetLink(email: string, ip: string) {
-  const normalizedEmail = normalizeEmail(email);
+export async function requestResetLink(normalizedEmail: string, ip: string) {
   if (await resetRequestLimitReached(normalizedEmail, ip)) throw tooManyAttempts();
   await recordResetRequest(normalizedEmail, ip);
 
@@ -60,9 +59,6 @@ export async function resetPassword(token: string, password: string) {
   return db.transaction(async (tx) => {
     const [link] = await usableLink(tx, token).for("update", { of: passwordResetTokens });
     if (!link) throw expiredLink();
-
-    const error = passwordError(password);
-    if (error) throw new ApiError(422, "Check the highlighted fields", { password: error });
 
     await tx
       .update(members)

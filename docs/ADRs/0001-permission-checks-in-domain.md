@@ -52,7 +52,7 @@ Someone reading only `projects.ts` would conclude that any member can create or 
   - Rejected alternative 2: an `adminOnly` wrapper. It would add an abstraction for a check that's one line.
 - **A role check comes before any lookup**, so a member gets 403, not 404, for an admin-only action on a missing target.
 - **A member's invalid body on an admin-only route still gets 422, not 403.** This isn't new: D-42 already validates before the role check. Only the step that does the role check moves.
-- **Malformed JSON on the hand-parsed admin routes.** `PATCH /api/members/{username}` and `POST /api/invitations` used to call `request.json()` themselves, so once the admin check moved into the domain, a member's malformed JSON gave `500` instead of `403`. Both got body schemas with this change (`src/schemas/member.ts`, `src/schemas/invitation.ts`), so it answers `422` "Couldn't read the request.". A missing `email` now gets the field error "Required", as for every other schema (M12, §3.2).
+- **Malformed JSON on the hand-parsed admin routes.** `PATCH /api/members/{username}` and `POST /api/invitations` used to call `request.json()` themselves, so once the admin check moved into the domain, a member's malformed JSON gave `500` instead of `403`. Both now declare body schemas (`src/schemas/member.ts`, `src/schemas/invitation.ts`, from M12.2), so it answers `422` "Couldn't read the request.". A missing `email` gets the field error "Required", as for every other schema (M12, §3.2).
 
 ## Implementation plan
 

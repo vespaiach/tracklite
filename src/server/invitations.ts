@@ -4,12 +4,12 @@ import { ApiError } from "./api-error";
 import { db } from "./db";
 import { sendEmail } from "./email/send";
 import { invitationEmail } from "./email/templates";
-import { fullNameError, memberSummary, usernameError } from "./members";
-import { hashPassword, passwordError } from "./passwords";
+import type { InvitationAcceptance } from "../schemas/invitation";
+import { memberSummary } from "./members";
+import { hashPassword } from "./passwords";
 import { invitations, members } from "./schema";
 import { assertAdmin, createSession, type Member } from "./sessions";
 import { createToken, hashToken } from "./tokens";
-import type { NewInvitation } from "../schemas/invitation";
 
 type Executor = Pick<typeof db, "select" | "update">;
 
@@ -81,7 +81,7 @@ async function sendLink(executor: Executor, inviter: Member, invitation: { id: s
   await executor.update(invitations).set({ providerMessageId }).where(eq(invitations.id, invitation.id));
 }
 
-export async function createInvitation(actor: Member, { email }: NewInvitation) {
+export async function createInvitation(actor: Member, email: string) {
   assertAdmin(actor);
   const [member] = await db
     .select({ deactivatedAt: members.deactivatedAt })
@@ -154,24 +154,13 @@ export async function lookUpInvitation(token: string) {
   return { email: usableInvitation(invitation).email };
 }
 
-type Acceptance = { token: string; fullName: string; username: string; password: string };
-
-export async function acceptInvitation(acceptance: Acceptance) {
+export async function acceptInvitation({ token, fullName, username, password }: InvitationAcceptance) {
   return db.transaction(async (tx) => {
-    const [found] = await invitationByToken(tx, acceptance.token).for("update");
+    const [found] = await invitationByToken(tx, token).for("update");
     const invitation = usableInvitation(found);
 
-    const fullName = acceptance.fullName.trim();
-    const username = acceptance.username.trim().toLowerCase();
     const [taken] = await tx.select({ id: members.id }).from(members).where(eq(members.username, username));
-    const errors = {
-      fullName: fullNameError(fullName),
-      username: usernameError(username) ?? (taken ? "Username taken" : undefined),
-      password: passwordError(acceptance.password),
-    };
-    const fields: Record<string, string> = {};
-    for (const [field, error] of Object.entries(errors)) if (error) fields[field] = error;
-    if (Object.keys(fields).length > 0) throw new ApiError(422, "Check the highlighted fields", fields);
+    if (taken) throw new ApiError(422, "Check the highlighted fields", { username: "Username taken" });
 
     const [member] = await tx
       .insert(members)
@@ -179,7 +168,7 @@ export async function acceptInvitation(acceptance: Acceptance) {
         email: invitation.email,
         fullName,
         username,
-        passwordHash: await hashPassword(acceptance.password),
+        passwordHash: await hashPassword(password),
         role: "member",
       })
       .returning();
