@@ -33,14 +33,12 @@ Using systemd for all four means no extra process manager. Logs go to journald, 
 
 **API.** Each handler is wrapped in `apiRoute`, which runs these steps in order:
 
-1. Reject cross-site writes with `403` (SEC-004).
+1. Reject cross-site writes with `403` (4.4).
 2. Validate the session with `requireMember`. This step only says who is asking; it checks no role. A route declared `"public"` (sign-in, password resets, invitation lookups and acceptance, sign-out) skips it.
 3. If the route declares a body schema, parse the JSON body and validate it with Valibot (D-42), failing fast with `422`. The schema checks shape and format only, with the spec's own messages, and passes the parsed, trimmed values on.
 4. Call one domain function in `src/server/`, passing the signed-in member as its first argument, `actor`. `apiRoute` opens no transaction; the domain function opens its own with `db.transaction`. The domain layer is the single permission layer (spec §12, D-43). An admin-only function calls `assertAdmin(actor)` as its first statement, before any lookup, so a member gets `403` and learns nothing about whether the target exists. An ownership check ("author or admin") runs right after the row is loaded. The function then checks the rules that need the database (a key already used, the last admin) and writes. The action and any notification rows it creates commit together (spec §12).
 5. Map a thrown `ApiError` to `401`/`403`/`404`/`409`/`410`/`422`/`429`/`503` with `{ error: { message, fields? } }`. Map anything else to `500`.
 6. Write one JSON log line per request, without bodies or tokens (SEC-007). A signed-in request's line names the member as `actor` by username.
-
-**Markdown.** The API returns the stored Markdown together with the list of members it mentions. The browser renders it with one shared component (SEC-002). The renderer highlights `@username` only when that username is in the mention list, so it doesn't need to look up members itself.
 
 ### 1.3 Time
 
@@ -409,7 +407,7 @@ One module, `src/lib/markdown/`, used for both **rendering** in the browser and 
 - **Links.** A `urlTransform` allows only `http:`, `https:` and `mailto:`. A link with any other scheme renders as its plain text, not an `<a>` (SEC-002.2). Allowed links get `target="_blank" rel="noopener noreferrer"`.
 - **Mentions.** A remark plugin walks text nodes outside `code` and `inlineCode` and matches `(?<![A-Za-z0-9._%+@-])@([a-z0-9-]{2,20})(?![a-z0-9-])`. The look-behind skips email addresses and `foo@sam`; the look-ahead stops at punctuation, so `(@sam)` and `@sam, thanks` both match (DATA-001.5, DATA-001.6). Mentions are found in issue descriptions, project descriptions and comments.
   - On the server, the matches become the `mentions` rows: active members only (2.5).
-  - In the browser, a match is shown highlighted, with the full name on hover, only if the username is in the `mentions` list from the API (1.2). Mentions aren't links (DATA-001).
+  - In the browser, a match is shown highlighted, with the full name on hover, only if the username is in the `mentions` list the API returns with the text, so the browser never looks members up itself. Mentions aren't links (DATA-001).
 
 ### 4.8 Logs (SEC-007)
 
@@ -423,7 +421,7 @@ One module, `src/lib/markdown/`, used for both **rendering** in the browser and 
 Caddy adds these to every response:
 - `Strict-Transport-Security: max-age=31536000` (SEC-005)
 - `X-Content-Type-Options: nosniff`
-- `Referrer-Policy: same-origin`, so no referrer goes to other sites (SEC-010) and a page address containing a token never leaks through the `Referer` header
+- `Referrer-Policy: same-origin`, so no referrer goes to other sites (SEC-010) and a page address containing a token never leaks through the `Referer` header. `src/proxy.ts` sets it too, so it holds even without Caddy.
 
 **Content Security Policy (SEC-010).** Next.js puts small inline scripts in every page, so the policy needs a fresh nonce per request. `src/proxy.ts` generates it and sets, on page requests only:
 
@@ -432,7 +430,7 @@ default-src 'self'; script-src 'self' 'nonce-{n}' 'strict-dynamic'; style-src 's
 img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
 ```
 
-In development `script-src` also gets `'unsafe-eval'`, which Next.js's dev tooling needs. It also sets `Referrer-Policy: same-origin`, so SEC-010 holds even without Caddy. Next.js reads the nonce from the request and adds it to its own scripts; the root layout awaits `connection()` so the shell is rendered per request. A nonce makes the shell render per request instead of being cached, which costs nothing here because there's one small shell.
+In development `script-src` also gets `'unsafe-eval'`, which Next.js's dev tooling needs. Next.js reads the nonce from the request and adds it to its own scripts; the root layout awaits `connection()` so the shell is rendered per request. A nonce makes the shell render per request instead of being cached, which costs nothing here because there's one small shell.
 
 **Access logs (SEC-007).** Caddy's access log uses a `query` filter that deletes the `token` parameter, so `/invite` and `/reset-password` addresses are logged without it.
 
@@ -465,7 +463,7 @@ Also useful: Resend accepts an `Idempotency-Key` header, which closes the duplic
 - **How results are treated:**
   - any `2xx` is a success, and the response's `id` is stored as `provider_message_id`;
   - anything else, a network error or a timeout is a failure;
-  - for notifications, a failure is retried as in 2.6 (1, 4, 10 minutes, then `failed`); for invitations and resets, a failure is `503` (1.5).
+  - for notifications, a failure is retried as in 2.6; for invitations and resets, a failure is `503` (1.5).
 - **Logging:** a failure logs the HTTP status and Resend's error *name* only, never the recipient's text (SEC-007).
 
 ### 5.3 Email content
@@ -508,7 +506,7 @@ Behaviour and copy come from the spec; this section only adds the routes, layout
 ### 6.1 Routes
 
 The routes are API-004's addresses (`src/client/routes.tsx`).
-- `/sign-in` and `/forgot-password` send a signed-in member to `/my-issues`, and `/` goes there too (or to sign-in).
+- `/forgot-password` sends a signed-in member to `/my-issues`, as `/sign-in` and `/` do (1.7).
 - `/reset-password` and `/invite` show a signed-in member a sign-out prompt (REQ-050.8, REQ-002.3).
 - `/project/{KEY}/settings` and `/settings/members` are admin-only.
 - Any other address shows Not found (STD-4).
