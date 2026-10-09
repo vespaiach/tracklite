@@ -1,6 +1,6 @@
 # Tracklite: Technical design
 
-Companion to `docs/tracklite-spec.md` (v0.10). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
+Companion to `docs/tracklite-spec.md` (v0.24). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
 
 ## 1. Architecture
 
@@ -34,10 +34,10 @@ Using systemd for all four means no extra process manager. Logs go to journald, 
 **API.** Each handler is wrapped in `apiRoute`, which runs these steps in order:
 
 1. Reject cross-site writes with `403` (SEC-004).
-2. Validate the session with `requireMember`. This step only says who is asking; it checks no role.
+2. Validate the session with `requireMember`. This step only says who is asking; it checks no role. A route declared `"public"` (sign-in, password resets, invitation lookups and acceptance, sign-out) skips it.
 3. If the route declares a body schema, parse the JSON body and validate it with Valibot (D-42), failing fast with `422`. The schema checks shape and format only, with the spec's own messages, and passes the parsed, trimmed values on.
-4. Call one domain function in `src/server/`, passing the signed-in member as its first argument, `actor`. The domain layer is the single permission layer (spec §12, D-43). An admin-only function calls `assertAdmin(actor)` as its first statement, before any lookup, so a member gets `403` and learns nothing about whether the target exists. An ownership check ("author or admin") runs right after the row is loaded. The function then checks the rules that need the database (a key already used, the last admin) and writes. The action and any notification rows it creates commit together (spec §12).
-5. Map a thrown `ApiError` to `401`/`403`/`404`/`422`/`429`/`503` with `{ error: { message, fields? } }`. Map anything else to `500`.
+4. Call one domain function in `src/server/`, passing the signed-in member as its first argument, `actor`. `apiRoute` opens no transaction; the domain function opens its own with `db.transaction`. The domain layer is the single permission layer (spec §12, D-43). An admin-only function calls `assertAdmin(actor)` as its first statement, before any lookup, so a member gets `403` and learns nothing about whether the target exists. An ownership check ("author or admin") runs right after the row is loaded. The function then checks the rules that need the database (a key already used, the last admin) and writes. The action and any notification rows it creates commit together (spec §12).
+5. Map a thrown `ApiError` to `401`/`403`/`404`/`409`/`410`/`422`/`429`/`503` with `{ error: { message, fields? } }`. Map anything else to `500`.
 6. Write one JSON log line per request, without bodies or tokens (SEC-007). A signed-in request's line names the member as `actor` by username.
 
 **Markdown.** The API returns the stored Markdown together with the list of members it mentions. The browser renders it with one shared component (SEC-002). The renderer highlights `@username` only when that username is in the mention list, so it doesn't need to look up members itself.
@@ -84,10 +84,10 @@ All email goes through one `sendEmail()` module with three implementations:
 
 - Settings come from environment variables: `.env.local` in development, and `/etc/tracklite/env` on the VPS (`root:deployer`, mode `640`, outside the release directory, OPS-006). The `deployer` account reads it to build and migrate; only root changes it.
 - Both processes check them at startup and refuse to start if any are missing.
-- Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5).
+- Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5). `MAILPIT_HOST` and `MAILPIT_PORT` are optional and default to `localhost` and `8025`.
 - `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.6).
 - Tests run against `TEST_DATABASE_URL`, which must differ from `DATABASE_URL`. Before each run its schema is dropped and the migrations applied afresh.
-- The backup (1.8) isn't part of the app. Its settings (`OWNER_EMAIL`, the age public key and the R2 token) live in `/etc/tracklite/backup.env`, also mode `600`.
+- The backup (1.8) isn't part of the app. Its settings (`OWNER_EMAIL`, the age public key and the R2 token) live in `/etc/tracklite/backup.env` (`root:root`, mode `600`), which the `deployer` account can't read.
 
 ### 1.7 Browser app (single-page app)
 
@@ -97,7 +97,7 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 - `src/app/layout.tsx` holds `<html>`, `<body>`, the fonts (`next/font/google`, served from the app so the CSP's `font-src 'self'` holds) and the Track Lite stylesheet.
 - One optional catch-all page, `src/app/[[...path]]/page.tsx`, renders `<ClientApp />` through `next/dynamic` with `ssr: false`. It's the same document for every address.
 - `/api`, `/health` and `/webhooks` are more specific routes, so they're never caught by it.
-- `src/proxy.ts` only sets the Content Security Policy (4.9). It doesn't redirect pages; the browser app does.
+- `src/proxy.ts` only sets the Content Security Policy and `Referrer-Policy` (4.9). It doesn't redirect pages; the browser app does.
 
 **Routing.** React Router in data mode (`createBrowserRouter`), with routes lazy-loaded so each screen's code is downloaded on first visit.
 - The route table is the API-004 list plus the routes added in section 6.
@@ -119,8 +119,8 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
   - on `401`, redirects to sign-in;
   - leaves every other error to the component, which shows field errors (STD-3), an editor conflict (`409`, STD-8), or a toast.
 - **Fresh data on every visit.** Queries use `refetchOnMountOrArgChange: true`, so each screen loads current data when opened. That matches "pages show current data when they load" (spec §12). There's no `refetchOnFocus` and no polling: no live updates in R1, and REQ-041.6 expects an open page to stay as it is.
-- **Tags drive refreshing.** For example, `updateIssue` invalidates `Issue(ID)`, `Board(KEY)`, `IssueList(KEY)` and `MyIssues`. A mounted screen showing that data then refetches.
-- **Optimistic board moves (NFR-005, REQ-026).** `moveIssue` updates the cached board in `onQueryStarted` before the request goes out. If the request fails, it undoes the change and shows the toast "Couldn't move WEB-42". If it succeeds, it invalidates `Board(KEY)`, which refreshes the columns involved.
+- **Tags drive refreshing.** Tags are per type, with no IDs: `Me`, `Members`, `Invitations`, `Projects`, `Labels`, `Issue`, `Board`, `Comments`. A mutation invalidates its type, and a mounted screen showing that data refetches. `updateIssue` instead writes the saved issue into the `issue` cache, and invalidates `Labels` only on a `404` (a label deleted meanwhile). The list and My issues carry no tags; they rely on the refetch on every visit.
+- **Optimistic board moves (NFR-005, REQ-026).** `moveIssue` updates the cached board in `onQueryStarted` before the request goes out. If the request fails, it undoes the change and shows a toast: the server's message, or "Couldn't move WEB-42" for a network error or a `5xx`. If it succeeds, it invalidates `Board(KEY)`, which refreshes the columns involved.
 - **UI slice:** one `toast` slice (STD-9: one message at a time, 5 seconds, no dismiss).
 - **Kept out of Redux on purpose:**
   - list-view filters, search and sort live in the URL (`useSearchParams`), since REQ-040 already makes the URL their home;
@@ -159,7 +159,7 @@ PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) drive
 **`members`**: `email`, `full_name`, `username`, `password_hash`, `role`, `deactivated_at` (null = active), `created_at`.
 - Unique indexes on `lower(email)` and `username`. Usernames are lowercased before saving (REQ-003.1), so a plain unique index on `username` is enough.
 - Check that `username` matches `^[a-z0-9-]{2,20}$`.
-- Never deleted (section 8 of the spec), so foreign keys pointing at members use the default `restrict`.
+- Never deleted (section 8 of the spec), so foreign keys pointing at members use the default `no action`, which blocks deleting a referenced member.
 - **Keeping the last admin (REQ-007.3, REQ-052.3).** Removing admin or deactivating first locks every active admin row (`select id from members where role = 'admin' and deactivated_at is null for update`), then refuses if the target is the only one. Two admins demoting each other at once are serialised by the lock, so the second sees one admin left and is refused.
 - **Role changes apply on the next request (REQ-052).** `requireMember` reads the role from the database on every request; nothing caches it in the session.
 
@@ -200,11 +200,11 @@ Tokens (SEC-003) are 32 random bytes, sent base64url-encoded, and stored as `sha
 
 How the less obvious columns work:
 
-- **Numbering (REQ-016).** The create transaction runs `update projects set next_issue_number = next_issue_number + 1 where id = $1 returning next_issue_number - 1`. The row lock makes two people creating at the same moment wait for each other, so they get different numbers (REQ-016.4). Deleting an issue never decrements the counter, so numbers aren't reused (REQ-016.2).
+- **Numbering (REQ-016).** The create transaction locks the project row (`for update`, the same read that checks it isn't archived), then runs `update projects set next_issue_number = next_issue_number + 1 where id = $1 returning next_issue_number - 1`. The row lock makes two people creating at the same moment wait for each other, so they get different numbers (REQ-016.4). Deleting an issue never decrements the counter, so numbers aren't reused (REQ-016.2).
 - **Board position (REQ-026, REQ-027).** `position` is a string sort key from the `fractional-indexing` package. The column is `text COLLATE "C"`, because the keys only sort correctly byte by byte (`Zz` before `a0`); a database whose default collation is a language one, such as `en_US.UTF-8`, would put a card moved to the top at the bottom. A drop between two cards generates a key between theirs; "move to top" generates a key before the column's first card. Only the moved row changes, so two members reordering different cards don't conflict (REQ-026.3). Columns sort by `(position, id)`: if two moves land between the same pair at once, they may get equal keys, and `id` breaks the tie consistently for everyone.
 - **`updated_at` (REQ-036).** Set when the title, description, status, priority, assignee or the issue's labels change. Not set by reordering within a column (REQ-036.5), comments, or renaming or recoloring a label on the Labels page.
 - **`status_changed_at`.** Set on every status change, and drives the 14-day Done/Canceled window (REQ-028, REQ-041).
-- **`description_version`.** Incremented on each description save. A save sends the version it started from, and the update runs `where description_version = $sent`. If no row matches, someone else saved first → the STD-8 conflict message. Changes to other fields don't touch it, so a status change by a teammate never blocks your description save. Projects use the same pattern.
+- **`description_version`.** Incremented on each description save. A save sends the version it started from. The transaction locks the row (`for update`) and compares the stored version with the sent one; if they differ, someone else saved first → the STD-8 conflict message. Changes to other fields don't touch it, so a status change by a teammate never blocks your description save. Projects use the same pattern.
 - **`description_edited_by`.** The member who last saved the description, named in the STD-8 conflict message, as for projects (§2.3).
 - **`request_id`.** A create that repeats a `request_id` returns the existing issue (STD-5).
 
@@ -215,7 +215,7 @@ Indexes:
 - GIN `gin_trgm_ops` on `title` and on `description` for search.
 
 **`issue_labels`**: `issue_id` (FK → issues, cascade), `label_id` (FK → labels, cascade), primary key `(issue_id, label_id)`.
-- The 10-label maximum (REQ-020.3) is checked in the transaction that adds labels, after locking the issue row.
+- A label change sends the issue's full set (`labelIds`), which replaces the stored rows. The 10-label maximum (REQ-020.3) is checked by the body schema.
 
 **Search (REQ-038).** One condition per typed word, combined with `and`. The issue matches if the word appears in the title, the description, or its ID (`key || '-' || number`), each checked with `ILIKE '%word%'`, where `%`, `_` and `\` in the word are escaped first (REQ-038.4). The `pg_trgm` indexes keep this fast at 10,000 issues (NFR-004).
 
@@ -290,11 +290,11 @@ Every error body is `{ error: { message, fields? } }`, and the browser shows `me
 
 Changing a field that can't be changed (username, email, project key) gets `422` with a field error. The stored value stays as it was (REQ-003.3, REQ-010.1).
 
-A body schema failure gets `422` with "Check the highlighted fields" and the first failing rule's message for each field (STD-3). A field missing from the body gets the field error "Required". A body that isn't valid JSON, or isn't a JSON object, gets `422` "Couldn't read the request." with no `fields`. The browser never sends either, so this only keeps such requests from becoming a `500`. Query strings and path segments aren't covered by schemas.
+A body schema failure gets `422` with "Check the highlighted fields" and the first failing rule's message for each field (STD-3). A rule on the body as a whole, such as "Change one field at a time" on an issue `PATCH`, gets `422` with its own message and no `fields`. A field missing from the body gets the field error "Required". A body that isn't valid JSON, or isn't a JSON object, gets `422` "Couldn't read the request." with no `fields`. The browser never sends either, so this only keeps such requests from becoming a `500`. Query strings and path segments aren't covered by schemas.
 
 ### 3.3 Endpoints
 
-"Member" means any signed-in active member. Every write to something inside an archived project (its description, issues, comments, labels) gets `403` "This project is archived". Admins can still rename, unarchive or delete an archived project.
+"Member" means any signed-in active member. Every write to something inside an archived project (its description, issues, comments, labels) gets `403` "This project is archived". Admins can still unarchive or delete an archived project; renaming it gets the same `403`.
 
 **Sign-in and account** (no session needed unless noted)
 
@@ -329,7 +329,7 @@ A body schema failure gets `422` with "Check the highlighted fields" and the fir
 | `GET /api/projects?archived=false\|true` | → sidebar list, or the Archived list | Member | REQ-013, REQ-015 |
 | `POST /api/projects` | `{ name, key }` → `201` | Admin | REQ-009 |
 | `GET /api/projects/{KEY}` | → name, key, description, `descriptionVersion`, mentions, `archivedAt` | Member | REQ-046 |
-| `PATCH /api/projects/{KEY}` | `{ name? }` or `{ archived? }` (Admin), `{ description, descriptionVersion }` (Member) | Per field | REQ-011, REQ-012, REQ-013 |
+| `PATCH /api/projects/{KEY}` | `{ name?, archived? }` (Admin), or `{ description, descriptionVersion }` (Member) | Per field | REQ-011, REQ-012, REQ-013 |
 | `DELETE /api/projects/{KEY}` | → `204`. The typed-key confirmation is checked in the browser | Admin | REQ-014 |
 | `GET /api/projects/{KEY}/labels` | → labels sorted by name ignoring capitals, each `{ id, name, color, issueCount }` | Member | REQ-021, REQ-021.5 |
 | `POST /api/projects/{KEY}/labels` | `{ name, color }` → `201`, the label | Member | REQ-020.2, REQ-021 |
@@ -343,7 +343,7 @@ A body schema failure gets `422` with "Check the highlighted fields" and the fir
 | `GET /api/projects/{KEY}/board` | → 5 columns in order, each `{ status, count, cards }`, cards sorted by `(position, id)`. A card is `{ id, title, priority, assignee, labels }`: `assignee` is a member or `null`, and `labels` holds all of the issue's labels as `{ id, name, color }`, sorted by name ignoring capitals (the card trims them to 3 and "+N"). Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-024, REQ-025, REQ-028 |
 | `GET /api/projects/{KEY}/issues` | Query: `status` and `priority` (enum values), `assignee` (username, or `-` for Unassigned), `label` (label name, ignoring capitals), each repeatable; `q`; `sort` (`id`, `status`, `priority`, `updated`; default `updated`); `dir` (`asc`, `desc`; default `desc` for `updated`, `asc` otherwise); `offset`. Ties sort most recently updated first. Unknown values are ignored → `{ issues, hasMore, deactivatedAssignees }`: up to 100 rows, each `{ id, title, status, priority, assignee, labels, updatedAt }` with labels as on the board; `deactivatedAssignees` lists the deactivated members still assigned to an issue in the project, for the assignee filter, whatever the filters | Member | REQ-036…040 |
 | `POST /api/projects/{KEY}/issues` | `{ requestId, title, status? }` → `201`. `status` is used by the column **+** buttons | Member | REQ-016, REQ-029 |
-| `GET /api/issues/{ID}` | → the issue with its labels, assignee, creator, `descriptionVersion` and mentions | Member | REQ-016 |
+| `GET /api/issues/{ID}` | → the issue with its labels, assignee, `createdBy`, `createdAt`, `updatedAt`, `descriptionVersion`, mentions and `archived` | Member | REQ-016 |
 | `PATCH /api/issues/{ID}` | One of `{ title }`, `{ status }`, `{ priority }`, `{ assignee }` (username or `null`), `{ labelIds }`, or `{ description, descriptionVersion }` | Member | REQ-016…022, REQ-027.4 |
 | `PUT /api/issues/{ID}/position` | `{ status, place: "top" \| "bottom" \| { after: "WEB-5" } }` | Member | REQ-026, REQ-027, REQ-030 |
 | `DELETE /api/issues/{ID}` | → `204` | Creator or Admin | REQ-023 |
@@ -384,7 +384,7 @@ A comment is `{ id, body, author, createdAt, editedAt, version, mentions }`: `au
   - The settings are stored inside each hash. When they change, a successful sign-in re-hashes the password with the new ones.
 - **Length rule.** 12 to 128 is counted in Unicode code points (`[...password].length`), not JavaScript string length. Otherwise an emoji would count as 2.
 - **No changes to the password.** No trimming and no Unicode normalisation (REQ-048.4): the exact bytes typed are what get hashed.
-- **Unknown emails.** No dummy hash is computed for an email that isn't a member. The timing difference is an accepted limitation in spec §10.
+- **Unknown emails.** Sign-in verifies against a fixed dummy hash when the email isn't an active member, so both cases cost one Argon2id verify. A reset request still takes longer for a member, because only then is an email sent; spec §10 accepts that difference.
 
 ### 4.2 Tokens (SEC-003)
 
@@ -466,9 +466,9 @@ One module, `src/lib/markdown/`, used for both **rendering** in the browser and 
 
 ### 4.8 Logs (SEC-007)
 
-- The logger takes a fixed set of fields: time, level, event, method, path (without the query string), status, duration, member username, and error class or message.
+- The logger takes a fixed set of fields: time, level, event, method, path (without the query string), status, `durationMs`, `actor` (the member's username), and error class and message.
 - It never logs request or response bodies, headers or cookies.
-- Domain events are logged as short phrases, such as `sign-in, member sam` (SEC-007.1).
+- Besides the request line, only email events are logged, as short phrases such as `email bounced, invitation {id}` (SEC-007.1).
 - Errors from the email provider are logged without the message content.
 
 ### 4.9 Response headers
@@ -485,7 +485,7 @@ default-src 'self'; script-src 'self' 'nonce-{n}' 'strict-dynamic'; style-src 's
 img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
 ```
 
-It also sets `Referrer-Policy: same-origin`, so SEC-010 holds even without Caddy. Next.js reads the nonce from the request and adds it to its own scripts; the root layout awaits `connection()` so the shell is rendered per request. A nonce makes the shell render per request instead of being cached, which costs nothing here because there's one small shell.
+In development `script-src` also gets `'unsafe-eval'`, which Next.js's dev tooling needs. It also sets `Referrer-Policy: same-origin`, so SEC-010 holds even without Caddy. Next.js reads the nonce from the request and adds it to its own scripts; the root layout awaits `connection()` so the shell is rendered per request. A nonce makes the shell render per request instead of being cached, which costs nothing here because there's one small shell.
 
 **Access logs (SEC-007).** Caddy's access log uses a `query` filter that deletes the `token` parameter, so `/invite` and `/reset-password` addresses are logged without it.
 
@@ -563,24 +563,24 @@ Behaviour and copy come from the spec; this section only adds the routes, layout
 
 ### 6.1 Routes
 
-The API-004 addresses, plus the four marked **new**.
+The API-004 addresses.
 
 | Route | Screen | Who | Notes |
 |---|---|---|---|
 | `/sign-in` | Sign in | Signed out | Signed in → `/my-issues`. |
 | `/forgot-password` | Request a reset link | Signed out | Signed in → `/my-issues`. |
 | `/reset-password?token=…` | Choose a new password | Anyone | Signed in → sign-out prompt (REQ-050.8). |
-| `/invite?token=…` **new** | Accept an invitation | Anyone | Signed in → sign-out prompt (REQ-002.3). |
+| `/invite?token=…` | Accept an invitation | Anyone | Signed in → sign-out prompt (REQ-002.3). |
 | `/` | — | — | → `/my-issues` (or sign-in). |
 | `/my-issues` | My issues | Member | F-007. |
 | `/project/{KEY}` | Board | Member | F-004. |
 | `/project/{KEY}/list` | List | Member | F-005. Filters in the query string. |
 | `/project/{KEY}/detail` | Project details | Member | REQ-046. |
 | `/project/{KEY}/labels` | Labels | Member | REQ-021. |
-| `/project/{KEY}/settings` **new** | Project settings | Admin | 6.3. |
-| `/projects/archived` **new** | Archived projects | Member | 6.3. |
+| `/project/{KEY}/settings` | Project settings | Admin | 6.3. |
+| `/projects/archived` | Archived projects | Member | 6.3. |
 | `/issue/{ID}` | Issue | Member | 6.4. |
-| `/settings/profile` **new** | Profile | Member | 6.3. |
+| `/settings/profile` | Profile | Member | 6.3. |
 | `/settings/members` | Members and invitations | Admin | 6.3. |
 | anything else | Not found (STD-4) | Anyone | |
 
@@ -671,7 +671,7 @@ The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, 
 
 ### 6.7 Times
 
-- **Relative times** (REQ-031) come from `Intl.RelativeTimeFormat`: "just now" under a minute, then "5 min ago", "3 hours ago", "2 days ago", up to 7 days.
+- **Relative times** (REQ-031): "just now" under a minute, then "5 min ago", then "3 hours ago", "2 days ago" from `Intl.RelativeTimeFormat`, up to 7 days.
 - **Older dates** show as "Sep 20", or "Sep 20, 2025" when the year isn't the current one.
 - **Exact time on hover:** the full date and time in the browser's time zone (DATA-003).
 
@@ -679,7 +679,7 @@ The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, 
 
 | # | Decision | Over | Because |
 |---|---|---|---|
-| D-1 | Drizzle ORM (spec 0.9) | postgres.js | Matches the existing setup; typed schema and migrations. |
+| D-1 | Drizzle ORM on the postgres.js driver (spec 0.9) | postgres.js queries alone | Matches the existing setup; typed schema and migrations. |
 | D-2 | Fractional string keys for board position | Integer positions with gaps | A move rewrites one row and never needs a renumbering pass. |
 | D-3 | `project_keys` table that's never deleted from | Soft-deleting projects | Lets project deletion be a real cascade, as DATA-002 requires. |
 | D-4 | Separate version counters for descriptions | One version per row | A field change by a teammate shouldn't cause a description conflict. |
@@ -718,7 +718,7 @@ The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, 
 | D-37 | New issue: title-only dialog, then go to the issue | A full create form | Matches REQ-016's flow ("enters a title"); everything else is edited on the issue page. |
 | D-38 | Admin-only routes show the STD-2 message, not Not found | Hiding them as Not found | Matches STD-2's wording for actions reached anyway. |
 | D-39 | Track Lite design system, ported from its Claude Design project into `src/components/ui/track-lite/` | Hairline; a component library from npm | Made for this product. Fonts load through `next/font` and icons through `@phosphor-icons/react` instead of the project's CDN links, which the CSP (D-26) would block. |
-| D-40 | Keep D-36 with no fallback, after the M5.1 spike. Each column's `GridList` is its own scroll box with `position: relative`; each card has a `<Button slot="drag">` | Writing our own edge auto-scroll; a separate drag library | Mouse drags across 5 columns, into an empty column (`onRootDrop`) and within a column (`onReorder`) all landed in the right place. Near a column's edge, the browser scrolls it natively, or React Aria's `useAutoScroll` does in Safari. Keyboard drags (Enter on the drag button, Tab between columns, arrows, Enter) work and are announced. Without `position: relative`, the hidden keyboard drop targets scroll the whole page instead of the column. Without the drag button, cards that open the issue on click can only be dragged with Alt+Enter. |
+| D-40 | Keep D-36 with no fallback, after the M5.1 spike. Each column's body around its `GridList` is the scroll box, with `position: relative`; each card has a `<Button slot="drag">` | Writing our own edge auto-scroll; a separate drag library | Mouse drags across 5 columns, into an empty column (`onRootDrop`) and within a column (`onReorder`) all landed in the right place. Near a column's edge, the browser scrolls it natively, or React Aria's `useAutoScroll` does in Safari. Keyboard drags (Enter on the drag button, Tab between columns, arrows, Enter) work and are announced. Without `position: relative` on the scroll box, the hidden keyboard drop targets scroll the whole page instead of the column. Without the drag button, cards that open the issue on click can only be dragged with Alt+Enter. |
 | D-41 | Daily `pg_dump`, encrypted with `age` and copied to Cloudflare R2 with `rclone`, from a systemd timer | restic; Backblaze B2; a Hetzner Storage Box | Owner's choice. One plain encrypted file per day is easy to inspect and restore by hand, R2's free tier keeps the cost at zero (NFR-009), and the timer's `OnFailure=` gives the failure email with no extra service. |
 | D-42 | Valibot body schemas declared per route and run by `apiRoute`; schemas live in `src/schemas/` (one file per area, server-only), and the domain function takes their typed output | Hand-written `typeof` checks in each domain function; Zod; parsing at the start of each domain function; each schema in the domain module that uses it | One path turns invalid input into STD-3's `422`, domain functions get typed and already-trimmed input instead of `unknown`, and a malformed body stops being a `500`. Order: session, then schema, then the domain's role check, then database rules, then the write. A signed-out caller always gets `401` and learns nothing about the body; invalid input fails before the role check and any domain query. A signed-in member without the role who sends an invalid body therefore gets `422`, not `403`; the schema reveals only the request's shape, which the browser code already shows. Lengths count characters (code points) as the spec and Postgres do, not UTF-16 units. One folder puts every input rule in one place to read and review, and keeps the schemas apart from database code. |
 | D-43 | Routes only authenticate. Every domain function called from a signed-in route takes the member as `actor` first and owns every role and ownership check, with `assertAdmin` before any lookup ([ADR 0001](ADRs/0001-permission-checks-in-domain.md)) | `apiRoute("admin")` checking the role in the route; admin-only functions typed `actor: Admin`; an `adminOnly` wrapper | Reading a domain file must show its permission rules: with the role in the route, `createProject` looked open to anyone while `updateProject` checked. Typing `actor: Admin` would push the narrowing back into the route. Nothing at typecheck enforces `assertAdmin`, so each admin-only function has a 403 test. Every admin route declares a body schema (M12.2), so a member's malformed JSON gets `422` from `apiRoute` before the domain's `403`, never a `500`. |
