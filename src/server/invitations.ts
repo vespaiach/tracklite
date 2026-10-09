@@ -73,23 +73,21 @@ async function sendLink(executor: Executor, inviter: Member, invitation: { id: s
       bouncedAt: null,
     })
     .where(eq(invitations.id, invitation.id));
+
   const { providerMessageId } = await sendEmail({
     to: invitation.email,
     ...invitationEmail({ inviterName: inviter.fullName, token }),
   }).catch(() => {
     throw new ApiError(503, "We couldn't send the email. Try again.");
   });
+
   await executor.update(invitations).set({ providerMessageId }).where(eq(invitations.id, invitation.id));
 }
 
 export async function createInvitation(actor: Member, email: string) {
   assertAdmin(actor);
-  const [member] = await db
-    .select({ deactivatedAt: members.deactivatedAt })
-    .from(members)
-    .where(eq(sql`lower(${members.email})`, email));
-  if (member?.deactivatedAt) throw new ApiError(422, "This person is deactivated. Reactivate them instead.");
-  if (member) throw new ApiError(422, "Already a member");
+
+  await assertNotMember(email);
 
   const id = await db.transaction(async (tx) => {
     const [opened] = await tx.execute<{ id: string }>(sql`
@@ -101,27 +99,47 @@ export async function createInvitation(actor: Member, email: string) {
     await sendLink(tx, actor, { id: opened.id, email });
     return opened.id;
   });
+
   return openInvitation(id);
+}
+
+async function assertNotMember(email: string) {
+  const [member] = await db
+    .select({ deactivatedAt: members.deactivatedAt })
+    .from(members)
+    .where(eq(sql`lower(${members.email})`, email));
+  if (member?.deactivatedAt) throw new ApiError(422, "This person is deactivated. Reactivate them instead.");
+  if (member) throw new ApiError(422, "Already a member");
 }
 
 export async function resendInvitation(actor: Member, id: string) {
   assertAdmin(actor);
+
   if (!isUuid(id)) throw notFound();
+
   await db.transaction(async (tx) => {
-    const [invitation] = await tx
-      .select({ id: invitations.id, email: invitations.email })
-      .from(invitations)
-      .where(and(eq(invitations.id, id), isOpen))
-      .for("update");
-    if (!invitation) throw notFound();
+    const invitation = await lockedOpenInvitation(tx, id);
     await sendLink(tx, actor, invitation);
   });
+
   return openInvitation(id);
+}
+
+async function lockedOpenInvitation(executor: Executor, id: string) {
+  const [invitation] = await executor
+    .select({ id: invitations.id, email: invitations.email })
+    .from(invitations)
+    .where(and(eq(invitations.id, id), isOpen))
+    .for("update");
+  if (!invitation) throw notFound();
+  return invitation;
 }
 
 export async function revokeInvitation(actor: Member, id: string) {
   assertAdmin(actor);
+
   if (!isUuid(id)) throw notFound();
+
   const revoked = await db
     .update(invitations)
     .set({ revokedAt: sql`now()` })
@@ -160,8 +178,7 @@ export async function acceptInvitation({ token, fullName, username, password }: 
     const [found] = await invitationByToken(tx, token).for("update");
     const invitation = usableInvitation(found);
 
-    const [taken] = await tx.select({ id: members.id }).from(members).where(eq(members.username, username));
-    if (taken) throw new ApiError(422, "Check the highlighted fields", { username: "Username taken" });
+    await assertUsernameFree(tx, username);
 
     const [member] = await tx
       .insert(members)
@@ -173,7 +190,17 @@ export async function acceptInvitation({ token, fullName, username, password }: 
         role: "member",
       })
       .returning();
+
     await tx.update(invitations).set({ acceptedAt: sql`now()` }).where(eq(invitations.id, invitation.id));
+
     return { member, sessionToken: await createSession(member.id, tx) };
   });
+}
+
+async function assertUsernameFree(executor: Pick<typeof db, "select">, username: string) {
+  const [taken] = await executor
+    .select({ id: members.id })
+    .from(members)
+    .where(eq(members.username, username));
+  if (taken) throw new ApiError(422, "Check the highlighted fields", { username: "Username taken" });
 }

@@ -37,6 +37,7 @@ async function sendWithResend(email: SendRequest, config: Config) {
     }),
     signal: AbortSignal.timeout(timeoutMs),
   });
+
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     logEmailFailure({ status: response.status, errorName: body.name });
@@ -57,6 +58,7 @@ async function sendWithMailpit(email: SendRequest, config: Config) {
     }),
     signal: AbortSignal.timeout(timeoutMs),
   });
+
   if (!response.ok) throw new Error(`Mailpit answered ${response.status}`);
   const body = await response.json();
   return { providerMessageId: body.ID as string };

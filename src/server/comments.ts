@@ -25,7 +25,28 @@ function notAllowed() {
 }
 
 async function findComments(executor: Executor, where: SQL): Promise<ThreadComment[]> {
-  const rows = await executor
+  const rows = await commentRows(executor, where);
+
+  const mentioned = await mentionsOfComments(
+    executor,
+    rows.map((row) => row.id),
+  );
+
+  return rows.map(
+    (row): ThreadComment => ({
+      id: row.id,
+      body: row.body,
+      author: memberSummary(row.author),
+      createdAt: row.createdAt.toISOString(),
+      editedAt: row.editedAt?.toISOString() ?? null,
+      version: row.version,
+      mentions: mentioned.filter((mention) => mention.commentId === row.id).map(memberSummary),
+    }),
+  );
+}
+
+function commentRows(executor: Executor, where: SQL) {
+  return executor
     .select({
       id: comments.id,
       body: comments.body,
@@ -42,36 +63,21 @@ async function findComments(executor: Executor, where: SQL): Promise<ThreadComme
     .innerJoin(members, eq(members.id, comments.authorId))
     .where(where)
     .orderBy(asc(comments.createdAt), asc(comments.id));
-  const mentioned =
-    rows.length === 0
-      ? []
-      : await executor
-          .select({
-            commentId: mentions.commentId,
-            username: members.username,
-            fullName: members.fullName,
-            deactivatedAt: members.deactivatedAt,
-          })
-          .from(mentions)
-          .innerJoin(members, eq(members.id, mentions.memberId))
-          .where(
-            inArray(
-              mentions.commentId,
-              rows.map((row) => row.id),
-            ),
-          )
-          .orderBy(asc(members.username));
-  return rows.map(
-    (row): ThreadComment => ({
-      id: row.id,
-      body: row.body,
-      author: memberSummary(row.author),
-      createdAt: row.createdAt.toISOString(),
-      editedAt: row.editedAt?.toISOString() ?? null,
-      version: row.version,
-      mentions: mentioned.filter((mention) => mention.commentId === row.id).map(memberSummary),
-    }),
-  );
+}
+
+async function mentionsOfComments(executor: Executor, commentIds: string[]) {
+  if (commentIds.length === 0) return [];
+  return executor
+    .select({
+      commentId: mentions.commentId,
+      username: members.username,
+      fullName: members.fullName,
+      deactivatedAt: members.deactivatedAt,
+    })
+    .from(mentions)
+    .innerJoin(members, eq(members.id, mentions.memberId))
+    .where(inArray(mentions.commentId, commentIds))
+    .orderBy(asc(members.username));
 }
 
 async function oneComment(executor: Executor, id: string) {
@@ -113,6 +119,7 @@ async function postComment(
 ) {
   return db.transaction(async (tx) => {
     const parent = await parentOf(tx);
+
     const [repeated] = await findComments(tx, eq(comments.requestId, requestId));
     if (repeated) return { comment: repeated, created: false };
 
@@ -120,7 +127,9 @@ async function postComment(
       .insert(comments)
       .values({ ...parent, authorId: member.id, body: text, requestId })
       .returning({ id: comments.id });
+
     const mentioned = await replaceMentions(tx, { commentId: inserted.id }, text);
+
     await notify(tx, mentioned, {
       kind: "mentioned",
       actorId: member.id,
@@ -128,6 +137,7 @@ async function postComment(
       commentId: inserted.id,
       text,
     });
+
     return { comment: await oneComment(tx, inserted.id), created: true };
   });
 }
@@ -136,7 +146,9 @@ export function postIssueComment(actor: Member, id: string, body: NewComment) {
   return postComment(actor, body, async (tx) => {
     const issue = await issueOf(tx, id);
     if (!issue) throw issueGone();
+
     await writableProject(tx, issue.projectKey);
+
     return { issueId: issue.id };
   });
 }
@@ -147,6 +159,7 @@ export function postProjectComment(actor: Member, key: string, body: NewComment)
 
 async function lockedComment(tx: Transaction, id: string) {
   if (!uuidPattern.test(id)) throw commentGone();
+
   const [target] = await tx
     .select({ id: comments.id, projectKey: projects.key })
     .from(comments)
@@ -154,7 +167,9 @@ async function lockedComment(tx: Transaction, id: string) {
     .innerJoin(projects, eq(projects.id, sql`coalesce(${comments.projectId}, ${issues.projectId})`))
     .where(eq(comments.id, id));
   if (!target) throw commentGone();
+
   await writableProject(tx, target.projectKey);
+
   const [comment] = await tx.select().from(comments).where(eq(comments.id, target.id)).for("update");
   if (!comment) throw commentGone();
   return comment;
@@ -163,6 +178,7 @@ async function lockedComment(tx: Transaction, id: string) {
 export async function editComment(actor: Member, id: string, { body, version }: CommentEdit) {
   return db.transaction(async (tx) => {
     const comment = await lockedComment(tx, id);
+
     if (comment.authorId !== actor.id) throw notAllowed();
     if (comment.version !== version) throw await conflict(tx, comment.authorId);
 
@@ -170,22 +186,31 @@ export async function editComment(actor: Member, id: string, { body, version }: 
       .update(comments)
       .set({ body, version: sql`${comments.version} + 1`, editedAt: sql`now()` })
       .where(eq(comments.id, comment.id));
+
     const mentioned = await replaceMentions(tx, { commentId: comment.id }, body);
+
     await notify(tx, mentioned, {
       kind: "mentioned",
       actorId: actor.id,
-      target: comment.issueId ? { issueId: comment.issueId } : { projectId: comment.projectId as string },
+      target: parentOf(comment),
       commentId: comment.id,
       text: body,
     });
+
     return oneComment(tx, comment.id);
   });
+}
+
+function parentOf(comment: typeof comments.$inferSelect): CommentParent {
+  return comment.issueId ? { issueId: comment.issueId } : { projectId: comment.projectId as string };
 }
 
 export async function deleteComment(actor: Member, id: string) {
   await db.transaction(async (tx) => {
     const comment = await lockedComment(tx, id);
+
     if (comment.authorId !== actor.id && actor.role !== "admin") throw notAllowed();
+
     await tx.delete(comments).where(eq(comments.id, comment.id));
   });
 }

@@ -45,29 +45,34 @@ type NotificationItem = {
 
 function notificationBody(item: NotificationItem) {
   const link = `${readConfig().appUrl}${item.linkPath}`;
+
   if (item.kind === "assigned") {
     return [`${item.actorName} assigned ${item.issueRef} to you in ${item.projectName}.`, "", link].join(
       "\n",
     );
   }
+
   const place = item.commentId ? "a comment on" : "the description of";
   const target = item.issueRef ? `${item.issueRef} (${item.projectName})` : `project ${item.projectName}`;
   return [`${item.actorName} mentioned you in ${place} ${target}:`, "", item.excerpt, "", link].join("\n");
 }
 
 export function notificationEmail(items: NotificationItem[]) {
-  const newest = items[items.length - 1];
-  const heading = newest.issueRef
-    ? `[${newest.issueRef}] ${newest.issueTitle}`
-    : `[${newest.projectKey}] ${newest.projectName}`;
-  const update =
-    items.length > 1
-      ? `${items.length} updates for you`
-      : newest.kind === "assigned"
-        ? `assigned to you by ${newest.actorName}`
-        : `${newest.actorName} mentioned you`;
   return {
-    subject: `${heading}: ${update}`,
+    subject: `${notificationHeading(items[items.length - 1])}: ${updateSummary(items)}`,
     text: items.map(notificationBody).join("\n\n---\n\n") + signature,
   };
+}
+
+function notificationHeading(newest: NotificationItem) {
+  return newest.issueRef
+    ? `[${newest.issueRef}] ${newest.issueTitle}`
+    : `[${newest.projectKey}] ${newest.projectName}`;
+}
+
+function updateSummary(items: NotificationItem[]) {
+  const newest = items[items.length - 1];
+  if (items.length > 1) return `${items.length} updates for you`;
+  if (newest.kind === "assigned") return `assigned to you by ${newest.actorName}`;
+  return `${newest.actorName} mentioned you`;
 }

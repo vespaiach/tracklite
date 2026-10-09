@@ -19,29 +19,35 @@ export async function conflict(tx: Transaction, editorId: string | null) {
 }
 
 export async function replaceMentions(tx: Transaction, source: MentionSource, text: string) {
-  const usernames = findMentions(text);
-  const mentioned =
-    usernames.length === 0
-      ? []
-      : await tx
-          .select({ id: members.id })
-          .from(members)
-          .where(and(inArray(members.username, usernames), isNull(members.deactivatedAt)));
-  const memberIds = mentioned.map((row) => row.id);
-  const ofSource =
-    "projectId" in source
-      ? eq(mentions.projectId, source.projectId)
-      : "issueId" in source
-        ? eq(mentions.issueId, source.issueId)
-        : eq(mentions.commentId, source.commentId);
+  const memberIds = await activeMemberIds(tx, findMentions(text));
+
   await tx
     .delete(mentions)
-    .where(and(ofSource, memberIds.length > 0 ? notInArray(mentions.memberId, memberIds) : undefined));
+    .where(
+      and(mentionsFrom(source), memberIds.length > 0 ? notInArray(mentions.memberId, memberIds) : undefined),
+    );
+
   if (memberIds.length === 0) return [];
+
   const added = await tx
     .insert(mentions)
     .values(memberIds.map((memberId) => ({ memberId, ...source })))
     .onConflictDoNothing()
     .returning({ memberId: mentions.memberId });
   return added.map((row) => row.memberId);
+}
+
+async function activeMemberIds(tx: Transaction, usernames: string[]) {
+  if (usernames.length === 0) return [];
+  const found = await tx
+    .select({ id: members.id })
+    .from(members)
+    .where(and(inArray(members.username, usernames), isNull(members.deactivatedAt)));
+  return found.map((row) => row.id);
+}
+
+function mentionsFrom(source: MentionSource) {
+  if ("projectId" in source) return eq(mentions.projectId, source.projectId);
+  if ("issueId" in source) return eq(mentions.issueId, source.issueId);
+  return eq(mentions.commentId, source.commentId);
 }

@@ -62,6 +62,31 @@ const creators = alias(members, "creators");
 const assignees = alias(members, "assignees");
 
 async function findIssue(executor: Executor, where: SQL | undefined): Promise<Issue | undefined> {
+  const row = await issueRow(executor, where);
+  if (!row) return undefined;
+
+  const issueLabelRows = await labelsOfIssue(executor, row.issueId);
+
+  const mentioned = await mentionsOfIssue(executor, row.issueId);
+
+  return {
+    id: `${row.key}-${row.number}`,
+    title: row.title,
+    description: row.description,
+    status: row.status,
+    priority: row.priority,
+    assignee: row.assignee ? memberSummary(row.assignee) : null,
+    createdBy: memberSummary(row.creator),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    labels: issueLabelRows,
+    descriptionVersion: row.descriptionVersion,
+    mentions: mentioned.map(memberSummary),
+    archived: row.archivedAt !== null,
+  };
+}
+
+async function issueRow(executor: Executor, where: SQL | undefined) {
   const [row] = await executor
     .select({
       issueId: issues.id,
@@ -91,34 +116,25 @@ async function findIssue(executor: Executor, where: SQL | undefined): Promise<Is
     .innerJoin(creators, eq(creators.id, issues.createdBy))
     .leftJoin(assignees, eq(assignees.id, issues.assigneeId))
     .where(where);
-  if (!row) return undefined;
-  const issueLabelRows = await executor
+  return row;
+}
+
+function labelsOfIssue(executor: Executor, issueId: string) {
+  return executor
     .select({ id: labels.id, name: labels.name, color: labels.color })
     .from(issueLabels)
     .innerJoin(labels, eq(labels.id, issueLabels.labelId))
-    .where(eq(issueLabels.issueId, row.issueId))
+    .where(eq(issueLabels.issueId, issueId))
     .orderBy(asc(sql`lower(${labels.name})`), asc(labels.name));
-  const mentioned = await executor
+}
+
+function mentionsOfIssue(executor: Executor, issueId: string) {
+  return executor
     .select({ username: members.username, fullName: members.fullName, deactivatedAt: members.deactivatedAt })
     .from(mentions)
     .innerJoin(members, eq(members.id, mentions.memberId))
-    .where(eq(mentions.issueId, row.issueId))
+    .where(eq(mentions.issueId, issueId))
     .orderBy(asc(members.username));
-  return {
-    id: `${row.key}-${row.number}`,
-    title: row.title,
-    description: row.description,
-    status: row.status,
-    priority: row.priority,
-    assignee: row.assignee ? memberSummary(row.assignee) : null,
-    createdBy: memberSummary(row.creator),
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-    labels: issueLabelRows,
-    descriptionVersion: row.descriptionVersion,
-    mentions: mentioned.map(memberSummary),
-    archived: row.archivedAt !== null,
-  };
 }
 
 function fieldError(field: string, message: string) {
@@ -157,11 +173,10 @@ export async function createIssue(actor: Member, projectKey: string, { requestId
     const repeated = await findIssue(tx, eq(issues.requestId, requestId));
     if (repeated) return { issue: repeated, created: false };
 
-    const [{ number }] = await tx
-      .update(projects)
-      .set({ nextIssueNumber: sql`${projects.nextIssueNumber} + 1` })
-      .where(eq(projects.id, project.id))
-      .returning({ number: sql<number>`${projects.nextIssueNumber} - 1` });
+    const number = await takeIssueNumber(tx, project.id);
+
+    const position = await topOfColumn(tx, project.id, status);
+
     const [inserted] = await tx
       .insert(issues)
       .values({
@@ -170,15 +185,26 @@ export async function createIssue(actor: Member, projectKey: string, { requestId
         title,
         status,
         priority: "none",
-        position: await topOfColumn(tx, project.id, status),
+        position,
         createdBy: actor.id,
         requestId,
       })
       .returning({ id: issues.id });
+
     const issue = await findIssue(tx, eq(issues.id, inserted.id));
     if (!issue) throw new Error("Created issue not found");
+
     return { issue, created: true };
   });
+}
+
+async function takeIssueNumber(tx: Transaction, projectId: string) {
+  const [{ number }] = await tx
+    .update(projects)
+    .set({ nextIssueNumber: sql`${projects.nextIssueNumber} + 1` })
+    .where(eq(projects.id, projectId))
+    .returning({ number: sql<number>`${projects.nextIssueNumber} - 1` });
+  return number;
 }
 
 export async function getIssue(_actor: Member, id: string) {
@@ -199,17 +225,7 @@ async function activeAssigneeId(tx: Transaction, username: string | null) {
 }
 
 async function replaceLabels(tx: Transaction, issue: typeof issues.$inferSelect, labelIds: string[]) {
-  if (!labelIds.every((labelId) => uuidPattern.test(labelId))) throw labelGone();
-
-  const found =
-    labelIds.length === 0
-      ? []
-      : await tx
-          .select({ id: labels.id })
-          .from(labels)
-          .where(and(inArray(labels.id, labelIds), eq(labels.projectId, issue.projectId)))
-          .for("share");
-  if (found.length !== labelIds.length) throw labelGone();
+  await assertProjectLabels(tx, issue.projectId, labelIds);
 
   const current = await tx
     .select({ labelId: issueLabels.labelId })
@@ -220,10 +236,25 @@ async function replaceLabels(tx: Transaction, issue: typeof issues.$inferSelect,
   if (unchanged) return false;
 
   await tx.delete(issueLabels).where(eq(issueLabels.issueId, issue.id));
+
   if (labelIds.length > 0) {
     await tx.insert(issueLabels).values(labelIds.map((labelId) => ({ issueId: issue.id, labelId })));
   }
   return true;
+}
+
+async function assertProjectLabels(tx: Transaction, projectId: string, labelIds: string[]) {
+  if (!labelIds.every((labelId) => uuidPattern.test(labelId))) throw labelGone();
+
+  const found =
+    labelIds.length === 0
+      ? []
+      : await tx
+          .select({ id: labels.id })
+          .from(labels)
+          .where(and(inArray(labels.id, labelIds), eq(labels.projectId, projectId)))
+          .for("share");
+  if (found.length !== labelIds.length) throw labelGone();
 }
 
 async function fieldChange(
@@ -252,7 +283,9 @@ async function lockedIssue(tx: Transaction, where: SQL) {
     .innerJoin(projects, eq(projects.id, issues.projectId))
     .where(where);
   if (!target) throw issueGone();
+
   await writableProject(tx, target.projectKey);
+
   const [issue] = await tx.select().from(issues).where(eq(issues.id, target.id)).for("update");
   if (!issue) throw issueGone();
   return issue;
@@ -270,6 +303,7 @@ async function saveDescription(id: string, member: Member, description: string, 
 
   return db.transaction(async (tx) => {
     const issue = await lockedIssue(tx, where);
+
     if (issue.descriptionVersion !== descriptionVersion) throw await conflict(tx, issue.descriptionEditedBy);
 
     await tx
@@ -281,13 +315,16 @@ async function saveDescription(id: string, member: Member, description: string, 
         updatedAt: sql`now()`,
       })
       .where(eq(issues.id, issue.id));
+
     const mentioned = await replaceMentions(tx, { issueId: issue.id }, description);
+
     await notify(tx, mentioned, {
       kind: "mentioned",
       actorId: member.id,
       target: { issueId: issue.id },
       text: description,
     });
+
     return updatedIssue(tx, issue.id);
   });
 }
@@ -296,18 +333,22 @@ export async function updateIssue(actor: Member, id: string, change: IssueChange
   if (change.description !== undefined && change.descriptionVersion !== undefined) {
     return saveDescription(id, actor, change.description, change.descriptionVersion);
   }
+
   const where = byIssueId(id);
   if (!where) throw issueGone();
 
   return db.transaction(async (tx) => {
     const issue = await lockedIssue(tx, where);
+
     const update = await fieldChange(tx, issue, change);
+
     if (Object.keys(update).length > 0) {
       await tx
         .update(issues)
         .set({ ...update, updatedAt: sql`now()` })
         .where(eq(issues.id, issue.id));
     }
+
     if (typeof update.assigneeId === "string") {
       await notify(tx, [update.assigneeId], {
         kind: "assigned",
@@ -315,6 +356,7 @@ export async function updateIssue(actor: Member, id: string, change: IssueChange
         target: { issueId: issue.id },
       });
     }
+
     return updatedIssue(tx, issue.id);
   });
 }
@@ -330,30 +372,45 @@ async function positionIn(
     eq(issues.status, status),
     ne(issues.id, issue.id),
   );
-  if (place === "bottom") {
-    const [last] = await tx
-      .select({ position: issues.position })
-      .from(issues)
-      .where(otherCards)
-      .orderBy(desc(issues.position), desc(issues.id))
-      .limit(1);
-    return generateKeyBetween(last?.position ?? null, null);
-  }
-  const afterId = place === "top" ? undefined : byIssueId(place.after);
-  const [after] = afterId
-    ? await tx
-        .select({ position: issues.position })
-        .from(issues)
-        .innerJoin(projects, eq(projects.id, issues.projectId))
-        .where(and(otherCards, afterId))
-    : [];
+
+  if (place === "bottom") return bottomOf(tx, otherCards);
+
+  const afterPosition = place === "top" ? null : await positionOf(tx, otherCards, place.after);
+
+  const nextPosition = await firstPositionAfter(tx, otherCards, afterPosition);
+
+  return generateKeyBetween(afterPosition, nextPosition);
+}
+
+async function bottomOf(tx: Transaction, cards: SQL | undefined) {
+  const [last] = await tx
+    .select({ position: issues.position })
+    .from(issues)
+    .where(cards)
+    .orderBy(desc(issues.position), desc(issues.id))
+    .limit(1);
+  return generateKeyBetween(last?.position ?? null, null);
+}
+
+async function positionOf(tx: Transaction, cards: SQL | undefined, id: string) {
+  const where = byIssueId(id);
+  if (!where) return null;
+  const [card] = await tx
+    .select({ position: issues.position })
+    .from(issues)
+    .innerJoin(projects, eq(projects.id, issues.projectId))
+    .where(and(cards, where));
+  return card?.position ?? null;
+}
+
+async function firstPositionAfter(tx: Transaction, cards: SQL | undefined, position: string | null) {
   const [next] = await tx
     .select({ position: issues.position })
     .from(issues)
-    .where(after ? and(otherCards, gt(issues.position, after.position)) : otherCards)
+    .where(position === null ? cards : and(cards, gt(issues.position, position)))
     .orderBy(asc(issues.position), asc(issues.id))
     .limit(1);
-  return generateKeyBetween(after?.position ?? null, next?.position ?? null);
+  return next?.position ?? null;
 }
 
 export async function moveIssue(_actor: Member, id: string, { status, place }: IssueMove) {
@@ -362,13 +419,17 @@ export async function moveIssue(_actor: Member, id: string, { status, place }: I
 
   return db.transaction(async (tx) => {
     const issue = await lockedIssue(tx, where);
+
     const position = await positionIn(tx, issue, status, place);
+
     const statusChange: IssueUpdate =
       status === issue.status ? {} : { status, statusChangedAt: sql`now()`, updatedAt: sql`now()` };
+
     await tx
       .update(issues)
       .set({ position, ...statusChange })
       .where(eq(issues.id, issue.id));
+
     return updatedIssue(tx, issue.id);
   });
 }
@@ -379,9 +440,11 @@ export async function deleteIssue(actor: Member, id: string) {
 
   await db.transaction(async (tx) => {
     const issue = await lockedIssue(tx, where);
+
     if (issue.createdBy !== actor.id && actor.role !== "admin") {
       throw new ApiError(403, "You don't have permission to do that.");
     }
+
     await tx.delete(issues).where(eq(issues.id, issue.id));
   });
 }
@@ -421,7 +484,29 @@ function recentlyClosedOrOpen() {
 export async function getBoard(_actor: Member, projectKey: string): Promise<Board> {
   const project = await readableProject(projectKey);
 
-  const rows = await db
+  const rows = await boardRows(project.id);
+
+  const labelRows = await labelsOf(rows.map((row) => row.issueId));
+
+  const cards = rows.map((row): { status: IssueStatus; card: BoardIssue } => ({
+    status: row.status,
+    card: {
+      id: `${project.key}-${row.number}`,
+      title: row.title,
+      priority: row.priority,
+      assignee: row.assignee ? memberSummary(row.assignee) : null,
+      labels: labelsFor(labelRows, row.issueId),
+    },
+  }));
+
+  return issueStatuses.map((status) => {
+    const column = cards.filter((entry) => entry.status === status).map((entry) => entry.card);
+    return { status, count: column.length, cards: column };
+  });
+}
+
+function boardRows(projectId: string) {
+  return db
     .select({
       issueId: issues.id,
       number: issues.number,
@@ -436,25 +521,8 @@ export async function getBoard(_actor: Member, projectKey: string): Promise<Boar
     })
     .from(issues)
     .leftJoin(assignees, eq(assignees.id, issues.assigneeId))
-    .where(and(eq(issues.projectId, project.id), recentlyClosedOrOpen()))
+    .where(and(eq(issues.projectId, projectId), recentlyClosedOrOpen()))
     .orderBy(asc(issues.status), asc(issues.position), asc(issues.id));
-
-  const labelRows = await labelsOf(rows.map((row) => row.issueId));
-
-  const cards = rows.map((row): { status: IssueStatus; card: BoardIssue } => ({
-    status: row.status,
-    card: {
-      id: `${project.key}-${row.number}`,
-      title: row.title,
-      priority: row.priority,
-      assignee: row.assignee ? memberSummary(row.assignee) : null,
-      labels: labelsFor(labelRows, row.issueId),
-    },
-  }));
-  return issueStatuses.map((status) => {
-    const column = cards.filter((entry) => entry.status === status).map((entry) => entry.card);
-    return { status, count: column.length, cards: column };
-  });
 }
 
 function knownValues<T extends string>(values: string[], allowed: readonly T[]) {
@@ -480,57 +548,57 @@ function searchCondition(projectKey: string, query: string) {
 }
 
 async function assigneeCondition(values: string[]) {
-  const usernames = values.filter((value) => value !== unassigned).map((value) => value.toLowerCase());
-  const found =
-    usernames.length === 0
-      ? []
-      : await db.select({ id: members.id }).from(members).where(inArray(members.username, usernames));
+  const assigneeIds = await memberIdsNamed(
+    values.filter((value) => value !== unassigned).map((value) => value.toLowerCase()),
+  );
   const conditions = [
     ...(values.includes(unassigned) ? [isNull(issues.assigneeId)] : []),
-    ...(found.length > 0
-      ? [
-          inArray(
-            issues.assigneeId,
-            found.map((member) => member.id),
-          ),
-        ]
-      : []),
+    ...(assigneeIds.length > 0 ? [inArray(issues.assigneeId, assigneeIds)] : []),
   ];
   return conditions.length === 0 ? undefined : or(...conditions);
 }
 
+async function memberIdsNamed(usernames: string[]) {
+  if (usernames.length === 0) return [];
+  const found = await db.select({ id: members.id }).from(members).where(inArray(members.username, usernames));
+  return found.map((member) => member.id);
+}
+
 async function labelCondition(projectId: string, values: string[]) {
-  const names = values.map((value) => value.toLowerCase());
-  const found =
-    names.length === 0
-      ? []
-      : await db
-          .select({ id: labels.id })
-          .from(labels)
-          .where(and(eq(labels.projectId, projectId), inArray(sql`lower(${labels.name})`, names)));
-  if (found.length === 0) return undefined;
+  const labelIds = await labelIdsNamed(
+    projectId,
+    values.map((value) => value.toLowerCase()),
+  );
+  if (labelIds.length === 0) return undefined;
   return inArray(
     issues.id,
     db
       .select({ issueId: issueLabels.issueId })
       .from(issueLabels)
-      .where(
-        inArray(
-          issueLabels.labelId,
-          found.map((label) => label.id),
-        ),
-      ),
+      .where(inArray(issueLabels.labelId, labelIds)),
   );
 }
 
+async function labelIdsNamed(projectId: string, names: string[]) {
+  if (names.length === 0) return [];
+  const found = await db
+    .select({ id: labels.id })
+    .from(labels)
+    .where(and(eq(labels.projectId, projectId), inArray(sql`lower(${labels.name})`, names)));
+  return found.map((label) => label.id);
+}
+
 function listOrder(params: URLSearchParams) {
-  const sortParam = params.get("sort");
-  const sort: SortColumn =
-    sortParam !== null && sortParam in sortColumns ? (sortParam as SortColumn) : "updated";
-  const { column, ascending } = sortColumns[sort];
+  const { column, ascending } = sortColumns[sortColumn(params.get("sort"))];
+
   const dir = params.get("dir");
   const isAscending = dir === "asc" || dir === "desc" ? dir === "asc" : ascending;
+
   return [isAscending ? asc(column) : desc(column), desc(issues.updatedAt), asc(issues.id)];
+}
+
+function sortColumn(sort: string | null): SortColumn {
+  return sort !== null && sort in sortColumns ? (sort as SortColumn) : "updated";
 }
 
 function listOffset(params: URLSearchParams) {
@@ -544,51 +612,13 @@ export async function listIssues(
   params: URLSearchParams,
 ): Promise<IssueListPage> {
   const project = await readableProject(projectKey);
-  const statuses = knownValues(params.getAll("status"), issueStatuses);
-  const priorities = knownValues(params.getAll("priority"), issuePriorities);
 
-  const rows = await db
-    .select({
-      issueId: issues.id,
-      number: issues.number,
-      title: issues.title,
-      status: issues.status,
-      priority: issues.priority,
-      updatedAt: issues.updatedAt,
-      assignee: {
-        username: assignees.username,
-        fullName: assignees.fullName,
-        deactivatedAt: assignees.deactivatedAt,
-      },
-    })
-    .from(issues)
-    .leftJoin(assignees, eq(assignees.id, issues.assigneeId))
-    .where(
-      and(
-        eq(issues.projectId, project.id),
-        statuses.length > 0 ? inArray(issues.status, statuses) : undefined,
-        priorities.length > 0 ? inArray(issues.priority, priorities) : undefined,
-        await assigneeCondition(params.getAll("assignee")),
-        await labelCondition(project.id, params.getAll("label")),
-        searchCondition(project.key, params.get("q") ?? ""),
-      ),
-    )
-    .orderBy(...listOrder(params))
-    .limit(listPageSize + 1)
-    .offset(listOffset(params));
-
+  const rows = await listRows(await listFilter(project, params), params);
   const page = rows.slice(0, listPageSize);
+
   const labelRows = await labelsOf(page.map((row) => row.issueId));
-  const deactivatedAssignees = await db
-    .selectDistinct({
-      username: members.username,
-      fullName: members.fullName,
-      deactivatedAt: members.deactivatedAt,
-    })
-    .from(members)
-    .innerJoin(issues, eq(issues.assigneeId, members.id))
-    .where(and(eq(issues.projectId, project.id), isNotNull(members.deactivatedAt)))
-    .orderBy(asc(members.fullName), asc(members.username));
+
+  const deactivatedAssignees = await deactivatedAssigneesOf(project.id);
 
   return {
     issues: page.map(
@@ -607,22 +637,57 @@ export async function listIssues(
   };
 }
 
-export async function getMyIssues(actor: Member): Promise<MyIssueGroup[]> {
-  const rows = await db
+async function listFilter(project: { id: string; key: string }, params: URLSearchParams) {
+  const statuses = knownValues(params.getAll("status"), issueStatuses);
+  const priorities = knownValues(params.getAll("priority"), issuePriorities);
+  return and(
+    eq(issues.projectId, project.id),
+    statuses.length > 0 ? inArray(issues.status, statuses) : undefined,
+    priorities.length > 0 ? inArray(issues.priority, priorities) : undefined,
+    await assigneeCondition(params.getAll("assignee")),
+    await labelCondition(project.id, params.getAll("label")),
+    searchCondition(project.key, params.get("q") ?? ""),
+  );
+}
+
+function listRows(where: SQL | undefined, params: URLSearchParams) {
+  return db
     .select({
       issueId: issues.id,
-      projectKey: projects.key,
       number: issues.number,
       title: issues.title,
-      projectName: projects.name,
       status: issues.status,
       priority: issues.priority,
       updatedAt: issues.updatedAt,
+      assignee: {
+        username: assignees.username,
+        fullName: assignees.fullName,
+        deactivatedAt: assignees.deactivatedAt,
+      },
     })
     .from(issues)
-    .innerJoin(projects, eq(projects.id, issues.projectId))
-    .where(and(eq(issues.assigneeId, actor.id), isNull(projects.archivedAt), recentlyClosedOrOpen()))
-    .orderBy(asc(issues.status), asc(issues.priority), desc(issues.updatedAt), asc(issues.id));
+    .leftJoin(assignees, eq(assignees.id, issues.assigneeId))
+    .where(where)
+    .orderBy(...listOrder(params))
+    .limit(listPageSize + 1)
+    .offset(listOffset(params));
+}
+
+function deactivatedAssigneesOf(projectId: string) {
+  return db
+    .selectDistinct({
+      username: members.username,
+      fullName: members.fullName,
+      deactivatedAt: members.deactivatedAt,
+    })
+    .from(members)
+    .innerJoin(issues, eq(issues.assigneeId, members.id))
+    .where(and(eq(issues.projectId, projectId), isNotNull(members.deactivatedAt)))
+    .orderBy(asc(members.fullName), asc(members.username));
+}
+
+export async function getMyIssues(actor: Member): Promise<MyIssueGroup[]> {
+  const rows = await myIssueRows(actor.id);
 
   const labelRows = await labelsOf(rows.map((row) => row.issueId));
 
@@ -641,4 +706,22 @@ export async function getMyIssues(actor: Member): Promise<MyIssueGroup[]> {
       );
     return group.length === 0 ? [] : [{ status, count: group.length, issues: group }];
   });
+}
+
+function myIssueRows(assigneeId: string) {
+  return db
+    .select({
+      issueId: issues.id,
+      projectKey: projects.key,
+      number: issues.number,
+      title: issues.title,
+      projectName: projects.name,
+      status: issues.status,
+      priority: issues.priority,
+      updatedAt: issues.updatedAt,
+    })
+    .from(issues)
+    .innerJoin(projects, eq(projects.id, issues.projectId))
+    .where(and(eq(issues.assigneeId, assigneeId), isNull(projects.archivedAt), recentlyClosedOrOpen()))
+    .orderBy(asc(issues.status), asc(issues.priority), desc(issues.updatedAt), asc(issues.id));
 }

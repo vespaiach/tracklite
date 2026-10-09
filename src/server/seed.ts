@@ -36,7 +36,6 @@ export const seededMembers = [
 
 export async function seedMembers() {
   if (process.env.NODE_ENV === "production") throw new Error("Seeding is for development only");
-
   const passwordHash = await hashPassword(seedPassword);
   await db
     .insert(members)

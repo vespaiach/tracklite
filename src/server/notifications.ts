@@ -23,36 +23,41 @@ function excerptOf(markdown: string) {
   return `${characters.slice(0, maxExcerptLength).join("")}…`;
 }
 
-async function snapshotOf(tx: Transaction, target: NotificationTarget) {
-  if ("issueId" in target) {
-    const [issue] = await tx
-      .select({
-        number: issues.number,
-        title: issues.title,
-        projectName: projects.name,
-        projectKey: projects.key,
-      })
-      .from(issues)
-      .innerJoin(projects, eq(projects.id, issues.projectId))
-      .where(eq(issues.id, target.issueId));
-    const issueRef = `${issue.projectKey}-${issue.number}`;
-    return {
-      targetType: "issue",
-      targetId: target.issueId,
-      issueRef,
-      issueTitle: issue.title,
-      projectName: issue.projectName,
-      projectKey: issue.projectKey,
-      linkPath: `/issue/${issueRef}`,
-    };
-  }
+function snapshotOf(tx: Transaction, target: NotificationTarget) {
+  return "issueId" in target ? issueSnapshot(tx, target.issueId) : projectSnapshot(tx, target.projectId);
+}
+
+async function issueSnapshot(tx: Transaction, issueId: string) {
+  const [issue] = await tx
+    .select({
+      number: issues.number,
+      title: issues.title,
+      projectName: projects.name,
+      projectKey: projects.key,
+    })
+    .from(issues)
+    .innerJoin(projects, eq(projects.id, issues.projectId))
+    .where(eq(issues.id, issueId));
+  const issueRef = `${issue.projectKey}-${issue.number}`;
+  return {
+    targetType: "issue",
+    targetId: issueId,
+    issueRef,
+    issueTitle: issue.title,
+    projectName: issue.projectName,
+    projectKey: issue.projectKey,
+    linkPath: `/issue/${issueRef}`,
+  };
+}
+
+async function projectSnapshot(tx: Transaction, projectId: string) {
   const [project] = await tx
     .select({ name: projects.name, key: projects.key })
     .from(projects)
-    .where(eq(projects.id, target.projectId));
+    .where(eq(projects.id, projectId));
   return {
     targetType: "project",
-    targetId: target.projectId,
+    targetId: projectId,
     issueRef: null,
     issueTitle: null,
     projectName: project.name,
@@ -92,7 +97,9 @@ async function emailFor(tx: Transaction, recipientId: string, targetType: string
 export async function notify(tx: Transaction, recipientIds: string[], notice: Notice) {
   const recipients = recipientIds.filter((recipientId) => recipientId !== notice.actorId);
   if (recipients.length === 0) return;
+
   const { targetType, targetId, linkPath, ...snapshot } = await snapshotOf(tx, notice.target);
+
   for (const recipientId of recipients) {
     await tx.insert(notifications).values({
       emailId: await emailFor(tx, recipientId, targetType, targetId),

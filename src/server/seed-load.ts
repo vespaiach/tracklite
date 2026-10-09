@@ -7,6 +7,9 @@ import { issuePriorities, issueStatuses } from "../contract";
 import { comments, issues, members, projectKeys, projects } from "./schema";
 import { seedMembers } from "./seed";
 
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type Person = { id: string };
+
 const projectCount = 50;
 const busyProjectIssues = 690;
 const otherProjectIssues = 190;
@@ -50,61 +53,87 @@ export async function seedLoadData() {
   if (process.env.NODE_ENV === "production") throw new Error("Seeding is for development only");
 
   await seedMembers();
+
   const existing = await db.$count(projects, like(projects.name, `${loadProjectName} %`));
   if (existing > 0) return { seeded: false };
 
-  const reserved = new Set((await db.select().from(projectKeys)).map(({ key }) => key));
-  const loadProjectKeys = candidateKeys.filter((key) => !reserved.has(key)).slice(0, projectCount);
+  const loadProjectKeys = await unreservedLoadKeys();
 
-  const people = await db
+  const people = await activePeople();
+
+  await db.transaction(async (tx) => {
+    await tx.insert(projectKeys).values(loadProjectKeys.map((key) => ({ key })));
+    for (const [projectIndex, key] of loadProjectKeys.entries()) {
+      await seedProject(tx, key, plannedIssues(projectIndex), people);
+    }
+  });
+
+  return { seeded: true };
+}
+
+async function unreservedLoadKeys() {
+  const reserved = new Set((await db.select().from(projectKeys)).map(({ key }) => key));
+  return candidateKeys.filter((key) => !reserved.has(key)).slice(0, projectCount);
+}
+
+function activePeople() {
+  return db
     .select({ id: members.id })
     .from(members)
     .where(isNull(members.deactivatedAt))
     .orderBy(asc(members.username));
+}
+
+async function seedProject(
+  tx: Transaction,
+  key: string,
+  planned: ReturnType<typeof plannedIssues>,
+  people: Person[],
+) {
+  const [project] = await tx
+    .insert(projects)
+    .values({ key, name: `${loadProjectName} ${key}`, nextIssueNumber: planned.length + 1 })
+    .returning({ id: projects.id });
+
+  const positions = columnPositions(planned);
   const [busiest, ...others] = people;
+  const issueRows = planned.map(({ number, status, inBusyColumn }) => ({
+    projectId: project.id,
+    number,
+    title: `${verbs[number % verbs.length]} ${subjects[number % subjects.length]} ${number}`,
+    description: `Load test issue ${key}-${number}.`,
+    status,
+    priority: issuePriorities[number % issuePriorities.length],
+    assigneeId: inBusyColumn ? busiest.id : number % 4 === 0 ? null : others[number % others.length].id,
+    position: positions.get(status)?.shift() ?? "",
+    createdBy: people[number % people.length].id,
+    requestId: randomUUID(),
+  }));
 
-  await db.transaction(async (tx) => {
-    await tx.insert(projectKeys).values(loadProjectKeys.map((key) => ({ key })));
-
-    for (const [projectIndex, key] of loadProjectKeys.entries()) {
-      const planned = plannedIssues(projectIndex);
-      const [project] = await tx
-        .insert(projects)
-        .values({ key, name: `${loadProjectName} ${key}`, nextIssueNumber: planned.length + 1 })
-        .returning({ id: projects.id });
-
-      const positions = new Map(
-        issueStatuses.map((status) => {
-          const cards = planned.filter((issue) => issue.status === status).length;
-          return [status, generateNKeysBetween(null, null, cards)];
-        }),
-      );
-      const issueRows = planned.map(({ number, status, inBusyColumn }) => ({
-        projectId: project.id,
-        number,
-        title: `${verbs[number % verbs.length]} ${subjects[number % subjects.length]} ${number}`,
-        description: `Load test issue ${key}-${number}.`,
-        status,
-        priority: issuePriorities[number % issuePriorities.length],
-        assigneeId: inBusyColumn ? busiest.id : number % 4 === 0 ? null : others[number % others.length].id,
-        position: positions.get(status)?.shift() ?? "",
-        createdBy: people[number % people.length].id,
-        requestId: randomUUID(),
-      }));
-
-      for (const chunk of chunks(issueRows)) {
-        const inserted = await tx.insert(issues).values(chunk).returning({ id: issues.id });
-        const commentRows = inserted.flatMap(({ id }, issueIndex) =>
-          Array.from({ length: commentsPerIssue }, (_, index) => ({
-            issueId: id,
-            authorId: people[(issueIndex + index) % people.length].id,
-            body: `Load test comment ${index + 1}.`,
-            requestId: randomUUID(),
-          })),
-        );
-        for (const commentChunk of chunks(commentRows)) await tx.insert(comments).values(commentChunk);
-      }
+  for (const chunk of chunks(issueRows)) {
+    const inserted = await tx.insert(issues).values(chunk).returning({ id: issues.id });
+    for (const commentChunk of chunks(commentRowsFor(inserted, people))) {
+      await tx.insert(comments).values(commentChunk);
     }
-  });
-  return { seeded: true };
+  }
+}
+
+function columnPositions(planned: ReturnType<typeof plannedIssues>) {
+  return new Map(
+    issueStatuses.map((status) => {
+      const cards = planned.filter((issue) => issue.status === status).length;
+      return [status, generateNKeysBetween(null, null, cards)];
+    }),
+  );
+}
+
+function commentRowsFor(inserted: { id: string }[], people: Person[]) {
+  return inserted.flatMap(({ id }, issueIndex) =>
+    Array.from({ length: commentsPerIssue }, (_, index) => ({
+      issueId: id,
+      authorId: people[(issueIndex + index) % people.length].id,
+      body: `Load test comment ${index + 1}.`,
+      requestId: randomUUID(),
+    })),
+  );
 }
