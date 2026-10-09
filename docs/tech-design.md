@@ -419,7 +419,7 @@ For `POST`, `PUT`, `PATCH` and `DELETE`, `apiRoute` requires:
 - an `Origin` header equal to `APP_URL`'s origin;
 - or, if `Origin` is missing, `Sec-Fetch-Site: same-origin`.
 
-Anything else gets `403`. `SameSite=Lax` is a second layer of protection. The one exception is `/webhooks/email`, which is checked by signature instead (3.3).
+Anything else gets `403`. `SameSite=Lax` is a second layer of protection. Together they cover SEC-004 with no CSRF token stored in forms or state. The one exception is `/webhooks/email`, which is checked by signature instead (3.3).
 
 ### 4.5 Sign-in and reset limits (SEC-001)
 
@@ -681,46 +681,23 @@ The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, 
 
 ## 7. Decisions
 
+Only decisions with an alternative worth recording. Where the reason is already given next to the design it shapes, the row was removed; the gaps in the numbering are those rows, and numbers are never reused.
+
 | # | Decision | Over | Because |
 |---|---|---|---|
 | D-1 | Drizzle ORM on the postgres.js driver (spec 0.9) | postgres.js queries alone | Matches the existing setup; typed schema and migrations. |
-| D-2 | Fractional string keys for board position | Integer positions with gaps | A move rewrites one row and never needs a renumbering pass. |
-| D-3 | `project_keys` table that's never deleted from | Soft-deleting projects | Lets project deletion be a real cascade, as DATA-002 requires. |
-| D-4 | Separate version counters for descriptions | One version per row | A field change by a teammate shouldn't cause a description conflict. |
 | D-5 | `pg_trgm` + `ILIKE` per word | Postgres full-text search | The spec asks for substring matching (`"42"` → `WEB-42`, `"100%"`), which full-text search doesn't do. |
-| D-6 | Notification snapshots with no FKs | FKs to issues/projects | Emails must survive their target being deleted (REQ-045.7). |
-| D-7 | Mentions mirror the current text | Keeping every mention ever made | Simpler, and matches REQ-044: removing and re-adding a mention emails again. |
-| D-8 | Sessions deleted when they end | Keeping them 30 days with an ended flag | Simpler and safer. DATA-004 sets a maximum, not a minimum. |
 | D-9 | Separate worker process polling Postgres with `skip locked` (DEC-004) | A timer inside the Next.js server; pg-boss or similar | A web restart can't interrupt sends, there's no new dependency, and the queue is just a table. |
 | D-10 | Strict single-page app: one HTML shell, all page data loaded through the API | Server-rendered pages | Owner's choice. Also gives one code path for permissions and tests. |
-| D-11 | Database `now()` for every time check | App-server clock | One clock. Tests move timestamps back instead of faking time. |
-| D-12 | Invitation and reset emails sent inside the request | Queuing them | STD-6 needs the send result before answering. |
 | D-13 | Caddy as the reverse proxy | nginx | Automatic TLS and HSTS with a few lines of config. |
 | D-14 | systemd + journald for processes and logs | pm2, logrotate | Already on the VPS. Retention is one setting. |
-| D-15 | Error messages written by the server, shown as-is by the browser | Error codes the browser translates into text | All copy for server-side outcomes in one place, next to the rule that produces it. |
-| D-16 | `409` for stale saves, `410` for dead links | Folding both into `422` | The browser needs to tell them apart: an in-editor message vs an expired page. |
-| D-17 | Field-by-field `PATCH` on issues | Saving the whole form | Matches "last save wins" per field (STD-8) and the instant saves on the board and issue page. |
-| D-18 | Moves name one neighbour (`after`), and the server reads the next card | The browser sending both neighbours' keys | Correct even on a board that's out of date (REQ-026.4). |
-| D-19 | Offset paging for the list | Keyset cursors | Sorting by several columns makes cursors complex, and with no live updates offsets are good enough. |
-| D-20 | Accepting an invitation is `POST /api/members` | A separate invitations "accept" endpoint | Resource-style: accepting creates a member. |
 | D-21 | `@node-rs/argon2` | `argon2` (node-gyp) | Prebuilt binaries; nothing to compile on the VPS. |
-| D-22 | `sha256` for tokens | Argon2id for tokens | Tokens have 256 random bits, so a slow hash adds nothing and would make every request slower. |
-| D-23 | `Origin` check plus `SameSite=Lax` | CSRF tokens | Covers SEC-004 with no token stored in forms or state. |
-| D-24 | HTML nodes turned into text by our own plugin | Relying on react-markdown's default for HTML | The spec requires "shown as text", so we enforce it ourselves rather than depend on a library default. |
-| D-25 | One Markdown module for rendering and mention extraction | Separate regex for mentions on the server | `@sam` in code is treated the same everywhere (DATA-001.4). |
 | D-26 | Nonce-based CSP set in `src/proxy.ts` (SEC-010) | A CSP without script rules | SEC-010 requires that only the app's own scripts run, and Next.js's inline scripts need a nonce for that. |
 | D-27 | React Router (data mode) inside the shell | Next.js routing; hand-rolled `pushState` | One HTML document for every route, plus `useBlocker` for REQ-035. |
-| D-28 | Signed-out redirect done in the browser after `GET /api/me` | Redirecting in `src/proxy.ts` (which only sets the CSP) | The server returns the same shell for every address, so one redirect mechanism (in the browser) covers both the first load and a later `401`. |
-| D-29 | RTK Query for server data; a `toast` slice for UI | Hand-written slices and thunks | Caching, tags and optimistic updates are built in (REQ-026, NFR-005). |
-| D-30 | Refetch on every screen visit, no polling | Long-lived cache | Matches "pages show current data when they load" with no live updates. |
-| D-31 | List filters live in the URL, not Redux | Mirroring them in a slice | REQ-040 already makes the URL the source of truth. |
 | D-32 | Resend (DEC-003) | Postmark, Amazon SES | Free plan fits NFR-009, signed webhooks, idempotency keys, simple domain setup. |
-| D-33 | Plain-text emails only | HTML + text templates | Half the templates; the spec already asks for plain-text excerpts. |
 | D-34 | `fetch` + hand-written signature check | Resend SDK, `svix` package | Two small functions instead of two dependencies. |
-| D-35 | Combined emails: "{n} updates for you" plus each item | One combined sentence | Works for any mix of assigned and mentioned with one rule. |
 | D-36 | React Aria `GridList` drag and drop | dnd-kit | Already in the stack, and accessible by keyboard and screen reader out of the box. Edge auto-scroll confirmed by the M5.1 spike (D-40). |
 | D-37 | New issue: title-only dialog, then go to the issue | A full create form | Matches REQ-016's flow ("enters a title"); everything else is edited on the issue page. |
-| D-38 | Admin-only routes show the STD-2 message, not Not found | Hiding them as Not found | Matches STD-2's wording for actions reached anyway. |
 | D-39 | Track Lite design system, ported from its Claude Design project into `src/components/ui/track-lite/` | Hairline; a component library from npm | Made for this product. Fonts load through `next/font` and icons through `@phosphor-icons/react` instead of the project's CDN links, which the CSP (D-26) would block. |
 | D-40 | Keep D-36 with no fallback, after the M5.1 spike. Each column's body around its `GridList` is the scroll box, with `position: relative`; each card has a `<Button slot="drag">` | Writing our own edge auto-scroll; a separate drag library | Mouse drags across 5 columns, into an empty column (`onRootDrop`) and within a column (`onReorder`) all landed in the right place. Near a column's edge, the browser scrolls it natively, or React Aria's `useAutoScroll` does in Safari. Keyboard drags (Enter on the drag button, Tab between columns, arrows, Enter) work and are announced. Without `position: relative` on the scroll box, the hidden keyboard drop targets scroll the whole page instead of the column. Without the drag button, cards that open the issue on click can only be dragged with Alt+Enter. |
 | D-41 | Daily `pg_dump`, encrypted with `age` and copied to Cloudflare R2 with `rclone`, from a systemd timer | restic; Backblaze B2; a Hetzner Storage Box | Owner's choice. One plain encrypted file per day is easy to inspect and restore by hand, R2's free tier keeps the cost at zero (NFR-009), and the timer's `OnFailure=` gives the failure email with no extra service. |
