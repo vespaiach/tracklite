@@ -1,4 +1,4 @@
-import type { MyIssueGroup } from "../../../client/api";
+import type { MyIssueGroup } from "../../../contract";
 import { apiRoute } from "../../../server/api-route";
 import { getMyIssues } from "../../../server/issues";
 

@@ -1,6 +1,6 @@
 # Tracklite: Technical design
 
-Companion to `docs/tracklite-spec.md` (v0.24). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
+Companion to `docs/tracklite-spec.md` (v0.25). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
 
 ## 1. Architecture
 
@@ -216,7 +216,7 @@ How the parts fit:
 
 ## 3. API
 
-Settles DEC-002. Request and response types live in the code; this section fixes paths, permissions and errors.
+Settles DEC-002. Request types live in `src/schemas/` and response types in `src/contract/` (3.5); this section fixes paths, permissions and errors.
 
 ### 3.1 Conventions
 
@@ -329,6 +329,13 @@ Request bodies are the Valibot schemas in `src/schemas/`, and response types are
 ### 3.4 Details worth fixing now
 
 Its items now sit with the design they belong to: moving a card in 2.4, list paging in 3.1, link lookups in 4.6, and the status for a wrong password in 4.5.
+
+### 3.5 Shared API types
+
+Every response type, and the enum values both sides need, lives in `src/contract/`. It holds types and constant arrays only, so both the browser and the server can import it.
+- **Three shapes, two boundaries.** Database rows (`*Row`, inferred from `schema.ts`) stay on the server. Contract types are what goes over the wire. Mapping functions in `src/server/` turn one into the other and declare the contract type as their return type, so a field added to a response by accident fails to compile. A mapper that builds rows with `.map` declares the row type on the callback too, since `.map` infers its element type and would skip the check.
+- **Enums have one source.** `issueStatuses`, `issuePriorities`, `labelColors` and `roles` are `as const` arrays in the contract; `schema.ts` builds its `pgEnum`s from them, so their order is still the sort order (2.1). The request schemas in `src/schemas/` take their picklists from the same arrays (D-42). Client lists keyed by an enum use `satisfies Record<…>`, so a new value fails to compile until every list covers it, and pickers list values in the contract's order, which is also the order the spec names them in (REQ-017, REQ-018).
+- **One type per view, derived.** `ListIssue`, `BoardIssue` and `MyIssue` are `Pick`s of `Issue`, not separate models.
 
 ## 4. Auth and security
 
@@ -599,3 +606,4 @@ Only decisions with an alternative worth recording. Where the reason is already 
 | D-41 | Daily `pg_dump`, encrypted with `age` and copied to Cloudflare R2 with `rclone`, from a systemd timer | restic; Backblaze B2; a Hetzner Storage Box | Owner's choice. One plain encrypted file per day is easy to inspect and restore by hand, R2's free tier keeps the cost at zero (NFR-009), and the timer's `OnFailure=` gives the failure email with no extra service. |
 | D-42 | Valibot body schemas declared per route and run by `apiRoute`; schemas live in `src/schemas/` (one file per area, server-only), and the domain function takes their typed output | Hand-written `typeof` checks in each domain function; Zod; parsing at the start of each domain function; each schema in the domain module that uses it | One path turns invalid input into STD-3's `422`, domain functions get typed and already-trimmed input instead of `unknown`, and a malformed body stops being a `500`. Order: session, then schema, then the domain's role check, then database rules, then the write. A signed-out caller always gets `401` and learns nothing about the body; invalid input fails before the role check and any domain query. A signed-in member without the role who sends an invalid body therefore gets `422`, not `403`; the schema reveals only the request's shape, which the browser code already shows. Lengths count characters (code points) as the spec and Postgres do, not UTF-16 units. One folder puts every input rule in one place to read and review, and keeps the schemas apart from database code. |
 | D-43 | Routes only authenticate. Every domain function called from a signed-in route takes the member as `actor` first and owns every role and ownership check, with `assertAdmin` before any lookup ([ADR 0001](ADRs/0001-permission-checks-in-domain.md)) | `apiRoute("admin")` checking the role in the route; admin-only functions typed `actor: Admin`; an `adminOnly` wrapper | Reading a domain file must show its permission rules: with the role in the route, `createProject` looked open to anyone while `updateProject` checked. Typing `actor: Admin` would push the narrowing back into the route. Nothing at typecheck enforces `assertAdmin`, so each admin-only function has a 403 test. Every admin route declares a body schema (M12.2), so a member's malformed JSON gets `422` from `apiRoute` before the domain's `403`, never a `500`. |
+| D-44 | Response types and enum values in a shared `src/contract/`; mapping functions return them | Types owned by the client and checked with `satisfies` in each route; one model shared by database, domain and API | A declared return type catches extra fields, which `satisfies` on a function call can't. One enum source keeps client lists complete. Rows and responses really differ (uuid vs `WEB-42`, `Date` vs ISO string, internal columns), so they stay separate types with a mapping between them. |

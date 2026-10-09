@@ -37,6 +37,7 @@ import {
   useBoardQuery,
   useMoveIssueMutation,
 } from "../api";
+import { issueStatuses } from "../../contract";
 import { priorities, statuses } from "../issue-fields";
 import { LoadFailed, Loading } from "../LoadStates";
 import { useRouterClick } from "../links";
@@ -46,10 +47,6 @@ import { useShowLoading } from "../useShowLoading";
 const labelsShown = 3;
 const closedStatuses: IssueStatus[] = ["done", "canceled"];
 const issueType = "application/x-tracklite-issue";
-
-function statusInfo(status: IssueStatus) {
-  return statuses.find(([key]) => key === status) ?? statuses[0];
-}
 
 export function BoardView({ project }: { project: ProjectSummary }) {
   const query = useBoardQuery(project.key);
@@ -95,7 +92,7 @@ function placeAt(cards: BoardIssue[], id: string, target: DropTarget): BoardPlac
 }
 
 function StatusColumn({ column, archived, onCreate }: StatusColumnProps) {
-  const [, name, kind] = statusInfo(column.status);
+  const { name, kind } = statuses[column.status];
   const [moveIssue] = useMoveIssueMutation();
   const move = (id: string, place: BoardPlace) => void moveIssue({ id, status: column.status, place });
   const { dragAndDropHooks } = useDragAndDrop({
@@ -205,7 +202,7 @@ type IssueCardProps = {
 function IssueCard({ card, status, first, last, archived, dragging }: IssueCardProps) {
   const href = `/issue/${card.id}`;
   const open = useRouterClick(href);
-  const [, , priorityKind] = priorities.find(([key]) => key === card.priority) ?? priorities[0];
+  const priorityKind = priorities[card.priority].kind;
   const hidden = card.labels.length - labelsShown;
   return (
     <BoardCard
@@ -283,18 +280,18 @@ function MoveMenu({ id, status, first, last }: MoveMenuProps) {
       }
       onAction={move}>
       <MenuSubmenu label="Move to">
-        {statuses.map(([key, name, kind]) => (
+        {issueStatuses.map((key) => (
           <MenuItem
             key={key}
             id={key}
             icon={
               <span aria-hidden="true">
-                <Status status={kind} />
+                <Status status={statuses[key].kind} />
               </span>
             }
             checked={key === status}
             disabled={key === status}>
-            {name}
+            {statuses[key].name}
           </MenuItem>
         ))}
       </MenuSubmenu>

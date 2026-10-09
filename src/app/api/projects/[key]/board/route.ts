@@ -1,4 +1,4 @@
-import type { Board } from "../../../../../client/api";
+import type { Board } from "../../../../../contract";
 import { apiRoute } from "../../../../../server/api-route";
 import { getBoard } from "../../../../../server/issues";
 

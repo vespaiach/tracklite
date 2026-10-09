@@ -1,4 +1,4 @@
-import type { InvitationLookup } from "../../../client/api";
+import type { InvitationLookup } from "../../../contract";
 import { InvitationLinkLookup } from "../../../schemas/invitation";
 import { apiRoute } from "../../../server/api-route";
 import { lookUpInvitation } from "../../../server/invitations";

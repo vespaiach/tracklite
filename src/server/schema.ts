@@ -14,6 +14,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { issuePriorities, issueStatuses, labelColors, roles } from "../contract";
 
 const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
 const byteOrderedText = customType<{ data: string }>({ dataType: () => 'text COLLATE "C"' });
@@ -22,25 +23,10 @@ const id = () => uuid("id").primaryKey().defaultRandom();
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
 const createdAt = () => timestamptz("created_at").notNull().defaultNow();
 
-export const role = pgEnum("role", ["admin", "member"]);
-export const issueStatus = pgEnum("issue_status", [
-  "backlog",
-  "in_progress",
-  "in_review",
-  "done",
-  "canceled",
-]);
-export const issuePriority = pgEnum("issue_priority", ["urgent", "high", "medium", "low", "none"]);
-export const labelColor = pgEnum("label_color", [
-  "gray",
-  "red",
-  "orange",
-  "yellow",
-  "green",
-  "blue",
-  "purple",
-  "pink",
-]);
+export const role = pgEnum("role", roles);
+export const issueStatus = pgEnum("issue_status", issueStatuses);
+export const issuePriority = pgEnum("issue_priority", issuePriorities);
+export const labelColor = pgEnum("label_color", labelColors);
 export const notificationKind = pgEnum("notification_kind", ["assigned", "mentioned"]);
 export const emailState = pgEnum("email_state", ["pending", "sent", "dropped", "failed", "bounced"]);
 

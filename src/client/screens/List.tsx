@@ -26,6 +26,7 @@ import {
   useMembersQuery,
 } from "../api";
 import { LabelPills, TitleLink, UpdatedAt } from "../IssueCells";
+import { issuePriorities, issueStatuses } from "../../contract";
 import { priorities, statuses } from "../issue-fields";
 import { LoadFailed, Loading } from "../LoadStates";
 import { NewIssueDialog } from "../NewIssueDialog";
@@ -91,12 +92,14 @@ export function ListView({ project }: { project: ProjectSummary }) {
   const filtering = [...filterParams, "q"].some((name) => params.has(name));
 
   const options: Record<FilterParam, FilterOption[]> = {
-    status: statuses.map(([key, name, kind]) => ({ key, name, icon: icon(<Status status={kind} />) })),
-    priority: priorities.map(([key, name, kind]) => ({
-      key,
-      name,
-      icon: icon(<Priority priority={kind} />),
-    })),
+    status: issueStatuses.map((key) => {
+      const { name, kind } = statuses[key];
+      return { key, name, icon: icon(<Status status={kind} />) };
+    }),
+    priority: issuePriorities.map((key) => {
+      const { name, kind } = priorities[key];
+      return { key, name, icon: icon(<Priority priority={kind} />) };
+    }),
     assignee: [
       {
         key: unassigned,
@@ -366,8 +369,8 @@ function AssigneeAvatar({ initials }: { initials: string }) {
 }
 
 function IssueRow({ issue }: { issue: ListIssue }) {
-  const [, statusName, statusKind] = statuses.find(([key]) => key === issue.status) ?? statuses[0];
-  const [, priorityName, priorityKind] = priorities.find(([key]) => key === issue.priority) ?? priorities[0];
+  const { name: statusName, kind: statusKind } = statuses[issue.status];
+  const { name: priorityName, kind: priorityKind } = priorities[issue.priority];
   return (
     <tr className="tl-table__row">
       <td>

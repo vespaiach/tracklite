@@ -23,22 +23,24 @@ import { conflict, replaceMentions } from "./descriptions";
 import { memberSummary } from "./members";
 import { notify } from "./notifications";
 import { writableProject } from "./projects";
-import {
-  issueLabels,
-  issuePriority,
-  issueStatus,
-  issues,
-  labels,
-  members,
-  mentions,
-  projects,
-} from "./schema";
+import { issueLabels, issues, labels, members, mentions, projects } from "./schema";
 import type { Member } from "./sessions";
 import type { IssueChange, IssueMove, NewIssue } from "../schemas/issue";
+import {
+  type Board,
+  type BoardIssue,
+  type Issue,
+  type IssueListPage,
+  issuePriorities,
+  type IssueStatus,
+  issueStatuses,
+  type ListIssue,
+  type MyIssue,
+  type MyIssueGroup,
+} from "../contract";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | Transaction;
-type IssueStatus = (typeof issueStatus.enumValues)[number];
 type IssueUpdate = PgUpdateSetSource<typeof issues>;
 type SortColumn = keyof typeof sortColumns;
 
@@ -59,7 +61,7 @@ const issueIdPattern = /^([A-Za-z]{2,5})-([1-9]\d{0,8})$/;
 const creators = alias(members, "creators");
 const assignees = alias(members, "assignees");
 
-async function findIssue(executor: Executor, where: SQL | undefined) {
+async function findIssue(executor: Executor, where: SQL | undefined): Promise<Issue | undefined> {
   const [row] = await executor
     .select({
       issueId: issues.id,
@@ -416,7 +418,7 @@ function recentlyClosedOrOpen() {
   );
 }
 
-export async function getBoard(_actor: Member, projectKey: string) {
+export async function getBoard(_actor: Member, projectKey: string): Promise<Board> {
   const project = await readableProject(projectKey);
 
   const rows = await db
@@ -439,7 +441,7 @@ export async function getBoard(_actor: Member, projectKey: string) {
 
   const labelRows = await labelsOf(rows.map((row) => row.issueId));
 
-  const cards = rows.map((row) => ({
+  const cards = rows.map((row): { status: IssueStatus; card: BoardIssue } => ({
     status: row.status,
     card: {
       id: `${project.key}-${row.number}`,
@@ -449,7 +451,7 @@ export async function getBoard(_actor: Member, projectKey: string) {
       labels: labelsFor(labelRows, row.issueId),
     },
   }));
-  return issueStatus.enumValues.map((status) => {
+  return issueStatuses.map((status) => {
     const column = cards.filter((entry) => entry.status === status).map((entry) => entry.card);
     return { status, count: column.length, cards: column };
   });
@@ -536,10 +538,14 @@ function listOffset(params: URLSearchParams) {
   return /^\d{1,9}$/.test(offset) ? Number(offset) : 0;
 }
 
-export async function listIssues(_actor: Member, projectKey: string, params: URLSearchParams) {
+export async function listIssues(
+  _actor: Member,
+  projectKey: string,
+  params: URLSearchParams,
+): Promise<IssueListPage> {
   const project = await readableProject(projectKey);
-  const statuses = knownValues(params.getAll("status"), issueStatus.enumValues);
-  const priorities = knownValues(params.getAll("priority"), issuePriority.enumValues);
+  const statuses = knownValues(params.getAll("status"), issueStatuses);
+  const priorities = knownValues(params.getAll("priority"), issuePriorities);
 
   const rows = await db
     .select({
@@ -585,21 +591,23 @@ export async function listIssues(_actor: Member, projectKey: string, params: URL
     .orderBy(asc(members.fullName), asc(members.username));
 
   return {
-    issues: page.map((row) => ({
-      id: `${project.key}-${row.number}`,
-      title: row.title,
-      status: row.status,
-      priority: row.priority,
-      assignee: row.assignee ? memberSummary(row.assignee) : null,
-      labels: labelsFor(labelRows, row.issueId),
-      updatedAt: row.updatedAt.toISOString(),
-    })),
+    issues: page.map(
+      (row): ListIssue => ({
+        id: `${project.key}-${row.number}`,
+        title: row.title,
+        status: row.status,
+        priority: row.priority,
+        assignee: row.assignee ? memberSummary(row.assignee) : null,
+        labels: labelsFor(labelRows, row.issueId),
+        updatedAt: row.updatedAt.toISOString(),
+      }),
+    ),
     hasMore: rows.length > listPageSize,
     deactivatedAssignees: deactivatedAssignees.map(memberSummary),
   };
 }
 
-export async function getMyIssues(actor: Member) {
+export async function getMyIssues(actor: Member): Promise<MyIssueGroup[]> {
   const rows = await db
     .select({
       issueId: issues.id,
@@ -618,17 +626,19 @@ export async function getMyIssues(actor: Member) {
 
   const labelRows = await labelsOf(rows.map((row) => row.issueId));
 
-  return issueStatus.enumValues.flatMap((status) => {
+  return issueStatuses.flatMap((status) => {
     const group = rows
       .filter((row) => row.status === status)
-      .map((row) => ({
-        id: `${row.projectKey}-${row.number}`,
-        title: row.title,
-        projectName: row.projectName,
-        priority: row.priority,
-        labels: labelsFor(labelRows, row.issueId),
-        updatedAt: row.updatedAt.toISOString(),
-      }));
+      .map(
+        (row): MyIssue => ({
+          id: `${row.projectKey}-${row.number}`,
+          title: row.title,
+          projectName: row.projectName,
+          priority: row.priority,
+          labels: labelsFor(labelRows, row.issueId),
+          updatedAt: row.updatedAt.toISOString(),
+        }),
+      );
     return group.length === 0 ? [] : [{ status, count: group.length, issues: group }];
   });
 }

@@ -1,5 +1,6 @@
 import "server-only";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import type { Me, MemberSummary } from "../contract";
 import type { MemberChanges } from "../schemas/member";
 import { ApiError } from "./api-error";
 import { db } from "./db";
@@ -28,7 +29,9 @@ export function initials(fullName: string) {
   return (firstCharacter(words[0]) + last).toUpperCase();
 }
 
-export function memberSummary(member: Pick<Member, "username" | "fullName" | "deactivatedAt">) {
+export function memberSummary(
+  member: Pick<Member, "username" | "fullName" | "deactivatedAt">,
+): MemberSummary {
   return {
     username: member.username,
     fullName: member.fullName,
@@ -37,7 +40,7 @@ export function memberSummary(member: Pick<Member, "username" | "fullName" | "de
   };
 }
 
-export function profileResponse(member: Member) {
+export function profileResponse(member: Member): Me {
   return {
     ...memberSummary(member),
     email: member.email,

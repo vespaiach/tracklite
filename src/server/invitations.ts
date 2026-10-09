@@ -4,6 +4,7 @@ import { ApiError } from "./api-error";
 import { db } from "./db";
 import { sendEmail } from "./email/send";
 import { invitationEmail } from "./email/templates";
+import type { Invitation } from "../contract";
 import type { InvitationAcceptance } from "../schemas/invitation";
 import { memberSummary } from "./members";
 import { hashPassword } from "./passwords";
@@ -46,7 +47,7 @@ function openInvitations(executor: Pick<typeof db, "select">) {
 
 type InvitationRow = Awaited<ReturnType<typeof openInvitations>>[number];
 
-function invitationResponse({ inviter, expiresAt, ...invitation }: InvitationRow) {
+function invitationResponse({ inviter, expiresAt, ...invitation }: InvitationRow): Invitation {
   return { ...invitation, invitedBy: memberSummary(inviter), expiresAt: expiresAt.toISOString() };
 }
 

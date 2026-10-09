@@ -1,4 +1,4 @@
-import type { Label } from "../../../../client/api";
+import type { Label } from "../../../../contract";
 import { LabelChanges } from "../../../../schemas/label";
 import { apiRoute } from "../../../../server/api-route";
 import { deleteLabel, updateLabel } from "../../../../server/labels";

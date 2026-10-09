@@ -1,84 +1,28 @@
 import { type BaseQueryFn, createApi } from "@reduxjs/toolkit/query/react";
+import type {
+  Board,
+  Invitation,
+  InvitationLookup,
+  Issue,
+  IssueListPage,
+  IssuePriority,
+  IssueStatus,
+  Label,
+  LabelColor,
+  Me,
+  MyIssueGroup,
+  Project,
+  ProjectSummary,
+  ThreadComment,
+} from "../contract";
 import type { StoreExtra } from "./store";
 import { showToast } from "./toast";
 
+export type * from "../contract";
+
 export type ApiFailure = { status: number | "network"; message: string; fields?: Record<string, string> };
 
-export type Me = {
-  username: string;
-  fullName: string;
-  initials: string;
-  deactivated: boolean;
-  email: string;
-  role: "admin" | "member";
-};
-
-export type MemberSummary = Pick<Me, "username" | "fullName" | "initials" | "deactivated">;
-
-export type Invitation = {
-  id: string;
-  email: string;
-  state: "pending" | "bounced" | "expired";
-  expiresAt: string;
-  invitedBy: MemberSummary;
-};
-
-export type InvitationLookup = { email: string };
-
-export type ProjectSummary = { key: string; name: string; archivedAt: string | null };
-
-export type Project = ProjectSummary & {
-  description: string;
-  descriptionVersion: number;
-  mentions: MemberSummary[];
-};
-
-export type LabelColor = "gray" | "red" | "orange" | "yellow" | "green" | "blue" | "purple" | "pink";
-
-export type Label = { id: string; name: string; color: LabelColor; issueCount: number };
-
-export type IssueStatus = "backlog" | "in_progress" | "in_review" | "done" | "canceled";
-
-export type IssuePriority = "none" | "urgent" | "high" | "medium" | "low";
-
-export type IssueLabel = Pick<Label, "id" | "name" | "color">;
-
-export type Issue = {
-  id: string;
-  title: string;
-  description: string;
-  status: IssueStatus;
-  priority: IssuePriority;
-  assignee: MemberSummary | null;
-  createdBy: MemberSummary;
-  createdAt: string;
-  updatedAt: string;
-  labels: IssueLabel[];
-  descriptionVersion: number;
-  mentions: MemberSummary[];
-  archived: boolean;
-};
-
-export type BoardIssue = Pick<Issue, "id" | "title" | "priority" | "assignee" | "labels">;
-
-export type BoardStatusColumn = { status: IssueStatus; count: number; cards: BoardIssue[] };
-
-export type Board = BoardStatusColumn[];
-
 export type BoardPlace = "top" | "bottom" | { after: string };
-
-export type ListIssue = Pick<
-  Issue,
-  "id" | "title" | "status" | "priority" | "assignee" | "labels" | "updatedAt"
->;
-
-export type IssueListPage = { issues: ListIssue[]; hasMore: boolean; deactivatedAssignees: MemberSummary[] };
-
-export type MyIssue = Pick<Issue, "id" | "title" | "priority" | "labels" | "updatedAt"> & {
-  projectName: string;
-};
-
-export type MyIssueGroup = { status: IssueStatus; count: number; issues: MyIssue[] };
 
 const issueListPageSize = 100;
 
@@ -88,16 +32,6 @@ function issueListPath(key: string, query: string, offset: number) {
   const search = params.toString();
   return `projects/${key}/issues${search ? `?${search}` : ""}`;
 }
-
-export type ThreadComment = {
-  id: string;
-  body: string;
-  author: MemberSummary;
-  createdAt: string;
-  editedAt: string | null;
-  version: number;
-  mentions: MemberSummary[];
-};
 
 export type IssueChange =
   | { title: string }

@@ -1,6 +1,6 @@
 import "server-only";
 import * as v from "valibot";
-import { labelColor } from "../server/schema";
+import { labelColors } from "../contract";
 import { maxCharacters } from "./common";
 
 const maxNameLength = 30;
@@ -11,7 +11,7 @@ const labelName = v.pipe(
   v.nonEmpty("Name required"),
   maxCharacters(maxNameLength, `Too long (max ${maxNameLength})`),
 );
-const color = v.picklist(labelColor.enumValues, "Choose a color");
+const color = v.picklist(labelColors, "Choose a color");
 
 export const NewLabel = v.object({ name: labelName, color });
 export type NewLabel = v.InferOutput<typeof NewLabel>;

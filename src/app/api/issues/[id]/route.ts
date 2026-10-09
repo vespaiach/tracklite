@@ -1,4 +1,4 @@
-import type { Issue } from "../../../../client/api";
+import type { Issue } from "../../../../contract";
 import { IssueChange } from "../../../../schemas/issue";
 import { apiRoute } from "../../../../server/api-route";
 import { deleteIssue, getIssue, updateIssue } from "../../../../server/issues";

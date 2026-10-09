@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary } from "../../../client/api";
+import type { Project, ProjectSummary } from "../../../contract";
 import { apiRoute } from "../../../server/api-route";
 import { NewProject } from "../../../schemas/project";
 import { createProject, listProjects } from "../../../server/projects";

@@ -43,6 +43,7 @@ import { CommentThread } from "../CommentThread";
 import { formatDate } from "../dates";
 import { type DescriptionDraft, DescriptionEditor } from "../DescriptionEditor";
 import { useFailureToast } from "../failure";
+import { issuePriorities, issueStatuses } from "../../contract";
 import { priorities, statuses } from "../issue-fields";
 import { LoadFailed, Loading } from "../LoadStates";
 import { useRouterClick } from "../links";
@@ -222,7 +223,7 @@ function Glyph({ children }: { children: ReactNode }) {
 
 function StatusField({ issue, editable }: { issue: Issue; editable: boolean }) {
   const save = useIssueSave(issue.id);
-  const [, name, kind] = statuses.find(([key]) => key === issue.status) ?? statuses[0];
+  const { name, kind } = statuses[issue.status];
   const value = (
     <>
       <Glyph>
@@ -239,15 +240,15 @@ function StatusField({ issue, editable }: { issue: Issue; editable: boolean }) {
           selectedKey={issue.status}
           value={value}
           onChange={(key) => void save({ status: key as IssueStatus })}>
-          {statuses.map(([key, label, glyph]) => (
+          {issueStatuses.map((key) => (
             <PickerItem
               key={key}
               id={key}
-              textValue={label}>
+              textValue={statuses[key].name}>
               <Glyph>
-                <Status status={glyph} />
+                <Status status={statuses[key].kind} />
               </Glyph>
-              {label}
+              {statuses[key].name}
             </PickerItem>
           ))}
         </Picker>
@@ -260,7 +261,7 @@ function StatusField({ issue, editable }: { issue: Issue; editable: boolean }) {
 
 function PriorityField({ issue, editable }: { issue: Issue; editable: boolean }) {
   const save = useIssueSave(issue.id);
-  const [, name, kind] = priorities.find(([key]) => key === issue.priority) ?? priorities[0];
+  const { name, kind } = priorities[issue.priority];
   const value = (
     <>
       <Glyph>
@@ -278,15 +279,15 @@ function PriorityField({ issue, editable }: { issue: Issue; editable: boolean })
           value={value}
           empty={issue.priority === "none"}
           onChange={(key) => void save({ priority: key as IssuePriority })}>
-          {priorities.map(([key, label, glyph]) => (
+          {issuePriorities.map((key) => (
             <PickerItem
               key={key}
               id={key}
-              textValue={label}>
+              textValue={priorities[key].name}>
               <Glyph>
-                <Priority priority={glyph} />
+                <Priority priority={priorities[key].kind} />
               </Glyph>
-              {label}
+              {priorities[key].name}
             </PickerItem>
           ))}
         </Picker>

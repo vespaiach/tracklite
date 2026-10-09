@@ -10,6 +10,7 @@ import { writableProject } from "./projects";
 import { comments, issues, members, mentions, projects } from "./schema";
 import type { Member } from "./sessions";
 import type { CommentEdit, NewComment } from "../schemas/comment";
+import type { ThreadComment } from "../contract";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | Transaction;
@@ -23,7 +24,7 @@ function notAllowed() {
   return new ApiError(403, "You don't have permission to do that.");
 }
 
-async function findComments(executor: Executor, where: SQL) {
+async function findComments(executor: Executor, where: SQL): Promise<ThreadComment[]> {
   const rows = await executor
     .select({
       id: comments.id,
@@ -60,15 +61,17 @@ async function findComments(executor: Executor, where: SQL) {
             ),
           )
           .orderBy(asc(members.username));
-  return rows.map((row) => ({
-    id: row.id,
-    body: row.body,
-    author: memberSummary(row.author),
-    createdAt: row.createdAt.toISOString(),
-    editedAt: row.editedAt?.toISOString() ?? null,
-    version: row.version,
-    mentions: mentioned.filter((mention) => mention.commentId === row.id).map(memberSummary),
-  }));
+  return rows.map(
+    (row): ThreadComment => ({
+      id: row.id,
+      body: row.body,
+      author: memberSummary(row.author),
+      createdAt: row.createdAt.toISOString(),
+      editedAt: row.editedAt?.toISOString() ?? null,
+      version: row.version,
+      mentions: mentioned.filter((mention) => mention.commentId === row.id).map(memberSummary),
+    }),
+  );
 }
 
 async function oneComment(executor: Executor, id: string) {
