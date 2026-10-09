@@ -6,7 +6,7 @@ import { conflict, replaceMentions } from "./descriptions";
 import { memberSummary } from "./members";
 import { notify } from "./notifications";
 import { members, mentions, projectKeys, projects } from "./schema";
-import { type Member, requireAdmin } from "./sessions";
+import { assertAdmin, type Member } from "./sessions";
 import type { NewProject, ProjectChanges } from "../schemas/project";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -38,7 +38,7 @@ async function projectResponse(executor: Executor, project: Project) {
   };
 }
 
-export async function listProjects(archived: boolean) {
+export async function listProjects(_actor: Member, archived: boolean) {
   const rows = await db
     .select({ key: projects.key, name: projects.name, archivedAt: projects.archivedAt })
     .from(projects)
@@ -47,13 +47,14 @@ export async function listProjects(archived: boolean) {
   return rows.map((row) => ({ ...row, archivedAt: row.archivedAt?.toISOString() ?? null }));
 }
 
-export async function getProject(key: string) {
+export async function getProject(_actor: Member, key: string) {
   const [project] = await db.select().from(projects).where(byKey(key));
   if (!project) throw new ApiError(404, "Not found");
   return projectResponse(db, project);
 }
 
-export async function createProject({ name, key }: NewProject) {
+export async function createProject(actor: Member, { name, key }: NewProject) {
+  assertAdmin(actor);
   return db.transaction(async (tx) => {
     const reserved = await tx.insert(projectKeys).values({ key }).onConflictDoNothing().returning();
     if (reserved.length === 0) refuseFields({ key: "Key already used" });
@@ -62,11 +63,11 @@ export async function createProject({ name, key }: NewProject) {
   });
 }
 
-export async function updateProject(member: Member, key: string, changes: ProjectChanges) {
+export async function updateProject(actor: Member, key: string, changes: ProjectChanges) {
   const { name, archived, description, descriptionVersion } = changes;
   if (description !== undefined && descriptionVersion !== undefined)
-    return saveDescription(member, key, description, descriptionVersion);
-  if (name !== undefined || archived !== undefined) requireAdmin(member);
+    return saveDescription(actor, key, description, descriptionVersion);
+  if (name !== undefined || archived !== undefined) assertAdmin(actor);
 
   return db.transaction(async (tx) => {
     const [project] = await tx.select().from(projects).where(byKey(key)).for("update");
@@ -86,7 +87,8 @@ export async function updateProject(member: Member, key: string, changes: Projec
   });
 }
 
-export async function deleteProject(key: string) {
+export async function deleteProject(actor: Member, key: string) {
+  assertAdmin(actor);
   const deleted = await db.delete(projects).where(byKey(key)).returning({ id: projects.id });
   if (deleted.length === 0) throw new ApiError(404, "Not found");
 }

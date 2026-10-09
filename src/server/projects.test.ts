@@ -1,10 +1,17 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { createMember, createProject } from "../test/factories";
+import { createMember, createProject, uniqueProjectKey } from "../test/factories";
 import { ApiError } from "./api-error";
 import { db } from "./db";
-import { updateProject, writableProject } from "./projects";
-import { projects } from "./schema";
+import { createProject as create, deleteProject, updateProject, writableProject } from "./projects";
+import { members, projects } from "./schema";
+
+const forbidden = { status: 403, message: "You don't have permission to do that." };
+
+async function storedProject(id: string) {
+  const [stored] = await db.select().from(projects).where(eq(projects.id, id));
+  return stored;
+}
 
 async function waitForLockWaiters(count: number) {
   for (;;) {
@@ -63,4 +70,66 @@ it("STD-4: a write to a missing project is Not found", async () => {
     status: 404,
     message: "Not found",
   });
+});
+
+it("SEC-006.1: a member deleting project WEB gets 403 and WEB remains", async () => {
+  const member = await createMember();
+  const project = await createProject();
+
+  await expect(deleteProject(member, project.key)).rejects.toMatchObject(forbidden);
+
+  expect(await storedProject(project.id)).toBeDefined();
+});
+
+it("SEC-006.1: a member deleting a missing project gets 403, not 404", async () => {
+  const member = await createMember();
+
+  await expect(deleteProject(member, "NOPE")).rejects.toMatchObject(forbidden);
+});
+
+it("STD-2: a member can't create a project", async () => {
+  const member = await createMember();
+  const key = uniqueProjectKey();
+
+  await expect(create(member, { name: "Website", key })).rejects.toMatchObject(forbidden);
+
+  expect(await db.select().from(projects).where(eq(projects.key, key))).toHaveLength(0);
+});
+
+it("STD-2: a member can't rename a project", async () => {
+  const member = await createMember();
+  const project = await createProject({ name: "Website" });
+
+  await expect(updateProject(member, project.key, { name: "Renamed" })).rejects.toMatchObject(forbidden);
+
+  expect((await storedProject(project.id)).name).toBe("Website");
+});
+
+it("STD-2: a member can't archive a project", async () => {
+  const member = await createMember();
+  const project = await createProject();
+
+  await expect(updateProject(member, project.key, { archived: true })).rejects.toMatchObject(forbidden);
+
+  expect((await storedProject(project.id)).archivedAt).toBeNull();
+});
+
+it("REQ-052.2: Jo, no longer an admin, saving a rename on project settings gets You don't have permission to do that.", async () => {
+  const jo = await createMember({ role: "admin" });
+  const project = await createProject({ name: "Website" });
+  const [demoted] = await db.update(members).set({ role: "member" }).where(eq(members.id, jo.id)).returning();
+
+  await expect(updateProject(demoted, project.key, { name: "Renamed" })).rejects.toMatchObject(forbidden);
+
+  expect((await storedProject(project.id)).name).toBe("Website");
+});
+
+it("REQ-012: a member can still save a description through updateProject", async () => {
+  const member = await createMember();
+  const project = await createProject();
+
+  const saved = await updateProject(member, project.key, { description: "# Goals", descriptionVersion: 0 });
+
+  expect(saved.description).toBe("# Goals");
+  expect((await storedProject(project.id)).description).toBe("# Goals");
 });

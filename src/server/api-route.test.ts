@@ -181,33 +181,32 @@ async function signedInRequest(role: "admin" | "member", body?: unknown) {
     headers: { Origin: appOrigin, Cookie: `session=${token}` },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  return { member, request };
+  return { member, token, request };
 }
 
-it("SEC-006.1: a member's request to an admin-only route gets 403 and the handler never runs", async () => {
-  const handler = vi.fn(ok);
-  const { request } = await signedInRequest("member");
-  const response = await apiRoute("admin", handler)(request);
-  expect(response.status).toBe(403);
-  expect(await response.json()).toEqual({ error: { message: "You don't have permission to do that." } });
-  expect(handler).not.toHaveBeenCalled();
-});
-
-it("SEC-006: an admin's request reaches the admin-only handler with the member", async () => {
-  const handler = vi.fn(ok);
-  const { member, request } = await signedInRequest("admin");
-  const response = await apiRoute("admin", handler)(request);
-  expect(response.status).toBe(204);
-  expect(handler).toHaveBeenCalledWith(request, expect.objectContaining({ id: member.id, role: "admin" }));
-});
-
-it("REQ-052: a role removed after sign-in applies on the next request", async () => {
+it("REQ-052: the handler gets the member's role as stored now, not as at sign-in", async () => {
   const handler = vi.fn(ok);
   const { member, request } = await signedInRequest("admin");
   await db.update(members).set({ role: "member" }).where(eq(members.id, member.id));
-  const response = await apiRoute("admin", handler)(request);
-  expect(response.status).toBe(403);
-  expect(handler).not.toHaveBeenCalled();
+  const response = await apiRoute("member", handler)(request);
+  expect(response.status).toBe(204);
+  expect(handler).toHaveBeenCalledWith(request, expect.objectContaining({ id: member.id, role: "member" }));
+});
+
+it("SEC-007: a signed-in request's log line names the actor by username only", async () => {
+  const { member, token, request } = await signedInRequest("member");
+  await apiRoute("member", ok)(request);
+  const [line] = log.mock.calls.map(([raw]) => raw as string);
+  expect(JSON.parse(line).actor).toBe(member.username);
+  for (const secret of [member.id, member.email, member.fullName, token]) {
+    expect(line).not.toContain(secret);
+  }
+});
+
+it("SEC-007: a signed-out request's 401 log line has no actor", async () => {
+  const response = await apiRoute("member", ok)(new Request(`${appOrigin}/api/projects`));
+  expect(response.status).toBe(401);
+  expect(loggedLines()).toEqual([expect.not.objectContaining({ actor: expect.anything() })]);
 });
 
 const NewThing = v.object({
@@ -324,13 +323,4 @@ it("a route without a schema can still read the body itself", async () => {
     postWith(JSON.stringify({ name: "Website" })),
   );
   expect(await response.json()).toEqual({ name: "Website" });
-});
-
-it("a member's invalid body on an admin-only route gets 422, and a valid one gets 403", async () => {
-  const handler = vi.fn(ok);
-  const invalid = await signedInRequest("member", { name: "" });
-  expect((await apiRoute("admin", NewThing, handler)(invalid.request)).status).toBe(422);
-  const valid = await signedInRequest("member", { name: "Website", key: "WEB" });
-  expect((await apiRoute("admin", NewThing, handler)(valid.request)).status).toBe(403);
-  expect(handler).not.toHaveBeenCalled();
 });

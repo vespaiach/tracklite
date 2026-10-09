@@ -11,30 +11,30 @@ import { members, sessions } from "./schema";
 import type { Member } from "./sessions";
 import { hashToken } from "./tokens";
 
-export async function updateProfile(member: Member, { fullName }: ProfileChanges) {
-  const [updated] = await db.update(members).set({ fullName }).where(eq(members.id, member.id)).returning();
+export async function updateProfile(actor: Member, { fullName }: ProfileChanges) {
+  const [updated] = await db.update(members).set({ fullName }).where(eq(members.id, actor.id)).returning();
   return updated;
 }
 
 export async function changePassword(
-  member: Member,
+  actor: Member,
   sessionToken: string,
   { currentPassword, newPassword }: PasswordChange,
   ip: string,
 ) {
-  const email = normalizeEmail(member.email);
+  const email = normalizeEmail(actor.email);
   if (await signInLimitReached(email, ip)) throw tooManyAttempts();
 
-  if (!(await verifyPassword(member.passwordHash, currentPassword))) {
+  if (!(await verifyPassword(actor.passwordHash, currentPassword))) {
     await recordFailedSignIn(email, ip);
     throw new ApiError(422, "Check the highlighted fields", { currentPassword: "Incorrect password" });
   }
 
   const passwordHash = await hashPassword(newPassword);
   await db.transaction(async (tx) => {
-    await tx.update(members).set({ passwordHash }).where(eq(members.id, member.id));
+    await tx.update(members).set({ passwordHash }).where(eq(members.id, actor.id));
     await tx
       .delete(sessions)
-      .where(and(eq(sessions.memberId, member.id), ne(sessions.tokenHash, hashToken(sessionToken))));
+      .where(and(eq(sessions.memberId, actor.id), ne(sessions.tokenHash, hashToken(sessionToken))));
   });
 }

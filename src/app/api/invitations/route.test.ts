@@ -18,6 +18,7 @@ import {
   signedInAdmin,
   uniqueEmail,
 } from "../../../test/invitations";
+import { POST } from "./route";
 
 beforeEach(() => {
   vi.spyOn(console, "log").mockImplementation(() => {});
@@ -172,4 +173,41 @@ it("STD-3: a malformed email → 422 with a field error", async () => {
     });
   }
   expect(outbox.sent).toEqual([]);
+});
+
+it("STD-3: a member's malformed JSON to invite gets 422 \"Couldn't read the request.\", not 500", async () => {
+  const { cookie } = await signedIn();
+  const email = uniqueEmail();
+  const request = new Request("http://localhost:3000/api/invitations", {
+    method: "POST",
+    headers: { Origin: "http://localhost:3000", "Content-Type": "application/json", Cookie: cookie },
+    body: `{ email: ${email}`,
+  });
+
+  await expectRefused(await POST(request), "Couldn't read the request.");
+  expect(await storedInvitations(email)).toEqual([]);
+  expect(outbox.sent).toEqual([]);
+});
+
+it('STD-3: an invite with no email gets 422 "Required"', async () => {
+  const { cookie } = await signedInAdmin();
+
+  const response = await invite(cookie, undefined);
+
+  expect(response.status).toBe(422);
+  expect(await response.json()).toEqual({
+    error: { message: "Check the highlighted fields", fields: { email: "Required" } },
+  });
+  expect(outbox.sent).toEqual([]);
+});
+
+it("REQ-001: an email with spaces around it and capitals is invited trimmed and lower-cased", async () => {
+  const { cookie } = await signedInAdmin();
+  const email = uniqueEmail();
+
+  const response = await invite(cookie, `  ${email.toUpperCase()} `);
+
+  expect(response.status).toBe(201);
+  expect((await response.json()).email).toBe(email);
+  expect(outbox.sent.map((sent) => sent.to)).toEqual([email]);
 });

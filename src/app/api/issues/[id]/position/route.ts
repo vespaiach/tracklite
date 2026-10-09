@@ -5,7 +5,7 @@ import { moveIssue } from "../../../../../server/issues";
 
 export async function PUT(request: Request, { params }: RouteContext<"/api/issues/[id]/position">) {
   const { id } = await params;
-  return apiRoute("member", IssueMove, async (_memberRequest, _member, move) =>
-    Response.json((await moveIssue(id, move)) satisfies Issue),
+  return apiRoute("member", IssueMove, async (_memberRequest, member, move) =>
+    Response.json((await moveIssue(member, id, move)) satisfies Issue),
   )(request);
 }

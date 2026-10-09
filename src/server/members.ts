@@ -4,7 +4,7 @@ import type { MemberChanges } from "../schemas/member";
 import { ApiError } from "./api-error";
 import { db } from "./db";
 import { members, sessions } from "./schema";
-import type { Member } from "./sessions";
+import { assertAdmin, type Member } from "./sessions";
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -45,12 +45,12 @@ export function profileResponse(member: Member) {
   };
 }
 
-export async function listMembers(viewer: Member) {
+export async function listMembers(actor: Member) {
   const all = await db
     .select()
     .from(members)
     .orderBy(asc(sql`lower(${members.fullName})`), asc(members.username));
-  return all.map(viewer.role === "admin" ? profileResponse : memberSummary);
+  return all.map(actor.role === "admin" ? profileResponse : memberSummary);
 }
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -66,7 +66,8 @@ async function keepLastAdmin(tx: Transaction, target: Member) {
   }
 }
 
-export async function updateMember(username: string, { role, deactivated }: MemberChanges) {
+export async function updateMember(actor: Member, username: string, { role, deactivated }: MemberChanges) {
+  assertAdmin(actor);
   return db.transaction(async (tx) => {
     const [target] = await tx.select().from(members).where(eq(members.username, username.toLowerCase()));
     if (!target) throw new ApiError(404, "Not found");

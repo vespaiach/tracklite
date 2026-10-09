@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { createProject } from "../test/factories";
+import { createMember, createProject } from "../test/factories";
 import { db } from "./db";
 import { createLabel } from "./labels";
 import { labels } from "./schema";
@@ -17,6 +17,7 @@ async function waitForLockWaiters(count: number) {
 }
 
 it("REQ-021.2: two concurrent creates of bug and BUG leave one label", async () => {
+  const member = await createMember();
   const project = await createProject();
   let inserted!: () => void;
   let finishFirst!: () => void;
@@ -32,7 +33,7 @@ it("REQ-021.2: two concurrent creates of bug and BUG leave one label", async () 
   });
   await firstInserted;
 
-  const second = createLabel(project.key, { name: "BUG", color: "blue" });
+  const second = createLabel(member, project.key, { name: "BUG", color: "blue" });
   await waitForLockWaiters(1);
   finishFirst();
   await first;

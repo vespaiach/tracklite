@@ -148,11 +148,7 @@ async function topOfColumn(tx: Transaction, projectId: string, status: IssueStat
   return generateKeyBetween(null, first?.position ?? null);
 }
 
-export async function createIssue(
-  projectKey: string,
-  member: Member,
-  { requestId, title, status }: NewIssue,
-) {
+export async function createIssue(actor: Member, projectKey: string, { requestId, title, status }: NewIssue) {
   return db.transaction(async (tx) => {
     const project = await writableProject(tx, projectKey, "update");
 
@@ -173,7 +169,7 @@ export async function createIssue(
         status,
         priority: "none",
         position: await topOfColumn(tx, project.id, status),
-        createdBy: member.id,
+        createdBy: actor.id,
         requestId,
       })
       .returning({ id: issues.id });
@@ -183,7 +179,7 @@ export async function createIssue(
   });
 }
 
-export async function getIssue(id: string) {
+export async function getIssue(_actor: Member, id: string) {
   const where = byIssueId(id);
   const issue = where ? await findIssue(db, where) : undefined;
   if (!issue) throw new ApiError(404, "Not found");
@@ -294,9 +290,9 @@ async function saveDescription(id: string, member: Member, description: string, 
   });
 }
 
-export async function updateIssue(id: string, member: Member, change: IssueChange) {
+export async function updateIssue(actor: Member, id: string, change: IssueChange) {
   if (change.description !== undefined && change.descriptionVersion !== undefined) {
-    return saveDescription(id, member, change.description, change.descriptionVersion);
+    return saveDescription(id, actor, change.description, change.descriptionVersion);
   }
   const where = byIssueId(id);
   if (!where) throw issueGone();
@@ -313,7 +309,7 @@ export async function updateIssue(id: string, member: Member, change: IssueChang
     if (typeof update.assigneeId === "string") {
       await notify(tx, [update.assigneeId], {
         kind: "assigned",
-        actorId: member.id,
+        actorId: actor.id,
         target: { issueId: issue.id },
       });
     }
@@ -358,7 +354,7 @@ async function positionIn(
   return generateKeyBetween(after?.position ?? null, next?.position ?? null);
 }
 
-export async function moveIssue(id: string, { status, place }: IssueMove) {
+export async function moveIssue(_actor: Member, id: string, { status, place }: IssueMove) {
   const where = byIssueId(id);
   if (!where) throw issueGone();
 
@@ -375,13 +371,13 @@ export async function moveIssue(id: string, { status, place }: IssueMove) {
   });
 }
 
-export async function deleteIssue(id: string, member: Member) {
+export async function deleteIssue(actor: Member, id: string) {
   const where = byIssueId(id);
   if (!where) throw issueGone();
 
   await db.transaction(async (tx) => {
     const issue = await lockedIssue(tx, where);
-    if (issue.createdBy !== member.id && member.role !== "admin") {
+    if (issue.createdBy !== actor.id && actor.role !== "admin") {
       throw new ApiError(403, "You don't have permission to do that.");
     }
     await tx.delete(issues).where(eq(issues.id, issue.id));
@@ -420,7 +416,7 @@ function recentlyClosedOrOpen() {
   );
 }
 
-export async function getBoard(projectKey: string) {
+export async function getBoard(_actor: Member, projectKey: string) {
   const project = await readableProject(projectKey);
 
   const rows = await db
@@ -540,7 +536,7 @@ function listOffset(params: URLSearchParams) {
   return /^\d{1,9}$/.test(offset) ? Number(offset) : 0;
 }
 
-export async function listIssues(projectKey: string, params: URLSearchParams) {
+export async function listIssues(_actor: Member, projectKey: string, params: URLSearchParams) {
   const project = await readableProject(projectKey);
   const statuses = knownValues(params.getAll("status"), issueStatus.enumValues);
   const priorities = knownValues(params.getAll("priority"), issuePriority.enumValues);
@@ -603,7 +599,7 @@ export async function listIssues(projectKey: string, params: URLSearchParams) {
   };
 }
 
-export async function getMyIssues(member: Member) {
+export async function getMyIssues(actor: Member) {
   const rows = await db
     .select({
       issueId: issues.id,
@@ -617,7 +613,7 @@ export async function getMyIssues(member: Member) {
     })
     .from(issues)
     .innerJoin(projects, eq(projects.id, issues.projectId))
-    .where(and(eq(issues.assigneeId, member.id), isNull(projects.archivedAt), recentlyClosedOrOpen()))
+    .where(and(eq(issues.assigneeId, actor.id), isNull(projects.archivedAt), recentlyClosedOrOpen()))
     .orderBy(asc(issues.status), asc(issues.priority), desc(issues.updatedAt), asc(issues.id));
 
   const labelRows = await labelsOf(rows.map((row) => row.issueId));

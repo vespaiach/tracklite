@@ -273,6 +273,48 @@ it("STD-2: a member can't change roles or deactivate", async () => {
   expect(await storedMember(sam.id)).toMatchObject({ role: "member", deactivatedAt: null });
 });
 
+it("STD-3: a member's malformed JSON on a member change gets 422 \"Couldn't read the request.\", not 500", async () => {
+  const { cookie } = await signedIn("member");
+  const { member: sam } = await signedIn("member");
+  const request = new Request(`http://localhost:3000/api/members/${sam.username}`, {
+    method: "PATCH",
+    headers: { Origin: "http://localhost:3000", "Content-Type": "application/json", Cookie: cookie },
+    body: "{ role: admin",
+  });
+
+  const response = await PATCH(request, { params: Promise.resolve({ username: sam.username }) });
+
+  expect(response.status).toBe(422);
+  expect(await response.json()).toEqual({ error: { message: "Couldn't read the request." } });
+  expect(await storedMember(sam.id)).toMatchObject({ role: "member", deactivatedAt: null });
+});
+
+it('STD-3: an admin setting a role other than admin or member gets 422 "Choose admin or member"', async () => {
+  const { cookie } = await signedIn("admin");
+  const { member: sam } = await signedIn("member");
+
+  const response = await patchMember(cookie, sam.username, { role: "owner" });
+
+  expect(response.status).toBe(422);
+  expect(await response.json()).toEqual({
+    error: { message: "Check the highlighted fields", fields: { role: "Choose admin or member" } },
+  });
+  expect((await storedMember(sam.id)).role).toBe("member");
+});
+
+it('STD-3: an admin setting deactivated to something other than true or false gets 422 "Choose true or false"', async () => {
+  const { cookie } = await signedIn("admin");
+  const { member: sam } = await signedIn("member");
+
+  const response = await patchMember(cookie, sam.username, { deactivated: "yes" });
+
+  expect(response.status).toBe(422);
+  expect(await response.json()).toEqual({
+    error: { message: "Check the highlighted fields", fields: { deactivated: "Choose true or false" } },
+  });
+  expect((await storedMember(sam.id)).deactivatedAt).toBeNull();
+});
+
 it("§3.1: the username is matched ignoring capitals", async () => {
   const { cookie } = await signedIn("admin");
   const { member: sam } = await signedIn("member");

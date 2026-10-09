@@ -66,7 +66,7 @@ it("NFR-001: an issue created after seeding gets the next number", async () => {
     .from(issues)
     .where(eq(issues.projectId, project.id));
 
-  const { issue } = await createIssue(project.key, member, {
+  const { issue } = await createIssue(member, project.key, {
     requestId: randomUUID(),
     title: "After seeding",
     status: "backlog",
