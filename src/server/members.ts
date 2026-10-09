@@ -4,6 +4,7 @@ import { ApiError } from "./api-error";
 import { db } from "./db";
 import { members, sessions } from "./schema";
 import { assertAdmin, type Member } from "./sessions";
+import type { MemberChanges } from "../schemas/member";
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -64,22 +65,7 @@ export async function listMembers(actor: Member) {
   return all.map(actor.role === "admin" ? profileResponse : memberSummary);
 }
 
-type Role = Member["role"];
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-function isRole(value: unknown): value is Role {
-  return value === "admin" || value === "member";
-}
-
-function parseMemberChanges(body: Record<string, unknown>) {
-  const { role, deactivated } = body;
-  const fields: Record<string, string> = {};
-  if (role !== undefined && !isRole(role)) fields.role = "Choose admin or member";
-  if (deactivated !== undefined && typeof deactivated !== "boolean")
-    fields.deactivated = "Choose true or false";
-  if (Object.keys(fields).length > 0) throw new ApiError(422, "Check the highlighted fields", fields);
-  return { role: role as Role | undefined, deactivated: deactivated as boolean | undefined };
-}
 
 async function keepLastAdmin(tx: Transaction, target: Member) {
   const activeAdmins = await tx
@@ -92,9 +78,8 @@ async function keepLastAdmin(tx: Transaction, target: Member) {
   }
 }
 
-export async function updateMember(actor: Member, username: string, body: Record<string, unknown>) {
+export async function updateMember(actor: Member, username: string, { role, deactivated }: MemberChanges) {
   assertAdmin(actor);
-  const { role, deactivated } = parseMemberChanges(body);
 
   return db.transaction(async (tx) => {
     const [target] = await tx.select().from(members).where(eq(members.username, username.toLowerCase()));
