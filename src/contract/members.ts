@@ -1,10 +1,14 @@
+export const roles = ["admin", "member"] as const;
+
+export type Role = (typeof roles)[number];
+
 export type Me = {
   username: string;
   fullName: string;
   initials: string;
   deactivated: boolean;
   email: string;
-  role: "admin" | "member";
+  role: Role;
 };
 
 export type MemberSummary = Pick<Me, "username" | "fullName" | "initials" | "deactivated">;

@@ -22,6 +22,7 @@ import {
   SettingsRowActions,
   SettingsSection,
 } from "../../components/ui/track-lite";
+import { labelColors } from "../../contract";
 import {
   type ApiFailure,
   type Label,
@@ -37,8 +38,6 @@ import { useFailureToast } from "../failure";
 import { ProjectGate } from "../ProjectGate";
 import { ProjectHeader } from "../ProjectHeader";
 import { useShowLoading } from "../useShowLoading";
-
-const labelColors: LabelColor[] = ["gray", "red", "orange", "yellow", "green", "blue", "purple", "pink"];
 
 type FieldErrors = { name?: string; color?: string };
 

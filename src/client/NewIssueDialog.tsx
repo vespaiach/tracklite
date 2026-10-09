@@ -103,7 +103,7 @@ export function NewIssueDialog({ project, status, onClose }: NewIssueDialogProps
 }
 
 function StartingStatus({ status }: { status: IssueStatus }) {
-  const [, name, kind] = statuses.find(([key]) => key === status) ?? statuses[0];
+  const { name, kind } = statuses[status];
   return (
     <p className="tl-form-status">
       It starts in <Status status={kind} />

@@ -8,6 +8,8 @@ export type Project = ProjectSummary & {
   mentions: MemberSummary[];
 };
 
-export type LabelColor = "gray" | "red" | "orange" | "yellow" | "green" | "blue" | "purple" | "pink";
+export const labelColors = ["gray", "red", "orange", "yellow", "green", "blue", "purple", "pink"] as const;
+
+export type LabelColor = (typeof labelColors)[number];
 
 export type Label = { id: string; name: string; color: LabelColor; issueCount: number };

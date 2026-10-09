@@ -1,9 +1,13 @@
 import type { MemberSummary } from "./members";
 import type { Label } from "./projects";
 
-export type IssueStatus = "backlog" | "in_progress" | "in_review" | "done" | "canceled";
+export const issueStatuses = ["backlog", "in_progress", "in_review", "done", "canceled"] as const;
 
-export type IssuePriority = "none" | "urgent" | "high" | "medium" | "low";
+export type IssueStatus = (typeof issueStatuses)[number];
+
+export const issuePriorities = ["urgent", "high", "medium", "low", "none"] as const;
+
+export type IssuePriority = (typeof issuePriorities)[number];
 
 export type IssueLabel = Pick<Label, "id" | "name" | "color">;
 

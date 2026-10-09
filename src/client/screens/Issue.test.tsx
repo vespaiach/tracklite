@@ -213,7 +213,7 @@ it("REQ-018.1: setting the priority to Urgent shows Urgent", async () => {
   renderAppAt("/issue/WEB-42");
 
   const listbox = await openPicker("Priority");
-  expect(keysOf(listbox)).toEqual(["none", "urgent", "high", "medium", "low"]);
+  expect(keysOf(listbox)).toEqual(["urgent", "high", "medium", "low", "none"]);
   fireEvent.click(within(listbox).getByRole("option", { name: "Urgent" }));
 
   await waitFor(() =>

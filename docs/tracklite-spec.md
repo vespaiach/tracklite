@@ -1,9 +1,9 @@
 ---
 product: "Tracklite"
-version: "0.24"
+version: "0.25"
 release: "R1"
 status: Ready to build
-updated: "2026-10-07"
+updated: "2026-10-09"
 ---
 
 # Tracklite: Spec
@@ -258,7 +258,7 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
   - REQ-016.5: A member opens `/issue/web-42` → `WEB-42` opens. (Verify: auto)
 - **REQ-017** The system shall offer one fixed set of statuses, in this order: **Backlog, In Progress, In Review, Done, Canceled**. Any member can move an issue to any status at any time.
   - REQ-017.1: `WEB-42` is moved from Backlog straight to Done → allowed. (Verify: auto)
-- **REQ-018** The system shall offer these priorities: **No priority, Urgent, High, Medium, Low**.
+- **REQ-018** The system shall offer these priorities, in this order: **Urgent, High, Medium, Low, No priority**.
   - REQ-018.1: Sam sets `WEB-42` to Urgent → `WEB-42` shows Urgent. (Verify: auto)
 - **REQ-019** An issue shall have no assignee or one active member as its assignee. Anyone else gets the field error "Choose an active member" (STD-3).
   - REQ-019.1: Sam assigns `WEB-42` to Alex → shows Alex. (Verify: auto)
@@ -738,6 +738,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.25 (2026-10-09):** REQ-018 lists the priorities in their sort order, Urgent to No priority, so pickers and sorting agree (REQ-039).
 - **0.24 (2026-10-07):** Section 9: the combined notification email puts a blank line before and after each `---` separator, and ends with `— Tracklite` once.
 - **0.23 (2026-10-07):** API-003 gets numbered examples for bounces, bad signatures, stale timestamps and ignored events (API-003.1 to API-003.6).
 - **0.22 (2026-10-07):** REQ-044 gets the examples the 0.9 changes cite: a mention in a project description (REQ-044.6) and a re-added mention emailing again (REQ-044.7). Section 9 adds the email for a mention in a project description.

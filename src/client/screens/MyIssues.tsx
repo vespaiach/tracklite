@@ -56,7 +56,7 @@ export function MyIssues() {
 }
 
 function IssueGroup({ group }: { group: MyIssueGroup }) {
-  const [, name, kind] = statuses.find(([key]) => key === group.status) ?? statuses[0];
+  const { name, kind } = statuses[group.status];
   return (
     <section aria-label={`${name}, ${group.count} ${group.count === 1 ? "issue" : "issues"}`}>
       <ListGroup
@@ -85,7 +85,7 @@ function IssueGroup({ group }: { group: MyIssueGroup }) {
 }
 
 function IssueRow({ issue }: { issue: MyIssue }) {
-  const [, priorityName, priorityKind] = priorities.find(([key]) => key === issue.priority) ?? priorities[0];
+  const { name: priorityName, kind: priorityKind } = priorities[issue.priority];
   return (
     <tr className="tl-table__row">
       <td>
