@@ -1,6 +1,6 @@
 import "server-only";
 import * as v from "valibot";
-import { issuePriority, issueStatus } from "../server/schema";
+import { issuePriorities, issueStatuses } from "../contract";
 import { maxCharacters, requestId } from "./common";
 import { descriptionText, descriptionVersion } from "./description";
 
@@ -14,12 +14,12 @@ const title = v.pipe(
   v.nonEmpty("Title required"),
   maxCharacters(maxTitleLength, `Too long (max ${maxTitleLength})`),
 );
-const status = v.picklist(issueStatus.enumValues, "Choose a status");
+const status = v.picklist(issueStatuses, "Choose a status");
 
 export const NewIssue = v.object({
   requestId,
   title,
-  status: v.optional(v.fallback(v.picklist(issueStatus.enumValues), "backlog"), "backlog"),
+  status: v.optional(v.fallback(v.picklist(issueStatuses), "backlog"), "backlog"),
 });
 export type NewIssue = v.InferOutput<typeof NewIssue>;
 
@@ -38,7 +38,7 @@ export const IssueChange = v.pipe(
   v.object({
     title: v.optional(title),
     status: v.optional(status),
-    priority: v.optional(v.picklist(issuePriority.enumValues, "Choose a priority")),
+    priority: v.optional(v.picklist(issuePriorities, "Choose a priority")),
     assignee: v.optional(v.nullable(v.pipe(v.string("Choose an active member"), v.toLowerCase()))),
     labelIds: v.optional(
       v.pipe(
