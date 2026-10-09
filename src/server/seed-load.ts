@@ -3,10 +3,9 @@ import { randomUUID } from "node:crypto";
 import { asc, isNull, like } from "drizzle-orm";
 import { generateNKeysBetween } from "fractional-indexing";
 import { db } from "./db";
-import { comments, type issueStatus, issues, members, projectKeys, projects } from "./schema";
+import { issuePriorities, issueStatuses } from "../contract";
+import { comments, issues, members, projectKeys, projects } from "./schema";
 import { seedMembers } from "./seed";
-
-type IssueStatus = (typeof issueStatus.enumValues)[number];
 
 const projectCount = 50;
 const busyProjectIssues = 690;
@@ -15,8 +14,6 @@ const busyColumnCards = 300;
 const commentsPerIssue = 5;
 const chunkSize = 1000;
 
-const statuses: IssueStatus[] = ["backlog", "in_progress", "in_review", "done", "canceled"];
-const priorities = ["urgent", "high", "medium", "low", "none"] as const;
 const verbs = ["Fix", "Add", "Update", "Remove", "Refactor", "Document", "Test", "Speed up"];
 const subjects = [
   "sign-in form",
@@ -43,7 +40,7 @@ function plannedIssues(projectIndex: number) {
     const inBusyColumn = projectIndex === 0 && index < busyColumnCards;
     return {
       number: index + 1,
-      status: inBusyColumn ? "backlog" : statuses[index % statuses.length],
+      status: inBusyColumn ? "backlog" : issueStatuses[index % issueStatuses.length],
       inBusyColumn,
     };
   });
@@ -77,7 +74,7 @@ export async function seedLoadData() {
         .returning({ id: projects.id });
 
       const positions = new Map(
-        statuses.map((status) => {
+        issueStatuses.map((status) => {
           const cards = planned.filter((issue) => issue.status === status).length;
           return [status, generateNKeysBetween(null, null, cards)];
         }),
@@ -88,7 +85,7 @@ export async function seedLoadData() {
         title: `${verbs[number % verbs.length]} ${subjects[number % subjects.length]} ${number}`,
         description: `Load test issue ${key}-${number}.`,
         status,
-        priority: priorities[number % priorities.length],
+        priority: issuePriorities[number % issuePriorities.length],
         assigneeId: inBusyColumn ? busiest.id : number % 4 === 0 ? null : others[number % others.length].id,
         position: positions.get(status)?.shift() ?? "",
         createdBy: people[number % people.length].id,
