@@ -112,7 +112,7 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 - **Return after sign-in (SEC-009).** `next` is used only if it starts with `/` but not `//` or `/\`; anything else goes to `/my-issues`. So `?next=https://evil.example` can't send anyone off-site.
 - Any `401` later, such as an expired session or a deactivated member mid-edit (REQ-007.4), does the same redirect from the shared `baseQuery`.
 
-**Redux Toolkit.** One store, created once in `ClientApp`.
+**Redux Toolkit.** One store, created once in `ClientApp` and provided through `react-redux`.
 
 - **RTK Query** (`createApi`, one `api` slice) holds all server data. The `baseQuery`:
   - wraps `fetch`, sends JSON and parses `{ error: { message, fields? } }`;
@@ -141,7 +141,7 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 
 ## 2. Schema
 
-PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). The schema is `src/server/schema.ts`; `drizzle-kit generate` writes migrations to `migrations/`. Every table has `id uuid primary key default gen_random_uuid()` unless stated, and every timestamp is `timestamptz` in UTC (DATA-003). "FK → x, cascade" means `on delete cascade`.
+PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). The schema is `src/server/schema.ts`; `drizzle-kit generate` writes migrations to `migrations/`. This section describes the schema as it stands after the last one; `0001` and `0002` added `description_edited_by` to projects and issues, and `0003` gave `issues.position` its `"C"` collation. Every table has `id uuid primary key default gen_random_uuid()` unless stated, and every timestamp is `timestamptz` in UTC (DATA-003). "FK → x, cascade" means `on delete cascade`.
 
 ### 2.1 Enums
 
@@ -212,7 +212,7 @@ Indexes:
 - `(project_id, status, position)` for the board.
 - `(project_id, updated_at desc)` for the list's default sort.
 - `(assignee_id, status)` for My issues.
-- GIN `gin_trgm_ops` on `title` and on `description` for search.
+- GIN `gin_trgm_ops` on `title` and on `description` for search. They need the `pg_trgm` extension, which drizzle-kit can't declare, so the first migration runs `create extension if not exists pg_trgm` (added by hand).
 
 **`issue_labels`**: `issue_id` (FK → issues, cascade), `label_id` (FK → labels, cascade), primary key `(issue_id, label_id)`.
 - A label change sends the issue's full set (`labelIds`), which replaces the stored rows. The 10-label maximum (REQ-020.3) is checked by the body schema.
@@ -234,9 +234,10 @@ Indexes:
 
 Two tables. One holds the notifications; the other holds the emails they're combined into (REQ-045).
 
-**`notification_emails`**: `recipient_id` (FK → members), `target_type` (`issue` | `project`), `target_id uuid` (**no FK**), `send_after`, `state email_state`, `attempts int default 0`, `next_attempt_at`, `provider_message_id`, `created_at`, `sent_at`.
+**`notification_emails`**: `recipient_id` (FK → members), `target_type` (text, with a check that it's `issue` or `project`), `target_id uuid` (**no FK**), `send_after`, `state email_state`, `attempts int default 0`, `next_attempt_at`, `provider_message_id`, `created_at`, `sent_at`.
 - The worker picks up rows with `state = 'pending' and coalesce(next_attempt_at, send_after) <= now()`.
 - The webhook finds a bounced email by its `provider_message_id` (API-003).
+- No index covers `provider_message_id` (here or on `invitations`), `notifications.email_id` or `sessions.member_id`. At one team's volume these lookups scan small tables; add an index if one shows up in NFR-003 timings.
 
 **`notifications`**: `email_id` (FK → notification_emails, cascade), `kind`, `actor_id` (FK → members), `comment_id uuid` (no FK, null), `dropped boolean default false`, `created_at`, plus a **snapshot** of what the email needs: issue ID text, issue title, project name and key, link path, and a plain-text excerpt of up to 500 characters.
 
@@ -267,10 +268,11 @@ Settles DEC-002. Request and response types live in the code; this section fixes
 
 - **Format.** JSON in and out. Times are ISO 8601 strings in UTC (DATA-003).
 - **Addressing.** Issues by ID (`WEB-42`), projects by key (`WEB`), and members by username. All are matched ignoring capitals (REQ-016.5). Labels, comments and invitations use their `uuid`.
+- **Unknown paths.** A catch-all, `src/app/api/[...path]/route.ts`, answers every method on an unknown `/api` path with `404` "Not found". It needs a session, so a signed-out caller gets `401` and learns nothing about which paths exist.
 - **No tokens in paths.** Invitation and reset tokens always travel in the request body. The request log records only the path, never the query string, so the `?token=` on the reset *page* (API-004) isn't logged either (SEC-007).
 - **Field-by-field saves.** The issue page saves each field as soon as it changes, with a `PATCH` that holds only that field. That's what makes STD-8's "last save wins" work per field. It also means one failed field leaves the others saved (REQ-020.4).
-- **Creating twice.** Creates of issues and comments carry `requestId`. A repeat returns the first result with `200` instead of `201` (STD-5).
-- **Small member data.** A member appears in responses as `{ username, fullName, initials, deactivated }`. Emails appear only on `/api/me` and the admin member list. Password hashes never appear (SEC-008.2).
+- **Creating twice.** Creates of issues and comments carry `requestId`. A repeat returns the first result with `200` instead of `201` (STD-5). `request_id` is unique across the whole table, so a repeat is found whatever project or issue it was sent to.
+- **Small member data.** A member appears in responses as `{ username, fullName, initials, deactivated }`. Emails appear only in a full profile: `/api/me`, the admin member list, an admin's `PATCH /api/members/{username}`, and the new member's own `POST /api/members`. Password hashes never appear (SEC-008.2).
 
 ### 3.2 Errors
 
@@ -280,13 +282,15 @@ Every error body is `{ error: { message, fields? } }`, and the browser shows `me
 |---|---|---|
 | `401` | No valid session: signed out, expired or deactivated (STD-1, REQ-007.4) | Redirect to `/sign-in?next=…` |
 | `403` | Not allowed (STD-2), a cross-site write (SEC-004), or a write to an archived project, with the message "This project is archived" (REQ-013.4) | Toast (STD-9) |
-| `404` | The target doesn't exist. The message names it: "Not found", "This issue was deleted", "This comment was deleted", "That label no longer exists" | Not-found page on load (STD-4); toast on save (STD-9) |
+| `404` | The target doesn't exist. The message names it: "Not found", "This issue was deleted", "This comment was deleted", "That label no longer exists". Reading a missing issue or its comments gets "Not found"; a write to one gets "This issue was deleted" | Not-found page on load (STD-4); toast on save (STD-9) |
 | `409` | Stale save of a description or comment: "This was changed by Alex Kim. Copy your text and reload." (STD-8) | Message in the editor; text kept |
 | `410` | An invitation or reset link that's expired, used or revoked (REQ-002.2, REQ-002.4, REQ-050.4) | The page's expired state |
 | `422` | Invalid input. With `fields`: one error per field (STD-3). Without `fields`: a form-level refusal, such as "Already a member", "There must be at least one admin." or "Incorrect email or password." | Next to the fields, or beside the form |
 | `429` | A SEC-001 limit: "Too many attempts. Try again later." | Beside the form |
 | `503` | An invitation or reset email couldn't be sent (STD-6) | Toast |
 | `500` | Anything else | Toast "Couldn't save. Try again." or the "Couldn't load this." state (DEC-006) |
+
+A rule that needs the database also answers with a field error: "Key already used" (`key`), "Label already exists" (`name`), "Username taken" (`username`) and "Incorrect password" (`currentPassword`).
 
 Changing a field that can't be changed (username, email, project key) gets `422` with a field error. The stored value stays as it was (REQ-003.3, REQ-010.1).
 
@@ -306,19 +310,19 @@ A body schema failure gets `422` with "Check the highlighted fields" and the fir
 | `POST /api/password-reset-lookups` | `{ token }` → `204`, or `410` "This link has expired". Doesn't use up the link | Anyone | REQ-050.5, REQ-050.9 |
 | `POST /api/password-resets` | `{ token, password }` → `204`. Ends all the member's sessions, then sets a new cookie | Anyone | REQ-050 |
 | `POST /api/invitation-lookups` | `{ token }` → `{ email }`, or `410` with the same messages as accepting | Anyone | REQ-002 |
-| `POST /api/members` | `{ token, fullName, username, password }` → `201`, sets the cookie (accepting an invitation) | Anyone | REQ-002, REQ-003 |
+| `POST /api/members` | `{ token, fullName, username, password }` → `201` and the new member's profile, sets the cookie (accepting an invitation) | Anyone | REQ-002, REQ-003 |
 | `GET /api/me` | → profile, including email and role | Member | REQ-003.3 |
 | `PATCH /api/me` | `{ fullName }` | Member | REQ-003 |
-| `PUT /api/me/password` | `{ currentPassword, newPassword }` → `204`. Ends the member's other sessions | Member | REQ-049 |
+| `PUT /api/me/password` | `{ currentPassword, newPassword }` → `204`. Ends the member's other sessions. A wrong current password gets the field error "Incorrect password" and counts toward the sign-in limit (`429`, 4.5) | Member | REQ-049, SEC-001 |
 
 **Members and invitations**
 
 | Method and path | Body → result | Who | Spec |
 |---|---|---|---|
 | `GET /api/members` | → all members, active and deactivated. Used for the assignee picker, the @mention suggestions and the members page. With about 15 people, the browser filters the list itself. | Member (emails only for admins) | DATA-001, REQ-037 |
-| `PATCH /api/members/{username}` | `{ role?, deactivated? }` | Admin | REQ-007, REQ-008, REQ-052 |
+| `PATCH /api/members/{username}` | `{ role?, deactivated? }` → the member's profile, including email and role | Admin | REQ-007, REQ-008, REQ-052 |
 | `GET /api/invitations` | → invitations that are Pending, Bounced or Expired | Admin | REQ-001, REQ-051 |
-| `POST /api/invitations` | `{ email }` → `201`. If an open invitation for that email exists, this works as a resend | Admin | REQ-001 |
+| `POST /api/invitations` | `{ email }` → `201`. If an open invitation for that email exists, this works as a resend. A deactivated member's email gets `422` "This person is deactivated. Reactivate them instead." | Admin | REQ-001 |
 | `POST /api/invitations/{id}/resend` | → `200`, new link | Admin | REQ-001.3 |
 | `DELETE /api/invitations/{id}` | → `204`, revoked | Admin | REQ-001.4 |
 
@@ -342,7 +346,7 @@ A body schema failure gets `422` with "Check the highlighted fields" and the fir
 |---|---|---|---|
 | `GET /api/projects/{KEY}/board` | → 5 columns in order, each `{ status, count, cards }`, cards sorted by `(position, id)`. A card is `{ id, title, priority, assignee, labels }`: `assignee` is a member or `null`, and `labels` holds all of the issue's labels as `{ id, name, color }`, sorted by name ignoring capitals (the card trims them to 3 and "+N"). Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-024, REQ-025, REQ-028 |
 | `GET /api/projects/{KEY}/issues` | Query: `status` and `priority` (enum values), `assignee` (username, or `-` for Unassigned), `label` (label name, ignoring capitals), each repeatable; `q`; `sort` (`id`, `status`, `priority`, `updated`; default `updated`); `dir` (`asc`, `desc`; default `desc` for `updated`, `asc` otherwise); `offset`. Ties sort most recently updated first. Unknown values are ignored → `{ issues, hasMore, deactivatedAssignees }`: up to 100 rows, each `{ id, title, status, priority, assignee, labels, updatedAt }` with labels as on the board; `deactivatedAssignees` lists the deactivated members still assigned to an issue in the project, for the assignee filter, whatever the filters | Member | REQ-036…040 |
-| `POST /api/projects/{KEY}/issues` | `{ requestId, title, status? }` → `201`. `status` is used by the column **+** buttons | Member | REQ-016, REQ-029 |
+| `POST /api/projects/{KEY}/issues` | `{ requestId, title, status? }` → `201`. `status` is used by the column **+** buttons; a missing or unknown value becomes `backlog` | Member | REQ-016, REQ-029 |
 | `GET /api/issues/{ID}` | → the issue with its labels, assignee, `createdBy`, `createdAt`, `updatedAt`, `descriptionVersion`, mentions and `archived` | Member | REQ-016 |
 | `PATCH /api/issues/{ID}` | One of `{ title }`, `{ status }`, `{ priority }`, `{ assignee }` (username or `null`), `{ labelIds }`, or `{ description, descriptionVersion }` | Member | REQ-016…022, REQ-027.4 |
 | `PUT /api/issues/{ID}/position` | `{ status, place: "top" \| "bottom" \| { after: "WEB-5" } }` | Member | REQ-026, REQ-027, REQ-030 |
@@ -457,7 +461,7 @@ If the request arrives with a valid session, it's refused with `403` "You're sig
 
 One module, `src/lib/markdown/`, used for both **rendering** in the browser and **finding mentions** on the server. Because both use the same parser, `@sam` inside code is skipped the same way in both places (DATA-001.4).
 
-- **Parser:** `react-markdown` with `remark-gfm` (checklists, tables, strikethrough). `rehype-raw` is never used.
+- **Parser:** `remark-gfm` (checklists, tables, strikethrough) on `remark-parse`. `parse.ts` exports the remark plugins; the browser renders with `react-markdown` using them, and the server runs the same plugins through `unified` and takes plain text with `mdast-util-to-string`. `rehype-raw` is never used.
 - **Raw HTML.** A small remark plugin turns every `html` node into a `text` node. `<script>` and `<img onerror>` then show as literal text (REQ-012.3, SEC-002.1), rather than depending on a library default.
 - **Links.** A `urlTransform` allows only `http:`, `https:` and `mailto:`. A link with any other scheme renders as its plain text, not an `<a>` (SEC-002.2). Allowed links get `target="_blank" rel="noopener noreferrer"`.
 - **Mentions.** A remark plugin walks text nodes outside `code` and `inlineCode` and matches `(?<![A-Za-z0-9._%+@-])@([a-z0-9-]{2,20})(?![a-z0-9-])`. The look-behind skips email addresses and `foo@sam`; the look-ahead stops at punctuation, so `(@sam)` and `@sam, thanks` both match (DATA-001.5, DATA-001.6). Mentions are found in issue descriptions, project descriptions and comments.
@@ -559,7 +563,7 @@ The wording of every email is in the spec (§9, "Email content"). That's where t
 
 ## 6. Screens
 
-Behaviour and copy come from the spec; this section only adds the routes, layout and pages the spec doesn't describe. All components come from the Track Lite design system (`src/components/ui/track-lite/`).
+Behaviour and copy come from the spec; this section only adds the routes, layout and pages the spec doesn't describe. All components come from the Track Lite design system (`src/components/ui/track-lite/`). Complex widgets use React Aria Components; the kit's `Dialog` also takes `FocusScope` from the lower-level `react-aria` hooks package.
 
 ### 6.1 Routes
 
