@@ -255,69 +255,69 @@ A body schema failure gets `422` with "Check the highlighted fields" and the fir
 
 "Member" means any signed-in active member. Every write to something inside an archived project (its description, issues, comments, labels) gets `403` "This project is archived". Admins can still unarchive or delete an archived project; renaming it gets the same `403`.
 
+Request bodies are the Valibot schemas in `src/schemas/`, and response types are in `src/client/api.ts`, which every handler's return value `satisfies`. The tables give only what the types can't say.
+
 **Sign-in and account** (no session needed unless noted)
 
-| Method and path | Body → result | Who | Spec |
+| Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `POST /api/sessions` | `{ email, password }` → `204`, sets the cookie | Anyone | REQ-047, SEC-001 |
-| `DELETE /api/sessions/current` | → `204`, with or without a session | Anyone | REQ-006 |
-| `POST /api/password-reset-links` | `{ email }` → `204` whether or not the email belongs to a member | Anyone | REQ-050, SEC-001 |
-| `POST /api/password-reset-lookups` | `{ token }` → `204`, or `410` "This link has expired". Doesn't use up the link | Anyone | REQ-050.5, REQ-050.9 |
-| `POST /api/password-resets` | `{ token, password }` → `204`. Ends all the member's sessions, then sets a new cookie | Anyone | REQ-050 |
-| `POST /api/invitation-lookups` | `{ token }` → `{ email }`, or `410` with the same messages as accepting | Anyone | REQ-002 |
-| `POST /api/members` | `{ token, fullName, username, password }` → `201` and the new member's profile, sets the cookie (accepting an invitation) | Anyone | REQ-002, REQ-003 |
-| `GET /api/me` | → profile, including email and role | Member | REQ-003.3 |
-| `PATCH /api/me` | `{ fullName }` | Member | REQ-003 |
-| `PUT /api/me/password` | `{ currentPassword, newPassword }` → `204`. Ends the member's other sessions. A wrong current password gets the field error "Incorrect password" and counts toward the sign-in limit (`429`, 4.5) | Member | REQ-049, SEC-001 |
+| `POST /api/sessions` | `204`, sets the cookie | Anyone | REQ-047, SEC-001 |
+| `DELETE /api/sessions/current` | `204`, with or without a session | Anyone | REQ-006 |
+| `POST /api/password-reset-links` | `204` whether or not the email belongs to a member | Anyone | REQ-050, SEC-001 |
+| `POST /api/password-reset-lookups` | `204` or `410`; doesn't use up the link | Anyone | REQ-050.5, REQ-050.9 |
+| `POST /api/password-resets` | `204`; ends all the member's sessions, then sets a new cookie | Anyone | REQ-050 |
+| `POST /api/invitation-lookups` | The invited email, or `410` as for accepting | Anyone | REQ-002 |
+| `POST /api/members` | Accepts an invitation: `201` and the new member's profile, sets the cookie | Anyone | REQ-002, REQ-003 |
+| `GET /api/me` | The profile, including email and role | Member | REQ-003.3 |
+| `PATCH /api/me` | Full name only | Member | REQ-003 |
+| `PUT /api/me/password` | `204`; ends the member's other sessions. A wrong current password counts toward the sign-in limit (4.5) | Member | REQ-049, SEC-001 |
 
 **Members and invitations**
 
-| Method and path | Body → result | Who | Spec |
+| Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/members` | → all members, active and deactivated. Used for the assignee picker, the @mention suggestions and the members page. With about 15 people, the browser filters the list itself. | Member (emails only for admins) | DATA-001, REQ-037 |
-| `PATCH /api/members/{username}` | `{ role?, deactivated? }` → the member's profile, including email and role | Admin | REQ-007, REQ-008, REQ-052 |
-| `GET /api/invitations` | → invitations that are Pending, Bounced or Expired | Admin | REQ-001, REQ-051 |
-| `POST /api/invitations` | `{ email }` → `201`. If an open invitation for that email exists, this works as a resend. A deactivated member's email gets `422` "This person is deactivated. Reactivate them instead." | Admin | REQ-001 |
-| `POST /api/invitations/{id}/resend` | → `200`, new link | Admin | REQ-001.3 |
-| `DELETE /api/invitations/{id}` | → `204`, revoked | Admin | REQ-001.4 |
+| `GET /api/members` | All members, active and deactivated, for the assignee picker, the @mention suggestions and the members page; with about 15 people the browser filters the list itself | Member (emails only for admins) | DATA-001, REQ-037 |
+| `PATCH /api/members/{username}` | Role or deactivated; returns the full profile | Admin | REQ-007, REQ-008, REQ-052 |
+| `GET /api/invitations` | Pending, Bounced and Expired invitations | Admin | REQ-001, REQ-051 |
+| `POST /api/invitations` | `201`; works as a resend if the email has an open invitation | Admin | REQ-001 |
+| `POST /api/invitations/{id}/resend` | A new link | Admin | REQ-001.3 |
+| `DELETE /api/invitations/{id}` | Revokes | Admin | REQ-001.4 |
 
 **Projects and labels**
 
-| Method and path | Body → result | Who | Spec |
+| Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/projects?archived=false\|true` | → sidebar list, or the Archived list | Member | REQ-013, REQ-015 |
-| `POST /api/projects` | `{ name, key }` → `201` | Admin | REQ-009 |
-| `GET /api/projects/{KEY}` | → name, key, description, `descriptionVersion`, mentions, `archivedAt` | Member | REQ-046 |
-| `PATCH /api/projects/{KEY}` | `{ name?, archived? }` (Admin), or `{ description, descriptionVersion }` (Member) | Per field | REQ-011, REQ-012, REQ-013 |
-| `DELETE /api/projects/{KEY}` | → `204`. The typed-key confirmation is checked in the browser | Admin | REQ-014 |
-| `GET /api/projects/{KEY}/labels` | → labels sorted by name ignoring capitals, each `{ id, name, color, issueCount }` | Member | REQ-021, REQ-021.5 |
-| `POST /api/projects/{KEY}/labels` | `{ name, color }` → `201`, the label | Member | REQ-020.2, REQ-021 |
-| `PATCH /api/labels/{id}` | `{ name?, color? }` → the label. A missing label gets `404` "That label no longer exists" | Member | REQ-021 |
-| `DELETE /api/labels/{id}` | → `204` | Member | REQ-021.3 |
+| `GET /api/projects?archived=false\|true` | The sidebar list, or the Archived list | Member | REQ-013, REQ-015 |
+| `POST /api/projects` | `201` | Admin | REQ-009 |
+| `GET /api/projects/{KEY}` | Includes the description's version and mentions | Member | REQ-046 |
+| `PATCH /api/projects/{KEY}` | Name or archived (Admin), or a description save (Member) | Per field | REQ-011, REQ-012, REQ-013 |
+| `DELETE /api/projects/{KEY}` | The typed-key confirmation is checked in the browser | Admin | REQ-014 |
+| `GET /api/projects/{KEY}/labels` | Sorted by name ignoring capitals, each with its issue count | Member | REQ-021, REQ-021.5 |
+| `POST /api/projects/{KEY}/labels` | `201` | Member | REQ-020.2, REQ-021 |
+| `PATCH /api/labels/{id}` | Name or colour | Member | REQ-021 |
+| `DELETE /api/labels/{id}` | | Member | REQ-021.3 |
 
 **Issues and views**
 
-| Method and path | Body → result | Who | Spec |
+| Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/projects/{KEY}/board` | → 5 columns in order, each `{ status, count, cards }`, cards sorted by `(position, id)`. A card is `{ id, title, priority, assignee, labels }`: `assignee` is a member or `null`, and `labels` holds all of the issue's labels as `{ id, name, color }`, sorted by name ignoring capitals (the card trims them to 3 and "+N"). Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-024, REQ-025, REQ-028 |
-| `GET /api/projects/{KEY}/issues` | Query: `status` and `priority` (enum values), `assignee` (username, or `-` for Unassigned), `label` (label name, ignoring capitals), each repeatable; `q`; `sort` (`id`, `status`, `priority`, `updated`; default `updated`); `dir` (`asc`, `desc`; default `desc` for `updated`, `asc` otherwise); `offset`. Ties sort most recently updated first. Unknown values are ignored → `{ issues, hasMore, deactivatedAssignees }`: up to 100 rows, each `{ id, title, status, priority, assignee, labels, updatedAt }` with labels as on the board; `deactivatedAssignees` lists the deactivated members still assigned to an issue in the project, for the assignee filter, whatever the filters | Member | REQ-036…040 |
-| `POST /api/projects/{KEY}/issues` | `{ requestId, title, status? }` → `201`. `status` is used by the column **+** buttons; a missing or unknown value becomes `backlog` | Member | REQ-016, REQ-029 |
-| `GET /api/issues/{ID}` | → the issue with its labels, assignee, `createdBy`, `createdAt`, `updatedAt`, `descriptionVersion`, mentions and `archived` | Member | REQ-016 |
-| `PATCH /api/issues/{ID}` | One of `{ title }`, `{ status }`, `{ priority }`, `{ assignee }` (username or `null`), `{ labelIds }`, or `{ description, descriptionVersion }` | Member | REQ-016…022, REQ-027.4 |
-| `PUT /api/issues/{ID}/position` | `{ status, place: "top" \| "bottom" \| { after: "WEB-5" } }` | Member | REQ-026, REQ-027, REQ-030 |
-| `DELETE /api/issues/{ID}` | → `204` | Creator or Admin | REQ-023 |
-| `GET /api/my-issues` | → the member's issues in active projects, as groups `{ status, count, issues }` in status order with empty groups left out (so nothing assigned is `[]`). A row is `{ id, title, projectName, priority, labels, updatedAt }` with labels as on the board, sorted by priority from Urgent down, then most recently updated. Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-041, REQ-042 |
+| `GET /api/projects/{KEY}/board` | 5 columns in status order, cards sorted by `(position, id)`. Each card carries all its labels, sorted by name ignoring capitals; the card trims them to 3 and "+N". Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-024, REQ-025, REQ-028 |
+| `GET /api/projects/{KEY}/issues` | Filters `status`, `priority`, `assignee` (`-` for Unassigned) and `label` (name, ignoring capitals), each repeatable; `q`; `sort` (default `updated`) and `dir` (default `desc` for `updated`, `asc` otherwise); `offset`. Ties sort most recently updated first, and unknown values are ignored. Up to 100 rows, plus the deactivated members still assigned in the project, for the assignee filter | Member | REQ-036…040 |
+| `POST /api/projects/{KEY}/issues` | `201`. `status` is used by the column **+** buttons; a missing or unknown value becomes `backlog` | Member | REQ-016, REQ-029 |
+| `GET /api/issues/{ID}` | Includes the description's version and mentions | Member | REQ-016 |
+| `PATCH /api/issues/{ID}` | One field per request (3.1): title, status, priority, assignee, the full label set, or a description save | Member | REQ-016…022, REQ-027.4 |
+| `PUT /api/issues/{ID}/position` | A status and a place: top, bottom, or after a named card (2.4) | Member | REQ-026, REQ-027, REQ-030 |
+| `DELETE /api/issues/{ID}` | | Creator or Admin | REQ-023 |
+| `GET /api/my-issues` | The member's issues in active projects, grouped by status in order with empty groups left out, sorted by priority from Urgent down, then most recently updated. Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-041, REQ-042 |
 
 **Comments**
 
-| Method and path | Body → result | Who | Spec |
+| Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/issues/{ID}/comments`, `GET /api/projects/{KEY}/comments` | → every comment, oldest first, each with its mentions | Member | REQ-032 |
-| `POST /api/issues/{ID}/comments`, `POST /api/projects/{KEY}/comments` | `{ requestId, body }` → `201` and the comment; a repeated `requestId` → `200` and the original (STD-5) | Member | REQ-031 |
-| `PATCH /api/comments/{id}` | `{ body, version }` → the comment; a stale `version` → `409` (STD-8); a deleted comment → `404` "This comment was deleted" | Author | REQ-033 |
-| `DELETE /api/comments/{id}` | → `204` | Author or Admin | REQ-034 |
-
-A comment is `{ id, body, author, createdAt, editedAt, version, mentions }`: `author` is a member as in 3.1, `editedAt` is `null` until the first edit, and `mentions` lists the members it mentions. The body is stored as sent; it must have something other than spaces ("Comment required") and at most 10,000 characters ("Too long (max 10,000)").
+| `GET /api/issues/{ID}/comments`, `GET /api/projects/{KEY}/comments` | Oldest first, each with its mentions | Member | REQ-032 |
+| `POST /api/issues/{ID}/comments`, `POST /api/projects/{KEY}/comments` | `201`; a repeated `requestId` gets `200` and the original (STD-5) | Member | REQ-031 |
+| `PATCH /api/comments/{id}` | A stale version gets `409` (STD-8) | Author | REQ-033 |
+| `DELETE /api/comments/{id}` | | Author or Admin | REQ-034 |
 
 **Outside `/api`**
 
