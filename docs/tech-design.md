@@ -393,22 +393,12 @@ Anything else gets `403`. `SameSite=Lax` is a second layer of protection. Togeth
 
 ### 4.6 Invitation and reset links
 
-**Accepting an invitation** (`POST /api/members`). The body schema has already checked the profile and password (`422`, D-42), so a malformed form is refused before the link is looked at. A token that isn't a string is treated as an unknown link. Then, in one transaction:
-1. Lock the invitation found by hash (`for update`).
-2. Answer `410` with the right message if needed:
-   - revoked → "This invitation is no longer valid." (REQ-002.4);
-   - expired, already accepted, or unknown (including a link replaced by a resend) → "This invitation has expired. Ask an admin for a new one." (REQ-002.2).
-3. Refuse a taken username (`422`, REQ-003.2).
-4. Insert the member, set `accepted_at`, create a session.
+Accepting an invitation (`POST /api/members`) and resetting a password (`POST /api/password-resets`) each run in one transaction that **locks the link's row** (`for update`) before checking it, so two submits of the same link can't both succeed. The body schema has already checked the form (D-42), so a malformed form is refused before the link is looked at.
+- **Which `410`.** A revoked invitation gets REQ-002.4's message; expired, accepted or unknown (including a link replaced by a resend) gets REQ-002.2's. A reset link that's used, expired or unknown, or whose member is deactivated, gets "This link has expired".
+- **A reset ends every session.** It sets `used_at` on **all** the member's unused tokens (REQ-050.6), deletes the member's sessions and creates a new one.
+- **Signed in.** Accepting with a valid session gets `403` "You're signed in as {name}. Sign out to accept this invitation." The page shows that state before the form appears (REQ-002.3); the API check only stops a bypass. The reset page shows its own sign-out prompt and never looks at the token (REQ-050.8).
 
-If the request arrives with a valid session, it's refused with `403` "You're signed in as {name}. Sign out to accept this invitation." The page shows that state before the form appears (REQ-002.3). This check just stops a bypass through the API.
-
-**Resetting a password** (`POST /api/password-resets`). The body schema has already checked the new password (`422`, D-42). Then, in one transaction:
-1. Lock the token row.
-2. Answer `410` "This link has expired" if it's used, expired, unknown, or the member is deactivated.
-3. Set the hash, set `used_at` on **all** the member's unused tokens (REQ-050.6), delete the member's sessions, and create a new one.
-
-**Opening a link.** The invitation page calls `POST /api/invitation-lookups` with the token in the body as it opens, so it can show "expired" straight away (REQ-002.2) and greet the person by email. The reset page checks its token with `POST /api/password-reset-lookups` the same way. Neither lookup uses up the link. A usable link shows the form; anything else shows "This link has expired" (REQ-050.9). Because the check never uses the link up, a mail scanner opening it changes nothing (REQ-050.5). If a valid session exists, the page shows "You're signed in as {name}. Sign out to reset a password." and never looks at the token (REQ-050.8).
+**Opening a link.** The invitation page calls `POST /api/invitation-lookups` with the token in the body as it opens, so it can show "expired" straight away (REQ-002.2) and greet the person by email. The reset page checks its token with `POST /api/password-reset-lookups` the same way, and shows the form only for a usable link (REQ-050.9). Neither lookup uses up the link, so a mail scanner opening it changes nothing (REQ-050.5).
 
 ### 4.7 Markdown (SEC-002, DATA-001)
 
