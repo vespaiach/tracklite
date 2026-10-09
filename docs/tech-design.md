@@ -141,105 +141,68 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 
 ## 2. Schema
 
-PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). The schema is `src/server/schema.ts`; `drizzle-kit generate` writes migrations to `migrations/`. This section describes the schema as it stands after the last one; `0001` and `0002` added `description_edited_by` to projects and issues, and `0003` gave `issues.position` its `"C"` collation. Every table has `id uuid primary key default gen_random_uuid()` unless stated, and every timestamp is `timestamptz` in UTC (DATA-003). "FK → x, cascade" means `on delete cascade`.
+PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). Tables, columns, constraints and indexes are in `src/server/schema.ts`; `drizzle-kit generate` writes migrations to `migrations/`. This section records only why the schema is shaped as it is. Every table has a `uuid` id unless stated, and every timestamp is `timestamptz` in UTC (DATA-003).
 
 ### 2.1 Enums
 
-| Enum | Values, in declared order | Why the order matters |
-|---|---|---|
-| `role` | `admin`, `member` | — |
-| `issue_status` | `backlog`, `in_progress`, `in_review`, `done`, `canceled` | Postgres sorts enums by declared order, so `ORDER BY status` gives the REQ-017 order for free (REQ-039). |
-| `issue_priority` | `urgent`, `high`, `medium`, `low`, `none` | `ORDER BY priority` gives Urgent first, No priority last (REQ-039, REQ-042). |
-| `label_color` | 8 values | Each maps to Track Lite colour tokens in section 6.6. |
-| `notification_kind` | `assigned`, `mentioned` | — |
-| `email_state` | `pending`, `sent`, `dropped`, `failed`, `bounced` | — |
+Postgres sorts an enum by its declared order, so the order is the sort order. `issue_status` is declared `backlog`, `in_progress`, `in_review`, `done`, `canceled`, so `ORDER BY status` gives the REQ-017 order (REQ-039). `issue_priority` is declared `urgent` to `none`, so `ORDER BY priority` puts Urgent first and No priority last (REQ-039, REQ-042). `label_color` holds the spec's 8 colours (6.6).
 
 ### 2.2 Accounts and sign-in
 
-**`members`**: `email`, `full_name`, `username`, `password_hash`, `role`, `deactivated_at` (null = active), `created_at`.
-- Unique indexes on `lower(email)` and `username`. Usernames are lowercased before saving (REQ-003.1), so a plain unique index on `username` is enough.
-- Check that `username` matches `^[a-z0-9-]{2,20}$`.
-- Never deleted (section 8 of the spec), so foreign keys pointing at members use the default `no action`, which blocks deleting a referenced member.
+**`members`**
+- Usernames are lowercased before saving (REQ-003.1), so a plain unique index on `username` is enough; emails are unique on `lower(email)`.
+- Never deleted (section 8 of the spec), so foreign keys pointing at members keep the default `no action`, which blocks deleting a referenced member.
 - **Keeping the last admin (REQ-007.3, REQ-052.3).** Removing admin or deactivating first locks every active admin row (`select id from members where role = 'admin' and deactivated_at is null for update`), then refuses if the target is the only one. Two admins demoting each other at once are serialised by the lock, so the second sees one admin left and is refused.
 - **Role changes apply on the next request (REQ-052).** `requireMember` reads the role from the database on every request; nothing caches it in the session.
 
-**`invitations`**: `email`, `invited_by` (FK → members), `token_hash` (unique), `expires_at`, `accepted_at`, `revoked_at`, `bounced_at`, `provider_message_id`, `created_at`.
+**`invitations`**
 - The spec's state is derived, not stored: Accepted if `accepted_at` is set, Revoked if `revoked_at` is set, Bounced if `bounced_at` is set, Expired if `expires_at < now()`, otherwise Pending.
 - `provider_message_id` is the Resend ID of the latest email, so the bounce webhook can find the invitation (5.4). A resend replaces it and clears `bounced_at`.
-- Partial unique index on `lower(email)` where `accepted_at is null and revoked_at is null`, so an email has at most one open invitation. Inviting an email again replaces that row's `token_hash` and `expires_at`, which is how a resend works (REQ-001.3). The old link stops working because its hash no longer matches.
+- A partial unique index on `lower(email)` where `accepted_at is null and revoked_at is null` allows at most one open invitation per email. Inviting an email again replaces that row's `token_hash` and `expires_at`, which is how a resend works (REQ-001.3). The old link stops working because its hash no longer matches.
 
-**`password_reset_tokens`**: `member_id` (FK → members), `token_hash` (unique), `expires_at`, `used_at`, `created_at`.
-- A successful reset sets `used_at` on that row **and** on all the member's other unused rows (REQ-050.6).
+**`password_reset_tokens`**: a successful reset sets `used_at` on that row **and** on all the member's other unused rows (REQ-050.6).
 
-**`sessions`**: `member_id` (FK → members), `token_hash` (unique), `last_active_at`, `created_at`.
+**`sessions`**
 - A session ends by deleting its row: on sign-out, deactivation (REQ-007), a password change for the member's other sessions (REQ-049), or a reset (REQ-050). DATA-004's 30-day limit is a maximum, so deleting at once complies.
 - A session is valid while `last_active_at > now() - 30 days` (REQ-006). To avoid a database write on every request, `last_active_at` is only rewritten when it's more than 1 hour old. At most 1 hour of the 30 days is lost, which is acceptable.
 
-**`sign_in_attempts`** (failed sign-ins and wrong current passwords, REQ-049.3) and **`password_reset_requests`**: `email` (lowercased), `ip` (`inet`), `created_at`, with no `id` column.
-- SEC-001 checks count the rows from the last hour, so each table has indexes on `(email, created_at)` and `(ip, created_at)`.
-- They're deleted after the retention in DATA-004 (1 hour and 1 day respectively, plus 30 days).
+**`sign_in_attempts`** (failed sign-ins and wrong current passwords, REQ-049.3) and **`password_reset_requests`** have no `id`. SEC-001 counts the last hour's rows, so each is indexed on `(email, created_at)` and `(ip, created_at)`.
 
 Tokens (SEC-003) are 32 random bytes, sent base64url-encoded, and stored as `sha256` hashes in a `bytea` column. A fast hash is enough here because the token itself has 256 random bits; only passwords need Argon2id (SEC-008).
 
 ### 2.3 Projects and labels
 
-**`project_keys`**: `key text primary key`. One row is inserted with every project and is **never deleted**. That's what reserves the key forever (REQ-009.3), while the project row itself can be hard-deleted.
+**`project_keys`** has one row per project key, inserted with the project and **never deleted**. That's what reserves the key forever (REQ-009.3), while the project row itself can be hard-deleted with a cascade (DATA-002).
 
-**`projects`**: `key` (unique, FK → project_keys), `name`, `description` (default `''`), `description_version int default 0`, `description_edited_by` (FK → members, null), `next_issue_number int default 1`, `archived_at`, `created_at`.
-- Check that `key` matches `^[A-Z]{2,5}$`.
-- Sidebar order (REQ-015): `order by name, key`.
-- `description_edited_by` is the member who last saved the description, named in the STD-8 conflict message. If you saved from another tab, the message names you.
+**`projects`**: `description_edited_by` is the member who last saved the description, named in the STD-8 conflict message. If you saved from another tab, the message names you. Issues have the same column.
 
-**`labels`**: `project_id` (FK → projects, cascade), `name`, `color label_color`.
-- Unique index on `(project_id, lower(name))` (REQ-021.2).
+**`labels`** are unique per project ignoring capitals, on `(project_id, lower(name))` (REQ-021.2).
 
 ### 2.4 Issues
-
-**`issues`**: `project_id` (FK → projects, cascade), `number`, `title`, `description` (default `''`), `description_version int default 0`, `description_edited_by` (FK → members, null), `status`, `priority`, `assignee_id` (FK → members, null), `position text`, `created_by` (FK → members), `created_at`, `updated_at`, `status_changed_at`, `request_id uuid` (unique).
-- Unique on `(project_id, number)`.
-
-How the less obvious columns work:
 
 - **Numbering (REQ-016).** The create transaction locks the project row (`for update`, the same read that checks it isn't archived), then runs `update projects set next_issue_number = next_issue_number + 1 where id = $1 returning next_issue_number - 1`. The row lock makes two people creating at the same moment wait for each other, so they get different numbers (REQ-016.4). Deleting an issue never decrements the counter, so numbers aren't reused (REQ-016.2).
 - **Board position (REQ-026, REQ-027).** `position` is a string sort key from the `fractional-indexing` package. The column is `text COLLATE "C"`, because the keys only sort correctly byte by byte (`Zz` before `a0`); a database whose default collation is a language one, such as `en_US.UTF-8`, would put a card moved to the top at the bottom. A drop between two cards generates a key between theirs; "move to top" generates a key before the column's first card. Only the moved row changes, so two members reordering different cards don't conflict (REQ-026.3). Columns sort by `(position, id)`: if two moves land between the same pair at once, they may get equal keys, and `id` breaks the tie consistently for everyone.
 - **`updated_at` (REQ-036).** Set when the title, description, status, priority, assignee or the issue's labels change. Not set by reordering within a column (REQ-036.5), comments, or renaming or recoloring a label on the Labels page.
 - **`status_changed_at`.** Set on every status change, and drives the 14-day Done/Canceled window (REQ-028, REQ-041).
 - **`description_version`.** Incremented on each description save. A save sends the version it started from. The transaction locks the row (`for update`) and compares the stored version with the sent one; if they differ, someone else saved first → the STD-8 conflict message. Changes to other fields don't touch it, so a status change by a teammate never blocks your description save. Projects use the same pattern.
-- **`description_edited_by`.** The member who last saved the description, named in the STD-8 conflict message, as for projects (§2.3).
-- **`request_id`.** A create that repeats a `request_id` returns the existing issue (STD-5).
+- **Labels.** A label change sends the issue's full set (`labelIds`), which replaces its `issue_labels` rows. The 10-label maximum (REQ-020.3) is checked by the body schema.
 
-Indexes:
-- `(project_id, status, position)` for the board.
-- `(project_id, updated_at desc)` for the list's default sort.
-- `(assignee_id, status)` for My issues.
-- GIN `gin_trgm_ops` on `title` and on `description` for search. They need the `pg_trgm` extension, which drizzle-kit can't declare, so the first migration runs `create extension if not exists pg_trgm` (added by hand).
-
-**`issue_labels`**: `issue_id` (FK → issues, cascade), `label_id` (FK → labels, cascade), primary key `(issue_id, label_id)`.
-- A label change sends the issue's full set (`labelIds`), which replaces the stored rows. The 10-label maximum (REQ-020.3) is checked by the body schema.
-
-**Search (REQ-038).** One condition per typed word, combined with `and`. The issue matches if the word appears in the title, the description, or its ID (`key || '-' || number`), each checked with `ILIKE '%word%'`, where `%`, `_` and `\` in the word are escaped first (REQ-038.4). The `pg_trgm` indexes keep this fast at 10,000 issues (NFR-004).
+**Search (REQ-038).** One condition per typed word, combined with `and`. The issue matches if the word appears in the title, the description, or its ID (`key || '-' || number`), each checked with `ILIKE '%word%'`, where `%`, `_` and `\` in the word are escaped first (REQ-038.4). GIN `gin_trgm_ops` indexes on `title` and `description` keep this fast at 10,000 issues (NFR-004). They need the `pg_trgm` extension, which drizzle-kit can't declare, so the first migration runs `create extension if not exists pg_trgm` (added by hand).
 
 ### 2.5 Comments and mentions
 
-**`comments`**: `issue_id` (FK → issues, cascade, null), `project_id` (FK → projects, cascade, null), `author_id` (FK → members), `body`, `version int default 0`, `created_at`, `edited_at`, `request_id uuid` (unique).
-- Check `num_nonnulls(issue_id, project_id) = 1`: each comment belongs to exactly one issue or one project.
-- Indexes on `(issue_id, created_at)` and `(project_id, created_at)`.
+**`comments`** each belong to exactly one issue or one project (a `num_nonnulls` check).
 
-**`mentions`**: `member_id` (FK → members), `issue_id` (FK → issues, cascade, null), `project_id` (FK → projects, cascade, null), `comment_id` (FK → comments, cascade, null).
-- `issue_id` is used for a mention in an issue's description, and `project_id` for one in a project's description (REQ-044).
-- Check `num_nonnulls(issue_id, project_id, comment_id) = 1`, plus unique indexes on `(member_id, issue_id)`, `(member_id, project_id)` and `(member_id, comment_id)`.
+**`mentions`** record who a text mentions. Exactly one of `issue_id` (an issue's description), `project_id` (a project's description) or `comment_id` is set (REQ-044).
 - The rows always mirror the **current** text. Each save parses the mentions (DATA-001), inserts the new ones and deletes the removed ones. "Mentioned for the first time" (REQ-044) means "not in the text before this save". So if a mention is removed and later added back, that member is emailed again, as the spec requires (REQ-044).
 
 ### 2.6 Notifications
 
-Two tables. One holds the notifications; the other holds the emails they're combined into (REQ-045).
+**`notification_emails`** has one row per email a recipient will get about one issue or project (`target_type`, `target_id`), with its `send_after`, `state`, retry count and Resend ID.
 
-**`notification_emails`**: `recipient_id` (FK → members), `target_type` (text, with a check that it's `issue` or `project`), `target_id uuid` (**no FK**), `send_after`, `state email_state`, `attempts int default 0`, `next_attempt_at`, `provider_message_id`, `created_at`, `sent_at`.
-- The worker picks up rows with `state = 'pending' and coalesce(next_attempt_at, send_after) <= now()`.
-- The webhook finds a bounced email by its `provider_message_id` (API-003).
-- No index covers `provider_message_id` (here or on `invitations`), `notifications.email_id` or `sessions.member_id`. At one team's volume these lookups scan small tables; add an index if one shows up in NFR-003 timings.
+**`notifications`** has one row per notification, attached to the email it's combined into (REQ-045), with a **snapshot** of what the email needs: issue ID, issue title, project name and key, link path, and a plain-text excerpt of up to 500 characters.
 
-**`notifications`**: `email_id` (FK → notification_emails, cascade), `kind`, `actor_id` (FK → members), `comment_id uuid` (no FK, null), `dropped boolean default false`, `created_at`, plus a **snapshot** of what the email needs: issue ID text, issue title, project name and key, link path, and a plain-text excerpt of up to 500 characters.
+No index covers `provider_message_id` (here or on `invitations`), `notifications.email_id` or `sessions.member_id`. At one team's volume these lookups scan small tables; add an index if one shows up in NFR-003 timings.
 
 How the parts fit:
 
