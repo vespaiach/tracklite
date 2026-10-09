@@ -75,17 +75,14 @@ Invitations (REQ-001) and password reset links (REQ-050) are **not** queued. The
 - The token row is written first, then the email is sent, all in one transaction.
 - If the send fails, the transaction rolls back, so no working link exists that nobody received, and the API answers `503`.
 
-All email goes through one `sendEmail()` module with three implementations:
-- **production:** the provider's HTTP API;
-- **development:** Mailpit's HTTP send API (`:8025`);
-- **tests:** an in-memory outbox that tests can inspect.
+All email goes through one `sendEmail()` (5.2).
 
 ### 1.6 Configuration
 
 - Settings come from environment variables: `.env.local` in development, and `/etc/tracklite/env` on the VPS (`root:deployer`, mode `640`, outside the release directory, OPS-006). The `deployer` account reads it to build and migrate; only root changes it.
 - Both processes check them at startup and refuse to start if any are missing.
 - Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5). `MAILPIT_HOST` and `MAILPIT_PORT` are optional and default to `localhost` and `8025`.
-- `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.6).
+- `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.2).
 - Tests run against `TEST_DATABASE_URL`, which must differ from `DATABASE_URL`. Before each run its schema is dropped and the migrations applied afresh.
 - The backup (1.8) isn't part of the app. Its settings (`OWNER_EMAIL`, the age public key and the R2 token) live in `/etc/tracklite/backup.env` (`root:root`, mode `600`), which the `deployer` account can't read.
 
@@ -470,13 +467,16 @@ In development `script-src` also gets `'unsafe-eval'`, which Next.js's dev tooli
 
 Also useful: Resend accepts an `Idempotency-Key` header, which closes the duplicate-on-crash gap in 1.4.
 
-**Risk: the 100/day cap.** A team of under 15 with 2-minute combining should stay well below it, but a very busy day could hit it. Sends over the cap fail and are retried like any other failure, so a notification can end up `failed`, and an invitation or reset shows STD-6's "We couldn't send the email". If that ever happens, the fix is a paid plan or Amazon SES. The `sendEmail()` module (1.5) is the only code that would change.
+**Risk: the 100/day cap.** A team of under 15 with 2-minute combining should stay well below it, but a very busy day could hit it. Sends over the cap fail and are retried like any other failure, so a notification can end up `failed`, and an invitation or reset shows STD-6's "We couldn't send the email". If that ever happens, the fix is a paid plan or Amazon SES. The `sendEmail()` module (5.2) is the only code that would change.
 
 Postmark was rejected because its paid plan (~$15) plus the VPS goes over the $20 budget, and its webhooks aren't signed. Amazon SES is the cheapest at volume, but its bounces come through SNS, which needs an AWS account and much more setup for 15 people.
 
 ### 5.2 Sending
 
-`sendEmail({ to, subject, text, idempotencyKey? })`, implemented three ways (1.5).
+`sendEmail({ to, subject, text, idempotencyKey? })` picks its backend by `NODE_ENV`:
+- **production:** Resend's HTTP API (5.1);
+- **development:** Mailpit's send API (`http://localhost:8025/api/v1/send`), so every email shows in Mailpit's inbox with no Resend key;
+- **tests:** an in-memory outbox that tests can inspect, and make fail on demand (REQ-001.7, REQ-050 with the service down, the STD-6 retries).
 
 - **Plain text only.** No HTML templates. REQ-044 already asks for the excerpt "as plain text", text emails deliver well, and it's one template per email instead of two.
 - **From:** `EMAIL_FROM`, for example `Tracklite <notify@mail.example.com>`.
@@ -520,9 +520,7 @@ The wording of every email is in the spec (§9, "Email content"). That's where t
 
 ### 5.6 Development and tests
 
-- **Development:** `sendEmail()` posts to Mailpit's send API (`http://localhost:8025/api/v1/send`), so every email is visible in Mailpit's inbox. No Resend key is needed locally.
-- **Tests:** an in-memory outbox. Tests can make it fail on demand (REQ-001.7, REQ-050 with the service down, the STD-6 retries).
-- **Webhook signature:** tested with a known secret and a hand-built signature.
+The webhook signature is tested with a known secret and a hand-built signature. Development and test email are covered in 5.2.
 
 ## 6. Screens
 
