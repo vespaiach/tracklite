@@ -464,8 +464,6 @@ Also useful: Resend accepts an `Idempotency-Key` header, which closes the duplic
 
 **Risk: the 100/day cap.** A team of under 15 with 2-minute combining should stay well below it, but a very busy day could hit it. Sends over the cap fail and are retried like any other failure, so a notification can end up `failed`, and an invitation or reset shows STD-6's "We couldn't send the email". If that ever happens, the fix is a paid plan or Amazon SES. The `sendEmail()` module (5.2) is the only code that would change.
 
-Postmark was rejected because its paid plan (~$15) plus the VPS goes over the $20 budget, and its webhooks aren't signed. Amazon SES is the cheapest at volume, but its bounces come through SNS, which needs an AWS account and much more setup for 15 people.
-
 ### 5.2 Sending
 
 `sendEmail({ to, subject, text, idempotencyKey? })` picks its backend by `NODE_ENV`:
@@ -606,7 +604,7 @@ Only decisions with an alternative worth recording. Where the reason is already 
 | D-21 | `@node-rs/argon2` | `argon2` (node-gyp) | Prebuilt binaries; nothing to compile on the VPS. |
 | D-26 | Nonce-based CSP set in `src/proxy.ts` (SEC-010) | A CSP without script rules | SEC-010 requires that only the app's own scripts run, and Next.js's inline scripts need a nonce for that. |
 | D-27 | React Router (data mode) inside the shell | Next.js routing; hand-rolled `pushState` | One HTML document for every route, plus `useBlocker` for REQ-035. |
-| D-32 | Resend (DEC-003) | Postmark, Amazon SES | Free plan fits NFR-009, signed webhooks, idempotency keys, simple domain setup. |
+| D-32 | Resend (DEC-003) | Postmark, Amazon SES | Free plan fits NFR-009, signed webhooks, idempotency keys, simple domain setup. Postmark's paid plan (~$15) plus the VPS goes over the $20 budget, and its webhooks aren't signed. SES is cheapest at volume, but its bounces come through SNS, which needs an AWS account and much more setup for 15 people. |
 | D-34 | `fetch` + hand-written signature check | Resend SDK, `svix` package | Two small functions instead of two dependencies. |
 | D-36 | React Aria `GridList` drag and drop | dnd-kit | Already in the stack, and accessible by keyboard and screen reader out of the box. Edge auto-scroll confirmed by the M5.1 spike (D-40). |
 | D-37 | New issue: title-only dialog, then go to the issue | A full create form | Matches REQ-016's flow ("enters a title"); everything else is edited on the issue page. |
