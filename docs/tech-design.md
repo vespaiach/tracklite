@@ -174,6 +174,7 @@ Tokens (SEC-003) are 32 random bytes, sent base64url-encoded, and stored as `sha
 
 - **Numbering (REQ-016).** The create transaction locks the project row (`for update`, the same read that checks it isn't archived), then runs `update projects set next_issue_number = next_issue_number + 1 where id = $1 returning next_issue_number - 1`. The row lock makes two people creating at the same moment wait for each other, so they get different numbers (REQ-016.4). Deleting an issue never decrements the counter, so numbers aren't reused (REQ-016.2).
 - **Board position (REQ-026, REQ-027).** `position` is a string sort key from the `fractional-indexing` package. The column is `text COLLATE "C"`, because the keys only sort correctly byte by byte (`Zz` before `a0`); a database whose default collation is a language one, such as `en_US.UTF-8`, would put a card moved to the top at the bottom. A drop between two cards generates a key between theirs; "move to top" generates a key before the column's first card. Only the moved row changes, so two members reordering different cards don't conflict (REQ-026.3). Columns sort by `(position, id)`: if two moves land between the same pair at once, they may get equal keys, and `id` breaks the tie consistently for everyone.
+- **Moving a card.** A move names one neighbour (`place: { after: "WEB-5" }`), not the keys around it. The server computes a key between WEB-5 and whatever card follows WEB-5 *right now*, so a board that's out of date still lands the card next to the one the member chose (REQ-026.4). If WEB-5 is no longer in that column, the card goes to the top. A move changes `status` and `status_changed_at` only when the status actually changes. A status change from anywhere else (`PATCH { status }`) also puts the card at the top of its new column (REQ-027.4).
 - **`updated_at` (REQ-036).** Set when the title, description, status, priority, assignee or the issue's labels change. Not set by reordering within a column (REQ-036.5), comments, or renaming or recoloring a label on the Labels page.
 - **`status_changed_at`.** Set on every status change, and drives the 14-day Done/Canceled window (REQ-028, REQ-041).
 - **`description_version`.** Incremented on each description save. A save sends the version it started from. The transaction locks the row (`for update`) and compares the stored version with the sent one; if they differ, someone else saved first → the STD-8 conflict message. Changes to other fields don't touch it, so a status change by a teammate never blocks your description save. Projects use the same pattern.
@@ -225,6 +226,7 @@ Settles DEC-002. Request and response types live in the code; this section fixes
 - **Addressing.** Issues by ID (`WEB-42`), projects by key (`WEB`), and members by username. All are matched ignoring capitals (REQ-016.5). Labels, comments and invitations use their `uuid`.
 - **Unknown paths.** A catch-all, `src/app/api/[...path]/route.ts`, answers every method on an unknown `/api` path with `404` "Not found". It needs a session, so a signed-out caller gets `401` and learns nothing about which paths exist.
 - **No tokens in paths.** Invitation and reset tokens always travel in the request body. The request log records only the path, never the query string, so the `?token=` on the reset *page* (API-004) isn't logged either (SEC-007).
+- **List paging** uses `offset`, not keyset cursors, which several sort columns would make complex. With no live updates (spec §3), rows only shift if someone else edits mid-scroll, and that's accepted.
 - **Field-by-field saves.** The issue page saves each field as soon as it changes, with a `PATCH` that holds only that field. That's what makes STD-8's "last save wins" work per field. It also means one failed field leaves the others saved (REQ-020.4).
 - **Creating twice.** Creates of issues and comments carry `requestId`. A repeat returns the first result with `200` instead of `201` (STD-5). `request_id` is unique across the whole table, so a repeat is found whatever project or issue it was sent to.
 - **Small member data.** A member appears in responses as `{ username, fullName, initials, deactivated }`. Emails appear only in a full profile: `/api/me`, the admin member list, an admin's `PATCH /api/members/{username}`, and the new member's own `POST /api/members`. Password hashes never appear (SEC-008.2).
@@ -328,11 +330,7 @@ A comment is `{ id, body, author, createdAt, editedAt, version, mentions }`: `au
 
 ### 3.4 Details worth fixing now
 
-- **Moving a card.** `place: { after: "WEB-5" }` names one neighbour. The server computes a key between WEB-5 and whatever card follows WEB-5 *right now*, so a board that's out of date still lands the card next to the card the member chose (REQ-026.4). If WEB-5 is no longer in that column, the card goes to the top. The `PUT` changes `status` and `status_changed_at` only when the status actually changes, and it never touches `updated_at` for a move within one column (REQ-036.5).
-- **A status change from anywhere else** (`PATCH { status }`) also puts the card at the top of its new column (REQ-027.4).
-- **List paging uses `offset`**, not keyset cursors. With no live updates (spec §3), rows only shift if someone else edits mid-scroll, and that's accepted.
-- **The invitation page** (`/invite?token=…`) calls `POST /api/invitation-lookups` with the token in the body when it opens. It needs to show "expired" straight away (REQ-002.2), and the email to greet the person with. The reset page does the same with `POST /api/password-reset-lookups`, so an expired or malformed link shows "This link has expired" with no form (REQ-050.9). Neither lookup uses up the link.
-- **Wrong email or password** returns `422` with no `fields`, not `401`. A `401` would make the browser treat it as an ended session.
+Its items now sit with the design they belong to: moving a card in 2.4, list paging in 3.1, link lookups in 4.6, and the status for a wrong password in 4.5.
 
 ## 4. Auth and security
 
@@ -382,7 +380,7 @@ Anything else gets `403`. `SameSite=Lax` is a second layer of protection. Togeth
 1. Lowercase and trim the email.
 2. Count the last hour's `sign_in_attempts` rows for that email and for that IP. If there are 10 or more for the email, or 30 or more for the IP, answer `429`. This check comes **before** the password check, so a correct password is also refused (SEC-001.1).
 3. Look up an active member by `lower(email)` and verify the password.
-4. If either step fails, insert a `sign_in_attempts` row and answer `422` "Incorrect email or password.". Unknown and deactivated emails count the same way (SEC-001.3).
+4. If either step fails, insert a `sign_in_attempts` row and answer `422` "Incorrect email or password.", not `401`, which the browser would treat as an ended session. Unknown and deactivated emails count the same way (SEC-001.3).
 5. On success, create the session. Earlier failures stay counted until they're an hour old; a success doesn't reset them.
 
 **Changing a password** (`PUT /api/me/password`) uses the same per-email count: a wrong current password inserts a `sign_in_attempts` row, and past the limit even the right one gets `429` (REQ-049.3).
@@ -410,7 +408,7 @@ If the request arrives with a valid session, it's refused with `403` "You're sig
 2. Answer `410` "This link has expired" if it's used, expired, unknown, or the member is deactivated.
 3. Set the hash, set `used_at` on **all** the member's unused tokens (REQ-050.6), delete the member's sessions, and create a new one.
 
-**Opening a reset link** checks the token with `POST /api/password-reset-lookups`, which only reads it. A usable link shows the form; anything else shows "This link has expired" (REQ-050.9). Because the check never uses the link up, a mail scanner opening it changes nothing (REQ-050.5). If a valid session exists, the page shows "You're signed in as {name}. Sign out to reset a password." and never looks at the token (REQ-050.8).
+**Opening a link.** The invitation page calls `POST /api/invitation-lookups` with the token in the body as it opens, so it can show "expired" straight away (REQ-002.2) and greet the person by email. The reset page checks its token with `POST /api/password-reset-lookups` the same way. Neither lookup uses up the link. A usable link shows the form; anything else shows "This link has expired" (REQ-050.9). Because the check never uses the link up, a mail scanner opening it changes nothing (REQ-050.5). If a valid session exists, the page shows "You're signed in as {name}. Sign out to reset a password." and never looks at the token (REQ-050.8).
 
 ### 4.7 Markdown (SEC-002, DATA-001)
 
