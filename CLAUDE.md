@@ -99,7 +99,7 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 - Tokens never go in paths.
 - A member in a response is `{ username, fullName, initials, deactivated }`.
 
-**Page and API task pairs.** A page task writes its own RTK Query endpoints, typed from §3.3, and tests against mocks. Whichever task merges second wires them up and makes each handler's return value `satisfies` the page's response type.
+**Page and API task pairs.** A page task writes its own RTK Query endpoints, typed from the shapes §3.3 holds for endpoints not wired yet, and tests against mocks. Whichever task merges second wires them up, makes each handler's return value `satisfies` the page's response type, and removes those shapes from §3.3. Wired-up shapes live only in the code: request bodies in `src/schemas/`, responses in `src/client/api.ts`.
 
 **Time (§1.3).** Every expiry and time-window check uses the database's `now()` inside SQL, never the app clock. Tests move stored timestamps into the past (`expires_at = now() - interval '1 minute'`). They never fake the clock.
 
