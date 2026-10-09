@@ -86,7 +86,7 @@ There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks
 1. rejects cross-site writes with `403`;
 2. runs `requireMember`, which only authenticates (`401`). Routes never check roles;
 3. parses the JSON body against the route's Valibot schema, if it declares one, and fails fast with `422` (D-42). Schemas check shape and format only;
-4. calls one domain function in `src/server/` inside a transaction, with the member as its first argument, `actor`. The domain is the only permission layer (D-43): admin-only functions call `assertAdmin(actor)` before any lookup, and ownership checks run once the row is loaded. It then checks the rules that need the database and writes, so the action and its notification rows commit together;
+4. calls one domain function in `src/server/`, with the member as its first argument, `actor`. `apiRoute` opens no transaction; the domain function opens its own. The domain is the only permission layer (D-43): admin-only functions call `assertAdmin(actor)` before any lookup, and ownership checks run once the row is loaded. It then checks the rules that need the database and writes, so the action and its notification rows commit together;
 5. maps a thrown `ApiError` to `{ error: { message, fields? } }` with 401/403/404/422/429/503, and anything else to 500;
 6. writes one JSON log line, with no bodies, tokens or query strings. A signed-in request names its `actor` by username.
 
