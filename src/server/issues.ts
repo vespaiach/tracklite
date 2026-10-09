@@ -23,27 +23,19 @@ import { conflict, replaceMentions } from "./descriptions";
 import { memberSummary } from "./members";
 import { notify } from "./notifications";
 import { writableProject } from "./projects";
-import {
-  issueLabels,
-  issuePriority,
-  issueStatus,
-  issues,
-  labels,
-  members,
-  mentions,
-  projects,
-} from "./schema";
+import { issueLabels, issuePriority, issues, labels, members, mentions, projects } from "./schema";
 import type { Member } from "./sessions";
 import type { IssueChange, IssueMove, NewIssue } from "../schemas/issue";
-import type {
-  Board,
-  BoardIssue,
-  Issue,
-  IssueListPage,
-  IssueStatus,
-  ListIssue,
-  MyIssue,
-  MyIssueGroup,
+import {
+  type Board,
+  type BoardIssue,
+  type Issue,
+  type IssueListPage,
+  type IssueStatus,
+  issueStatuses,
+  type ListIssue,
+  type MyIssue,
+  type MyIssueGroup,
 } from "../contract";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -458,7 +450,7 @@ export async function getBoard(_actor: Member, projectKey: string): Promise<Boar
       labels: labelsFor(labelRows, row.issueId),
     },
   }));
-  return issueStatus.enumValues.map((status) => {
+  return issueStatuses.map((status) => {
     const column = cards.filter((entry) => entry.status === status).map((entry) => entry.card);
     return { status, count: column.length, cards: column };
   });
@@ -551,7 +543,7 @@ export async function listIssues(
   params: URLSearchParams,
 ): Promise<IssueListPage> {
   const project = await readableProject(projectKey);
-  const statuses = knownValues(params.getAll("status"), issueStatus.enumValues);
+  const statuses = knownValues(params.getAll("status"), issueStatuses);
   const priorities = knownValues(params.getAll("priority"), issuePriority.enumValues);
 
   const rows = await db
@@ -633,7 +625,7 @@ export async function getMyIssues(actor: Member): Promise<MyIssueGroup[]> {
 
   const labelRows = await labelsOf(rows.map((row) => row.issueId));
 
-  return issueStatus.enumValues.flatMap((status) => {
+  return issueStatuses.flatMap((status) => {
     const group = rows
       .filter((row) => row.status === status)
       .map(
