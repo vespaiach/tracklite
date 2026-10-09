@@ -17,6 +17,7 @@ function expiredLink() {
 
 export async function requestResetLink(normalizedEmail: string, ip: string) {
   if (await resetRequestLimitReached(normalizedEmail, ip)) throw tooManyAttempts();
+
   await recordResetRequest(normalizedEmail, ip);
 
   const member = await activeMemberByEmail(normalizedEmail);
@@ -64,11 +65,14 @@ export async function resetPassword(token: string, password: string) {
       .update(members)
       .set({ passwordHash: await hashPassword(password) })
       .where(eq(members.id, link.memberId));
+
     await tx
       .update(passwordResetTokens)
       .set({ usedAt: sql`now()` })
       .where(and(eq(passwordResetTokens.memberId, link.memberId), isNull(passwordResetTokens.usedAt)));
+
     await tx.delete(sessions).where(eq(sessions.memberId, link.memberId));
+
     return createSession(link.memberId, tx);
   });
 }

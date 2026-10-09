@@ -17,26 +17,56 @@ function errorResponse(status: number, message: string, fields?: Record<string, 
   return Response.json({ error: fields ? { message, fields } : { message } }, { status });
 }
 
+function errorOutcome(error: unknown): Outcome {
+  if (error instanceof ApiError) {
+    return { response: errorResponse(error.status, error.message, error.fields) };
+  }
+  return {
+    response: errorResponse(500, "Something went wrong."),
+    failure: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+  };
+}
+
+function unreadableRequest() {
+  return new ApiError(422, "Couldn't read the request.");
+}
+
 async function readInput(request: Request, schema: v.GenericSchema) {
-  const unreadable = new ApiError(422, "Couldn't read the request.");
-  const body: unknown = await request.json().catch(() => {
-    throw unreadable;
-  });
-  if (typeof body !== "object" || body === null || Array.isArray(body)) throw unreadable;
+  const body = await readJsonObject(request);
+
   const result = v.safeParse(schema, body, { abortPipeEarly: true });
   if (result.success) return result.output;
-  const issues = result.issues.map((issue) =>
-    issue.type === "object" && issue.input === undefined ? { ...issue, message: "Required" } : issue,
-  ) as typeof result.issues;
-  const { root, nested } = v.flatten(issues);
-  if (root) throw new ApiError(422, root[0]);
-  if (!nested) throw unreadable;
+
+  throw inputError(result.issues);
+}
+
+async function readJsonObject(request: Request) {
+  const body: unknown = await request.json().catch(() => {
+    throw unreadableRequest();
+  });
+  if (typeof body !== "object" || body === null || Array.isArray(body)) throw unreadableRequest();
+  return body;
+}
+
+function inputError(issues: ValidationIssues) {
+  const { root, nested } = v.flatten(withRequiredMessages(issues));
+  if (root) return new ApiError(422, root[0]);
+  if (!nested) return unreadableRequest();
   const fields = Object.fromEntries(
     Object.entries(nested).flatMap(([field, messages]) => (messages ? [[field, messages[0]]] : [])),
   );
-  throw new ApiError(422, "Check the highlighted fields", fields);
+  return new ApiError(422, "Check the highlighted fields", fields);
 }
 
+function withRequiredMessages(issues: ValidationIssues) {
+  return issues.map((issue) =>
+    issue.type === "object" && issue.input === undefined ? { ...issue, message: "Required" } : issue,
+  ) as ValidationIssues;
+}
+
+type ValidationIssues = [v.BaseIssue<unknown>, ...v.BaseIssue<unknown>[]];
+type Outcome = { response: Response; failure?: string };
+type Caller = { username?: string; renewedCookie?: string };
 type Handler<Args extends unknown[]> = (...args: Args) => Response | Promise<Response>;
 type AnyHandler = Handler<never[]>;
 type Route = (request: Request) => Promise<Response>;
@@ -60,35 +90,32 @@ export function apiRoute(
 ) {
   const schema = schemaHandler ? (schemaOrHandler as v.GenericSchema) : undefined;
   const handler = (schemaHandler ?? schemaOrHandler) as Handler<unknown[]>;
+
+  const inputOf = async (request: Request) => (schema ? [await readInput(request, schema)] : []);
+
+  const respond = async (request: Request, caller: Caller) => {
+    if (isCrossSiteWrite(request)) throw new ApiError(403, "You don't have permission to do that.");
+
+    if (access === "public") return handler(request, ...(await inputOf(request)));
+
+    const session = await requireMember(request);
+    caller.username = session.member.username;
+    caller.renewedCookie = session.cookie;
+
+    return handler(request, session.member, ...(await inputOf(request)));
+  };
+
   return async (request: Request) => {
     const started = performance.now();
-    let response: Response;
-    let failure: string | undefined;
-    let renewedCookie: string | undefined;
-    let actor: string | undefined;
-    try {
-      if (isCrossSiteWrite(request)) {
-        throw new ApiError(403, "You don't have permission to do that.");
-      }
-      if (access === "public") {
-        const input = schema ? [await readInput(request, schema)] : [];
-        response = await handler(request, ...input);
-      } else {
-        const session = await requireMember(request);
-        renewedCookie = session.cookie;
-        actor = session.member.username;
-        const input = schema ? [await readInput(request, schema)] : [];
-        response = await handler(request, session.member, ...input);
-      }
-    } catch (error) {
-      if (error instanceof ApiError) {
-        response = errorResponse(error.status, error.message, error.fields);
-      } else {
-        failure = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-        response = errorResponse(500, "Something went wrong.");
-      }
-    }
-    if (renewedCookie) response.headers.append("set-cookie", renewedCookie);
+    const caller: Caller = {};
+
+    const { response, failure } = await respond(request, caller).then(
+      (response): Outcome => ({ response }),
+      errorOutcome,
+    );
+
+    if (caller.renewedCookie) response.headers.append("set-cookie", caller.renewedCookie);
+
     logRequest({
       level: failure ? "error" : "info",
       method: request.method,
@@ -96,7 +123,7 @@ export function apiRoute(
       status: response.status,
       durationMs: Math.round(performance.now() - started),
       error: failure,
-      actor,
+      actor: caller.username,
     });
     return response;
   };

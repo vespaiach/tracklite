@@ -14,7 +14,9 @@ export async function createFirstAdmin(input: v.InferInput<typeof FirstAdmin>) {
   const passwordHash = await hashPassword(password);
   await db.transaction(async (tx) => {
     await tx.execute(sql`lock table ${members} in exclusive mode`);
+
     if ((await tx.$count(members)) > 0) throw new Error("Setup already done");
+
     await tx.insert(members).values({ email, fullName, username, passwordHash, role: "admin" });
   });
 }

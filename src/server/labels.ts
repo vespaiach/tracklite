@@ -27,22 +27,30 @@ async function refusingDuplicateNames<T>(write: Promise<T>) {
   try {
     return await write;
   } catch (error) {
-    const cause = error instanceof DrizzleQueryError ? error.cause : undefined;
-    if (cause && "constraint_name" in cause && cause.constraint_name === "labels_project_name_key") {
+    if (isDuplicateName(error)) {
       throw new ApiError(422, "Check the highlighted fields", { name: "Label already exists" });
     }
     throw error;
   }
 }
 
+function isDuplicateName(error: unknown) {
+  const cause = error instanceof DrizzleQueryError ? error.cause : undefined;
+  return (
+    cause !== undefined && "constraint_name" in cause && cause.constraint_name === "labels_project_name_key"
+  );
+}
+
 async function lockLabelProject(tx: Transaction, id: string) {
   if (!uuidPattern.test(id)) throw labelGone();
+
   const [label] = await tx
     .select({ projectKey: projects.key })
     .from(labels)
     .innerJoin(projects, eq(projects.id, labels.projectId))
     .where(eq(labels.id, id));
   if (!label) throw labelGone();
+
   await writableProject(tx, label.projectKey);
 }
 
@@ -75,9 +83,11 @@ export async function createLabel(_actor: Member, projectKey: string, { name, co
 export async function updateLabel(_actor: Member, id: string, changes: LabelChanges) {
   return db.transaction(async (tx) => {
     await lockLabelProject(tx, id);
+
     if (changes.name !== undefined || changes.color !== undefined) {
       await refusingDuplicateNames(tx.update(labels).set(changes).where(eq(labels.id, id)));
     }
+
     const [label] = await tx.select(labelResponse).from(labels).where(eq(labels.id, id));
     if (!label) throw labelGone();
     return label;

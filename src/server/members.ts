@@ -77,15 +77,20 @@ export async function updateMember(actor: Member, username: string, { role, deac
 
     if (role === "member" || deactivated === true) await keepLastAdmin(tx, target);
 
-    const changes = {
-      ...(role && { role }),
-      ...(deactivated === true && { deactivatedAt: sql`coalesce(${members.deactivatedAt}, now())` }),
-      ...(deactivated === false && { deactivatedAt: null }),
-    };
+    const changes = roleAndActiveUpdate({ role, deactivated });
     if (Object.keys(changes).length === 0) return target;
 
     const [updated] = await tx.update(members).set(changes).where(eq(members.id, target.id)).returning();
+
     if (deactivated === true) await tx.delete(sessions).where(eq(sessions.memberId, target.id));
     return updated;
   });
+}
+
+function roleAndActiveUpdate({ role, deactivated }: MemberChanges) {
+  return {
+    ...(role && { role }),
+    ...(deactivated === true && { deactivatedAt: sql`coalesce(${members.deactivatedAt}, now())` }),
+    ...(deactivated === false && { deactivatedAt: null }),
+  };
 }

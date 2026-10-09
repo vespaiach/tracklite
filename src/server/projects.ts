@@ -59,6 +59,7 @@ export async function createProject(actor: Member, { name, key }: NewProject) {
   return db.transaction(async (tx) => {
     const reserved = await tx.insert(projectKeys).values({ key }).onConflictDoNothing().returning();
     if (reserved.length === 0) refuseFields({ key: "Key already used" });
+
     const [project] = await tx.insert(projects).values({ key, name }).returning();
     return projectResponse(tx, project);
   });
@@ -68,24 +69,30 @@ export async function updateProject(actor: Member, key: string, changes: Project
   const { name, archived, description, descriptionVersion } = changes;
   if (description !== undefined && descriptionVersion !== undefined)
     return saveDescription(actor, key, description, descriptionVersion);
+
   if (name !== undefined || archived !== undefined) assertAdmin(actor);
 
   return db.transaction(async (tx) => {
     const [project] = await tx.select().from(projects).where(byKey(key)).for("update");
     if (!project) throw new ApiError(404, "Not found");
+
     if (name !== undefined && project.archivedAt !== null)
       throw new ApiError(403, "This project is archived");
 
-    const changes = {
-      ...(name !== undefined && { name }),
-      ...(archived === true && { archivedAt: sql`coalesce(${projects.archivedAt}, now())` }),
-      ...(archived === false && { archivedAt: null }),
-    };
-    if (Object.keys(changes).length === 0) return projectResponse(tx, project);
+    const update = nameAndArchiveUpdate(changes);
+    if (Object.keys(update).length === 0) return projectResponse(tx, project);
 
-    const [updated] = await tx.update(projects).set(changes).where(eq(projects.id, project.id)).returning();
+    const [updated] = await tx.update(projects).set(update).where(eq(projects.id, project.id)).returning();
     return projectResponse(tx, updated);
   });
+}
+
+function nameAndArchiveUpdate({ name, archived }: ProjectChanges) {
+  return {
+    ...(name !== undefined && { name }),
+    ...(archived === true && { archivedAt: sql`coalesce(${projects.archivedAt}, now())` }),
+    ...(archived === false && { archivedAt: null }),
+  };
 }
 
 export async function deleteProject(actor: Member, key: string) {
@@ -97,6 +104,7 @@ export async function deleteProject(actor: Member, key: string) {
 async function saveDescription(member: Member, key: string, description: string, descriptionVersion: number) {
   return db.transaction(async (tx) => {
     const project = await writableProject(tx, key, "update");
+
     if (project.descriptionVersion !== descriptionVersion)
       throw await conflict(tx, project.descriptionEditedBy);
 
@@ -109,13 +117,16 @@ async function saveDescription(member: Member, key: string, description: string,
       })
       .where(eq(projects.id, project.id))
       .returning();
+
     const mentioned = await replaceMentions(tx, { projectId: project.id }, description);
+
     await notify(tx, mentioned, {
       kind: "mentioned",
       actorId: member.id,
       target: { projectId: project.id },
       text: description,
     });
+
     return projectResponse(tx, updated);
   });
 }

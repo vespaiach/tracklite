@@ -31,24 +31,25 @@ export async function runWorker({ signal }: { signal: AbortSignal }) {
 
 export function sendDueEmails() {
   return db.transaction(async (tx) => {
-    const due = await tx
-      .select()
-      .from(notificationEmails)
-      .where(
-        and(
-          eq(notificationEmails.state, "pending"),
-          lte(
-            sql`coalesce(${notificationEmails.nextAttemptAt}, ${notificationEmails.sendAfter})`,
-            sql`now()`,
-          ),
-        ),
-      )
-      .orderBy(asc(notificationEmails.sendAfter))
-      .limit(batchSize)
-      .for("update", { skipLocked: true });
+    const due = await dueEmails(tx);
     for (const email of due) await deliver(tx, email);
     return due.length;
   });
+}
+
+function dueEmails(tx: Transaction) {
+  return tx
+    .select()
+    .from(notificationEmails)
+    .where(
+      and(
+        eq(notificationEmails.state, "pending"),
+        lte(sql`coalesce(${notificationEmails.nextAttemptAt}, ${notificationEmails.sendAfter})`, sql`now()`),
+      ),
+    )
+    .orderBy(asc(notificationEmails.sendAfter))
+    .limit(batchSize)
+    .for("update", { skipLocked: true });
 }
 
 function itemsOf(tx: Transaction, emailId: string) {
@@ -73,15 +74,16 @@ function itemsOf(tx: Transaction, emailId: string) {
 
 async function deliver(tx: Transaction, email: DueEmail) {
   const [recipient] = await tx.select().from(members).where(eq(members.id, email.recipientId));
+
   const items = await itemsOf(tx, email.id);
-  const kept: Item[] = [];
-  for (const item of items) {
-    if (recipient.deactivatedAt === null && (await stillWanted(tx, email, item))) kept.push(item);
-  }
-  const dropped = items.filter((item) => !kept.includes(item)).map((item) => item.id);
-  if (dropped.length > 0) {
-    await tx.update(notifications).set({ dropped: true }).where(inArray(notifications.id, dropped));
-  }
+
+  const kept = recipient.deactivatedAt === null ? await wantedItems(tx, email, items) : [];
+
+  await dropNotifications(
+    tx,
+    items.filter((item) => !kept.includes(item)).map((item) => item.id),
+  );
+
   if (kept.length === 0) {
     await tx.update(notificationEmails).set({ state: "dropped" }).where(eq(notificationEmails.id, email.id));
     return;
@@ -102,6 +104,19 @@ async function deliver(tx: Transaction, email: DueEmail) {
   }
 }
 
+async function wantedItems(tx: Transaction, email: DueEmail, items: Item[]) {
+  const kept: Item[] = [];
+  for (const item of items) {
+    if (await stillWanted(tx, email, item)) kept.push(item);
+  }
+  return kept;
+}
+
+async function dropNotifications(tx: Transaction, ids: string[]) {
+  if (ids.length === 0) return;
+  await tx.update(notifications).set({ dropped: true }).where(inArray(notifications.id, ids));
+}
+
 async function stillWanted(tx: Transaction, email: DueEmail, item: Item) {
   if (email.targetType === "project") {
     const [project] = await tx
@@ -117,6 +132,10 @@ async function stillWanted(tx: Transaction, email: DueEmail, item: Item) {
     if (!issue) return true;
     if (item.kind === "assigned") return issue.assigneeId === email.recipientId;
   }
+  return stillMentioned(tx, email, item);
+}
+
+async function stillMentioned(tx: Transaction, email: DueEmail, item: Item) {
   const source = item.commentId
     ? eq(mentions.commentId, item.commentId)
     : email.targetType === "issue"
@@ -131,14 +150,7 @@ async function stillWanted(tx: Transaction, email: DueEmail, item: Item) {
 
 async function recordFailure(tx: Transaction, email: DueEmail) {
   const delayMinutes = retryDelaysMinutes[email.attempts];
-  if (delayMinutes === undefined) {
-    await tx
-      .update(notificationEmails)
-      .set({ state: "failed", attempts: email.attempts + 1 })
-      .where(eq(notificationEmails.id, email.id));
-    logNotificationFailure({ emailId: email.id });
-    return;
-  }
+  if (delayMinutes === undefined) return markFailed(tx, email);
   await tx
     .update(notificationEmails)
     .set({
@@ -146,4 +158,12 @@ async function recordFailure(tx: Transaction, email: DueEmail) {
       nextAttemptAt: sql`now() + make_interval(mins => ${delayMinutes})`,
     })
     .where(eq(notificationEmails.id, email.id));
+}
+
+async function markFailed(tx: Transaction, email: DueEmail) {
+  await tx
+    .update(notificationEmails)
+    .set({ state: "failed", attempts: email.attempts + 1 })
+    .where(eq(notificationEmails.id, email.id));
+  logNotificationFailure({ emailId: email.id });
 }
