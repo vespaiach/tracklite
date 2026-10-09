@@ -23,7 +23,7 @@ import { conflict, replaceMentions } from "./descriptions";
 import { memberSummary } from "./members";
 import { notify } from "./notifications";
 import { writableProject } from "./projects";
-import { issueLabels, issuePriority, issues, labels, members, mentions, projects } from "./schema";
+import { issueLabels, issues, labels, members, mentions, projects } from "./schema";
 import type { Member } from "./sessions";
 import type { IssueChange, IssueMove, NewIssue } from "../schemas/issue";
 import {
@@ -31,6 +31,7 @@ import {
   type BoardIssue,
   type Issue,
   type IssueListPage,
+  issuePriorities,
   type IssueStatus,
   issueStatuses,
   type ListIssue,
@@ -544,7 +545,7 @@ export async function listIssues(
 ): Promise<IssueListPage> {
   const project = await readableProject(projectKey);
   const statuses = knownValues(params.getAll("status"), issueStatuses);
-  const priorities = knownValues(params.getAll("priority"), issuePriority.enumValues);
+  const priorities = knownValues(params.getAll("priority"), issuePriorities);
 
   const rows = await db
     .select({
