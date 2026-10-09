@@ -1,6 +1,6 @@
 # Tracklite: Technical design
 
-Companion to `docs/tracklite-spec.md` (v0.10). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
+Companion to `docs/tracklite-spec.md` (v0.24). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
 
 ## 1. Architecture
 
@@ -33,14 +33,12 @@ Using systemd for all four means no extra process manager. Logs go to journald, 
 
 **API.** Each handler is wrapped in `apiRoute`, which runs these steps in order:
 
-1. Reject cross-site writes with `403` (SEC-004).
-2. Validate the session with `requireMember`. This step only says who is asking; it checks no role.
+1. Reject cross-site writes with `403` (4.4).
+2. Validate the session with `requireMember`. This step only says who is asking; it checks no role. A route declared `"public"` (sign-in, password resets, invitation lookups and acceptance, sign-out) skips it.
 3. If the route declares a body schema, parse the JSON body and validate it with Valibot (D-42), failing fast with `422`. The schema checks shape and format only, with the spec's own messages, and passes the parsed, trimmed values on.
-4. Call one domain function in `src/server/`, passing the signed-in member as its first argument, `actor`. The domain layer is the single permission layer (spec §12, D-43). An admin-only function calls `assertAdmin(actor)` as its first statement, before any lookup, so a member gets `403` and learns nothing about whether the target exists. An ownership check ("author or admin") runs right after the row is loaded. The function then checks the rules that need the database (a key already used, the last admin) and writes. The action and any notification rows it creates commit together (spec §12).
-5. Map a thrown `ApiError` to `401`/`403`/`404`/`422`/`429`/`503` with `{ error: { message, fields? } }`. Map anything else to `500`.
+4. Call one domain function in `src/server/`, passing the signed-in member as its first argument, `actor`. `apiRoute` opens no transaction; the domain function opens its own with `db.transaction`. The domain layer is the single permission layer (spec §12, D-43). An admin-only function calls `assertAdmin(actor)` as its first statement, before any lookup, so a member gets `403` and learns nothing about whether the target exists. An ownership check ("author or admin") runs right after the row is loaded. The function then checks the rules that need the database (a key already used, the last admin) and writes. The action and any notification rows it creates commit together (spec §12).
+5. Map a thrown `ApiError` to `401`/`403`/`404`/`409`/`410`/`422`/`429`/`503` with `{ error: { message, fields? } }`. Map anything else to `500`.
 6. Write one JSON log line per request, without bodies or tokens (SEC-007). A signed-in request's line names the member as `actor` by username.
-
-**Markdown.** The API returns the stored Markdown together with the list of members it mentions. The browser renders it with one shared component (SEC-002). The renderer highlights `@username` only when that username is in the mention list, so it doesn't need to look up members itself.
 
 ### 1.3 Time
 
@@ -75,19 +73,16 @@ Invitations (REQ-001) and password reset links (REQ-050) are **not** queued. The
 - The token row is written first, then the email is sent, all in one transaction.
 - If the send fails, the transaction rolls back, so no working link exists that nobody received, and the API answers `503`.
 
-All email goes through one `sendEmail()` module with three implementations:
-- **production:** the provider's HTTP API;
-- **development:** Mailpit's HTTP send API (`:8025`);
-- **tests:** an in-memory outbox that tests can inspect.
+All email goes through one `sendEmail()` (5.2).
 
 ### 1.6 Configuration
 
 - Settings come from environment variables: `.env.local` in development, and `/etc/tracklite/env` on the VPS (`root:deployer`, mode `640`, outside the release directory, OPS-006). The `deployer` account reads it to build and migrate; only root changes it.
 - Both processes check them at startup and refuse to start if any are missing.
-- Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5).
-- `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.6).
+- Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5). `MAILPIT_HOST` and `MAILPIT_PORT` are optional and default to `localhost` and `8025`.
+- `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.2).
 - Tests run against `TEST_DATABASE_URL`, which must differ from `DATABASE_URL`. Before each run its schema is dropped and the migrations applied afresh.
-- The backup (1.8) isn't part of the app. Its settings (`OWNER_EMAIL`, the age public key and the R2 token) live in `/etc/tracklite/backup.env`, also mode `600`.
+- The backup (1.8) isn't part of the app. Its settings (`OWNER_EMAIL`, the age public key and the R2 token) live in `/etc/tracklite/backup.env` (`root:root`, mode `600`), which the `deployer` account can't read.
 
 ### 1.7 Browser app (single-page app)
 
@@ -97,7 +92,7 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 - `src/app/layout.tsx` holds `<html>`, `<body>`, the fonts (`next/font/google`, served from the app so the CSP's `font-src 'self'` holds) and the Track Lite stylesheet.
 - One optional catch-all page, `src/app/[[...path]]/page.tsx`, renders `<ClientApp />` through `next/dynamic` with `ssr: false`. It's the same document for every address.
 - `/api`, `/health` and `/webhooks` are more specific routes, so they're never caught by it.
-- `src/proxy.ts` only sets the Content Security Policy (4.9). It doesn't redirect pages; the browser app does.
+- `src/proxy.ts` only sets the Content Security Policy and `Referrer-Policy` (4.9). It doesn't redirect pages; the browser app does.
 
 **Routing.** React Router in data mode (`createBrowserRouter`), with routes lazy-loaded so each screen's code is downloaded on first visit.
 - The route table is the API-004 list plus the routes added in section 6.
@@ -112,15 +107,15 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 - **Return after sign-in (SEC-009).** `next` is used only if it starts with `/` but not `//` or `/\`; anything else goes to `/my-issues`. So `?next=https://evil.example` can't send anyone off-site.
 - Any `401` later, such as an expired session or a deactivated member mid-edit (REQ-007.4), does the same redirect from the shared `baseQuery`.
 
-**Redux Toolkit.** One store, created once in `ClientApp`.
+**Redux Toolkit.** One store, created once in `ClientApp` and provided through `react-redux`.
 
 - **RTK Query** (`createApi`, one `api` slice) holds all server data. The `baseQuery`:
   - wraps `fetch`, sends JSON and parses `{ error: { message, fields? } }`;
   - on `401`, redirects to sign-in;
   - leaves every other error to the component, which shows field errors (STD-3), an editor conflict (`409`, STD-8), or a toast.
 - **Fresh data on every visit.** Queries use `refetchOnMountOrArgChange: true`, so each screen loads current data when opened. That matches "pages show current data when they load" (spec §12). There's no `refetchOnFocus` and no polling: no live updates in R1, and REQ-041.6 expects an open page to stay as it is.
-- **Tags drive refreshing.** For example, `updateIssue` invalidates `Issue(ID)`, `Board(KEY)`, `IssueList(KEY)` and `MyIssues`. A mounted screen showing that data then refetches.
-- **Optimistic board moves (NFR-005, REQ-026).** `moveIssue` updates the cached board in `onQueryStarted` before the request goes out. If the request fails, it undoes the change and shows the toast "Couldn't move WEB-42". If it succeeds, it invalidates `Board(KEY)`, which refreshes the columns involved.
+- **Tags drive refreshing.** Tags are per type, with no IDs: `Me`, `Members`, `Invitations`, `Projects`, `Labels`, `Issue`, `Board`, `Comments`. A mutation invalidates its type, and a mounted screen showing that data refetches. `updateIssue` instead writes the saved issue into the `issue` cache, and invalidates `Labels` only on a `404` (a label deleted meanwhile). The list and My issues carry no tags; they rely on the refetch on every visit.
+- **Optimistic board moves (NFR-005, REQ-026).** `moveIssue` updates the cached board in `onQueryStarted` before the request goes out. If the request fails, it undoes the change and shows a toast: the server's message, or "Couldn't move WEB-42" for a network error or a `5xx`. If it succeeds, it invalidates `Board(KEY)`, which refreshes the columns involved.
 - **UI slice:** one `toast` slice (STD-9: one message at a time, 5 seconds, no dismiss).
 - **Kept out of Redux on purpose:**
   - list-view filters, search and sort live in the URL (`useSearchParams`), since REQ-040 already makes the URL their home;
@@ -132,113 +127,73 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 
 ### 1.8 Backups (OPS-003)
 
-- A systemd timer runs `ops/backup/backup.sh` daily at 03:00 UTC as the `postgres` user: `pg_dump --format=custom`, encrypted with `age` to a public key, uploaded with `rclone` to a Cloudflare R2 bucket as `tracklite-<UTC time>.dump.age`.
-- After a successful upload it deletes all but the newest 14 (OPS-003.2). A failed run deletes nothing.
-- The private age key is kept off the VPS, so neither the VPS nor the R2 token can read a backup.
-- A failure triggers the unit's `OnFailure=`, which emails `OWNER_EMAIL` through the Resend HTTP API (OPS-003.3).
-- R2's free tier (10 GB, no egress fees) holds 14 dumps of a small team's database at no cost (NFR-009).
-- `ops/backup/restore.sh` restores a backup into any database. `ops/README.md` has the steps.
+A systemd timer runs a daily `pg_dump`, encrypts it with `age` to a public key and uploads it with `rclone` to Cloudflare R2, keeping the newest 14 (OPS-003). The private age key is kept off the VPS, so neither the VPS nor the R2 token can read a backup. A failure triggers the unit's `OnFailure=`, which emails `OWNER_EMAIL` through Resend (OPS-003.3). R2's free tier holds 14 dumps at no cost (NFR-009). Set-up and restore steps are in `ops/README.md`.
 
 ## 2. Schema
 
-PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). The schema is `src/server/schema.ts`; `drizzle-kit generate` writes migrations to `migrations/`. Every table has `id uuid primary key default gen_random_uuid()` unless stated, and every timestamp is `timestamptz` in UTC (DATA-003). "FK → x, cascade" means `on delete cascade`.
+PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). Tables, columns, constraints and indexes are in `src/server/schema.ts`; `drizzle-kit generate` writes migrations to `migrations/`. This section records only why the schema is shaped as it is. Every table has a `uuid` id unless stated, and every timestamp is `timestamptz` in UTC (DATA-003).
 
 ### 2.1 Enums
 
-| Enum | Values, in declared order | Why the order matters |
-|---|---|---|
-| `role` | `admin`, `member` | — |
-| `issue_status` | `backlog`, `in_progress`, `in_review`, `done`, `canceled` | Postgres sorts enums by declared order, so `ORDER BY status` gives the REQ-017 order for free (REQ-039). |
-| `issue_priority` | `urgent`, `high`, `medium`, `low`, `none` | `ORDER BY priority` gives Urgent first, No priority last (REQ-039, REQ-042). |
-| `label_color` | 8 values | Each maps to Track Lite colour tokens in section 6.6. |
-| `notification_kind` | `assigned`, `mentioned` | — |
-| `email_state` | `pending`, `sent`, `dropped`, `failed`, `bounced` | — |
+Postgres sorts an enum by its declared order, so the order is the sort order. `issue_status` is declared `backlog`, `in_progress`, `in_review`, `done`, `canceled`, so `ORDER BY status` gives the REQ-017 order (REQ-039). `issue_priority` is declared `urgent` to `none`, so `ORDER BY priority` puts Urgent first and No priority last (REQ-039, REQ-042). `label_color` holds the spec's 8 colours (6.6).
 
 ### 2.2 Accounts and sign-in
 
-**`members`**: `email`, `full_name`, `username`, `password_hash`, `role`, `deactivated_at` (null = active), `created_at`.
-- Unique indexes on `lower(email)` and `username`. Usernames are lowercased before saving (REQ-003.1), so a plain unique index on `username` is enough.
-- Check that `username` matches `^[a-z0-9-]{2,20}$`.
-- Never deleted (section 8 of the spec), so foreign keys pointing at members use the default `restrict`.
+**`members`**
+- Usernames are lowercased before saving (REQ-003.1), so a plain unique index on `username` is enough; emails are unique on `lower(email)`.
+- Never deleted (section 8 of the spec), so foreign keys pointing at members keep the default `no action`, which blocks deleting a referenced member.
 - **Keeping the last admin (REQ-007.3, REQ-052.3).** Removing admin or deactivating first locks every active admin row (`select id from members where role = 'admin' and deactivated_at is null for update`), then refuses if the target is the only one. Two admins demoting each other at once are serialised by the lock, so the second sees one admin left and is refused.
 - **Role changes apply on the next request (REQ-052).** `requireMember` reads the role from the database on every request; nothing caches it in the session.
 
-**`invitations`**: `email`, `invited_by` (FK → members), `token_hash` (unique), `expires_at`, `accepted_at`, `revoked_at`, `bounced_at`, `provider_message_id`, `created_at`.
+**`invitations`**
 - The spec's state is derived, not stored: Accepted if `accepted_at` is set, Revoked if `revoked_at` is set, Bounced if `bounced_at` is set, Expired if `expires_at < now()`, otherwise Pending.
 - `provider_message_id` is the Resend ID of the latest email, so the bounce webhook can find the invitation (5.4). A resend replaces it and clears `bounced_at`.
-- Partial unique index on `lower(email)` where `accepted_at is null and revoked_at is null`, so an email has at most one open invitation. Inviting an email again replaces that row's `token_hash` and `expires_at`, which is how a resend works (REQ-001.3). The old link stops working because its hash no longer matches.
+- A partial unique index on `lower(email)` where `accepted_at is null and revoked_at is null` allows at most one open invitation per email. Inviting an email again replaces that row's `token_hash` and `expires_at`, which is how a resend works (REQ-001.3). The old link stops working because its hash no longer matches.
 
-**`password_reset_tokens`**: `member_id` (FK → members), `token_hash` (unique), `expires_at`, `used_at`, `created_at`.
-- A successful reset sets `used_at` on that row **and** on all the member's other unused rows (REQ-050.6).
+**`password_reset_tokens`**: a successful reset sets `used_at` on that row **and** on all the member's other unused rows (REQ-050.6).
 
-**`sessions`**: `member_id` (FK → members), `token_hash` (unique), `last_active_at`, `created_at`.
+**`sessions`**
 - A session ends by deleting its row: on sign-out, deactivation (REQ-007), a password change for the member's other sessions (REQ-049), or a reset (REQ-050). DATA-004's 30-day limit is a maximum, so deleting at once complies.
 - A session is valid while `last_active_at > now() - 30 days` (REQ-006). To avoid a database write on every request, `last_active_at` is only rewritten when it's more than 1 hour old. At most 1 hour of the 30 days is lost, which is acceptable.
 
-**`sign_in_attempts`** (failed sign-ins and wrong current passwords, REQ-049.3) and **`password_reset_requests`**: `email` (lowercased), `ip` (`inet`), `created_at`, with no `id` column.
-- SEC-001 checks count the rows from the last hour, so each table has indexes on `(email, created_at)` and `(ip, created_at)`.
-- They're deleted after the retention in DATA-004 (1 hour and 1 day respectively, plus 30 days).
+**`sign_in_attempts`** (failed sign-ins and wrong current passwords, REQ-049.3) and **`password_reset_requests`** have no `id`. SEC-001 counts the last hour's rows, so each is indexed on `(email, created_at)` and `(ip, created_at)`.
 
 Tokens (SEC-003) are 32 random bytes, sent base64url-encoded, and stored as `sha256` hashes in a `bytea` column. A fast hash is enough here because the token itself has 256 random bits; only passwords need Argon2id (SEC-008).
 
 ### 2.3 Projects and labels
 
-**`project_keys`**: `key text primary key`. One row is inserted with every project and is **never deleted**. That's what reserves the key forever (REQ-009.3), while the project row itself can be hard-deleted.
+**`project_keys`** has one row per project key, inserted with the project and **never deleted**. That's what reserves the key forever (REQ-009.3), while the project row itself can be hard-deleted with a cascade (DATA-002).
 
-**`projects`**: `key` (unique, FK → project_keys), `name`, `description` (default `''`), `description_version int default 0`, `description_edited_by` (FK → members, null), `next_issue_number int default 1`, `archived_at`, `created_at`.
-- Check that `key` matches `^[A-Z]{2,5}$`.
-- Sidebar order (REQ-015): `order by name, key`.
-- `description_edited_by` is the member who last saved the description, named in the STD-8 conflict message. If you saved from another tab, the message names you.
+**`projects`**: `description_edited_by` is the member who last saved the description, named in the STD-8 conflict message. If you saved from another tab, the message names you. Issues have the same column.
 
-**`labels`**: `project_id` (FK → projects, cascade), `name`, `color label_color`.
-- Unique index on `(project_id, lower(name))` (REQ-021.2).
+**`labels`** are unique per project ignoring capitals, on `(project_id, lower(name))` (REQ-021.2).
 
 ### 2.4 Issues
 
-**`issues`**: `project_id` (FK → projects, cascade), `number`, `title`, `description` (default `''`), `description_version int default 0`, `description_edited_by` (FK → members, null), `status`, `priority`, `assignee_id` (FK → members, null), `position text`, `created_by` (FK → members), `created_at`, `updated_at`, `status_changed_at`, `request_id uuid` (unique).
-- Unique on `(project_id, number)`.
-
-How the less obvious columns work:
-
-- **Numbering (REQ-016).** The create transaction runs `update projects set next_issue_number = next_issue_number + 1 where id = $1 returning next_issue_number - 1`. The row lock makes two people creating at the same moment wait for each other, so they get different numbers (REQ-016.4). Deleting an issue never decrements the counter, so numbers aren't reused (REQ-016.2).
+- **Numbering (REQ-016).** The create transaction locks the project row (`for update`, the same read that checks it isn't archived), then runs `update projects set next_issue_number = next_issue_number + 1 where id = $1 returning next_issue_number - 1`. The row lock makes two people creating at the same moment wait for each other, so they get different numbers (REQ-016.4). Deleting an issue never decrements the counter, so numbers aren't reused (REQ-016.2).
 - **Board position (REQ-026, REQ-027).** `position` is a string sort key from the `fractional-indexing` package. The column is `text COLLATE "C"`, because the keys only sort correctly byte by byte (`Zz` before `a0`); a database whose default collation is a language one, such as `en_US.UTF-8`, would put a card moved to the top at the bottom. A drop between two cards generates a key between theirs; "move to top" generates a key before the column's first card. Only the moved row changes, so two members reordering different cards don't conflict (REQ-026.3). Columns sort by `(position, id)`: if two moves land between the same pair at once, they may get equal keys, and `id` breaks the tie consistently for everyone.
+- **Moving a card.** A move names one neighbour (`place: { after: "WEB-5" }`), not the keys around it. The server computes a key between WEB-5 and whatever card follows WEB-5 *right now*, so a board that's out of date still lands the card next to the one the member chose (REQ-026.4). If WEB-5 is no longer in that column, the card goes to the top. A move changes `status` and `status_changed_at` only when the status actually changes. A status change from anywhere else (`PATCH { status }`) also puts the card at the top of its new column (REQ-027.4).
 - **`updated_at` (REQ-036).** Set when the title, description, status, priority, assignee or the issue's labels change. Not set by reordering within a column (REQ-036.5), comments, or renaming or recoloring a label on the Labels page.
 - **`status_changed_at`.** Set on every status change, and drives the 14-day Done/Canceled window (REQ-028, REQ-041).
-- **`description_version`.** Incremented on each description save. A save sends the version it started from, and the update runs `where description_version = $sent`. If no row matches, someone else saved first → the STD-8 conflict message. Changes to other fields don't touch it, so a status change by a teammate never blocks your description save. Projects use the same pattern.
-- **`description_edited_by`.** The member who last saved the description, named in the STD-8 conflict message, as for projects (§2.3).
-- **`request_id`.** A create that repeats a `request_id` returns the existing issue (STD-5).
+- **`description_version`.** Incremented on each description save. A save sends the version it started from. The transaction locks the row (`for update`) and compares the stored version with the sent one; if they differ, someone else saved first → the STD-8 conflict message. Changes to other fields don't touch it, so a status change by a teammate never blocks your description save. Projects use the same pattern.
+- **Labels.** A label change sends the issue's full set (`labelIds`), which replaces its `issue_labels` rows. The 10-label maximum (REQ-020.3) is checked by the body schema.
 
-Indexes:
-- `(project_id, status, position)` for the board.
-- `(project_id, updated_at desc)` for the list's default sort.
-- `(assignee_id, status)` for My issues.
-- GIN `gin_trgm_ops` on `title` and on `description` for search.
-
-**`issue_labels`**: `issue_id` (FK → issues, cascade), `label_id` (FK → labels, cascade), primary key `(issue_id, label_id)`.
-- The 10-label maximum (REQ-020.3) is checked in the transaction that adds labels, after locking the issue row.
-
-**Search (REQ-038).** One condition per typed word, combined with `and`. The issue matches if the word appears in the title, the description, or its ID (`key || '-' || number`), each checked with `ILIKE '%word%'`, where `%`, `_` and `\` in the word are escaped first (REQ-038.4). The `pg_trgm` indexes keep this fast at 10,000 issues (NFR-004).
+**Search (REQ-038).** One condition per typed word, combined with `and`. The issue matches if the word appears in the title, the description, or its ID (`key || '-' || number`), each checked with `ILIKE '%word%'`, where `%`, `_` and `\` in the word are escaped first (REQ-038.4). GIN `gin_trgm_ops` indexes on `title` and `description` keep this fast at 10,000 issues (NFR-004). They need the `pg_trgm` extension, which drizzle-kit can't declare, so the first migration runs `create extension if not exists pg_trgm` (added by hand).
 
 ### 2.5 Comments and mentions
 
-**`comments`**: `issue_id` (FK → issues, cascade, null), `project_id` (FK → projects, cascade, null), `author_id` (FK → members), `body`, `version int default 0`, `created_at`, `edited_at`, `request_id uuid` (unique).
-- Check `num_nonnulls(issue_id, project_id) = 1`: each comment belongs to exactly one issue or one project.
-- Indexes on `(issue_id, created_at)` and `(project_id, created_at)`.
+**`comments`** each belong to exactly one issue or one project (a `num_nonnulls` check).
 
-**`mentions`**: `member_id` (FK → members), `issue_id` (FK → issues, cascade, null), `project_id` (FK → projects, cascade, null), `comment_id` (FK → comments, cascade, null).
-- `issue_id` is used for a mention in an issue's description, and `project_id` for one in a project's description (REQ-044).
-- Check `num_nonnulls(issue_id, project_id, comment_id) = 1`, plus unique indexes on `(member_id, issue_id)`, `(member_id, project_id)` and `(member_id, comment_id)`.
+**`mentions`** record who a text mentions. Exactly one of `issue_id` (an issue's description), `project_id` (a project's description) or `comment_id` is set (REQ-044).
 - The rows always mirror the **current** text. Each save parses the mentions (DATA-001), inserts the new ones and deletes the removed ones. "Mentioned for the first time" (REQ-044) means "not in the text before this save". So if a mention is removed and later added back, that member is emailed again, as the spec requires (REQ-044).
 
 ### 2.6 Notifications
 
-Two tables. One holds the notifications; the other holds the emails they're combined into (REQ-045).
+**`notification_emails`** has one row per email a recipient will get about one issue or project (`target_type`, `target_id`), with its `send_after`, `state`, retry count and Resend ID.
 
-**`notification_emails`**: `recipient_id` (FK → members), `target_type` (`issue` | `project`), `target_id uuid` (**no FK**), `send_after`, `state email_state`, `attempts int default 0`, `next_attempt_at`, `provider_message_id`, `created_at`, `sent_at`.
-- The worker picks up rows with `state = 'pending' and coalesce(next_attempt_at, send_after) <= now()`.
-- The webhook finds a bounced email by its `provider_message_id` (API-003).
+**`notifications`** has one row per notification, attached to the email it's combined into (REQ-045), with a **snapshot** of what the email needs: issue ID, issue title, project name and key, link path, and a plain-text excerpt of up to 500 characters.
 
-**`notifications`**: `email_id` (FK → notification_emails, cascade), `kind`, `actor_id` (FK → members), `comment_id uuid` (no FK, null), `dropped boolean default false`, `created_at`, plus a **snapshot** of what the email needs: issue ID text, issue title, project name and key, link path, and a plain-text excerpt of up to 500 characters.
+No index covers `provider_message_id` (here or on `invitations`), `notifications.email_id` or `sessions.member_id`. At one team's volume these lookups scan small tables; add an index if one shows up in NFR-003 timings.
 
 How the parts fit:
 
@@ -267,10 +222,12 @@ Settles DEC-002. Request and response types live in the code; this section fixes
 
 - **Format.** JSON in and out. Times are ISO 8601 strings in UTC (DATA-003).
 - **Addressing.** Issues by ID (`WEB-42`), projects by key (`WEB`), and members by username. All are matched ignoring capitals (REQ-016.5). Labels, comments and invitations use their `uuid`.
+- **Unknown paths.** A catch-all, `src/app/api/[...path]/route.ts`, answers every method on an unknown `/api` path with `404` "Not found". It needs a session, so a signed-out caller gets `401` and learns nothing about which paths exist.
 - **No tokens in paths.** Invitation and reset tokens always travel in the request body. The request log records only the path, never the query string, so the `?token=` on the reset *page* (API-004) isn't logged either (SEC-007).
+- **List paging** uses `offset`, not keyset cursors, which several sort columns would make complex. With no live updates (spec §3), rows only shift if someone else edits mid-scroll, and that's accepted.
 - **Field-by-field saves.** The issue page saves each field as soon as it changes, with a `PATCH` that holds only that field. That's what makes STD-8's "last save wins" work per field. It also means one failed field leaves the others saved (REQ-020.4).
-- **Creating twice.** Creates of issues and comments carry `requestId`. A repeat returns the first result with `200` instead of `201` (STD-5).
-- **Small member data.** A member appears in responses as `{ username, fullName, initials, deactivated }`. Emails appear only on `/api/me` and the admin member list. Password hashes never appear (SEC-008.2).
+- **Creating twice.** Creates of issues and comments carry `requestId`. A repeat returns the first result with `200` instead of `201` (STD-5). `request_id` is unique across the whole table, so a repeat is found whatever project or issue it was sent to.
+- **Small member data.** A member appears in responses as `{ username, fullName, initials, deactivated }`. Emails appear only in a full profile: `/api/me`, the admin member list, an admin's `PATCH /api/members/{username}`, and the new member's own `POST /api/members`. Password hashes never appear (SEC-008.2).
 
 ### 3.2 Errors
 
@@ -279,86 +236,88 @@ Every error body is `{ error: { message, fields? } }`, and the browser shows `me
 | Status | When | Browser shows |
 |---|---|---|
 | `401` | No valid session: signed out, expired or deactivated (STD-1, REQ-007.4) | Redirect to `/sign-in?next=…` |
-| `403` | Not allowed (STD-2), a cross-site write (SEC-004), or a write to an archived project, with the message "This project is archived" (REQ-013.4) | Toast (STD-9) |
-| `404` | The target doesn't exist. The message names it: "Not found", "This issue was deleted", "This comment was deleted", "That label no longer exists" | Not-found page on load (STD-4); toast on save (STD-9) |
-| `409` | Stale save of a description or comment: "This was changed by Alex Kim. Copy your text and reload." (STD-8) | Message in the editor; text kept |
+| `403` | Not allowed (STD-2), a cross-site write (SEC-004), or a write to an archived project (REQ-013.4) | Toast (STD-9) |
+| `404` | The target doesn't exist, and the message names it. Reading a missing issue or its comments gets "Not found"; a write to one gets "This issue was deleted" | Not-found page on load (STD-4); toast on save (STD-9) |
+| `409` | Stale save of a description or comment (STD-8) | Message in the editor; text kept |
 | `410` | An invitation or reset link that's expired, used or revoked (REQ-002.2, REQ-002.4, REQ-050.4) | The page's expired state |
-| `422` | Invalid input. With `fields`: one error per field (STD-3). Without `fields`: a form-level refusal, such as "Already a member", "There must be at least one admin." or "Incorrect email or password." | Next to the fields, or beside the form |
-| `429` | A SEC-001 limit: "Too many attempts. Try again later." | Beside the form |
+| `422` | Invalid input. With `fields`: one error per field (STD-3). Without `fields`: a form-level refusal, such as the last admin or a wrong sign-in | Next to the fields, or beside the form |
+| `429` | A SEC-001 limit | Beside the form |
 | `503` | An invitation or reset email couldn't be sent (STD-6) | Toast |
-| `500` | Anything else | Toast "Couldn't save. Try again." or the "Couldn't load this." state (DEC-006) |
+| `500` | Anything else | The DEC-006 toast or error state |
+
+Rules that need the database also answer with a field error: a key, label name or username already taken, or a wrong current password.
 
 Changing a field that can't be changed (username, email, project key) gets `422` with a field error. The stored value stays as it was (REQ-003.3, REQ-010.1).
 
-A body schema failure gets `422` with "Check the highlighted fields" and the first failing rule's message for each field (STD-3). A field missing from the body gets the field error "Required". A body that isn't valid JSON, or isn't a JSON object, gets `422` "Couldn't read the request." with no `fields`. The browser never sends either, so this only keeps such requests from becoming a `500`. Query strings and path segments aren't covered by schemas.
+A body schema failure gets `422` with "Check the highlighted fields" and the first failing rule's message for each field (STD-3). A rule on the body as a whole, such as "Change one field at a time" on an issue `PATCH`, gets `422` with its own message and no `fields`. A field missing from the body gets the field error "Required". A body that isn't valid JSON, or isn't a JSON object, gets `422` "Couldn't read the request." with no `fields`. The browser never sends either, so this only keeps such requests from becoming a `500`. Query strings and path segments aren't covered by schemas.
 
 ### 3.3 Endpoints
 
-"Member" means any signed-in active member. Every write to something inside an archived project (its description, issues, comments, labels) gets `403` "This project is archived". Admins can still rename, unarchive or delete an archived project.
+"Member" means any signed-in active member. Every write to something inside an archived project (its description, issues, comments, labels) gets `403` "This project is archived". Admins can still unarchive or delete an archived project; renaming it gets the same `403`.
+
+Request bodies are the Valibot schemas in `src/schemas/`, and response types are in `src/client/api.ts`, which every handler's return value `satisfies`. The tables give only what the types can't say.
 
 **Sign-in and account** (no session needed unless noted)
 
-| Method and path | Body → result | Who | Spec |
+| Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `POST /api/sessions` | `{ email, password }` → `204`, sets the cookie | Anyone | REQ-047, SEC-001 |
-| `DELETE /api/sessions/current` | → `204`, with or without a session | Anyone | REQ-006 |
-| `POST /api/password-reset-links` | `{ email }` → `204` whether or not the email belongs to a member | Anyone | REQ-050, SEC-001 |
-| `POST /api/password-reset-lookups` | `{ token }` → `204`, or `410` "This link has expired". Doesn't use up the link | Anyone | REQ-050.5, REQ-050.9 |
-| `POST /api/password-resets` | `{ token, password }` → `204`. Ends all the member's sessions, then sets a new cookie | Anyone | REQ-050 |
-| `POST /api/invitation-lookups` | `{ token }` → `{ email }`, or `410` with the same messages as accepting | Anyone | REQ-002 |
-| `POST /api/members` | `{ token, fullName, username, password }` → `201`, sets the cookie (accepting an invitation) | Anyone | REQ-002, REQ-003 |
-| `GET /api/me` | → profile, including email and role | Member | REQ-003.3 |
-| `PATCH /api/me` | `{ fullName }` | Member | REQ-003 |
-| `PUT /api/me/password` | `{ currentPassword, newPassword }` → `204`. Ends the member's other sessions | Member | REQ-049 |
+| `POST /api/sessions` | `204`, sets the cookie | Anyone | REQ-047, SEC-001 |
+| `DELETE /api/sessions/current` | `204`, with or without a session | Anyone | REQ-006 |
+| `POST /api/password-reset-links` | `204` whether or not the email belongs to a member | Anyone | REQ-050, SEC-001 |
+| `POST /api/password-reset-lookups` | `204` or `410`; doesn't use up the link | Anyone | REQ-050.5, REQ-050.9 |
+| `POST /api/password-resets` | `204`; ends all the member's sessions, then sets a new cookie | Anyone | REQ-050 |
+| `POST /api/invitation-lookups` | The invited email, or `410` as for accepting | Anyone | REQ-002 |
+| `POST /api/members` | Accepts an invitation: `201` and the new member's profile, sets the cookie | Anyone | REQ-002, REQ-003 |
+| `GET /api/me` | The profile, including email and role | Member | REQ-003.3 |
+| `PATCH /api/me` | Full name only | Member | REQ-003 |
+| `PUT /api/me/password` | `204`; ends the member's other sessions. A wrong current password counts toward the sign-in limit (4.5) | Member | REQ-049, SEC-001 |
 
 **Members and invitations**
 
-| Method and path | Body → result | Who | Spec |
+| Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/members` | → all members, active and deactivated. Used for the assignee picker, the @mention suggestions and the members page. With about 15 people, the browser filters the list itself. | Member (emails only for admins) | DATA-001, REQ-037 |
-| `PATCH /api/members/{username}` | `{ role?, deactivated? }` | Admin | REQ-007, REQ-008, REQ-052 |
-| `GET /api/invitations` | → invitations that are Pending, Bounced or Expired | Admin | REQ-001, REQ-051 |
-| `POST /api/invitations` | `{ email }` → `201`. If an open invitation for that email exists, this works as a resend | Admin | REQ-001 |
-| `POST /api/invitations/{id}/resend` | → `200`, new link | Admin | REQ-001.3 |
-| `DELETE /api/invitations/{id}` | → `204`, revoked | Admin | REQ-001.4 |
+| `GET /api/members` | All members, active and deactivated, for the assignee picker, the @mention suggestions and the members page; with about 15 people the browser filters the list itself | Member (emails only for admins) | DATA-001, REQ-037 |
+| `PATCH /api/members/{username}` | Role or deactivated; returns the full profile | Admin | REQ-007, REQ-008, REQ-052 |
+| `GET /api/invitations` | Pending, Bounced and Expired invitations | Admin | REQ-001, REQ-051 |
+| `POST /api/invitations` | `201`; works as a resend if the email has an open invitation | Admin | REQ-001 |
+| `POST /api/invitations/{id}/resend` | A new link | Admin | REQ-001.3 |
+| `DELETE /api/invitations/{id}` | Revokes | Admin | REQ-001.4 |
 
 **Projects and labels**
 
-| Method and path | Body → result | Who | Spec |
+| Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/projects?archived=false\|true` | → sidebar list, or the Archived list | Member | REQ-013, REQ-015 |
-| `POST /api/projects` | `{ name, key }` → `201` | Admin | REQ-009 |
-| `GET /api/projects/{KEY}` | → name, key, description, `descriptionVersion`, mentions, `archivedAt` | Member | REQ-046 |
-| `PATCH /api/projects/{KEY}` | `{ name? }` or `{ archived? }` (Admin), `{ description, descriptionVersion }` (Member) | Per field | REQ-011, REQ-012, REQ-013 |
-| `DELETE /api/projects/{KEY}` | → `204`. The typed-key confirmation is checked in the browser | Admin | REQ-014 |
-| `GET /api/projects/{KEY}/labels` | → labels sorted by name ignoring capitals, each `{ id, name, color, issueCount }` | Member | REQ-021, REQ-021.5 |
-| `POST /api/projects/{KEY}/labels` | `{ name, color }` → `201`, the label | Member | REQ-020.2, REQ-021 |
-| `PATCH /api/labels/{id}` | `{ name?, color? }` → the label. A missing label gets `404` "That label no longer exists" | Member | REQ-021 |
-| `DELETE /api/labels/{id}` | → `204` | Member | REQ-021.3 |
+| `GET /api/projects?archived=false\|true` | The sidebar list, or the Archived list | Member | REQ-013, REQ-015 |
+| `POST /api/projects` | `201` | Admin | REQ-009 |
+| `GET /api/projects/{KEY}` | Includes the description's version and mentions | Member | REQ-046 |
+| `PATCH /api/projects/{KEY}` | Name or archived (Admin), or a description save (Member) | Per field | REQ-011, REQ-012, REQ-013 |
+| `DELETE /api/projects/{KEY}` | The typed-key confirmation is checked in the browser | Admin | REQ-014 |
+| `GET /api/projects/{KEY}/labels` | Sorted by name ignoring capitals, each with its issue count | Member | REQ-021, REQ-021.5 |
+| `POST /api/projects/{KEY}/labels` | `201` | Member | REQ-020.2, REQ-021 |
+| `PATCH /api/labels/{id}` | Name or colour | Member | REQ-021 |
+| `DELETE /api/labels/{id}` | | Member | REQ-021.3 |
 
 **Issues and views**
 
-| Method and path | Body → result | Who | Spec |
+| Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/projects/{KEY}/board` | → 5 columns in order, each `{ status, count, cards }`, cards sorted by `(position, id)`. A card is `{ id, title, priority, assignee, labels }`: `assignee` is a member or `null`, and `labels` holds all of the issue's labels as `{ id, name, color }`, sorted by name ignoring capitals (the card trims them to 3 and "+N"). Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-024, REQ-025, REQ-028 |
-| `GET /api/projects/{KEY}/issues` | Query: `status` and `priority` (enum values), `assignee` (username, or `-` for Unassigned), `label` (label name, ignoring capitals), each repeatable; `q`; `sort` (`id`, `status`, `priority`, `updated`; default `updated`); `dir` (`asc`, `desc`; default `desc` for `updated`, `asc` otherwise); `offset`. Ties sort most recently updated first. Unknown values are ignored → `{ issues, hasMore, deactivatedAssignees }`: up to 100 rows, each `{ id, title, status, priority, assignee, labels, updatedAt }` with labels as on the board; `deactivatedAssignees` lists the deactivated members still assigned to an issue in the project, for the assignee filter, whatever the filters | Member | REQ-036…040 |
-| `POST /api/projects/{KEY}/issues` | `{ requestId, title, status? }` → `201`. `status` is used by the column **+** buttons | Member | REQ-016, REQ-029 |
-| `GET /api/issues/{ID}` | → the issue with its labels, assignee, creator, `descriptionVersion` and mentions | Member | REQ-016 |
-| `PATCH /api/issues/{ID}` | One of `{ title }`, `{ status }`, `{ priority }`, `{ assignee }` (username or `null`), `{ labelIds }`, or `{ description, descriptionVersion }` | Member | REQ-016…022, REQ-027.4 |
-| `PUT /api/issues/{ID}/position` | `{ status, place: "top" \| "bottom" \| { after: "WEB-5" } }` | Member | REQ-026, REQ-027, REQ-030 |
-| `DELETE /api/issues/{ID}` | → `204` | Creator or Admin | REQ-023 |
-| `GET /api/my-issues` | → the member's issues in active projects, as groups `{ status, count, issues }` in status order with empty groups left out (so nothing assigned is `[]`). A row is `{ id, title, projectName, priority, labels, updatedAt }` with labels as on the board, sorted by priority from Urgent down, then most recently updated. Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-041, REQ-042 |
+| `GET /api/projects/{KEY}/board` | 5 columns in status order, cards sorted by `(position, id)`. Each card carries all its labels, sorted by name ignoring capitals; the card trims them to 3 and "+N". Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-024, REQ-025, REQ-028 |
+| `GET /api/projects/{KEY}/issues` | Filters `status`, `priority`, `assignee` (`-` for Unassigned) and `label` (name, ignoring capitals), each repeatable; `q`; `sort` (default `updated`) and `dir` (default `desc` for `updated`, `asc` otherwise); `offset`. Ties sort most recently updated first, and unknown values are ignored. Up to 100 rows, plus the deactivated members still assigned in the project, for the assignee filter | Member | REQ-036…040 |
+| `POST /api/projects/{KEY}/issues` | `201`. `status` is used by the column **+** buttons; a missing or unknown value becomes `backlog` | Member | REQ-016, REQ-029 |
+| `GET /api/issues/{ID}` | Includes the description's version and mentions | Member | REQ-016 |
+| `PATCH /api/issues/{ID}` | One field per request (3.1): title, status, priority, assignee, the full label set, or a description save | Member | REQ-016…022, REQ-027.4 |
+| `PUT /api/issues/{ID}/position` | A status and a place: top, bottom, or after a named card (2.4) | Member | REQ-026, REQ-027, REQ-030 |
+| `DELETE /api/issues/{ID}` | | Creator or Admin | REQ-023 |
+| `GET /api/my-issues` | The member's issues in active projects, grouped by status in order with empty groups left out, sorted by priority from Urgent down, then most recently updated. Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-041, REQ-042 |
 
 **Comments**
 
-| Method and path | Body → result | Who | Spec |
+| Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/issues/{ID}/comments`, `GET /api/projects/{KEY}/comments` | → every comment, oldest first, each with its mentions | Member | REQ-032 |
-| `POST /api/issues/{ID}/comments`, `POST /api/projects/{KEY}/comments` | `{ requestId, body }` → `201` and the comment; a repeated `requestId` → `200` and the original (STD-5) | Member | REQ-031 |
-| `PATCH /api/comments/{id}` | `{ body, version }` → the comment; a stale `version` → `409` (STD-8); a deleted comment → `404` "This comment was deleted" | Author | REQ-033 |
-| `DELETE /api/comments/{id}` | → `204` | Author or Admin | REQ-034 |
-
-A comment is `{ id, body, author, createdAt, editedAt, version, mentions }`: `author` is a member as in 3.1, `editedAt` is `null` until the first edit, and `mentions` lists the members it mentions. The body is stored as sent; it must have something other than spaces ("Comment required") and at most 10,000 characters ("Too long (max 10,000)").
+| `GET /api/issues/{ID}/comments`, `GET /api/projects/{KEY}/comments` | Oldest first, each with its mentions | Member | REQ-032 |
+| `POST /api/issues/{ID}/comments`, `POST /api/projects/{KEY}/comments` | `201`; a repeated `requestId` gets `200` and the original (STD-5) | Member | REQ-031 |
+| `PATCH /api/comments/{id}` | A stale version gets `409` (STD-8) | Author | REQ-033 |
+| `DELETE /api/comments/{id}` | | Author or Admin | REQ-034 |
 
 **Outside `/api`**
 
@@ -369,11 +328,7 @@ A comment is `{ id, body, author, createdAt, editedAt, version, mentions }`: `au
 
 ### 3.4 Details worth fixing now
 
-- **Moving a card.** `place: { after: "WEB-5" }` names one neighbour. The server computes a key between WEB-5 and whatever card follows WEB-5 *right now*, so a board that's out of date still lands the card next to the card the member chose (REQ-026.4). If WEB-5 is no longer in that column, the card goes to the top. The `PUT` changes `status` and `status_changed_at` only when the status actually changes, and it never touches `updated_at` for a move within one column (REQ-036.5).
-- **A status change from anywhere else** (`PATCH { status }`) also puts the card at the top of its new column (REQ-027.4).
-- **List paging uses `offset`**, not keyset cursors. With no live updates (spec §3), rows only shift if someone else edits mid-scroll, and that's accepted.
-- **The invitation page** (`/invite?token=…`) calls `POST /api/invitation-lookups` with the token in the body when it opens. It needs to show "expired" straight away (REQ-002.2), and the email to greet the person with. The reset page does the same with `POST /api/password-reset-lookups`, so an expired or malformed link shows "This link has expired" with no form (REQ-050.9). Neither lookup uses up the link.
-- **Wrong email or password** returns `422` with no `fields`, not `401`. A `401` would make the browser treat it as an ended session.
+Its items now sit with the design they belong to: moving a card in 2.4, list paging in 3.1, link lookups in 4.6, and the status for a wrong password in 4.5.
 
 ## 4. Auth and security
 
@@ -384,7 +339,7 @@ A comment is `{ id, body, author, createdAt, editedAt, version, mentions }`: `au
   - The settings are stored inside each hash. When they change, a successful sign-in re-hashes the password with the new ones.
 - **Length rule.** 12 to 128 is counted in Unicode code points (`[...password].length`), not JavaScript string length. Otherwise an emoji would count as 2.
 - **No changes to the password.** No trimming and no Unicode normalisation (REQ-048.4): the exact bytes typed are what get hashed.
-- **Unknown emails.** No dummy hash is computed for an email that isn't a member. The timing difference is an accepted limitation in spec §10.
+- **Unknown emails.** Sign-in verifies against a fixed dummy hash when the email isn't an active member, so both cases cost one Argon2id verify. A reset request still takes longer for a member, because only then is an email sent; spec §10 accepts that difference.
 
 ### 4.2 Tokens (SEC-003)
 
@@ -415,7 +370,7 @@ For `POST`, `PUT`, `PATCH` and `DELETE`, `apiRoute` requires:
 - an `Origin` header equal to `APP_URL`'s origin;
 - or, if `Origin` is missing, `Sec-Fetch-Site: same-origin`.
 
-Anything else gets `403`. `SameSite=Lax` is a second layer of protection. The one exception is `/webhooks/email`, which is checked by signature instead (3.3).
+Anything else gets `403`. `SameSite=Lax` is a second layer of protection. Together they cover SEC-004 with no CSRF token stored in forms or state. The one exception is `/webhooks/email`, which is checked by signature instead (3.3).
 
 ### 4.5 Sign-in and reset limits (SEC-001)
 
@@ -423,7 +378,7 @@ Anything else gets `403`. `SameSite=Lax` is a second layer of protection. The on
 1. Lowercase and trim the email.
 2. Count the last hour's `sign_in_attempts` rows for that email and for that IP. If there are 10 or more for the email, or 30 or more for the IP, answer `429`. This check comes **before** the password check, so a correct password is also refused (SEC-001.1).
 3. Look up an active member by `lower(email)` and verify the password.
-4. If either step fails, insert a `sign_in_attempts` row and answer `422` "Incorrect email or password.". Unknown and deactivated emails count the same way (SEC-001.3).
+4. If either step fails, insert a `sign_in_attempts` row and answer `422` "Incorrect email or password.", not `401`, which the browser would treat as an ended session. Unknown and deactivated emails count the same way (SEC-001.3).
 5. On success, create the session. Earlier failures stay counted until they're an hour old; a success doesn't reset them.
 
 **Changing a password** (`PUT /api/me/password`) uses the same per-email count: a wrong current password inserts a `sign_in_attempts` row, and past the limit even the right one gets `429` (REQ-049.3).
@@ -436,39 +391,29 @@ Anything else gets `403`. `SameSite=Lax` is a second layer of protection. The on
 
 ### 4.6 Invitation and reset links
 
-**Accepting an invitation** (`POST /api/members`). The body schema has already checked the profile and password (`422`, D-42), so a malformed form is refused before the link is looked at. A token that isn't a string is treated as an unknown link. Then, in one transaction:
-1. Lock the invitation found by hash (`for update`).
-2. Answer `410` with the right message if needed:
-   - revoked → "This invitation is no longer valid." (REQ-002.4);
-   - expired, already accepted, or unknown (including a link replaced by a resend) → "This invitation has expired. Ask an admin for a new one." (REQ-002.2).
-3. Refuse a taken username (`422`, REQ-003.2).
-4. Insert the member, set `accepted_at`, create a session.
+Accepting an invitation (`POST /api/members`) and resetting a password (`POST /api/password-resets`) each run in one transaction that **locks the link's row** (`for update`) before checking it, so two submits of the same link can't both succeed. The body schema has already checked the form (D-42), so a malformed form is refused before the link is looked at.
+- **Which `410`.** A revoked invitation gets REQ-002.4's message; expired, accepted or unknown (including a link replaced by a resend) gets REQ-002.2's. A reset link that's used, expired or unknown, or whose member is deactivated, gets "This link has expired".
+- **A reset ends every session.** It sets `used_at` on **all** the member's unused tokens (REQ-050.6), deletes the member's sessions and creates a new one.
+- **Signed in.** Accepting with a valid session gets `403` "You're signed in as {name}. Sign out to accept this invitation." The page shows that state before the form appears (REQ-002.3); the API check only stops a bypass. The reset page shows its own sign-out prompt and never looks at the token (REQ-050.8).
 
-If the request arrives with a valid session, it's refused with `403` "You're signed in as {name}. Sign out to accept this invitation." The page shows that state before the form appears (REQ-002.3). This check just stops a bypass through the API.
-
-**Resetting a password** (`POST /api/password-resets`). The body schema has already checked the new password (`422`, D-42). Then, in one transaction:
-1. Lock the token row.
-2. Answer `410` "This link has expired" if it's used, expired, unknown, or the member is deactivated.
-3. Set the hash, set `used_at` on **all** the member's unused tokens (REQ-050.6), delete the member's sessions, and create a new one.
-
-**Opening a reset link** checks the token with `POST /api/password-reset-lookups`, which only reads it. A usable link shows the form; anything else shows "This link has expired" (REQ-050.9). Because the check never uses the link up, a mail scanner opening it changes nothing (REQ-050.5). If a valid session exists, the page shows "You're signed in as {name}. Sign out to reset a password." and never looks at the token (REQ-050.8).
+**Opening a link.** The invitation page calls `POST /api/invitation-lookups` with the token in the body as it opens, so it can show "expired" straight away (REQ-002.2) and greet the person by email. The reset page checks its token with `POST /api/password-reset-lookups` the same way, and shows the form only for a usable link (REQ-050.9). Neither lookup uses up the link, so a mail scanner opening it changes nothing (REQ-050.5).
 
 ### 4.7 Markdown (SEC-002, DATA-001)
 
 One module, `src/lib/markdown/`, used for both **rendering** in the browser and **finding mentions** on the server. Because both use the same parser, `@sam` inside code is skipped the same way in both places (DATA-001.4).
 
-- **Parser:** `react-markdown` with `remark-gfm` (checklists, tables, strikethrough). `rehype-raw` is never used.
+- **Parser:** `remark-gfm` (checklists, tables, strikethrough) on `remark-parse`. `parse.ts` exports the remark plugins; the browser renders with `react-markdown` using them, and the server runs the same plugins through `unified` and takes plain text with `mdast-util-to-string`. `rehype-raw` is never used.
 - **Raw HTML.** A small remark plugin turns every `html` node into a `text` node. `<script>` and `<img onerror>` then show as literal text (REQ-012.3, SEC-002.1), rather than depending on a library default.
 - **Links.** A `urlTransform` allows only `http:`, `https:` and `mailto:`. A link with any other scheme renders as its plain text, not an `<a>` (SEC-002.2). Allowed links get `target="_blank" rel="noopener noreferrer"`.
 - **Mentions.** A remark plugin walks text nodes outside `code` and `inlineCode` and matches `(?<![A-Za-z0-9._%+@-])@([a-z0-9-]{2,20})(?![a-z0-9-])`. The look-behind skips email addresses and `foo@sam`; the look-ahead stops at punctuation, so `(@sam)` and `@sam, thanks` both match (DATA-001.5, DATA-001.6). Mentions are found in issue descriptions, project descriptions and comments.
   - On the server, the matches become the `mentions` rows: active members only (2.5).
-  - In the browser, a match is shown highlighted, with the full name on hover, only if the username is in the `mentions` list from the API (1.2). Mentions aren't links (DATA-001).
+  - In the browser, a match is shown highlighted, with the full name on hover, only if the username is in the `mentions` list the API returns with the text, so the browser never looks members up itself. Mentions aren't links (DATA-001).
 
 ### 4.8 Logs (SEC-007)
 
-- The logger takes a fixed set of fields: time, level, event, method, path (without the query string), status, duration, member username, and error class or message.
+- The logger takes a fixed set of fields: time, level, event, method, path (without the query string), status, `durationMs`, `actor` (the member's username), and error class and message.
 - It never logs request or response bodies, headers or cookies.
-- Domain events are logged as short phrases, such as `sign-in, member sam` (SEC-007.1).
+- Besides the request line, only email events are logged, as short phrases such as `email bounced, invitation {id}` (SEC-007.1).
 - Errors from the email provider are logged without the message content.
 
 ### 4.9 Response headers
@@ -476,7 +421,7 @@ One module, `src/lib/markdown/`, used for both **rendering** in the browser and 
 Caddy adds these to every response:
 - `Strict-Transport-Security: max-age=31536000` (SEC-005)
 - `X-Content-Type-Options: nosniff`
-- `Referrer-Policy: same-origin`, so no referrer goes to other sites (SEC-010) and a page address containing a token never leaks through the `Referer` header
+- `Referrer-Policy: same-origin`, so no referrer goes to other sites (SEC-010) and a page address containing a token never leaks through the `Referer` header. `src/proxy.ts` sets it too, so it holds even without Caddy.
 
 **Content Security Policy (SEC-010).** Next.js puts small inline scripts in every page, so the policy needs a fresh nonce per request. `src/proxy.ts` generates it and sets, on page requests only:
 
@@ -485,7 +430,7 @@ default-src 'self'; script-src 'self' 'nonce-{n}' 'strict-dynamic'; style-src 's
 img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
 ```
 
-It also sets `Referrer-Policy: same-origin`, so SEC-010 holds even without Caddy. Next.js reads the nonce from the request and adds it to its own scripts; the root layout awaits `connection()` so the shell is rendered per request. A nonce makes the shell render per request instead of being cached, which costs nothing here because there's one small shell.
+In development `script-src` also gets `'unsafe-eval'`, which Next.js's dev tooling needs. Next.js reads the nonce from the request and adds it to its own scripts; the root layout awaits `connection()` so the shell is rendered per request. A nonce makes the shell render per request instead of being cached, which costs nothing here because there's one small shell.
 
 **Access logs (SEC-007).** Caddy's access log uses a `query` filter that deletes the `token` parameter, so `/invite` and `/reset-password` addresses are logged without it.
 
@@ -503,13 +448,14 @@ It also sets `Referrer-Policy: same-origin`, so SEC-010 holds even without Caddy
 
 Also useful: Resend accepts an `Idempotency-Key` header, which closes the duplicate-on-crash gap in 1.4.
 
-**Risk: the 100/day cap.** A team of under 15 with 2-minute combining should stay well below it, but a very busy day could hit it. Sends over the cap fail and are retried like any other failure, so a notification can end up `failed`, and an invitation or reset shows STD-6's "We couldn't send the email". If that ever happens, the fix is a paid plan or Amazon SES. The `sendEmail()` module (1.5) is the only code that would change.
-
-Postmark was rejected because its paid plan (~$15) plus the VPS goes over the $20 budget, and its webhooks aren't signed. Amazon SES is the cheapest at volume, but its bounces come through SNS, which needs an AWS account and much more setup for 15 people.
+**Risk: the 100/day cap.** A team of under 15 with 2-minute combining should stay well below it, but a very busy day could hit it. Sends over the cap fail and are retried like any other failure, so a notification can end up `failed`, and an invitation or reset shows STD-6's "We couldn't send the email". If that ever happens, the fix is a paid plan or Amazon SES. The `sendEmail()` module (5.2) is the only code that would change.
 
 ### 5.2 Sending
 
-`sendEmail({ to, subject, text, idempotencyKey? })`, implemented three ways (1.5).
+`sendEmail({ to, subject, text, idempotencyKey? })` picks its backend by `NODE_ENV`:
+- **production:** Resend's HTTP API (5.1);
+- **development:** Mailpit's send API (`http://localhost:8025/api/v1/send`), so every email shows in Mailpit's inbox with no Resend key;
+- **tests:** an in-memory outbox that tests can inspect, and make fail on demand (REQ-001.7, REQ-050 with the service down, the STD-6 retries).
 
 - **Plain text only.** No HTML templates. REQ-044 already asks for the excerpt "as plain text", text emails deliver well, and it's one template per email instead of two.
 - **From:** `EMAIL_FROM`, for example `Tracklite <notify@mail.example.com>`.
@@ -517,7 +463,7 @@ Postmark was rejected because its paid plan (~$15) plus the VPS goes over the $2
 - **How results are treated:**
   - any `2xx` is a success, and the response's `id` is stored as `provider_message_id`;
   - anything else, a network error or a timeout is a failure;
-  - for notifications, a failure is retried as in 2.6 (1, 4, 10 minutes, then `failed`); for invitations and resets, a failure is `503` (1.5).
+  - for notifications, a failure is retried as in 2.6; for invitations and resets, a failure is `503` (1.5).
 - **Logging:** a failure logs the HTTP status and Resend's error *name* only, never the recipient's text (SEC-007).
 
 ### 5.3 Email content
@@ -547,42 +493,23 @@ The wording of every email is in the spec (§9, "Email content"). That's where t
 
 ### 5.5 Domain setup (one-time, before launch)
 
-- Send from a subdomain such as `mail.example.com`, so the app's sending reputation is kept apart from the team's normal email.
-- Add the SPF and DKIM records Resend gives you, plus a DMARC record (`v=DMARC1; p=none; rua=mailto:…`) to start.
-- Register the webhook URL `https://{host}/webhooks/email` for `email.bounced` and copy its secret into `RESEND_WEBHOOK_SECRET`.
+Mail is sent from a subdomain, so the app's sending reputation is kept apart from the team's normal email. The SPF, DKIM and DMARC records and the webhook registration are in `ops/monitoring-and-email.md`.
 
 ### 5.6 Development and tests
 
-- **Development:** `sendEmail()` posts to Mailpit's send API (`http://localhost:8025/api/v1/send`), so every email is visible in Mailpit's inbox. No Resend key is needed locally.
-- **Tests:** an in-memory outbox. Tests can make it fail on demand (REQ-001.7, REQ-050 with the service down, the STD-6 retries).
-- **Webhook signature:** tested with a known secret and a hand-built signature.
+The webhook signature is tested with a known secret and a hand-built signature. Development and test email are covered in 5.2.
 
 ## 6. Screens
 
-Behaviour and copy come from the spec; this section only adds the routes, layout and pages the spec doesn't describe. All components come from the Track Lite design system (`src/components/ui/track-lite/`).
+Behaviour and copy come from the spec; this section only adds the routes, layout and pages the spec doesn't describe. All components come from the Track Lite design system (`src/components/ui/track-lite/`). Complex widgets use React Aria Components; the kit's `Dialog` also takes `FocusScope` from the lower-level `react-aria` hooks package.
 
 ### 6.1 Routes
 
-The API-004 addresses, plus the four marked **new**.
-
-| Route | Screen | Who | Notes |
-|---|---|---|---|
-| `/sign-in` | Sign in | Signed out | Signed in → `/my-issues`. |
-| `/forgot-password` | Request a reset link | Signed out | Signed in → `/my-issues`. |
-| `/reset-password?token=…` | Choose a new password | Anyone | Signed in → sign-out prompt (REQ-050.8). |
-| `/invite?token=…` **new** | Accept an invitation | Anyone | Signed in → sign-out prompt (REQ-002.3). |
-| `/` | — | — | → `/my-issues` (or sign-in). |
-| `/my-issues` | My issues | Member | F-007. |
-| `/project/{KEY}` | Board | Member | F-004. |
-| `/project/{KEY}/list` | List | Member | F-005. Filters in the query string. |
-| `/project/{KEY}/detail` | Project details | Member | REQ-046. |
-| `/project/{KEY}/labels` | Labels | Member | REQ-021. |
-| `/project/{KEY}/settings` **new** | Project settings | Admin | 6.3. |
-| `/projects/archived` **new** | Archived projects | Member | 6.3. |
-| `/issue/{ID}` | Issue | Member | 6.4. |
-| `/settings/profile` **new** | Profile | Member | 6.3. |
-| `/settings/members` | Members and invitations | Admin | 6.3. |
-| anything else | Not found (STD-4) | Anyone | |
+The routes are API-004's addresses (`src/client/routes.tsx`).
+- `/forgot-password` sends a signed-in member to `/my-issues`, as `/sign-in` and `/` do (1.7).
+- `/reset-password` and `/invite` show a signed-in member a sign-out prompt (REQ-050.8, REQ-002.3).
+- `/project/{KEY}/settings` and `/settings/members` are admin-only.
+- Any other address shows Not found (STD-4).
 
 **Permissions.**
 - A member who reaches an admin-only route sees "You don't have permission to do that." (STD-2) in the page area; the links to it are hidden.
@@ -613,42 +540,15 @@ An archived project's header shows an "Archived" badge, and no create or edit co
 
 ### 6.3 Pages the spec doesn't describe
 
-**Sign in.** Email, password, **Sign in**, and a **Forgot password?** link. Errors appear beside the form (REQ-047, SEC-001).
+The spec gives the copy for these pages; these are the layout choices it leaves open.
 
-**Forgot password.** Email and **Send link**, then "Check your email" (REQ-050).
-
-**Reset password.**
-- A new-password field and **Set password**.
-- The expired state shows "This link has expired" with a **Request a new link** button that goes to `/forgot-password` (REQ-050.4).
-
-**Accept invitation.**
-- The invited email, shown and not editable.
-- Full name, username, password, and **Join Tracklite**.
-- Expired and "no longer valid" states show their REQ-002 messages, with no form.
-
-**Profile.**
-- Full name with **Save**.
-- Username and email shown, not editable.
-- A **Change password** form: current password, new password, **Change password**. On success: "Password changed. You've been signed out everywhere else."
-
-**Members** (admin).
-- **Invite:** an email field and **Send invitation**.
-- **Invitations:** a table of email, invited by and state (Pending, Bounced, or Expired with its date), with **Resend** and **Revoke** actions (REQ-051). Revoke asks for confirmation.
-- **Members:** a table with initials and name, username, email, role and status, sorted by name. Each row has a **⋯** menu with **Make admin** / **Remove admin** and **Deactivate**; a deactivated member's menu has only **Reactivate** (REQ-051). Deactivate asks for confirmation ("Sam Lee will be signed out and can't sign in until reactivated.").
-- Deactivated members stay in the table, marked "(deactivated)".
-
-**Project settings** (admin).
-- Name with **Save**; the key shown, not editable.
-- **Archive project** / **Unarchive project**.
-- **Delete project:** a confirmation dialog where the Delete button stays disabled until the key is typed exactly (REQ-014).
-
-**Archived projects.**
-- A list of archived projects: "Name · KEY" and the archived date. Clicking one opens its board, which is read-only.
-- The empty state reads "No archived projects."
-
-**New issue.**
-- A dialog with only a title field and **Create**, opened from **New issue** or a column's **+** (REQ-029).
-- On success, it goes to the new issue's page, so the description and fields can be filled in straight away.
+- **Reset password:** the expired state has a **Request a new link** button that goes to `/forgot-password` (REQ-050.4).
+- **Accept invitation:** the invited email is shown, not editable. The expired and revoked states show no form (REQ-002).
+- **Profile:** full name with **Save**; username and email read-only; a separate **Change password** form.
+- **Members** (admin): the invite field, then the invitations table, then the members table sorted by name. Each row's actions are in a **⋯** menu (REQ-051); Revoke and Deactivate ask for confirmation.
+- **Project settings** (admin): name with **Save**, the key read-only, **Archive** / **Unarchive**, and **Delete** in a dialog whose button stays disabled until the key is typed exactly (REQ-014).
+- **Archived projects:** each one opens its board, read-only.
+- **New issue:** a dialog with only a title, opened from **New issue** or a column's **+** (REQ-029). On success it goes to the new issue's page (D-37).
 
 ### 6.4 Issue page
 
@@ -671,54 +571,31 @@ The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, 
 
 ### 6.7 Times
 
-- **Relative times** (REQ-031) come from `Intl.RelativeTimeFormat`: "just now" under a minute, then "5 min ago", "3 hours ago", "2 days ago", up to 7 days.
+- **Relative times** (REQ-031): "just now" under a minute, then "5 min ago", then "3 hours ago", "2 days ago" from `Intl.RelativeTimeFormat`, up to 7 days.
 - **Older dates** show as "Sep 20", or "Sep 20, 2025" when the year isn't the current one.
 - **Exact time on hover:** the full date and time in the browser's time zone (DATA-003).
 
 ## 7. Decisions
 
+Only decisions with an alternative worth recording. Where the reason is already given next to the design it shapes, the row was removed; the gaps in the numbering are those rows, and numbers are never reused.
+
 | # | Decision | Over | Because |
 |---|---|---|---|
-| D-1 | Drizzle ORM (spec 0.9) | postgres.js | Matches the existing setup; typed schema and migrations. |
-| D-2 | Fractional string keys for board position | Integer positions with gaps | A move rewrites one row and never needs a renumbering pass. |
-| D-3 | `project_keys` table that's never deleted from | Soft-deleting projects | Lets project deletion be a real cascade, as DATA-002 requires. |
-| D-4 | Separate version counters for descriptions | One version per row | A field change by a teammate shouldn't cause a description conflict. |
+| D-1 | Drizzle ORM on the postgres.js driver (spec 0.9) | postgres.js queries alone | Matches the existing setup; typed schema and migrations. |
 | D-5 | `pg_trgm` + `ILIKE` per word | Postgres full-text search | The spec asks for substring matching (`"42"` → `WEB-42`, `"100%"`), which full-text search doesn't do. |
-| D-6 | Notification snapshots with no FKs | FKs to issues/projects | Emails must survive their target being deleted (REQ-045.7). |
-| D-7 | Mentions mirror the current text | Keeping every mention ever made | Simpler, and matches REQ-044: removing and re-adding a mention emails again. |
-| D-8 | Sessions deleted when they end | Keeping them 30 days with an ended flag | Simpler and safer. DATA-004 sets a maximum, not a minimum. |
 | D-9 | Separate worker process polling Postgres with `skip locked` (DEC-004) | A timer inside the Next.js server; pg-boss or similar | A web restart can't interrupt sends, there's no new dependency, and the queue is just a table. |
 | D-10 | Strict single-page app: one HTML shell, all page data loaded through the API | Server-rendered pages | Owner's choice. Also gives one code path for permissions and tests. |
-| D-11 | Database `now()` for every time check | App-server clock | One clock. Tests move timestamps back instead of faking time. |
-| D-12 | Invitation and reset emails sent inside the request | Queuing them | STD-6 needs the send result before answering. |
 | D-13 | Caddy as the reverse proxy | nginx | Automatic TLS and HSTS with a few lines of config. |
 | D-14 | systemd + journald for processes and logs | pm2, logrotate | Already on the VPS. Retention is one setting. |
-| D-15 | Error messages written by the server, shown as-is by the browser | Error codes the browser translates into text | All copy for server-side outcomes in one place, next to the rule that produces it. |
-| D-16 | `409` for stale saves, `410` for dead links | Folding both into `422` | The browser needs to tell them apart: an in-editor message vs an expired page. |
-| D-17 | Field-by-field `PATCH` on issues | Saving the whole form | Matches "last save wins" per field (STD-8) and the instant saves on the board and issue page. |
-| D-18 | Moves name one neighbour (`after`), and the server reads the next card | The browser sending both neighbours' keys | Correct even on a board that's out of date (REQ-026.4). |
-| D-19 | Offset paging for the list | Keyset cursors | Sorting by several columns makes cursors complex, and with no live updates offsets are good enough. |
-| D-20 | Accepting an invitation is `POST /api/members` | A separate invitations "accept" endpoint | Resource-style: accepting creates a member. |
 | D-21 | `@node-rs/argon2` | `argon2` (node-gyp) | Prebuilt binaries; nothing to compile on the VPS. |
-| D-22 | `sha256` for tokens | Argon2id for tokens | Tokens have 256 random bits, so a slow hash adds nothing and would make every request slower. |
-| D-23 | `Origin` check plus `SameSite=Lax` | CSRF tokens | Covers SEC-004 with no token stored in forms or state. |
-| D-24 | HTML nodes turned into text by our own plugin | Relying on react-markdown's default for HTML | The spec requires "shown as text", so we enforce it ourselves rather than depend on a library default. |
-| D-25 | One Markdown module for rendering and mention extraction | Separate regex for mentions on the server | `@sam` in code is treated the same everywhere (DATA-001.4). |
 | D-26 | Nonce-based CSP set in `src/proxy.ts` (SEC-010) | A CSP without script rules | SEC-010 requires that only the app's own scripts run, and Next.js's inline scripts need a nonce for that. |
 | D-27 | React Router (data mode) inside the shell | Next.js routing; hand-rolled `pushState` | One HTML document for every route, plus `useBlocker` for REQ-035. |
-| D-28 | Signed-out redirect done in the browser after `GET /api/me` | Redirecting in `src/proxy.ts` (which only sets the CSP) | The server returns the same shell for every address, so one redirect mechanism (in the browser) covers both the first load and a later `401`. |
-| D-29 | RTK Query for server data; a `toast` slice for UI | Hand-written slices and thunks | Caching, tags and optimistic updates are built in (REQ-026, NFR-005). |
-| D-30 | Refetch on every screen visit, no polling | Long-lived cache | Matches "pages show current data when they load" with no live updates. |
-| D-31 | List filters live in the URL, not Redux | Mirroring them in a slice | REQ-040 already makes the URL the source of truth. |
-| D-32 | Resend (DEC-003) | Postmark, Amazon SES | Free plan fits NFR-009, signed webhooks, idempotency keys, simple domain setup. |
-| D-33 | Plain-text emails only | HTML + text templates | Half the templates; the spec already asks for plain-text excerpts. |
+| D-32 | Resend (DEC-003) | Postmark, Amazon SES | Free plan fits NFR-009, signed webhooks, idempotency keys, simple domain setup. Postmark's paid plan (~$15) plus the VPS goes over the $20 budget, and its webhooks aren't signed. SES is cheapest at volume, but its bounces come through SNS, which needs an AWS account and much more setup for 15 people. |
 | D-34 | `fetch` + hand-written signature check | Resend SDK, `svix` package | Two small functions instead of two dependencies. |
-| D-35 | Combined emails: "{n} updates for you" plus each item | One combined sentence | Works for any mix of assigned and mentioned with one rule. |
 | D-36 | React Aria `GridList` drag and drop | dnd-kit | Already in the stack, and accessible by keyboard and screen reader out of the box. Edge auto-scroll confirmed by the M5.1 spike (D-40). |
 | D-37 | New issue: title-only dialog, then go to the issue | A full create form | Matches REQ-016's flow ("enters a title"); everything else is edited on the issue page. |
-| D-38 | Admin-only routes show the STD-2 message, not Not found | Hiding them as Not found | Matches STD-2's wording for actions reached anyway. |
 | D-39 | Track Lite design system, ported from its Claude Design project into `src/components/ui/track-lite/` | Hairline; a component library from npm | Made for this product. Fonts load through `next/font` and icons through `@phosphor-icons/react` instead of the project's CDN links, which the CSP (D-26) would block. |
-| D-40 | Keep D-36 with no fallback, after the M5.1 spike. Each column's `GridList` is its own scroll box with `position: relative`; each card has a `<Button slot="drag">` | Writing our own edge auto-scroll; a separate drag library | Mouse drags across 5 columns, into an empty column (`onRootDrop`) and within a column (`onReorder`) all landed in the right place. Near a column's edge, the browser scrolls it natively, or React Aria's `useAutoScroll` does in Safari. Keyboard drags (Enter on the drag button, Tab between columns, arrows, Enter) work and are announced. Without `position: relative`, the hidden keyboard drop targets scroll the whole page instead of the column. Without the drag button, cards that open the issue on click can only be dragged with Alt+Enter. |
+| D-40 | Keep D-36 with no fallback, after the M5.1 spike. Each column's body around its `GridList` is the scroll box, with `position: relative`; each card has a `<Button slot="drag">` | Writing our own edge auto-scroll; a separate drag library | Mouse drags across 5 columns, into an empty column (`onRootDrop`) and within a column (`onReorder`) all landed in the right place. Near a column's edge, the browser scrolls it natively, or React Aria's `useAutoScroll` does in Safari. Keyboard drags (Enter on the drag button, Tab between columns, arrows, Enter) work and are announced. Without `position: relative` on the scroll box, the hidden keyboard drop targets scroll the whole page instead of the column. Without the drag button, cards that open the issue on click can only be dragged with Alt+Enter. |
 | D-41 | Daily `pg_dump`, encrypted with `age` and copied to Cloudflare R2 with `rclone`, from a systemd timer | restic; Backblaze B2; a Hetzner Storage Box | Owner's choice. One plain encrypted file per day is easy to inspect and restore by hand, R2's free tier keeps the cost at zero (NFR-009), and the timer's `OnFailure=` gives the failure email with no extra service. |
 | D-42 | Valibot body schemas declared per route and run by `apiRoute`; schemas live in `src/schemas/` (one file per area, server-only), and the domain function takes their typed output | Hand-written `typeof` checks in each domain function; Zod; parsing at the start of each domain function; each schema in the domain module that uses it | One path turns invalid input into STD-3's `422`, domain functions get typed and already-trimmed input instead of `unknown`, and a malformed body stops being a `500`. Order: session, then schema, then the domain's role check, then database rules, then the write. A signed-out caller always gets `401` and learns nothing about the body; invalid input fails before the role check and any domain query. A signed-in member without the role who sends an invalid body therefore gets `422`, not `403`; the schema reveals only the request's shape, which the browser code already shows. Lengths count characters (code points) as the spec and Postgres do, not UTF-16 units. One folder puts every input rule in one place to read and review, and keeps the schemas apart from database code. |
 | D-43 | Routes only authenticate. Every domain function called from a signed-in route takes the member as `actor` first and owns every role and ownership check, with `assertAdmin` before any lookup ([ADR 0001](ADRs/0001-permission-checks-in-domain.md)) | `apiRoute("admin")` checking the role in the route; admin-only functions typed `actor: Admin`; an `adminOnly` wrapper | Reading a domain file must show its permission rules: with the role in the route, `createProject` looked open to anyone while `updateProject` checked. Typing `actor: Admin` would push the narrowing back into the route. Nothing at typecheck enforces `assertAdmin`, so each admin-only function has a 403 test. Every admin route declares a body schema (M12.2), so a member's malformed JSON gets `422` from `apiRoute` before the domain's `403`, never a `500`. |

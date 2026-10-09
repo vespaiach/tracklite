@@ -43,9 +43,10 @@ Each milestone starts with a **Run order** line. `→` means "after"; tasks join
 ## Pages built from the API description
 
 A page task's **Needs** names its API tasks after "API description:". The page doesn't wait for them; it works from their endpoints in design §3.3.
+- Design §3.3 lists every endpoint's path, permission and behaviour, but not the shapes of wired-up endpoints: those live in the code. Before either task starts, the first of the pair adds the new endpoints' request and response shapes to §3.3, marked *not wired yet*.
 - The page task writes the RTK Query endpoints it uses, with request and response types taken from §3.3, in the client code. It tests against mocked responses of those types.
 - The API task doesn't touch those files. Its tests check the response shape against §3.3.
-- **Wire-up:** whichever of the pair merges second runs the page against the real API, fixes any mismatch, and makes each handler's return value `satisfies` the page's response type, so `npm run typecheck` keeps them in step from then on. If §3.3 is too vague to type a response, the page task fixes §3.3 first.
+- **Wire-up:** whichever of the pair merges second runs the page against the real API, fixes any mismatch, and makes each handler's return value `satisfies` the page's response type, so `npm run typecheck` keeps them in step from then on. It then removes the shapes from §3.3, keeping only what the types can't say. If §3.3 is too vague to type a response, the page task fixes §3.3 first.
 
 ## Tasks with a UI design
 

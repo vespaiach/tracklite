@@ -84,10 +84,10 @@ There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks
 
 **API request flow (§1.2).** Every handler is wrapped in `apiRoute`, which in order:
 1. rejects cross-site writes with `403`;
-2. runs `requireMember`, which only authenticates (`401`). Routes never check roles;
+2. runs `requireMember`, which only authenticates (`401`). Routes never check roles. A route declared `"public"` (sign-in, password resets, invitation lookups and acceptance, sign-out) skips this step;
 3. parses the JSON body against the route's Valibot schema, if it declares one, and fails fast with `422` (D-42). Schemas check shape and format only;
-4. calls one domain function in `src/server/` inside a transaction, with the member as its first argument, `actor`. The domain is the only permission layer (D-43): admin-only functions call `assertAdmin(actor)` before any lookup, and ownership checks run once the row is loaded. It then checks the rules that need the database and writes, so the action and its notification rows commit together;
-5. maps a thrown `ApiError` to `{ error: { message, fields? } }` with 401/403/404/422/429/503, and anything else to 500;
+4. calls one domain function in `src/server/`, with the member as its first argument, `actor`. `apiRoute` opens no transaction; the domain function opens its own. The domain is the only permission layer (D-43): admin-only functions call `assertAdmin(actor)` before any lookup, and ownership checks run once the row is loaded. It then checks the rules that need the database and writes, so the action and its notification rows commit together;
+5. maps a thrown `ApiError` to `{ error: { message, fields? } }` with 401/403/404/409/410/422/429/503, and anything else to 500;
 6. writes one JSON log line, with no bodies, tokens or query strings. A signed-in request names its `actor` by username.
 
 The browser shows `message` as-is, so all user-facing copy for server outcomes lives on the server.
@@ -99,7 +99,7 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 - Tokens never go in paths.
 - A member in a response is `{ username, fullName, initials, deactivated }`.
 
-**Page and API task pairs.** A page task writes its own RTK Query endpoints, typed from §3.3, and tests against mocks. Whichever task merges second wires them up and makes each handler's return value `satisfies` the page's response type.
+**Page and API task pairs.** A page task writes its own RTK Query endpoints, typed from the shapes §3.3 holds for endpoints not wired yet, and tests against mocks. Whichever task merges second wires them up, makes each handler's return value `satisfies` the page's response type, and removes those shapes from §3.3. Wired-up shapes live only in the code: request bodies in `src/schemas/`, responses in `src/client/api.ts`.
 
 **Time (§1.3).** Every expiry and time-window check uses the database's `now()` inside SQL, never the app clock. Tests move stored timestamps into the past (`expires_at = now() - interval '1 minute'`). They never fake the clock.
 
