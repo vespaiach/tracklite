@@ -1,4 +1,4 @@
-import type { Me, MemberSummary } from "../../../client/api";
+import type { Me, MemberSummary } from "../../../contract";
 import { InvitationAcceptance } from "../../../schemas/invitation";
 import { ApiError } from "../../../server/api-error";
 import { apiRoute } from "../../../server/api-route";

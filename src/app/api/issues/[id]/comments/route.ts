@@ -1,4 +1,4 @@
-import type { ThreadComment } from "../../../../../client/api";
+import type { ThreadComment } from "../../../../../contract";
 import { NewComment } from "../../../../../schemas/comment";
 import { apiRoute } from "../../../../../server/api-route";
 import { listIssueComments, postIssueComment } from "../../../../../server/comments";

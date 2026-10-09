@@ -1,4 +1,4 @@
-import type { Invitation } from "../../../client/api";
+import type { Invitation } from "../../../contract";
 import { NewInvitation } from "../../../schemas/invitation";
 import { apiRoute } from "../../../server/api-route";
 import { createInvitation, listInvitations } from "../../../server/invitations";

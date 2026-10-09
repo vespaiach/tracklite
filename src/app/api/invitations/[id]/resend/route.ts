@@ -1,4 +1,4 @@
-import type { Invitation } from "../../../../../client/api";
+import type { Invitation } from "../../../../../contract";
 import { apiRoute } from "../../../../../server/api-route";
 import { resendInvitation } from "../../../../../server/invitations";
 
