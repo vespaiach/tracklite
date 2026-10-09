@@ -468,7 +468,7 @@ Every task in this milestone keeps behaviour as it is: the existing route tests 
   - Reads: design §1.2, §3.2, §3.3 (projects table), D-42 · spec STD-3, REQ-009, REQ-010, REQ-011, REQ-012
   - Needs: M0.3, M3.3
   - Done: `api-route` tests for a malformed body, a non-object body, one message per field, parsed output reaching the handler, the cross-site `403` and signed-out `401` before validation, an invalid body getting `422` before the admin `403`, and routes without a schema unchanged; the existing REQ-009.*, REQ-010.*, REQ-011.*, REQ-012.* tests pass
-- [ ] **M12.2 Account inputs.** Schemas for sessions, invitations, invitation and reset-link lookups, accepting an invitation, password-reset links and resets, `PATCH /api/me` and `/api/me/password`. The password rule (REQ-048) is one schema in `src/schemas/`, and the profile rules (REQ-003) one set used by accepting an invitation and editing the profile.
+- [x] **M12.2 Account inputs.** Schemas for sessions, invitations, invitation and reset-link lookups, accepting an invitation, password-reset links and resets, `PATCH /api/me`, `/api/me/password` and `PATCH /api/members/[username]`. The password rule (REQ-048) is one schema in `src/schemas/`, and the profile rules (REQ-003) one set used by accepting an invitation, editing the profile and first-admin setup.
   - Reads: design §3.2, §4.1, §4.6, D-42 · spec REQ-001, REQ-002, REQ-003, REQ-048, REQ-049, REQ-050, SEC-001
   - Needs: M12.1
   - Done: the existing tests for those REQs pass

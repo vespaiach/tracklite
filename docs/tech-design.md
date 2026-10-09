@@ -437,21 +437,20 @@ Anything else gets `403`. `SameSite=Lax` is a second layer of protection. The on
 
 ### 4.6 Invitation and reset links
 
-**Accepting an invitation** (`POST /api/members`). In one transaction:
+**Accepting an invitation** (`POST /api/members`). The body schema has already checked the profile and password (`422`, D-42), so a malformed form is refused before the link is looked at. A token that isn't a string is treated as an unknown link. Then, in one transaction:
 1. Lock the invitation found by hash (`for update`).
 2. Answer `410` with the right message if needed:
    - revoked → "This invitation is no longer valid." (REQ-002.4);
    - expired, already accepted, or unknown (including a link replaced by a resend) → "This invitation has expired. Ask an admin for a new one." (REQ-002.2).
-3. Validate the profile and password (`422`).
+3. Refuse a taken username (`422`, REQ-003.2).
 4. Insert the member, set `accepted_at`, create a session.
 
 If the request arrives with a valid session, it's refused with `403` "You're signed in as {name}. Sign out to accept this invitation." The page shows that state before the form appears (REQ-002.3). This check just stops a bypass through the API.
 
-**Resetting a password** (`POST /api/password-resets`). In one transaction:
+**Resetting a password** (`POST /api/password-resets`). The body schema has already checked the new password (`422`, D-42). Then, in one transaction:
 1. Lock the token row.
 2. Answer `410` "This link has expired" if it's used, expired, unknown, or the member is deactivated.
-3. Validate the new password (`422`).
-4. Set the hash, set `used_at` on **all** the member's unused tokens (REQ-050.6), delete the member's sessions, and create a new one.
+3. Set the hash, set `used_at` on **all** the member's unused tokens (REQ-050.6), delete the member's sessions, and create a new one.
 
 **Opening a reset link** checks the token with `POST /api/password-reset-lookups`, which only reads it. A usable link shows the form; anything else shows "This link has expired" (REQ-050.9). Because the check never uses the link up, a mail scanner opening it changes nothing (REQ-050.5). If a valid session exists, the page shows "You're signed in as {name}. Sign out to reset a password." and never looks at the token (REQ-050.8).
 
