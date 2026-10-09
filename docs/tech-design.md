@@ -238,16 +238,16 @@ Every error body is `{ error: { message, fields? } }`, and the browser shows `me
 | Status | When | Browser shows |
 |---|---|---|
 | `401` | No valid session: signed out, expired or deactivated (STD-1, REQ-007.4) | Redirect to `/sign-in?next=…` |
-| `403` | Not allowed (STD-2), a cross-site write (SEC-004), or a write to an archived project, with the message "This project is archived" (REQ-013.4) | Toast (STD-9) |
-| `404` | The target doesn't exist. The message names it: "Not found", "This issue was deleted", "This comment was deleted", "That label no longer exists". Reading a missing issue or its comments gets "Not found"; a write to one gets "This issue was deleted" | Not-found page on load (STD-4); toast on save (STD-9) |
-| `409` | Stale save of a description or comment: "This was changed by Alex Kim. Copy your text and reload." (STD-8) | Message in the editor; text kept |
+| `403` | Not allowed (STD-2), a cross-site write (SEC-004), or a write to an archived project (REQ-013.4) | Toast (STD-9) |
+| `404` | The target doesn't exist, and the message names it. Reading a missing issue or its comments gets "Not found"; a write to one gets "This issue was deleted" | Not-found page on load (STD-4); toast on save (STD-9) |
+| `409` | Stale save of a description or comment (STD-8) | Message in the editor; text kept |
 | `410` | An invitation or reset link that's expired, used or revoked (REQ-002.2, REQ-002.4, REQ-050.4) | The page's expired state |
-| `422` | Invalid input. With `fields`: one error per field (STD-3). Without `fields`: a form-level refusal, such as "Already a member", "There must be at least one admin." or "Incorrect email or password." | Next to the fields, or beside the form |
-| `429` | A SEC-001 limit: "Too many attempts. Try again later." | Beside the form |
+| `422` | Invalid input. With `fields`: one error per field (STD-3). Without `fields`: a form-level refusal, such as the last admin or a wrong sign-in | Next to the fields, or beside the form |
+| `429` | A SEC-001 limit | Beside the form |
 | `503` | An invitation or reset email couldn't be sent (STD-6) | Toast |
-| `500` | Anything else | Toast "Couldn't save. Try again." or the "Couldn't load this." state (DEC-006) |
+| `500` | Anything else | The DEC-006 toast or error state |
 
-A rule that needs the database also answers with a field error: "Key already used" (`key`), "Label already exists" (`name`), "Username taken" (`username`) and "Incorrect password" (`currentPassword`).
+Rules that need the database also answer with a field error: a key, label name or username already taken, or a wrong current password.
 
 Changing a field that can't be changed (username, email, project key) gets `422` with a field error. The stored value stays as it was (REQ-003.3, REQ-010.1).
 
