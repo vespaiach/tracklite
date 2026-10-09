@@ -2,7 +2,7 @@ import * as v from "valibot";
 import { ApiError } from "./api-error";
 import { readConfig } from "./config";
 import { logRequest } from "./log";
-import { type Member, requireAdmin, requireMember } from "./sessions";
+import { type Member, requireMember } from "./sessions";
 
 const writeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -47,14 +47,14 @@ export function apiRoute<Schema extends v.GenericSchema>(
   schema: Schema,
   handler: Handler<[Request, v.InferOutput<Schema>]>,
 ): Route;
-export function apiRoute(access: "member" | "admin", handler: Handler<[Request, Member]>): Route;
+export function apiRoute(access: "member", handler: Handler<[Request, Member]>): Route;
 export function apiRoute<Schema extends v.GenericSchema>(
-  access: "member" | "admin",
+  access: "member",
   schema: Schema,
   handler: Handler<[Request, Member, v.InferOutput<Schema>]>,
 ): Route;
 export function apiRoute(
-  access: "public" | "member" | "admin",
+  access: "public" | "member",
   schemaOrHandler: v.GenericSchema | AnyHandler,
   schemaHandler?: AnyHandler,
 ) {
@@ -65,6 +65,7 @@ export function apiRoute(
     let response: Response;
     let failure: string | undefined;
     let renewedCookie: string | undefined;
+    let actor: string | undefined;
     try {
       if (isCrossSiteWrite(request)) {
         throw new ApiError(403, "You don't have permission to do that.");
@@ -75,8 +76,8 @@ export function apiRoute(
       } else {
         const session = await requireMember(request);
         renewedCookie = session.cookie;
+        actor = session.member.username;
         const input = schema ? [await readInput(request, schema)] : [];
-        if (access === "admin") requireAdmin(session.member);
         response = await handler(request, session.member, ...input);
       }
     } catch (error) {
@@ -95,6 +96,7 @@ export function apiRoute(
       status: response.status,
       durationMs: Math.round(performance.now() - started),
       error: failure,
+      actor,
     });
     return response;
   };

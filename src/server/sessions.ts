@@ -6,6 +6,7 @@ import { members, sessions } from "./schema";
 import { createToken, hashToken } from "./tokens";
 
 export type Member = typeof members.$inferSelect;
+export type Admin = Member & { role: "admin" };
 
 const sessionMaxAgeSeconds = 30 * 24 * 60 * 60;
 
@@ -91,6 +92,6 @@ export async function requireMember(request: Request): Promise<{ member: Member;
   return { member: found.member, cookie: sessionCookie(token) };
 }
 
-export function requireAdmin(member: Member) {
+export function assertAdmin(member: Member): asserts member is Admin {
   if (member.role !== "admin") throw new ApiError(403, "You don't have permission to do that.");
 }

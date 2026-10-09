@@ -84,12 +84,11 @@ There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks
 
 **API request flow (§1.2).** Every handler is wrapped in `apiRoute`, which in order:
 1. rejects cross-site writes with `403`;
-2. runs `requireMember`;
+2. runs `requireMember`, which only authenticates (`401`). Routes never check roles;
 3. parses the JSON body against the route's Valibot schema, if it declares one, and fails fast with `422` (D-42). Schemas check shape and format only;
-4. runs `requireAdmin` where needed. Steps 2 and 4 are the only permission layer;
-5. calls one domain function in `src/server/` inside a transaction. It checks the rules that need the database first, then writes, so the action and its notification rows commit together;
-6. maps a thrown `ApiError` to `{ error: { message, fields? } }` with 401/403/404/422/429/503, and anything else to 500;
-7. writes one JSON log line, with no bodies, tokens or query strings.
+4. calls one domain function in `src/server/` inside a transaction, with the member as its first argument, `actor`. The domain is the only permission layer (D-43): admin-only functions call `assertAdmin(actor)` before any lookup, and ownership checks run once the row is loaded. It then checks the rules that need the database and writes, so the action and its notification rows commit together;
+5. maps a thrown `ApiError` to `{ error: { message, fields? } }` with 401/403/404/422/429/503, and anything else to 500;
+6. writes one JSON log line, with no bodies, tokens or query strings. A signed-in request names its `actor` by username.
 
 The browser shows `message` as-is, so all user-facing copy for server outcomes lives on the server.
 
@@ -120,6 +119,7 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 ## Coding rules
 
 - **No comments in code under `src/`.** That includes line comments, block comments and JSDoc. Say what the code means through names, types and test titles; spec IDs belong in test names, not comments.
+- **Domain functions take `actor` first and own every role and ownership check; routes never check roles.** An admin-only function's first statement is `assertAdmin(actor)`, and each one has a 403 test that calls it directly. Reading a domain file must show who may call it ([ADR 0001](docs/ADRs/0001-permission-checks-in-domain.md)).
 - **Component-driven development first.** Build UI from the bottom up. Each element starts as an isolated component that holds no app state and gets its data and callbacks through props. Develop it on its own in the design sandbox, then compose it into larger layouts and finally connect it to the store and the router.
 - **Test-driven development.** Write a failing test first, run it to confirm it fails for the expected reason, then write the minimum code to make it pass, then refactor with the tests green. Two owner checkpoints apply in every coding session:
    - **Before writing tests**, list the test cases you plan to write (name, what it asserts, which R-ID it closes) and ask the owner whether to add or change any. Do not write test code until the owner confirms the list.

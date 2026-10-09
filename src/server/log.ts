@@ -5,6 +5,7 @@ type RequestLogLine = {
   status: number;
   durationMs: number;
   error?: string;
+  actor?: string;
 };
 
 export function logRequest(line: RequestLogLine) {

@@ -7,7 +7,7 @@ import { invitationEmail } from "./email/templates";
 import { fullNameError, memberSummary, normalizeEmail, usernameError } from "./members";
 import { hashPassword, passwordError } from "./passwords";
 import { invitations, members } from "./schema";
-import { createSession, type Member } from "./sessions";
+import { assertAdmin, createSession, type Member } from "./sessions";
 import { createToken, hashToken } from "./tokens";
 
 type Executor = Pick<typeof db, "select" | "update">;
@@ -58,7 +58,8 @@ async function openInvitation(id: string) {
   return invitationResponse(row);
 }
 
-export async function listInvitations() {
+export async function listInvitations(actor: Member) {
+  assertAdmin(actor);
   const rows = await openInvitations(db).where(isOpen).orderBy(invitations.createdAt);
   return rows.map(invitationResponse);
 }
@@ -83,7 +84,8 @@ async function sendLink(executor: Executor, inviter: Member, invitation: { id: s
   await executor.update(invitations).set({ providerMessageId }).where(eq(invitations.id, invitation.id));
 }
 
-export async function createInvitation(inviter: Member, email: unknown) {
+export async function createInvitation(actor: Member, email: unknown) {
+  assertAdmin(actor);
   const normalizedEmail = typeof email === "string" ? normalizeEmail(email) : "";
   if (!isEmail(normalizedEmail)) {
     throw new ApiError(422, "Check the highlighted fields", { email: "Enter a valid email" });
@@ -99,17 +101,18 @@ export async function createInvitation(inviter: Member, email: unknown) {
   const id = await db.transaction(async (tx) => {
     const [opened] = await tx.execute<{ id: string }>(sql`
       insert into ${invitations} (email, invited_by, token_hash, expires_at)
-      values (${normalizedEmail}, ${inviter.id}, ${hashToken(createToken())}, now() + interval '7 days')
+      values (${normalizedEmail}, ${actor.id}, ${hashToken(createToken())}, now() + interval '7 days')
       on conflict (lower(email)) where accepted_at is null and revoked_at is null
       do update set email = excluded.email
       returning id`);
-    await sendLink(tx, inviter, { id: opened.id, email: normalizedEmail });
+    await sendLink(tx, actor, { id: opened.id, email: normalizedEmail });
     return opened.id;
   });
   return openInvitation(id);
 }
 
-export async function resendInvitation(inviter: Member, id: string) {
+export async function resendInvitation(actor: Member, id: string) {
+  assertAdmin(actor);
   if (!isUuid(id)) throw notFound();
   await db.transaction(async (tx) => {
     const [invitation] = await tx
@@ -118,12 +121,13 @@ export async function resendInvitation(inviter: Member, id: string) {
       .where(and(eq(invitations.id, id), isOpen))
       .for("update");
     if (!invitation) throw notFound();
-    await sendLink(tx, inviter, invitation);
+    await sendLink(tx, actor, invitation);
   });
   return openInvitation(id);
 }
 
-export async function revokeInvitation(id: string) {
+export async function revokeInvitation(actor: Member, id: string) {
+  assertAdmin(actor);
   if (!isUuid(id)) throw notFound();
   const revoked = await db
     .update(invitations)

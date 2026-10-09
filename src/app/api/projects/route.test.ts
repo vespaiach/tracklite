@@ -165,6 +165,15 @@ it("STD-2: a member can't create a project", async () => {
   expect(await db.select().from(projects).where(eq(projects.key, key))).toHaveLength(0);
 });
 
+it("STD-3: a member's invalid body to create a project gets 422, and a valid one gets 403", async () => {
+  const memberCookie = await signedIn("member");
+  const key = uniqueProjectKey();
+
+  expect((await createWith(memberCookie, { name: "", key })).status).toBe(422);
+  expect((await createWith(memberCookie, { name: "Website", key })).status).toBe(403);
+  expect(await db.select().from(projects).where(eq(projects.key, key))).toHaveLength(0);
+});
+
 it("REQ-013.1: archiving moves a project from the sidebar list to the Archived list", async () => {
   const adminCookie = await signedIn("admin");
   const memberCookie = await signedIn("member");

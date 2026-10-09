@@ -3,7 +3,7 @@ import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { ApiError } from "./api-error";
 import { db } from "./db";
 import { members, sessions } from "./schema";
-import type { Member } from "./sessions";
+import { assertAdmin, type Member } from "./sessions";
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -56,12 +56,12 @@ export function profileResponse(member: Member) {
   };
 }
 
-export async function listMembers(viewer: Member) {
+export async function listMembers(actor: Member) {
   const all = await db
     .select()
     .from(members)
     .orderBy(asc(sql`lower(${members.fullName})`), asc(members.username));
-  return all.map(viewer.role === "admin" ? profileResponse : memberSummary);
+  return all.map(actor.role === "admin" ? profileResponse : memberSummary);
 }
 
 type Role = Member["role"];
@@ -92,7 +92,8 @@ async function keepLastAdmin(tx: Transaction, target: Member) {
   }
 }
 
-export async function updateMember(username: string, body: Record<string, unknown>) {
+export async function updateMember(actor: Member, username: string, body: Record<string, unknown>) {
+  assertAdmin(actor);
   const { role, deactivated } = parseMemberChanges(body);
 
   return db.transaction(async (tx) => {
