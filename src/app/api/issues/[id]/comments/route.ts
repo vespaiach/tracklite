@@ -5,15 +5,15 @@ import { listIssueComments, postIssueComment } from "../../../../../server/comme
 
 export async function GET(request: Request, { params }: RouteContext<"/api/issues/[id]/comments">) {
   const { id } = await params;
-  return apiRoute("member", async () =>
-    Response.json((await listIssueComments(id)) satisfies ThreadComment[]),
+  return apiRoute("member", async (_memberRequest, member) =>
+    Response.json((await listIssueComments(member, id)) satisfies ThreadComment[]),
   )(request);
 }
 
 export async function POST(request: Request, { params }: RouteContext<"/api/issues/[id]/comments">) {
   const { id } = await params;
   return apiRoute("member", NewComment, async (_memberRequest, member, newComment) => {
-    const { comment, created } = await postIssueComment(id, member, newComment);
+    const { comment, created } = await postIssueComment(member, id, newComment);
     return Response.json(comment satisfies ThreadComment, { status: created ? 201 : 200 });
   })(request);
 }

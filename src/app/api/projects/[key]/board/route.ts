@@ -4,5 +4,7 @@ import { getBoard } from "../../../../../server/issues";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]/board">) {
   const { key } = await params;
-  return apiRoute("member", async () => Response.json((await getBoard(key)) satisfies Board))(request);
+  return apiRoute("member", async (_memberRequest, member) =>
+    Response.json((await getBoard(member, key)) satisfies Board),
+  )(request);
 }

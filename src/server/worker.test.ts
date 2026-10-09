@@ -27,11 +27,11 @@ async function website() {
 }
 
 function assign(issueRef: string, by: Member, assignee: Member | null) {
-  return updateIssue(issueRef, by, { assignee: assignee?.username ?? null });
+  return updateIssue(by, issueRef, { assignee: assignee?.username ?? null });
 }
 
 async function comment(issueRef: string, by: Member, body: string) {
-  const { comment } = await postIssueComment(issueRef, by, { requestId: randomUUID(), body });
+  const { comment } = await postIssueComment(by, issueRef, { requestId: randomUUID(), body });
   return comment;
 }
 
@@ -168,7 +168,7 @@ it("REQ-045.3: mention edited out during the wait → Sam gets nothing", async (
   const sam = await createMember();
   const { issueRef } = await website();
   const posted = await comment(issueRef, alex, `@${sam.username} look`);
-  await editComment(posted.id, alex, { body: "look", version: 0 });
+  await editComment(alex, posted.id, { body: "look", version: 0 });
   await waitIsOver(sam);
 
   await sendAllDue();
@@ -182,7 +182,7 @@ it("REQ-045.4: comment deleted during the wait → Sam gets nothing", async () =
   const sam = await createMember();
   const { issueRef } = await website();
   const posted = await comment(issueRef, alex, `@${sam.username} look`);
-  await deleteComment(posted.id, alex);
+  await deleteComment(alex, posted.id);
   await waitIsOver(sam);
 
   await sendAllDue();

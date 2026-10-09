@@ -88,13 +88,13 @@ async function issueOf(executor: Executor, id: string) {
   return issue;
 }
 
-export async function listIssueComments(id: string) {
+export async function listIssueComments(_actor: Member, id: string) {
   const issue = await issueOf(db, id);
   if (!issue) throw new ApiError(404, "Not found");
   return findComments(db, eq(comments.issueId, issue.id));
 }
 
-export async function listProjectComments(key: string) {
+export async function listProjectComments(_actor: Member, key: string) {
   const [project] = await db
     .select({ id: projects.id })
     .from(projects)
@@ -129,8 +129,8 @@ async function postComment(
   });
 }
 
-export function postIssueComment(id: string, member: Member, body: NewComment) {
-  return postComment(member, body, async (tx) => {
+export function postIssueComment(actor: Member, id: string, body: NewComment) {
+  return postComment(actor, body, async (tx) => {
     const issue = await issueOf(tx, id);
     if (!issue) throw issueGone();
     await writableProject(tx, issue.projectKey);
@@ -138,8 +138,8 @@ export function postIssueComment(id: string, member: Member, body: NewComment) {
   });
 }
 
-export function postProjectComment(key: string, member: Member, body: NewComment) {
-  return postComment(member, body, async (tx) => ({ projectId: (await writableProject(tx, key)).id }));
+export function postProjectComment(actor: Member, key: string, body: NewComment) {
+  return postComment(actor, body, async (tx) => ({ projectId: (await writableProject(tx, key)).id }));
 }
 
 async function lockedComment(tx: Transaction, id: string) {
@@ -157,10 +157,10 @@ async function lockedComment(tx: Transaction, id: string) {
   return comment;
 }
 
-export async function editComment(id: string, member: Member, { body, version }: CommentEdit) {
+export async function editComment(actor: Member, id: string, { body, version }: CommentEdit) {
   return db.transaction(async (tx) => {
     const comment = await lockedComment(tx, id);
-    if (comment.authorId !== member.id) throw notAllowed();
+    if (comment.authorId !== actor.id) throw notAllowed();
     if (comment.version !== version) throw await conflict(tx, comment.authorId);
 
     await tx
@@ -170,7 +170,7 @@ export async function editComment(id: string, member: Member, { body, version }:
     const mentioned = await replaceMentions(tx, { commentId: comment.id }, body);
     await notify(tx, mentioned, {
       kind: "mentioned",
-      actorId: member.id,
+      actorId: actor.id,
       target: comment.issueId ? { issueId: comment.issueId } : { projectId: comment.projectId as string },
       commentId: comment.id,
       text: body,
@@ -179,10 +179,10 @@ export async function editComment(id: string, member: Member, { body, version }:
   });
 }
 
-export async function deleteComment(id: string, member: Member) {
+export async function deleteComment(actor: Member, id: string) {
   await db.transaction(async (tx) => {
     const comment = await lockedComment(tx, id);
-    if (comment.authorId !== member.id && member.role !== "admin") throw notAllowed();
+    if (comment.authorId !== actor.id && actor.role !== "admin") throw notAllowed();
     await tx.delete(comments).where(eq(comments.id, comment.id));
   });
 }

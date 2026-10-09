@@ -43,11 +43,11 @@ function notificationsFor(member: { id: string }) {
 }
 
 function assign(issueRef: string, by: Member, assignee: Member | null) {
-  return updateIssue(issueRef, by, { assignee: assignee?.username ?? null });
+  return updateIssue(by, issueRef, { assignee: assignee?.username ?? null });
 }
 
 async function comment(issueRef: string, by: Member, body: string) {
-  const { comment } = await postIssueComment(issueRef, by, { requestId: randomUUID(), body });
+  const { comment } = await postIssueComment(by, issueRef, { requestId: randomUUID(), body });
   return comment;
 }
 
@@ -154,7 +154,7 @@ it("REQ-044.3: Alex edits a comment that already mentions @sam and adds @jo → 
   const { issueRef } = await website();
   const posted = await comment(issueRef, alex, `@${sam.username} look`);
 
-  await editComment(posted.id, alex, { body: `@${sam.username} @${jo.username} look`, version: 0 });
+  await editComment(alex, posted.id, { body: `@${sam.username} @${jo.username} look`, version: 0 });
 
   expect(await notificationsFor(sam)).toHaveLength(1);
   expect(await notificationsFor(jo)).toMatchObject([{ kind: "mentioned", commentId: posted.id }]);
@@ -175,7 +175,7 @@ it("REQ-044.5: Alex mentions @sam in a comment on project WEB → the email link
   const sam = await createMember();
   const project = await createProject({ name: "Website" });
 
-  const { comment: posted } = await postProjectComment(project.key, alex, {
+  const { comment: posted } = await postProjectComment(alex, project.key, {
     requestId: randomUUID(),
     body: `@${sam.username} thoughts?`,
   });
@@ -225,7 +225,7 @@ it("REQ-044: a mention in an issue description emails the member, linking to the
   const sam = await createMember();
   const { issue, issueRef } = await website();
 
-  await updateIssue(issueRef, alex, { description: `Ask @${sam.username}`, descriptionVersion: 0 });
+  await updateIssue(alex, issueRef, { description: `Ask @${sam.username}`, descriptionVersion: 0 });
 
   expect(await notificationsFor(sam)).toEqual([
     expect.objectContaining({
@@ -246,8 +246,8 @@ it("REQ-044.7: Alex mentions @sam in a comment, edits the mention out, then adds
   const { issueRef } = await website();
   const posted = await comment(issueRef, alex, `@${sam.username} look`);
 
-  await editComment(posted.id, alex, { body: "look", version: 0 });
-  await editComment(posted.id, alex, { body: `@${sam.username} look again`, version: 1 });
+  await editComment(alex, posted.id, { body: "look", version: 0 });
+  await editComment(alex, posted.id, { body: `@${sam.username} look again`, version: 1 });
 
   expect((await notificationsFor(sam)).map((row) => row.excerpt)).toEqual([
     `@${sam.username} look`,

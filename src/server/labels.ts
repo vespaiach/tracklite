@@ -6,6 +6,7 @@ import { db } from "./db";
 import { writableProject } from "./projects";
 import type { LabelChanges, NewLabel } from "../schemas/label";
 import { issueLabels, labels, projects } from "./schema";
+import type { Member } from "./sessions";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -45,7 +46,7 @@ async function lockLabelProject(tx: Transaction, id: string) {
   await writableProject(tx, label.projectKey);
 }
 
-export async function listLabels(projectKey: string) {
+export async function listLabels(_actor: Member, projectKey: string) {
   const [project] = await db
     .select({ id: projects.id })
     .from(projects)
@@ -58,7 +59,7 @@ export async function listLabels(projectKey: string) {
     .orderBy(asc(sql`lower(${labels.name})`), asc(labels.name));
 }
 
-export async function createLabel(projectKey: string, { name, color }: NewLabel) {
+export async function createLabel(_actor: Member, projectKey: string, { name, color }: NewLabel) {
   return db.transaction(async (tx) => {
     const project = await writableProject(tx, projectKey);
     const [created] = await refusingDuplicateNames(
@@ -71,7 +72,7 @@ export async function createLabel(projectKey: string, { name, color }: NewLabel)
   });
 }
 
-export async function updateLabel(id: string, changes: LabelChanges) {
+export async function updateLabel(_actor: Member, id: string, changes: LabelChanges) {
   return db.transaction(async (tx) => {
     await lockLabelProject(tx, id);
     if (changes.name !== undefined || changes.color !== undefined) {
@@ -83,7 +84,7 @@ export async function updateLabel(id: string, changes: LabelChanges) {
   });
 }
 
-export async function deleteLabel(id: string) {
+export async function deleteLabel(_actor: Member, id: string) {
   await db.transaction(async (tx) => {
     await lockLabelProject(tx, id);
     const deleted = await tx.delete(labels).where(eq(labels.id, id)).returning({ id: labels.id });

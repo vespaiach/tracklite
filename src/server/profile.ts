@@ -15,7 +15,7 @@ function invalidFields(fields: Record<string, string>) {
   return new ApiError(422, "Check the highlighted fields", fields);
 }
 
-export async function updateProfile(member: Member, changes: Record<string, unknown>) {
+export async function updateProfile(actor: Member, changes: Record<string, unknown>) {
   const fixed = fixedFields.filter((field) => field in changes);
   if (fixed.length > 0) {
     throw invalidFields(Object.fromEntries(fixed.map((field) => [field, "Can't be changed"])));
@@ -25,21 +25,21 @@ export async function updateProfile(member: Member, changes: Record<string, unkn
   const error = fullNameError(fullName);
   if (error) throw invalidFields({ fullName: error });
 
-  const [updated] = await db.update(members).set({ fullName }).where(eq(members.id, member.id)).returning();
+  const [updated] = await db.update(members).set({ fullName }).where(eq(members.id, actor.id)).returning();
   return updated;
 }
 
 export async function changePassword(
-  member: Member,
+  actor: Member,
   sessionToken: string,
   currentPassword: string,
   newPassword: string,
   ip: string,
 ) {
-  const email = normalizeEmail(member.email);
+  const email = normalizeEmail(actor.email);
   if (await signInLimitReached(email, ip)) throw tooManyAttempts();
 
-  if (!(await verifyPassword(member.passwordHash, currentPassword))) {
+  if (!(await verifyPassword(actor.passwordHash, currentPassword))) {
     await recordFailedSignIn(email, ip);
     throw invalidFields({ currentPassword: "Incorrect password" });
   }
@@ -49,9 +49,9 @@ export async function changePassword(
 
   const passwordHash = await hashPassword(newPassword);
   await db.transaction(async (tx) => {
-    await tx.update(members).set({ passwordHash }).where(eq(members.id, member.id));
+    await tx.update(members).set({ passwordHash }).where(eq(members.id, actor.id));
     await tx
       .delete(sessions)
-      .where(and(eq(sessions.memberId, member.id), ne(sessions.tokenHash, hashToken(sessionToken))));
+      .where(and(eq(sessions.memberId, actor.id), ne(sessions.tokenHash, hashToken(sessionToken))));
   });
 }
