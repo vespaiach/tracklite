@@ -35,11 +35,19 @@ import {
 } from "./schema";
 import type { Member } from "./sessions";
 import type { IssueChange, IssueMove, NewIssue } from "../schemas/issue";
-import type { Board, BoardIssue, Issue, IssueListPage, ListIssue, MyIssue, MyIssueGroup } from "../contract";
+import type {
+  Board,
+  BoardIssue,
+  Issue,
+  IssueListPage,
+  IssueStatus,
+  ListIssue,
+  MyIssue,
+  MyIssueGroup,
+} from "../contract";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | Transaction;
-type IssueStatus = (typeof issueStatus.enumValues)[number];
 type IssueUpdate = PgUpdateSetSource<typeof issues>;
 type SortColumn = keyof typeof sortColumns;
 
