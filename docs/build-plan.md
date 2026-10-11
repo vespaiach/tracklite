@@ -500,7 +500,7 @@ Every task in this milestone keeps behaviour as it is: the existing route tests 
   - Reads: design §2.6 · runbook §1 (OPS-004)
   - Needs: M13.1 (deployed)
   - Done: the migration test carries a leftover `notification_emails` row and its notification over; the table, column and enum are gone; every existing notification test passes
-- [ ] **M13.4 Worker efficiency.** Drop checks loaded once per pass with a fixed number of queries; DATA-004 cleanup in chunks of 1,000 rows, each in its own transaction.
+- [x] **M13.4 Worker efficiency.** Drop checks loaded once per pass with a fixed number of queries; DATA-004 cleanup in chunks of 1,000 rows, each in its own transaction.
   - Reads: design §2.6 (drop checks), §2.7 · spec REQ-045, DATA-004
   - Needs: M13.2
   - Done: the existing drop-check tests (REQ-045.2…REQ-045.5, REQ-045.7 and the two REQ-045 drop tests) and DATA-004.* pass; new tests: a pass of 10 deliveries runs as many drop-check queries as a pass of 1; cleanup deletes more than one chunk's worth of rows

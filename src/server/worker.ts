@@ -19,6 +19,7 @@ type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type DueDelivery = Awaited<ReturnType<typeof dueDeliveries>>[number];
 type ClaimedDelivery = DueDelivery & { lease: string };
 type Item = Awaited<ReturnType<typeof itemsOf>>[number];
+type DropChecks = Awaited<ReturnType<typeof loadDropChecks>>;
 
 const batchSize = 10;
 const pollIntervalMs = 5_000;
@@ -41,7 +42,10 @@ export async function runWorker({ signal }: { signal: AbortSignal }) {
 
 export async function sendDueDeliveries() {
   const claimed = await claimDueDeliveries();
-  for (const delivery of claimed) await deliver(delivery);
+  if (claimed.length === 0) return 0;
+
+  const checks = await loadDropChecks(claimed);
+  for (const delivery of claimed) await deliver(delivery, checks);
   return claimed.length;
 }
 
@@ -121,17 +125,17 @@ function heldBy(delivery: ClaimedDelivery) {
   );
 }
 
-async function deliver(delivery: ClaimedDelivery) {
+async function deliver(delivery: ClaimedDelivery, checks: DropChecks) {
   try {
-    await sendAndRecord(delivery);
+    await sendAndRecord(delivery, checks);
   } catch (error) {
     logNotificationError({ deliveryId: delivery.id, errorName: errorNameOf(error) });
     await recordFailure(delivery).catch(() => {});
   }
 }
 
-async function sendAndRecord(delivery: ClaimedDelivery) {
-  const message = await applyDropChecks(delivery);
+async function sendAndRecord(delivery: ClaimedDelivery, checks: DropChecks) {
+  const message = await applyDropChecks(delivery, checks);
   if (!message) return;
 
   const sent = await send(delivery, message);
@@ -147,40 +151,52 @@ function send(delivery: ClaimedDelivery, { recipient, kept }: { recipient: Recip
   return notificationSenders[delivery.channel](recipient, kept, delivery.id).catch(() => null);
 }
 
-function applyDropChecks(delivery: ClaimedDelivery) {
-  return db.transaction(async (tx) => {
-    if (!(await holdsLease(tx, delivery))) return null;
+async function loadDropChecks(claimed: ClaimedDelivery[]) {
+  const recipientIds = unique(claimed.map((delivery) => delivery.recipientId));
+  const issueIds = targetIdsOf(claimed, "issue");
+  const projectIds = targetIdsOf(claimed, "project");
 
-    const [recipient] = await tx.select().from(members).where(eq(members.id, delivery.recipientId));
-    const items = await itemsOf(tx, delivery.batchId);
-    const kept = recipient.deactivatedAt === null ? await wantedItems(tx, delivery, items) : [];
+  const recipients = await db.select().from(members).where(inArray(members.id, recipientIds));
+  const items = await itemsOf(unique(claimed.map((delivery) => delivery.batchId)));
+  const existingIssues = await db
+    .select({ id: issues.id, assigneeId: issues.assigneeId })
+    .from(issues)
+    .where(inArray(issues.id, issueIds));
+  const existingProjects = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .where(inArray(projects.id, projectIds));
+  const commentIds = unique(items.flatMap((item) => (item.commentId ? [item.commentId] : [])));
+  const mentioned = await mentionsOf(recipientIds, { issueIds, projectIds, commentIds });
 
-    await dropNotifications(
-      tx,
-      items.filter((item) => !kept.includes(item)).map((item) => item.id),
-    );
-
-    if (kept.length === 0) {
-      await tx.update(notificationDeliveries).set({ state: "dropped" }).where(heldBy(delivery));
-      return null;
-    }
-    return { recipient, kept };
-  });
+  return {
+    recipients: new Map(recipients.map((recipient) => [recipient.id, recipient])),
+    items,
+    assigneeOfIssue: new Map(existingIssues.map((issue) => [issue.id, issue.assigneeId])),
+    existingProjectIds: new Set(existingProjects.map((project) => project.id)),
+    mentionKeys: new Set(
+      mentioned.map((mention) =>
+        mentionKey(mention.memberId, mention.commentId ?? mention.issueId ?? mention.projectId),
+      ),
+    ),
+  };
 }
 
-async function holdsLease(tx: Transaction, delivery: ClaimedDelivery) {
-  const held = await tx
-    .select({ id: notificationDeliveries.id })
-    .from(notificationDeliveries)
-    .where(heldBy(delivery))
-    .for("update");
-  return held.length > 0;
+function unique(ids: string[]) {
+  return [...new Set(ids)];
 }
 
-function itemsOf(tx: Transaction, batchId: string) {
-  return tx
+function targetIdsOf(claimed: ClaimedDelivery[], targetType: DueDelivery["targetType"]) {
+  return unique(
+    claimed.filter((delivery) => delivery.targetType === targetType).map((delivery) => delivery.targetId),
+  );
+}
+
+function itemsOf(batchIds: string[]) {
+  return db
     .select({
       id: notifications.id,
+      batchId: notifications.batchId,
       kind: notifications.kind,
       commentId: notifications.commentId,
       actorName: members.fullName,
@@ -193,52 +209,87 @@ function itemsOf(tx: Transaction, batchId: string) {
     })
     .from(notifications)
     .innerJoin(members, eq(members.id, notifications.actorId))
-    .where(and(eq(notifications.batchId, batchId), eq(notifications.dropped, false)))
+    .where(and(inArray(notifications.batchId, batchIds), eq(notifications.dropped, false)))
     .orderBy(asc(notifications.createdAt), asc(notifications.id));
 }
 
-async function wantedItems(tx: Transaction, delivery: DueDelivery, items: Item[]) {
-  const kept: Item[] = [];
-  for (const item of items) {
-    if (await stillWanted(tx, delivery, item)) kept.push(item);
+function mentionsOf(
+  recipientIds: string[],
+  sources: { issueIds: string[]; projectIds: string[]; commentIds: string[] },
+) {
+  return db
+    .select({
+      memberId: mentions.memberId,
+      issueId: mentions.issueId,
+      projectId: mentions.projectId,
+      commentId: mentions.commentId,
+    })
+    .from(mentions)
+    .where(
+      and(
+        inArray(mentions.memberId, recipientIds),
+        or(
+          inArray(mentions.issueId, sources.issueIds),
+          inArray(mentions.projectId, sources.projectIds),
+          inArray(mentions.commentId, sources.commentIds),
+        ),
+      ),
+    );
+}
+
+function mentionKey(memberId: string, sourceId: string | null) {
+  return `${memberId}:${sourceId}`;
+}
+
+function applyDropChecks(delivery: ClaimedDelivery, checks: DropChecks) {
+  const { recipient, kept, droppedIds } = checkedMessage(delivery, checks);
+
+  return db.transaction(async (tx) => {
+    if (!(await holdsLease(tx, delivery))) return null;
+
+    await dropNotifications(tx, droppedIds);
+
+    if (!recipient || kept.length === 0) {
+      await tx.update(notificationDeliveries).set({ state: "dropped" }).where(heldBy(delivery));
+      return null;
+    }
+    return { recipient, kept };
+  });
+}
+
+function checkedMessage(delivery: ClaimedDelivery, checks: DropChecks) {
+  const recipient = checks.recipients.get(delivery.recipientId);
+  const items = checks.items.filter((item) => item.batchId === delivery.batchId);
+
+  const kept =
+    recipient?.deactivatedAt === null ? items.filter((item) => stillWanted(checks, delivery, item)) : [];
+  const droppedIds = items.filter((item) => !kept.includes(item)).map((item) => item.id);
+  return { recipient, kept, droppedIds };
+}
+
+function stillWanted(checks: DropChecks, delivery: DueDelivery, item: Item) {
+  if (delivery.targetType === "project") {
+    if (!checks.existingProjectIds.has(delivery.targetId)) return true;
+  } else {
+    if (!checks.assigneeOfIssue.has(delivery.targetId)) return true;
+    if (item.kind === "assigned")
+      return checks.assigneeOfIssue.get(delivery.targetId) === delivery.recipientId;
   }
-  return kept;
+  return checks.mentionKeys.has(mentionKey(delivery.recipientId, item.commentId ?? delivery.targetId));
+}
+
+async function holdsLease(tx: Transaction, delivery: ClaimedDelivery) {
+  const held = await tx
+    .select({ id: notificationDeliveries.id })
+    .from(notificationDeliveries)
+    .where(heldBy(delivery))
+    .for("update");
+  return held.length > 0;
 }
 
 async function dropNotifications(tx: Transaction, ids: string[]) {
   if (ids.length === 0) return;
   await tx.update(notifications).set({ dropped: true }).where(inArray(notifications.id, ids));
-}
-
-async function stillWanted(tx: Transaction, delivery: DueDelivery, item: Item) {
-  if (delivery.targetType === "project") {
-    const [project] = await tx
-      .select({ id: projects.id })
-      .from(projects)
-      .where(eq(projects.id, delivery.targetId));
-    if (!project) return true;
-  } else {
-    const [issue] = await tx
-      .select({ assigneeId: issues.assigneeId })
-      .from(issues)
-      .where(eq(issues.id, delivery.targetId));
-    if (!issue) return true;
-    if (item.kind === "assigned") return issue.assigneeId === delivery.recipientId;
-  }
-  return stillMentioned(tx, delivery, item);
-}
-
-async function stillMentioned(tx: Transaction, delivery: DueDelivery, item: Item) {
-  const source = item.commentId
-    ? eq(mentions.commentId, item.commentId)
-    : delivery.targetType === "issue"
-      ? eq(mentions.issueId, delivery.targetId)
-      : eq(mentions.projectId, delivery.targetId);
-  const [mention] = await tx
-    .select({ id: mentions.id })
-    .from(mentions)
-    .where(and(eq(mentions.memberId, delivery.recipientId), source));
-  return mention !== undefined;
 }
 
 async function recordFailure(delivery: ClaimedDelivery) {
