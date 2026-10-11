@@ -8,7 +8,14 @@ import { db } from "./db";
 import { outbox } from "./email/outbox";
 import { updateIssue } from "./issues";
 import { notificationSenders } from "./notification-channels";
-import { issues, members, notificationBatches, notificationDeliveries, notifications } from "./schema";
+import {
+  issues,
+  members,
+  notificationBatches,
+  notificationDeliveries,
+  notifications,
+  workerHeartbeats,
+} from "./schema";
 import type { Member } from "./sessions";
 import { runWorker, sendDueDeliveries } from "./worker";
 
@@ -160,6 +167,28 @@ async function dropCheckQueriesOfOnePass() {
 
 function logLines(log: { mock: { calls: unknown[][] } }) {
   return log.mock.calls.map(([line]) => JSON.parse(String(line)));
+}
+
+function workerLines(log: { mock: { calls: unknown[][] } }) {
+  return logLines(log).filter((line) => line.event === "worker");
+}
+
+async function emptyQueue() {
+  await db.delete(notificationDeliveries).where(eq(notificationDeliveries.state, "pending"));
+}
+
+async function onePass() {
+  const stop = new AbortController();
+  stop.abort();
+  await runWorker({ signal: stop.signal });
+}
+
+async function sendFailsFor(deliveryId: string) {
+  const send = notificationSenders.email;
+  vi.spyOn(notificationSenders, "email").mockImplementation(async (...args) => {
+    if (args[2] === deliveryId) throw new Error("provider down");
+    return send(...args);
+  });
 }
 
 it("REQ-045: an email isn't sent before its 2 minutes are up", async () => {
@@ -643,4 +672,88 @@ it("REQ-045: a pass of 10 deliveries runs as many drop-check queries as a pass o
 
   expect(queriesForTen).toBe(queriesForOne);
   expect(await statesOf([...one, ...ten])).toEqual(Array(11).fill("sent"));
+});
+
+it("OPS-005: every pass records the worker heartbeat with now()", async () => {
+  await db
+    .insert(workerHeartbeats)
+    .values({ name: "worker", lastPassAt: sql`now() - interval '5 minutes'` })
+    .onConflictDoUpdate({
+      target: workerHeartbeats.name,
+      set: { lastPassAt: sql`now() - interval '5 minutes'` },
+    });
+
+  await onePass();
+
+  const [heartbeat] = await db
+    .select({ ageSeconds: sql<number>`extract(epoch from now() - ${workerHeartbeats.lastPassAt})::float` })
+    .from(workerHeartbeats)
+    .where(eq(workerHeartbeats.name, "worker"));
+  expect(heartbeat.ageSeconds).toBeLessThan(5);
+});
+
+it("§1.4: the metrics line holds the queue and delivery counts, and no recipient or text", async () => {
+  await emptyQueue();
+  const alex = await createMember();
+  const [sam, jo, kim, lee, mia] = await Promise.all(Array.from({ length: 5 }, () => createMember()));
+  const issueRefs = await Promise.all(Array.from({ length: 5 }, async () => (await website()).issueRef));
+  for (const [index, recipient] of [sam, jo, kim, lee, mia].entries())
+    await assign(issueRefs[index], alex, recipient);
+  await db.update(members).set({ deactivatedAt: sql`now()` }).where(eq(members.id, jo.id));
+  for (const recipient of [sam, jo, kim, mia]) await waitIsOver(recipient);
+  const [kimEmail] = await emailsOf(kim);
+  await db
+    .update(notificationDeliveries)
+    .set({ attempts: 3 })
+    .where(eq(notificationDeliveries.id, kimEmail.id));
+  await sendFailsFor(kimEmail.id);
+  await db
+    .update(notificationBatches)
+    .set({ sendAfter: sql`now() - interval '3 minutes'` })
+    .where(eq(notificationBatches.recipientId, mia.id));
+  await leaseEndsIn(mia, "1 minute");
+  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+  await onePass();
+
+  const lines = workerLines(log);
+  expect(lines).toEqual([
+    {
+      time: expect.any(String),
+      level: "info",
+      event: "worker",
+      pending: 2,
+      due: 1,
+      oldestDueSeconds: expect.any(Number),
+      sent: 1,
+      failed: 1,
+      dropped: 1,
+    },
+  ]);
+  expect(lines[0].oldestDueSeconds).toBeGreaterThanOrEqual(180);
+  expect(lines[0].oldestDueSeconds).toBeLessThan(190);
+  const text = JSON.stringify(lines);
+  for (const member of [sam, jo, kim, lee, mia]) {
+    expect(text).not.toContain(member.email);
+    expect(text).not.toContain(member.username);
+  }
+  expect(text).not.toContain("Fix login button");
+});
+
+it("§1.4: the metrics line is written at most once a minute", async () => {
+  await emptyQueue();
+  await dueMentionsFor(25);
+  const stop = new AbortController();
+  const send = notificationSenders.email;
+  let sends = 0;
+  vi.spyOn(notificationSenders, "email").mockImplementation(async (...args) => {
+    if (++sends === 25) stop.abort();
+    return send(...args);
+  });
+  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+  await runWorker({ signal: stop.signal });
+
+  expect(sends).toBe(25);
+  expect(workerLines(log)).toHaveLength(1);
 });

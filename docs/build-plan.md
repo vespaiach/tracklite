@@ -504,7 +504,7 @@ Every task in this milestone keeps behaviour as it is: the existing route tests 
   - Reads: design §2.6 (drop checks), §2.7 · spec REQ-045, DATA-004
   - Needs: M13.2
   - Done: the existing drop-check tests (REQ-045.2…REQ-045.5, REQ-045.7 and the two REQ-045 drop tests) and DATA-004.* pass; new tests: a pass of 10 deliveries runs as many drop-check queries as a pass of 1; cleanup deletes more than one chunk's worth of rows
-- [ ] **M13.5 Heartbeat, metrics and `/health/worker`.** The `worker_heartbeats` table, upserted with `now()` every pass; the once-a-minute `event: "worker"` log line; `GET /health/worker`. Update `ops/uptime/health-check.gs`, `ops/monitoring-and-email.md` and `ops/runbook.md` for the second uptime check; the runbook notes that a rollback to a release before this task makes `/health/worker` fail, because that worker writes no heartbeat.
+- [x] **M13.5 Heartbeat, metrics and `/health/worker`.** The `worker_heartbeats` table, upserted with `now()` every pass; the once-a-minute `event: "worker"` log line; `GET /health/worker`. Update `ops/uptime/health-check.gs`, `ops/monitoring-and-email.md` and `ops/runbook.md` for the second uptime check; the runbook notes that a rollback to a release before this task makes `/health/worker` fail, because that worker writes no heartbeat.
   - Reads: design §1.4, §2.6 (`worker_heartbeats`), §3.3 (Outside `/api`) · spec OPS-005, SEC-007 · `ops/monitoring-and-email.md`, `ops/runbook.md`, `ops/uptime/`
   - Needs: M13.2
   - Done: OPS-005.2…OPS-005.5, with tests that move stored timestamps into the past and never fake the clock; a test that the metrics line holds the counts and no recipient or text, and is written at most once a minute; OPS-005.6 checked by hand

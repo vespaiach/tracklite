@@ -44,3 +44,16 @@ export function logNotificationError({ deliveryId, errorName }: { deliveryId?: s
     }),
   );
 }
+
+type WorkerMetricsLine = {
+  pending: number;
+  due: number;
+  oldestDueSeconds: number;
+  sent: number;
+  failed: number;
+  dropped: number;
+};
+
+export function logWorkerMetrics(line: WorkerMetricsLine) {
+  console.log(JSON.stringify({ time: new Date().toISOString(), level: "info", event: "worker", ...line }));
+}

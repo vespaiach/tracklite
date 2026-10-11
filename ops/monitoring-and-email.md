@@ -4,10 +4,15 @@ One-time set-up before launch. Replace `tracklite.example.com` with the real dom
 
 ## Uptime check (OPS-005)
 
-A Google Apps Script outside the VPS calls `/health` every 5 minutes. When the check fails twice in a row, it emails the Google account that owns the script. It sends one email per outage and resets once `/health` answers `200` again.
+A Google Apps Script outside the VPS calls two addresses every 5 minutes. When either fails twice in a row, it emails the Google account that owns the script. It sends one email per outage and address, and resets once that address answers `200` again.
+
+| Address | Answers `503` when | Alert |
+|---|---|---|
+| `/health` | the database doesn't respond | "Tracklite is down" |
+| `/health/worker` | `tracklite-worker` hasn't finished a pass in 2 minutes (or never has), or a due notification has waited more than 10 minutes | "Tracklite notifications are stuck" |
 
 1. Sign in to the owner's Google account and create a new project at <https://script.google.com>.
-2. Replace the editor's contents with [`uptime/health-check.gs`](uptime/health-check.gs), and set `healthUrl` to `https://tracklite.example.com/health`.
+2. Replace the editor's contents with [`uptime/health-check.gs`](uptime/health-check.gs), and set `baseUrl` to `https://tracklite.example.com`.
 3. Choose `installTrigger` in the function menu and click **Run**. Grant the permissions it asks for: external requests, sending email as you, and managing triggers.
 4. **Triggers** (the clock icon) should list one trigger: `checkHealth`, time-driven, every 5 minutes.
 
@@ -40,6 +45,8 @@ Mail is sent from a subdomain, so the app's sending reputation is kept apart fro
 ## Checks by hand
 
 - **The uptime check alerts (OPS-005.1).** Run `sudo systemctl stop tracklite-web`. Within about 10 minutes the owner gets "Tracklite is down". Run `sudo systemctl start tracklite-web` afterwards. To check the database case, stop `postgresql` instead: `/health` answers `503`, and the alert follows the same way.
+- **The worker check alerts (OPS-005.6).** Run `sudo systemctl stop tracklite-worker`. Within 2 minutes `curl -s https://tracklite.example.com/health/worker` answers `unavailable`, and within about 15 minutes the owner gets "Tracklite notifications are stuck". Run `sudo systemctl start tracklite-worker` afterwards; the next check answers `ok`.
+- **The worker logs its metrics.** `journalctl -u tracklite-worker --since "5 min ago" | grep '"event":"worker"'` shows about one line a minute with `pending`, `due`, `oldestDueSeconds` and the `sent`, `failed` and `dropped` counts since the previous line.
 - **A test email passes SPF and DKIM.** As `deployer` on the VPS, send a password-reset email to a Gmail address you can read, with the same settings the services use:
 
   ```bash

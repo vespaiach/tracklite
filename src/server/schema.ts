@@ -283,6 +283,11 @@ export const notificationDeliveries = pgTable(
   ],
 );
 
+export const workerHeartbeats = pgTable("worker_heartbeats", {
+  name: text("name").primaryKey(),
+  lastPassAt: timestamptz("last_pass_at").notNull(),
+});
+
 export const notifications = pgTable("notifications", {
   id: id(),
   batchId: uuid("batch_id")
