@@ -43,6 +43,13 @@
       "when": 1791713320378,
       "tag": "0005_drop_notification_emails",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791715016728,
+      "tag": "0006_worker_lease",
+      "breakpoints": true
     }
   ]
 }

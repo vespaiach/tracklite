@@ -6,6 +6,7 @@ import { deleteComment, editComment, postIssueComment } from "./comments";
 import { db } from "./db";
 import { outbox } from "./email/outbox";
 import { updateIssue } from "./issues";
+import { notificationSenders } from "./notification-channels";
 import { issues, members, notificationBatches, notificationDeliveries, notifications } from "./schema";
 import type { Member } from "./sessions";
 import { runWorker, sendDueDeliveries } from "./worker";
@@ -92,6 +93,59 @@ function mailTo(member: { email: string }) {
 
 async function sendAllDue() {
   while ((await sendDueDeliveries()) > 0) {}
+}
+
+async function leaseEndsIn(member: { id: string }, interval: string) {
+  await db.execute(
+    sql`update ${notificationDeliveries} set locked_until = now() + ${interval}::interval where ${inArray(notificationDeliveries.batchId, batchesOf(member))}`,
+  );
+}
+
+async function dueMentionsFor(count: number) {
+  const alex = await createMember();
+  const recipients = await Promise.all(Array.from({ length: count }, () => createMember()));
+  const { issueRef } = await website();
+
+  await comment(issueRef, alex, recipients.map((recipient) => `@${recipient.username}`).join(" "));
+  for (const recipient of recipients) await waitIsOver(recipient);
+
+  return recipients;
+}
+
+async function statesOf(recipients: { id: string }[]) {
+  const emails = await Promise.all(recipients.map(emailsOf));
+  return emails.flat().map((email) => email.state);
+}
+
+function fromAnotherConnection<T>(
+  write: (tx: Parameters<Parameters<typeof db.transaction>[0]>[0]) => Promise<T>,
+) {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`set local lock_timeout = '1s'`);
+    return write(tx);
+  });
+}
+
+async function recordingSentFails(deliveryId: string) {
+  await db.execute(
+    sql.raw(`create function fail_recording_sent() returns trigger language plpgsql as $$
+      begin
+        if new.state = 'sent' and new.id = '${deliveryId}' then raise exception 'recording failed'; end if;
+        return new;
+      end $$`),
+  );
+  await db.execute(
+    sql`create trigger fail_recording_sent before update on notification_deliveries for each row execute function fail_recording_sent()`,
+  );
+}
+
+async function recordingSentWorks() {
+  await db.execute(sql`drop trigger if exists fail_recording_sent on notification_deliveries`);
+  await db.execute(sql`drop function if exists fail_recording_sent()`);
+}
+
+function logLines(log: { mock: { calls: unknown[][] } }) {
+  return log.mock.calls.map(([line]) => JSON.parse(String(line)));
 }
 
 it("REQ-045: an email isn't sent before its 2 minutes are up", async () => {
@@ -405,4 +459,163 @@ it("§1.4: on SIGTERM the worker finishes its current pass and exits", async () 
 
   expect(mailTo(sam)).toHaveLength(1);
   expect((await emailsOf(sam)).map((email) => email.state)).toEqual(["sent"]);
+});
+
+it("§1.4: a delivery whose lease has expired is claimed again", async () => {
+  const alex = await createMember();
+  const sam = await createMember();
+  const { issueRef } = await website();
+  await assign(issueRef, alex, sam);
+  await waitIsOver(sam);
+  await leaseEndsIn(sam, "-1 second");
+
+  await sendAllDue();
+
+  expect(mailTo(sam)).toHaveLength(1);
+  expect((await emailsOf(sam)).map((email) => email.state)).toEqual(["sent"]);
+});
+
+it("§1.4: a delivery leased by another pass isn't claimed", async () => {
+  const alex = await createMember();
+  const sam = await createMember();
+  const { issueRef } = await website();
+  await assign(issueRef, alex, sam);
+  await waitIsOver(sam);
+  await leaseEndsIn(sam, "1 minute");
+
+  await sendAllDue();
+
+  expect(mailTo(sam)).toEqual([]);
+  expect((await emailsOf(sam)).map((email) => email.state)).toEqual(["pending"]);
+});
+
+it("§1.4: an unexpected error in one delivery doesn't stop the others, and that delivery gets a retry", async () => {
+  const alex = await createMember();
+  const sam = await createMember();
+  const jo = await createMember();
+  const { issueRef } = await website();
+  await assign(issueRef, alex, sam);
+  await comment(issueRef, alex, `@${jo.username} look`);
+  await waitIsOver(sam);
+  await waitIsOver(jo);
+  const [samEmail] = await emailsOf(sam);
+  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+  await recordingSentFails(samEmail.id);
+  try {
+    await sendDueDeliveries();
+  } finally {
+    await recordingSentWorks();
+  }
+
+  expect(await emailsOf(jo)).toEqual([expect.objectContaining({ state: "sent" })]);
+  expect(await emailsOf(sam)).toEqual([
+    expect.objectContaining({ state: "pending", attempts: 1, retryInSeconds: 60 }),
+  ]);
+  const samLines = logLines(log).filter((line) => line.deliveryId === samEmail.id);
+  expect(samLines).toEqual([
+    expect.objectContaining({ level: "error", event: "notification", errorName: "PostgresError" }),
+  ]);
+  expect(JSON.stringify(samLines)).not.toContain(sam.email);
+});
+
+it("§1.4: a full batch is followed at once by another pass", async () => {
+  const recipients = await dueMentionsFor(11);
+  const stop = new AbortController();
+
+  const running = runWorker({ signal: stop.signal });
+  try {
+    await vi.waitFor(async () => expect(await statesOf(recipients)).toEqual(Array(11).fill("sent")), {
+      timeout: 2_000,
+      interval: 50,
+    });
+  } finally {
+    stop.abort();
+    await running;
+  }
+});
+
+it("§1.4: no transaction is open while the sender runs", async () => {
+  const alex = await createMember();
+  const sam = await createMember();
+  const { issueRef } = await website();
+  await assign(issueRef, alex, sam);
+  await waitIsOver(sam);
+  const [samEmail] = await emailsOf(sam);
+  const send = notificationSenders.email;
+  let outcome = "";
+  vi.spyOn(notificationSenders, "email").mockImplementation(async (...args) => {
+    if (args[2] !== samEmail.id) return send(...args);
+    outcome = await fromAnotherConnection((tx) =>
+      tx
+        .update(notificationDeliveries)
+        .set({ attempts: sql`${notificationDeliveries.attempts}` })
+        .where(eq(notificationDeliveries.id, samEmail.id)),
+    ).then(
+      () => "updated",
+      (error: Error) => String(error.cause),
+    );
+    return send(...args);
+  });
+
+  await sendAllDue();
+
+  expect(outcome).toBe("updated");
+  expect((await emailsOf(sam)).map((email) => email.state)).toEqual(["sent"]);
+});
+
+it("§1.4: a pass whose lease was taken over doesn't overwrite the newer pass's result", async () => {
+  const alex = await createMember();
+  const sam = await createMember();
+  const { issueRef } = await website();
+  await assign(issueRef, alex, sam);
+  await waitIsOver(sam);
+  const send = notificationSenders.email;
+  vi.spyOn(notificationSenders, "email").mockImplementation(async (...args) => {
+    await fromAnotherConnection(() => leaseEndsIn(sam, "5 minutes"));
+    return send(...args);
+  });
+
+  await sendDueDeliveries();
+
+  expect(await emailsOf(sam)).toEqual([expect.objectContaining({ state: "pending", attempts: 0 })]);
+});
+
+it("§1.4: on SIGTERM the worker finishes the deliveries it claimed and claims no more", async () => {
+  const recipients = await dueMentionsFor(11);
+  const stop = new AbortController();
+  const send = notificationSenders.email;
+  vi.spyOn(notificationSenders, "email").mockImplementationOnce(async (...args) => {
+    stop.abort();
+    return send(...args);
+  });
+
+  await runWorker({ signal: stop.signal });
+
+  const states = await statesOf(recipients);
+  expect(states.filter((state) => state === "sent")).toHaveLength(10);
+  expect(states.filter((state) => state === "pending")).toHaveLength(1);
+});
+
+it("§1.4: an error outside any delivery is logged and the worker keeps running", async () => {
+  const connectionRefused = Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:5432"), {
+    code: "ECONNREFUSED",
+  });
+  const claim = vi.spyOn(db, "transaction").mockRejectedValueOnce(connectionRefused);
+  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+  const stop = new AbortController();
+
+  const outcome = runWorker({ signal: stop.signal }).then(
+    () => "stopped",
+    (error: Error) => error.message,
+  );
+  await vi.waitFor(() => expect(claim).toHaveBeenCalled());
+  stop.abort();
+
+  expect(await outcome).toBe("stopped");
+  expect(logLines(log)).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ level: "error", event: "notification", errorName: "Error" }),
+    ]),
+  );
 });

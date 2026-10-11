@@ -1,9 +1,9 @@
 ---
 product: "Tracklite"
-version: "0.26"
+version: "0.27"
 release: "R1"
 status: Ready to build
-updated: "2026-10-10"
+updated: "2026-10-11"
 ---
 
 # Tracklite: Spec
@@ -488,9 +488,18 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
   - REQ-045.6: The email service reports that Sam's mailbox doesn't exist → the bounce is logged; nothing is resent. (Verify: auto)
   - REQ-045.7: Alex assigns `WEB-42` to Sam, and `WEB-42` is deleted a minute later → Sam still gets the email, and its link shows Not found (STD-4). (Verify: auto)
   - REQ-045.8: Alex mentions `@sam` on `WEB-42` at 10:00 and again at 10:01:30, then at 10:02:30 → one email at about 10:02 covers the first two; the third goes in a new email at about 10:04:30. (Verify: auto)
+- **REQ-053** The system shall give admins a notification status page, `/settings/notifications`, that shows whether notifications are going out. It shows when the background worker was last seen; how many deliveries are pending, how many of those are due, and how long the oldest due one has waited; per channel, how many deliveries were sent, dropped, failed and bounced in the last 24 hours; and the 20 most recent failed or bounced deliveries, newest first, each with the recipient's username, the channel, the issue ID or project key, the number of attempts and when it failed or bounced. A delivery is counted once, under the state it's in now, so an email that was sent and then bounced counts as bounced. The page never shows email addresses or notification text (SEC-007). It's read-only: it loads when opened and again when the admin clicks **Refresh**, and never refreshes by itself. Members who aren't admins can't open it (STD-2).
+  - REQ-053.1: The worker finished a pass 4 seconds ago, and 3 notifications are pending, 1 of them due for 40 seconds → the page shows the worker last seen "just now", 3 pending, 1 due, and 40 seconds for the oldest due. (Verify: auto)
+  - REQ-053.2: In the last 24 hours, 12 emails were sent, 2 dropped, 1 failed and 1 bounced, and one more failed 2 days ago → the Email row shows 12 sent, 2 dropped, 1 failed and 1 bounced. (Verify: auto)
+  - REQ-053.3: Sam's email about `WEB-42` failed after 4 attempts → the recent list shows `sam`, Email, `WEB-42`, 4 and when it failed. Sam's email address and the excerpt appear nowhere on the page or in what the API returns. (Verify: auto)
+  - REQ-053.4: 25 deliveries have failed or bounced → the 20 most recent are listed, newest first. (Verify: auto)
+  - REQ-053.5: The worker has never run → it shows as last seen "Never". (Verify: auto)
+  - REQ-053.6: Nothing has failed or bounced → the recent list shows "No failed or bounced notifications." (Verify: auto)
+  - REQ-053.7: An admin has the page open while another notification is sent → the numbers don't change until they click **Refresh**, then the sent count goes up by one. (Verify: auto)
+  - REQ-053.8: Alex, a member, opens `/settings/notifications` → "You don't have permission to do that." (Verify: auto)
 
 **Exceptions to standard behaviors:** None.
-**Uses:** Notification, Issue, Project, Comment, Member · DATA-001 (mentions) · STD-6 · REQ-007 · API-002, API-003
+**Uses:** Notification, Issue, Project, Comment, Member · DATA-001 (mentions) · STD-6 · REQ-007 · API-002, API-003, API-004 · SEC-007 · OPS-005
 
 ## System
 
@@ -521,6 +530,7 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
 | Edit own profile | Yes | Yes |
 | Change own password | Yes | Yes |
 | Open the members page (REQ-051) | Yes | No |
+| Open the notification status page (REQ-053) | Yes | No |
 | Invite, resend or revoke an invitation | Yes | No |
 | Deactivate or reactivate a member | Yes | No |
 | Make a member an admin, or remove admin | Yes (the last admin can't be removed) | No |
@@ -550,7 +560,7 @@ There are no private projects. Nobody, including admins, can see or set another 
 | Issue | Project, number, title, Markdown description, status, priority, assignee, labels (0 to 10), board position, created by, created at, last updated, status changed at | Number unique within its project and never reused (REQ-016). Board position is per status column (REQ-027). "Status changed at" drives the 14-day window (REQ-028). |
 | Comment | Either an issue or a project, author, Markdown body, created at, edited at | Belongs to exactly one issue or one project. |
 | Mention | The text it's in (an issue description, a project description or a comment), the member mentioned | Lets an edit email only new mentions (REQ-044). |
-| Notification | Recipient, kind (Assigned or Mentioned), issue or project, who caused it, the issue ID or project key, its title or name, the text excerpt (up to 500 characters), send after, and per notification channel a delivery state (Pending, Sent, Dropped, Failed, Bounced) | "Send after" is 2 minutes after the recipient's first pending notification about that issue or project (REQ-045). The ID, title and excerpt are saved when it's created, and later edits don't change them (section 9, Email content). Each of the recipient's channels is delivered, retried and failed on its own. Not deleted with its issue or project (REQ-045). |
+| Notification | Recipient, kind (Assigned or Mentioned), issue or project, who caused it, the issue ID or project key, its title or name, the text excerpt (up to 500 characters), send after, and per notification channel a delivery state (Pending, Sent, Dropped, Failed, Bounced), its number of attempts and when it reached that state | "Send after" is 2 minutes after the recipient's first pending notification about that issue or project (REQ-045). The ID, title and excerpt are saved when it's created, and later edits don't change them (section 9, Email content). Each of the recipient's channels is delivered, retried and failed on its own. Not deleted with its issue or project (REQ-045). |
 | Sign-in attempt | Email, IP address, attempted at | Records failed sign-ins and wrong current passwords (REQ-049) for SEC-001. |
 | Password reset request | Email, IP address, requested at | Records reset requests for SEC-001. |
 
@@ -576,7 +586,7 @@ There are no private projects. Nobody, including admins, can see or set another 
 | API-001 | The app's own HTTP API, under `/api/…`, used only by its own web front end | Every feature. It isn't public or documented for outside use. Errors follow STD-1 to STD-4 (`401`, `403`, `422`, `404`). The exact list of endpoints is the agent's choice (DEC-002). |
 | API-002 | Outgoing email service (a transactional email provider, DEC-003) | Invitations (REQ-001), password reset links (REQ-050) and notifications (F-008). If it fails, see STD-6: a password reset request shows "We couldn't send the email", and notifications are retried 3 times. |
 | API-003 | `POST /webhooks/email` (bounce reports from the email service) | Marking notifications as Bounced (REQ-045.6). It accepts only requests signed by the email service; anything else gets `401`. |
-| API-004 | Page addresses: `/sign-in`, `/forgot-password`, `/reset-password?token=…`, `/invite?token=…`, `/my-issues`, `/project/{KEY}` (board), `/project/{KEY}/list`, `/project/{KEY}/detail`, `/project/{KEY}/labels`, `/project/{KEY}/settings`, `/projects/archived`, `/issue/{ID}`, `/settings/profile`, `/settings/members` | Links in emails and between members. Keys and IDs are matched ignoring capitals (REQ-016.5). The list view's filters go in the query string (REQ-040). |
+| API-004 | Page addresses: `/sign-in`, `/forgot-password`, `/reset-password?token=…`, `/invite?token=…`, `/my-issues`, `/project/{KEY}` (board), `/project/{KEY}/list`, `/project/{KEY}/detail`, `/project/{KEY}/labels`, `/project/{KEY}/settings`, `/projects/archived`, `/issue/{ID}`, `/settings/profile`, `/settings/members`, `/settings/notifications` | Links in emails and between members. Keys and IDs are matched ignoring capitals (REQ-016.5). The list view's filters go in the query string (REQ-040). |
 
 API-003 examples:
   - API-003.1: The email service reports a bounce for a notification email sent to Sam → that email shows as Bounced and the bounce is logged; the webhook answers `200`. (Verify: auto)
@@ -721,8 +731,13 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
   - OPS-003.3: The 03:00 backup fails → the owner gets an email about it. (Verify: ops)
 - **OPS-004** The previous release shall stay on the server, so one command switches back to it. Each release's migrations must also work with the previous release's code.
   - OPS-004.1: A deploy causes errors → the rollback command restores the previous version within 2 minutes, with no database restore needed. (Verify: ops)
-- **OPS-005** An external uptime check shall call `/health` every 5 minutes and email the owner when it fails twice in a row. `/health` answers `200` only when the database responds.
+- **OPS-005** An external uptime check shall call `/health` and `/health/worker` every 5 minutes and email the owner when either fails twice in a row. `/health` answers `200` only when the database responds. `/health/worker` answers `503` when the background worker hasn't finished a pass in the last 2 minutes (or never has), or when the oldest due pending notification delivery has waited more than 10 minutes; otherwise it answers `200`. Neither shows anything about members or notifications.
   - OPS-005.1: The database stops → `/health` returns `503`, and the owner is emailed within about 10 minutes. (Verify: ops)
+  - OPS-005.2: The worker's last pass was 3 minutes ago → `/health/worker` returns `503`. (Verify: auto)
+  - OPS-005.3: The worker has never finished a pass → `/health/worker` returns `503`. (Verify: auto)
+  - OPS-005.4: The worker finished a pass 10 seconds ago, but the oldest due pending delivery has waited 11 minutes → `/health/worker` returns `503`. (Verify: auto)
+  - OPS-005.5: The worker finished a pass 10 seconds ago, and the oldest due pending delivery has waited 1 minute, or nothing is due → `/health/worker` returns `200`. A delivery waiting for a retry isn't due yet, so it doesn't count. (Verify: auto)
+  - OPS-005.6: The worker is stopped → the owner is emailed within about 15 minutes. (Verify: ops)
 - **OPS-006** Secrets, such as the email API key and the database password, shall live in a config file on the server, never in the repository. Logs are rotated and kept for 14 days.
   - OPS-006.1: A search of the repository for the email API key → no match. (Verify: auto)
 
@@ -738,6 +753,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.27 (2026-10-11):** Notification health becomes visible. OPS-005 adds a second uptime check, `/health/worker`, which fails when the background worker hasn't been seen for 2 minutes or a due notification has waited more than 10 (new OPS-005.2 to OPS-005.6). New REQ-053: an admin-only notification status page at `/settings/notifications` (API-004, section 7). Section 8: a delivery records its attempts and when it reached its state.
 - **0.26 (2026-10-10):** Section 8: a member has notification channels (Email is the only one in R1), and a notification has a delivery state per channel instead of one state, so another channel can be added later without changing F-008's rules.
 - **0.25 (2026-10-09):** REQ-018 lists the priorities in their sort order, Urgent to No priority, so pickers and sorting agree (REQ-039).
 - **0.24 (2026-10-07):** Section 9: the combined notification email puts a blank line before and after each `---` separator, and ends with `— Tracklite` once.

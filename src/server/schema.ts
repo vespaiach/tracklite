@@ -272,11 +272,15 @@ export const notificationDeliveries = pgTable(
     state: deliveryState("state").notNull(),
     attempts: integer("attempts").notNull().default(0),
     nextAttemptAt: timestamptz("next_attempt_at"),
+    lockedUntil: timestamptz("locked_until"),
     providerMessageId: text("provider_message_id"),
     createdAt: createdAt(),
     sentAt: timestamptz("sent_at"),
   },
-  (t) => [uniqueIndex("notification_deliveries_batch_channel_key").on(t.batchId, t.channel)],
+  (t) => [
+    uniqueIndex("notification_deliveries_batch_channel_key").on(t.batchId, t.channel),
+    index("notification_deliveries_pending_idx").on(t.batchId).where(sql`${t.state} = 'pending'`),
+  ],
 );
 
 export const notifications = pgTable("notifications", {

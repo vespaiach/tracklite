@@ -1,6 +1,6 @@
 # Tracklite: Technical design
 
-Companion to `docs/tracklite-spec.md` (v0.25). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
+Companion to `docs/tracklite-spec.md` (v0.27). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
 
 ## 1. Architecture
 
@@ -14,14 +14,14 @@ Companion to `docs/tracklite-spec.md` (v0.25). The spec says *what* the product 
                        └──────────────┬──────────────────────────────┬───────────────┘
                                       ▼                              ▼
                            email provider HTTP API        off-VPS backup storage
- uptime checker ──GET /health──▶ (through Caddy)          (OPS-003)
+ uptime checker ──GET /health, /health/worker──▶ (through Caddy)   (OPS-003)
  email provider ──POST /webhooks/email──▶ (through Caddy)
 ```
 
 | Process | What it does | Managed by |
 |---|---|---|
 | **Caddy** | Gets and renews TLS certificates, redirects HTTP to HTTPS and sends HSTS (SEC-005). It also sets `X-Forwarded-For`, and the app reads the rightmost entry for SEC-001's per-IP limit. That closes the accepted limitation in spec §10. | systemd |
-| **tracklite-web** | `next start`: the single-page-app shell (1.7), `/api/…`, `/health`, `/webhooks/email`. | systemd, `Restart=always` |
+| **tracklite-web** | `next start`: the single-page-app shell (1.7), `/api/…`, `/health`, `/health/worker`, `/webhooks/email`. | systemd, `Restart=always` |
 | **tracklite-worker** | A small Node entry point in `scripts/` built from the same codebase. It sends notification emails and runs cleanup (1.4). | systemd, `Restart=always` |
 | **PostgreSQL** | All state, including the notification queue. | systemd (distro package) |
 
@@ -46,25 +46,26 @@ Every expiry and time-window check uses the database's `now()` inside the query 
 
 ### 1.4 Background worker (DEC-004)
 
-One loop, every **5 seconds**:
+`scripts/worker.ts` runs `runWorker` until `SIGTERM`. The worker works in **passes**. A pass never holds a transaction open while a provider is called, and nothing that goes wrong with one delivery ends the process.
 
-1. **Send due notification deliveries.** In a transaction, select the `pending` rows of `notification_deliveries` whose `coalesce(next_attempt_at, send_after)` (`send_after` from its batch) is `<= now()`, `order by send_after limit 10 for update skip locked`. For each delivery:
-   - apply the drop checks (2.6);
-   - hand the kept notifications to the delivery's channel, which builds the message from the snapshots and calls its provider;
-   - record `sent`, schedule a retry, or mark `failed`.
-
-   Then commit.
-2. **Cleanup (DATA-004)** runs once an hour: one `delete … where … < now() - interval …` per table.
+1. **Heartbeat.** Upsert the `worker_heartbeats` row named `worker` with `last_pass_at = now()` (2.6). `/health/worker` and the status page read it (OPS-005, REQ-053).
+2. **Claim.** One short transaction picks up to 10 deliveries that are `pending`, due (`coalesce(next_attempt_at, send_after) <= now()`, with `send_after` from the batch) and not leased (`locked_until is null or locked_until <= now()`), `order by send_after for update of notification_deliveries skip locked`. It sets `locked_until = now() + interval '2 minutes'` on them, returns that value as the pass's **lease**, and commits. Two minutes covers a full pass at the provider's 10-second timeout (5.2), 10 × 10 s.
+3. **Each claimed delivery**, one after another (sends are never concurrent):
+   - **Drop checks** (2.6) in one short transaction: mark notifications no longer wanted as dropped and, if none is left, record `dropped`. The data the checks need is loaded once for the whole pass, with a fixed number of queries.
+   - **Send** outside any transaction: the delivery's channel gets the kept notifications and the delivery's `id` (2.6).
+   - **Record** in one statement: `sent` (with `provider_message_id` and `sent_at`), a retry (`attempts + 1`, `next_attempt_at`, `locked_until = null`), or `failed`. Every write in this step and the drop step has `where state = 'pending' and locked_until = <the pass's lease>`, so a pass whose lease ran out and was taken over can't overwrite the newer pass's result. The lease is compared inside SQL, as the exact database value, never as a JavaScript `Date`, which would lose the microseconds.
+4. **Errors stay with their delivery.** Everything in step 3 for one delivery runs inside one `try`. An unexpected error, such as a bug in the drop checks or a dropped database connection, counts as a failed attempt, with the same retries as a failed send (2.6: 1, 4 and 10 minutes, then `failed`). It's logged as `event: "notification"` with the delivery's `id` and the error's name, never the recipient or any text (SEC-007). The pass then carries on with the next delivery. If recording the failure fails too, the lease runs out and a later pass picks the delivery up again. An error outside any delivery (the heartbeat, the claim, cleanup), for example while PostgreSQL restarts, is logged the same way and the worker waits 5 seconds before the next pass.
+5. **Next pass.** If the claim returned a full 10, the next pass starts straight away, so a backlog drains at the provider's pace. Otherwise the worker sleeps 5 seconds.
+6. **Metrics.** At most once a minute, after a pass, the worker logs one JSON line, `event: "worker"`, with `pending`, `due`, `oldestDueSeconds` (both counted in SQL against `now()`), and the `sent`, `failed` and `dropped` counts since the previous line. It holds no recipients and no text.
+7. **Cleanup (DATA-004)** runs once an hour between passes, in chunks (2.7).
 
 How it meets DEC-004's requirements:
 
-- **Survives a restart.** The queue is the `notification_deliveries` table, so pending notifications survive a crash or deploy. systemd restarts the worker, and it picks up where it stopped.
+- **Survives a restart.** The queue is the `notification_deliveries` table, so pending notifications survive a crash or deploy. systemd restarts the worker. A delivery claimed by the crashed process is picked up again by a later pass once its lease runs out, at most 2 minutes later.
 - **Same VPS, no paid queue.** It's Postgres plus one Node process.
-- **Delivered at least once.** If the worker dies after the provider accepted an email but before the commit, that email is sent again on restart. The delivery's `id` goes out as Resend's `Idempotency-Key`, so Resend drops the duplicate (section 5).
-- **Safe to run twice.** `skip locked` means a second worker, for example while a deploy is switching over, never sends the same email.
-- **Shutdown.** On `SIGTERM` it finishes the current batch, then exits.
-
-Holding the transaction open during the provider call (about 1 s per email) is fine at this volume. It's what keeps "locked" and "being sent" the same thing, with no extra state column.
+- **Delivered at least once.** If the worker dies after the provider accepted a message but before it was recorded, the delivery is sent again after its lease runs out. The same happens if a send outlasts its lease and another pass reclaims it. Both sends carry the delivery's `id` as Resend's `Idempotency-Key`, so Resend drops the duplicate (section 5).
+- **Safe to run twice.** `skip locked` and the lease mean a second worker, for example while a deploy is switching over, never claims a delivery whose lease is still running.
+- **Shutdown.** On `SIGTERM` the worker claims nothing more. It finishes and records the deliveries already claimed in the current pass, then exits. A sleep in progress ends at once.
 
 ### 1.5 Emails sent during the request
 
@@ -196,6 +197,12 @@ Notifications don't know how they're delivered. Three tables keep the *what*, th
 
 **`notification_deliveries`** has one row per batch and channel (`channel`, unique per batch), with its `state`, retry count, next attempt and the provider's message ID. The channels come from **`members.notification_channels`** (at least one; `{email}` by default and the only choice in R1) when the batch is created, so a later change of channels applies to the next batch.
 
+**`notification_deliveries.locked_until`** is the lease a worker pass holds on a delivery it claimed (1.4); `null` when no pass holds it. A partial index, `notification_deliveries_pending_idx` on `(batch_id) where state = 'pending'`, serves the claim and the queue counts: the due time comes from the batch (`send_after`), so no single-table index can order by it, but the partial index holds only pending rows, a handful at a time, each joined to its batch by primary key. It stays small however much history the table keeps.
+
+**`notification_deliveries.state_changed_at`** is when the delivery reached its current state: set with `now()` whenever the worker records `sent`, `dropped` or `failed`, and when the bounce webhook records `bounced`; `null` while `pending`. The status page counts and lists by it (REQ-053).
+
+**`worker_heartbeats`** has one row per worker process name (`name text primary key`, `last_pass_at timestamptz not null`). The worker upserts the row named `worker` at the start of every pass (1.4).
+
 **Channels.** `src/server/notification-channels/` has one module per channel, and an index maps every value of the `notification_channel` enum to its sender: `send(recipient, notifications, deliveryId) → { providerMessageId }`. The email sender builds the message with the templates (5.3) and calls `sendEmail()` (5.2). The map is typed by the enum, so adding a channel to the enum doesn't compile until its sender exists; nothing in `notify()` or the worker changes.
 
 No index covers `provider_message_id` (here or on `invitations`), `notifications.batch_id` or `sessions.member_id`. At one team's volume these lookups scan small tables; add an index if one shows up in NFR-003 timings.
@@ -211,13 +218,15 @@ How the parts fit:
   - `mentioned` but the comment is gone, or there's no longer a matching `mentions` row → drop.
 
   A dropped notification stays dropped for every channel. If none is left, the delivery becomes `dropped`.
+
+  The data for these checks is loaded once per pass, for all the deliveries it claimed, with a fixed number of queries whatever the number of notifications: the recipients; the batches' notifications not yet dropped; the target issues and projects that still exist; and, in one query, the `mentions` rows of those recipients for those targets and for the comments the notifications name. The checks then run in memory. A change made while the pass is sending (a few seconds) isn't seen by that pass, which is the same as a change made a moment after the send.
 - **Retries (STD-6), per delivery.** After a failed send, `attempts += 1` and `next_attempt_at` moves forward 1, then 4, then 10 minutes. After the third retry fails, the state becomes `failed`. A bounce sets `bounced` and isn't retried.
 
 ### 2.7 Deleting and cleanup
 
 - **Deleting a project (DATA-002):** cascades to issues, labels, issue_labels, comments (both issue and project comments) and mentions. `project_keys` and notifications stay.
 - **Deleting an issue:** cascades to issue_labels, comments and mentions.
-- **DATA-004 cleanup:** an hourly job deletes rows older than their retention period, using `now() - interval`. These are among the few queries written in raw SQL.
+- **DATA-004 cleanup:** an hourly job deletes rows older than their retention period, using `now() - interval`. These are among the few queries written in raw SQL. Each table is deleted in chunks: one statement deletes at most 1,000 matching rows (`where ctid in (select ctid … limit 1000)`) in its own transaction, and repeats until a statement deletes fewer than 1,000. No long transaction holds locks or delays the worker's next pass.
 
 ## 3. API
 
@@ -324,11 +333,18 @@ Request bodies are the Valibot schemas in `src/schemas/`, and response types are
 | `PATCH /api/comments/{id}` | A stale version gets `409` (STD-8) | Author | REQ-033 |
 | `DELETE /api/comments/{id}` | | Author or Admin | REQ-034 |
 
+**Operations**
+
+| Method and path | Notes | Who | Spec |
+|---|---|---|---|
+| `GET /api/notification-stats` | The status page's data: the worker's `last_pass_at` (or `null`); pending, due and the oldest due wait in seconds; per channel, the sent, dropped, failed and bounced counts whose `state_changed_at` is within the last 24 hours; the 20 most recent failed or bounced deliveries by `state_changed_at`, each with the recipient's username, channel, issue ID or project key (from the batch's newest notification), attempts and `state_changed_at`. No emails and no excerpts. All windows use `now()`. The domain function `notificationStats(actor)` starts with `assertAdmin(actor)` | Admin | REQ-053, SEC-007 |
+
 **Outside `/api`**
 
 | Method and path | Notes | Spec |
 |---|---|---|
 | `GET /health` | `200` if `select 1` succeeds, otherwise `503` | OPS-005 |
+| `GET /health/worker` | No session. `503` if the `worker` heartbeat is missing or its `last_pass_at` is older than `now() - interval '2 minutes'`, if any due pending delivery's `coalesce(next_attempt_at, send_after)` is older than `now() - interval '10 minutes'`, or if the database doesn't answer; otherwise `200`. The body is a short fixed word, never data about members or notifications | OPS-005 |
 | `POST /webhooks/email` | Checks the provider's signature (`401` if it doesn't match). It skips the same-site check, since the provider is always cross-site, and marks emails `bounced` | API-003 |
 
 ### 3.4 Details worth fixing now
@@ -520,7 +536,7 @@ Behaviour and copy come from the spec; this section only adds the routes, layout
 The routes are API-004's addresses (`src/client/routes.tsx`).
 - `/forgot-password` sends a signed-in member to `/my-issues`, as `/sign-in` and `/` do (1.7).
 - `/reset-password` and `/invite` show a signed-in member a sign-out prompt (REQ-050.8, REQ-002.3).
-- `/project/{KEY}/settings` and `/settings/members` are admin-only.
+- `/project/{KEY}/settings`, `/settings/members` and `/settings/notifications` are admin-only.
 - Any other address shows Not found (STD-4).
 
 **Permissions.**
@@ -540,6 +556,7 @@ Every signed-in screen sits in the same shell.
 - **Projects:** the active projects, as "Name · KEY", sorted as in REQ-015. Admins also get a **+** that opens the New project dialog (name and key).
 - **Archived projects**.
 - **Members** (admins only).
+- **Notifications** (admins only), the status page (REQ-053).
 - At the bottom, the member's initials and name, opening a menu with **Profile** and **Sign out**.
 
 **Project header**, shown on the board, list, details and labels screens:
@@ -558,6 +575,7 @@ The spec gives the copy for these pages; these are the layout choices it leaves 
 - **Accept invitation:** the invited email is shown, not editable. The expired and revoked states show no form (REQ-002).
 - **Profile:** full name with **Save**; username and email read-only; a separate **Change password** form.
 - **Members** (admin): the invite field, then the invitations table, then the members table sorted by name. Each row's actions are in a **⋯** menu (REQ-051); Revoke and Deactivate ask for confirmation.
+- **Notification status** (admin, REQ-053): the page title with **Refresh** beside it, then four sections. **Worker**: last seen, as a relative time (6.7), or "Never". **Queue**: pending, due and the oldest due wait. **Last 24 hours**: a table with one row per channel and the columns Sent, Dropped, Failed and Bounced. **Recent problems**: a table of Recipient (username), Channel, Issue or project, Attempts and When (6.7), with "No failed or bounced notifications." when empty. **Refresh** calls the RTK Query endpoint's `refetch` and is disabled while it runs; the endpoint is refetched on mount and never polled (1.7).
 - **Project settings** (admin): name with **Save**, the key read-only, **Archive** / **Unarchive**, and **Delete** in a dialog whose button stays disabled until the key is typed exactly (REQ-014).
 - **Archived projects:** each one opens its board, read-only.
 - **New issue:** a dialog with only a title, opened from **New issue** or a column's **+** (REQ-029). On success it goes to the new issue's page (D-37).
@@ -613,3 +631,4 @@ Only decisions with an alternative worth recording. Where the reason is already 
 | D-43 | Routes only authenticate. Every domain function called from a signed-in route takes the member as `actor` first and owns every role and ownership check, with `assertAdmin` before any lookup ([ADR 0001](ADRs/0001-permission-checks-in-domain.md)) | `apiRoute("admin")` checking the role in the route; admin-only functions typed `actor: Admin`; an `adminOnly` wrapper | Reading a domain file must show its permission rules: with the role in the route, `createProject` looked open to anyone while `updateProject` checked. Typing `actor: Admin` would push the narrowing back into the route. Nothing at typecheck enforces `assertAdmin`, so each admin-only function has a 403 test. Every admin route declares a body schema (M12.2), so a member's malformed JSON gets `422` from `apiRoute` before the domain's `403`, never a `500`. |
 | D-44 | Response types and enum values in a shared `src/contract/`; mapping functions return them | Types owned by the client and checked with `satisfies` in each route; one model shared by database, domain and API | A declared return type catches extra fields, which `satisfies` on a function call can't. One enum source keeps client lists complete. Rows and responses really differ (uuid vs `WEB-42`, `Date` vs ISO string, internal columns), so they stay separate types with a mapping between them. |
 | D-45 | Notifications in batches with one delivery per channel; senders in `src/server/notification-channels/`, mapped by the `notification_channel` enum | One `notification_emails` table; one deliveries table with the notification rows copied per channel | Keeps notifications independent of email so a channel (SMS) can be added with a new sender, an enum value and a profile setting. Batching and drop checks stay shared; state and retries are per channel, so one channel failing doesn't touch another. |
+| D-46 | The worker claims deliveries with a 2-minute lease (`locked_until`) in a short transaction, then sends outside any transaction and records the result only if the lease is still its own (1.4) | Holding the row lock in one transaction for the whole pass, so "locked" meant "being sent"; a `sending` state | A pass held a transaction and a pooled connection open across up to 10 provider calls, and one bad row rolled back the whole pass and crash-looped the worker. With a lease, each delivery's writes are short and independent, an error stays with its delivery, and a crashed worker's deliveries come back on their own when the lease runs out. A `sending` state would need its own recovery and would leak into the webhook, cleanup and stats. The cost is a possible second send when a lease runs out mid-send, which Resend's `Idempotency-Key` absorbs. |
