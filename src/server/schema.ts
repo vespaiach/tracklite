@@ -29,6 +29,8 @@ export const issuePriority = pgEnum("issue_priority", issuePriorities);
 export const labelColor = pgEnum("label_color", labelColors);
 export const notificationKind = pgEnum("notification_kind", ["assigned", "mentioned"]);
 export const emailState = pgEnum("email_state", ["pending", "sent", "dropped", "failed", "bounced"]);
+export const deliveryState = pgEnum("delivery_state", ["pending", "sent", "dropped", "failed", "bounced"]);
+export const notificationChannel = pgEnum("notification_channel", ["email"]);
 
 export const members = pgTable(
   "members",
@@ -40,10 +42,12 @@ export const members = pgTable(
     passwordHash: text("password_hash").notNull(),
     role: role("role").notNull(),
     deactivatedAt: timestamptz("deactivated_at"),
+    notificationChannels: notificationChannel("notification_channels").array().notNull().default(["email"]),
     createdAt: createdAt(),
   },
   (t) => [
     uniqueIndex("members_email_key").on(sql`lower(${t.email})`),
+    check("members_notification_channels_not_empty", sql`cardinality(${t.notificationChannels}) > 0`),
     uniqueIndex("members_username_key").on(t.username),
     check("members_username_format", sql`${t.username} ~ '^[a-z0-9-]{2,20}$'`),
   ],
@@ -263,11 +267,43 @@ export const notificationEmails = pgTable(
   (t) => [check("notification_emails_target_type", sql`${t.targetType} in ('issue', 'project')`)],
 );
 
+export const notificationBatches = pgTable(
+  "notification_batches",
+  {
+    id: id(),
+    recipientId: uuid("recipient_id")
+      .notNull()
+      .references(() => members.id),
+    targetType: text("target_type").notNull(),
+    targetId: uuid("target_id").notNull(),
+    sendAfter: timestamptz("send_after").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [check("notification_batches_target_type", sql`${t.targetType} in ('issue', 'project')`)],
+);
+
+export const notificationDeliveries = pgTable(
+  "notification_deliveries",
+  {
+    id: id(),
+    batchId: uuid("batch_id")
+      .notNull()
+      .references(() => notificationBatches.id, { onDelete: "cascade" }),
+    channel: notificationChannel("channel").notNull(),
+    state: deliveryState("state").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: timestamptz("next_attempt_at"),
+    providerMessageId: text("provider_message_id"),
+    createdAt: createdAt(),
+    sentAt: timestamptz("sent_at"),
+  },
+  (t) => [uniqueIndex("notification_deliveries_batch_channel_key").on(t.batchId, t.channel)],
+);
+
 export const notifications = pgTable("notifications", {
   id: id(),
-  emailId: uuid("email_id")
-    .notNull()
-    .references(() => notificationEmails.id, { onDelete: "cascade" }),
+  emailId: uuid("email_id").references(() => notificationEmails.id, { onDelete: "cascade" }),
+  batchId: uuid("batch_id").references(() => notificationBatches.id, { onDelete: "cascade" }),
   kind: notificationKind("kind").notNull(),
   actorId: uuid("actor_id")
     .notNull()

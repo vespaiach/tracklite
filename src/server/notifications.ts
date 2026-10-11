@@ -2,7 +2,15 @@ import "server-only";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { toPlainText } from "../lib/markdown/parse";
 import type { db } from "./db";
-import { issues, notificationEmails, type notificationKind, notifications, projects } from "./schema";
+import {
+  issues,
+  members,
+  notificationBatches,
+  notificationDeliveries,
+  type notificationKind,
+  notifications,
+  projects,
+} from "./schema";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type NotificationKind = (typeof notificationKind.enumValues)[number];
@@ -66,32 +74,40 @@ async function projectSnapshot(tx: Transaction, projectId: string) {
   };
 }
 
-async function emailFor(tx: Transaction, recipientId: string, targetType: string, targetId: string) {
+async function batchFor(tx: Transaction, recipientId: string, targetType: string, targetId: string) {
   const [waiting] = await tx
-    .select({ id: notificationEmails.id })
-    .from(notificationEmails)
+    .select({ id: notificationBatches.id })
+    .from(notificationBatches)
     .where(
       and(
-        eq(notificationEmails.recipientId, recipientId),
-        eq(notificationEmails.targetType, targetType),
-        eq(notificationEmails.targetId, targetId),
-        eq(notificationEmails.state, "pending"),
-        gt(notificationEmails.sendAfter, sql`now()`),
+        eq(notificationBatches.recipientId, recipientId),
+        eq(notificationBatches.targetType, targetType),
+        eq(notificationBatches.targetId, targetId),
+        gt(notificationBatches.sendAfter, sql`now()`),
       ),
     )
     .limit(1);
   if (waiting) return waiting.id;
-  const [created] = await tx
-    .insert(notificationEmails)
-    .values({
-      recipientId,
-      targetType,
-      targetId,
-      sendAfter: sql`now() + interval '2 minutes'`,
-      state: "pending",
-    })
-    .returning({ id: notificationEmails.id });
-  return created.id;
+
+  return createBatch(tx, recipientId, targetType, targetId);
+}
+
+async function createBatch(tx: Transaction, recipientId: string, targetType: string, targetId: string) {
+  const [batch] = await tx
+    .insert(notificationBatches)
+    .values({ recipientId, targetType, targetId, sendAfter: sql`now() + interval '2 minutes'` })
+    .returning({ id: notificationBatches.id });
+
+  const [recipient] = await tx
+    .select({ channels: members.notificationChannels })
+    .from(members)
+    .where(eq(members.id, recipientId));
+
+  await tx
+    .insert(notificationDeliveries)
+    .values(recipient.channels.map((channel) => ({ batchId: batch.id, channel, state: "pending" as const })));
+
+  return batch.id;
 }
 
 export async function notify(tx: Transaction, recipientIds: string[], notice: Notice) {
@@ -102,7 +118,7 @@ export async function notify(tx: Transaction, recipientIds: string[], notice: No
 
   for (const recipientId of recipients) {
     await tx.insert(notifications).values({
-      emailId: await emailFor(tx, recipientId, targetType, targetId),
+      batchId: await batchFor(tx, recipientId, targetType, targetId),
       kind: notice.kind,
       actorId: notice.actorId,
       commentId: notice.commentId ?? null,

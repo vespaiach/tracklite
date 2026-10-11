@@ -1,11 +1,24 @@
 import { randomBytes, randomInt, randomUUID } from "node:crypto";
+import type { PgInsertValue } from "drizzle-orm/pg-core";
 import { generateKeyBetween } from "fractional-indexing";
 import { db } from "../server/db";
-import { comments, issueLabels, issues, labels, members, projectKeys, projects } from "../server/schema";
+import {
+  comments,
+  issueLabels,
+  issues,
+  labels,
+  members,
+  notificationBatches,
+  notificationDeliveries,
+  projectKeys,
+  projects,
+} from "../server/schema";
 
 type NewMember = typeof members.$inferInsert;
 type NewProject = typeof projects.$inferInsert;
 type NewLabel = typeof labels.$inferInsert;
+type NewNotificationBatch = PgInsertValue<typeof notificationBatches>;
+type NewNotificationDelivery = PgInsertValue<typeof notificationDeliveries>;
 
 export async function createMember(overrides: Partial<NewMember> = {}) {
   const suffix = randomBytes(5).toString("hex");
@@ -79,4 +92,16 @@ export async function createComment(parent: CommentParent, authorId: string, bod
     .values({ ...parent, authorId, body, requestId: randomUUID() })
     .returning();
   return comment;
+}
+
+export async function createNotificationBatch(
+  batch: NewNotificationBatch,
+  delivery: Partial<NewNotificationDelivery> = {},
+) {
+  const [createdBatch] = await db.insert(notificationBatches).values(batch).returning();
+  const [createdDelivery] = await db
+    .insert(notificationDeliveries)
+    .values({ channel: "email", state: "pending", ...delivery, batchId: createdBatch.id })
+    .returning();
+  return { batch: createdBatch, delivery: createdDelivery };
 }

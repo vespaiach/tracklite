@@ -17,9 +17,12 @@ export function deleteExpiredRows() {
       where last_active_at < now() - interval '60 days'`);
 
     await tx.execute(sql`
-      delete from notification_emails
-      where state <> 'pending'
-        and coalesce(sent_at, next_attempt_at, send_after) < now() - interval '30 days'`);
+      delete from notification_batches batch
+      where not exists (
+        select from notification_deliveries delivery
+        where delivery.batch_id = batch.id
+          and (delivery.state = 'pending'
+            or coalesce(delivery.sent_at, delivery.next_attempt_at, batch.send_after) >= now() - interval '30 days'))`);
 
     await tx.execute(sql`
       delete from sign_in_attempts

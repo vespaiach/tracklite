@@ -10,12 +10,19 @@ import {
   labels,
   members,
   mentions,
-  notificationEmails,
+  notificationBatches,
+  notificationDeliveries,
   notifications,
   projects,
 } from "../../../../server/schema";
 import { createSession } from "../../../../server/sessions";
-import { createIssue, createLabel, createMember, createProject } from "../../../../test/factories";
+import {
+  createIssue,
+  createLabel,
+  createMember,
+  createNotificationBatch,
+  createProject,
+} from "../../../../test/factories";
 import { jsonRequest } from "../../../../test/reset-links";
 import { POST } from "../../projects/[key]/issues/route";
 import { DELETE, GET, PATCH } from "./route";
@@ -674,18 +681,14 @@ it("DATA-002: deleting WEB-42 takes its comments, mentions and label links with 
     { memberId: sam.id, issueId: issue.id },
     { memberId: sam.id, commentId: comment.id },
   ]);
-  const [email] = await db
-    .insert(notificationEmails)
-    .values({
-      recipientId: sam.id,
-      targetType: "issue",
-      targetId: issue.id,
-      sendAfter: sql`now() + interval '2 minutes'`,
-      state: "pending",
-    })
-    .returning();
+  const { batch, delivery } = await createNotificationBatch({
+    recipientId: sam.id,
+    targetType: "issue",
+    targetId: issue.id,
+    sendAfter: sql`now() + interval '2 minutes'`,
+  });
   await db.insert(notifications).values({
-    emailId: email.id,
+    batchId: batch.id,
     kind: "mentioned",
     actorId: sam.id,
     commentId: comment.id,
@@ -705,10 +708,13 @@ it("DATA-002: deleting WEB-42 takes its comments, mentions and label links with 
   expect(await db.select().from(mentions).where(eq(mentions.memberId, sam.id))).toEqual([]);
   expect(await db.select().from(issueLabels).where(eq(issueLabels.issueId, issue.id))).toEqual([]);
   expect(await db.select().from(labels).where(eq(labels.id, bug.id))).toHaveLength(1);
-  expect(await db.select().from(notificationEmails).where(eq(notificationEmails.id, email.id))).toHaveLength(
-    1,
-  );
-  expect(await db.select().from(notifications).where(eq(notifications.emailId, email.id))).toHaveLength(1);
+  expect(
+    await db.select().from(notificationBatches).where(eq(notificationBatches.id, batch.id)),
+  ).toHaveLength(1);
+  expect(
+    await db.select().from(notificationDeliveries).where(eq(notificationDeliveries.id, delivery.id)),
+  ).toHaveLength(1);
+  expect(await db.select().from(notifications).where(eq(notifications.batchId, batch.id))).toHaveLength(1);
 });
 
 it("REQ-013.4: deleting an issue in an archived project gets This project is archived", async () => {

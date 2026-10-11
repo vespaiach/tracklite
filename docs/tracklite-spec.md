@@ -1,9 +1,9 @@
 ---
 product: "Tracklite"
-version: "0.25"
+version: "0.26"
 release: "R1"
 status: Ready to build
-updated: "2026-10-09"
+updated: "2026-10-10"
 ---
 
 # Tracklite: Spec
@@ -541,7 +541,7 @@ There are no private projects. Nobody, including admins, can see or set another 
 
 | Entity | What it holds | Notes |
 |---|---|---|
-| Member | Email, full name, username, password hash, role (Admin or Member), active or deactivated, created at | Created by accepting an invitation (REQ-002) or by the setup command (OPS-001). Email and username are unique, ignoring capitals. Never deleted, only deactivated. |
+| Member | Email, full name, username, password hash, role (Admin or Member), active or deactivated, notification channels, created at | Created by accepting an invitation (REQ-002) or by the setup command (OPS-001). Email and username are unique, ignoring capitals. Never deleted, only deactivated. Notification channels are where F-008 notifications go, at least one; Email is the only channel in R1 and every member has it. |
 | Invitation | Email, invited by, secret token, expires at, state (Pending, Accepted, Revoked, Expired, Bounced) | Expires 7 days after sending (REQ-001). At most one pending invitation per email. |
 | Password reset link | Member, secret token, expires at, used at | Expires 30 minutes after sending (REQ-050). |
 | Session | Member, secret token, last active at | Ends 30 days after last activity (REQ-006). |
@@ -550,7 +550,7 @@ There are no private projects. Nobody, including admins, can see or set another 
 | Issue | Project, number, title, Markdown description, status, priority, assignee, labels (0 to 10), board position, created by, created at, last updated, status changed at | Number unique within its project and never reused (REQ-016). Board position is per status column (REQ-027). "Status changed at" drives the 14-day window (REQ-028). |
 | Comment | Either an issue or a project, author, Markdown body, created at, edited at | Belongs to exactly one issue or one project. |
 | Mention | The text it's in (an issue description, a project description or a comment), the member mentioned | Lets an edit email only new mentions (REQ-044). |
-| Notification | Recipient, kind (Assigned or Mentioned), issue or project, who caused it, the issue ID or project key, its title or name, the text excerpt (up to 500 characters), send after, state (Pending, Sent, Dropped, Failed, Bounced) | "Send after" is 2 minutes after the recipient's first pending notification about that issue or project (REQ-045). The ID, title and excerpt are saved when it's created, and later edits don't change them (section 9, Email content). Not deleted with its issue or project (REQ-045). |
+| Notification | Recipient, kind (Assigned or Mentioned), issue or project, who caused it, the issue ID or project key, its title or name, the text excerpt (up to 500 characters), send after, and per notification channel a delivery state (Pending, Sent, Dropped, Failed, Bounced) | "Send after" is 2 minutes after the recipient's first pending notification about that issue or project (REQ-045). The ID, title and excerpt are saved when it's created, and later edits don't change them (section 9, Email content). Each of the recipient's channels is delivered, retried and failed on its own. Not deleted with its issue or project (REQ-045). |
 | Sign-in attempt | Email, IP address, attempted at | Records failed sign-ins and wrong current passwords (REQ-049) for SEC-001. |
 | Password reset request | Email, IP address, requested at | Records reset requests for SEC-001. |
 
@@ -738,6 +738,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.26 (2026-10-10):** Section 8: a member has notification channels (Email is the only one in R1), and a notification has a delivery state per channel instead of one state, so another channel can be added later without changing F-008's rules.
 - **0.25 (2026-10-09):** REQ-018 lists the priorities in their sort order, Urgent to No priority, so pickers and sorting agree (REQ-039).
 - **0.24 (2026-10-07):** Section 9: the combined notification email puts a blank line before and after each `---` separator, and ends with `— Tracklite` once.
 - **0.23 (2026-10-07):** API-003 gets numbered examples for bounces, bad signatures, stale timestamps and ignored events (API-003.1 to API-003.6).

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, DrizzleQueryError, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createIssue, createMember, createProject } from "../test/factories";
 import { moveIntoPast } from "../test/time";
@@ -7,7 +7,7 @@ import { editComment, postIssueComment, postProjectComment } from "./comments";
 import { db } from "./db";
 import { updateIssue } from "./issues";
 import { updateProject } from "./projects";
-import { issues, notificationEmails, notifications } from "./schema";
+import { issues, members, notificationBatches, notificationDeliveries, notifications } from "./schema";
 import type { Member } from "./sessions";
 
 async function website() {
@@ -20,11 +20,10 @@ async function website() {
 function notificationsFor(member: { id: string }) {
   return db
     .select({
-      emailId: notificationEmails.id,
-      targetType: notificationEmails.targetType,
-      targetId: notificationEmails.targetId,
-      state: notificationEmails.state,
-      waitSeconds: sql<number>`extract(epoch from ${notificationEmails.sendAfter} - ${notificationEmails.createdAt})::int`,
+      batchId: notificationBatches.id,
+      targetType: notificationBatches.targetType,
+      targetId: notificationBatches.targetId,
+      waitSeconds: sql<number>`extract(epoch from ${notificationBatches.sendAfter} - ${notificationBatches.createdAt})::int`,
       kind: notifications.kind,
       actorId: notifications.actorId,
       commentId: notifications.commentId,
@@ -37,9 +36,23 @@ function notificationsFor(member: { id: string }) {
       excerpt: notifications.excerpt,
     })
     .from(notifications)
-    .innerJoin(notificationEmails, eq(notificationEmails.id, notifications.emailId))
-    .where(eq(notificationEmails.recipientId, member.id))
+    .innerJoin(notificationBatches, eq(notificationBatches.id, notifications.batchId))
+    .where(eq(notificationBatches.recipientId, member.id))
     .orderBy(asc(notifications.createdAt), asc(notifications.id));
+}
+
+function deliveriesFor(member: { id: string }) {
+  return db
+    .select({
+      batchId: notificationDeliveries.batchId,
+      channel: notificationDeliveries.channel,
+      state: notificationDeliveries.state,
+      attempts: notificationDeliveries.attempts,
+    })
+    .from(notificationDeliveries)
+    .innerJoin(notificationBatches, eq(notificationBatches.id, notificationDeliveries.batchId))
+    .where(eq(notificationBatches.recipientId, member.id))
+    .orderBy(asc(notificationDeliveries.createdAt));
 }
 
 function assign(issueRef: string, by: Member, assignee: Member | null) {
@@ -60,10 +73,9 @@ it("REQ-043.1: Alex assigns WEB-42 to Sam → Sam gets the email", async () => {
 
   expect(await notificationsFor(sam)).toEqual([
     {
-      emailId: expect.any(String),
+      batchId: expect.any(String),
       targetType: "issue",
       targetId: issue.id,
-      state: "pending",
       waitSeconds: 120,
       kind: "assigned",
       actorId: alex.id,
@@ -278,7 +290,7 @@ it("REQ-045.1: Alex assigns WEB-42 to Sam and mentions @sam in a comment on it �
 
   const rows = await notificationsFor(sam);
   expect(rows.map((row) => row.kind)).toEqual(["assigned", "mentioned"]);
-  expect(new Set(rows.map((row) => row.emailId)).size).toBe(1);
+  expect(new Set(rows.map((row) => row.batchId)).size).toBe(1);
 });
 
 it("REQ-045.8: a mention during the wait joins the email without moving send after; one after it starts a new email", async () => {
@@ -287,28 +299,72 @@ it("REQ-045.8: a mention during the wait joins the email without moving send aft
   const { issueRef } = await website();
 
   await comment(issueRef, alex, `@${sam.username} first`);
-  const [{ emailId: firstEmail }] = await notificationsFor(sam);
-  await moveIntoPast(notificationEmails.sendAfter, firstEmail, "-30 seconds");
+  const [{ batchId: firstBatch }] = await notificationsFor(sam);
+  await moveIntoPast(notificationBatches.sendAfter, firstBatch, "-30 seconds");
   const [{ sendAfter: before }] = await db
-    .select({ sendAfter: notificationEmails.sendAfter })
-    .from(notificationEmails)
-    .where(eq(notificationEmails.id, firstEmail));
+    .select({ sendAfter: notificationBatches.sendAfter })
+    .from(notificationBatches)
+    .where(eq(notificationBatches.id, firstBatch));
 
   await comment(issueRef, alex, `@${sam.username} second`);
   const [{ sendAfter: after }] = await db
-    .select({ sendAfter: notificationEmails.sendAfter })
-    .from(notificationEmails)
-    .where(eq(notificationEmails.id, firstEmail));
+    .select({ sendAfter: notificationBatches.sendAfter })
+    .from(notificationBatches)
+    .where(eq(notificationBatches.id, firstBatch));
   expect(after).toEqual(before);
 
-  await moveIntoPast(notificationEmails.sendAfter, firstEmail, "30 seconds");
+  await moveIntoPast(notificationBatches.sendAfter, firstBatch, "30 seconds");
   await comment(issueRef, alex, `@${sam.username} third`);
 
   const rows = await notificationsFor(sam);
-  expect(rows.map((row) => [row.excerpt.split(" ")[1], row.emailId === firstEmail])).toEqual([
+  expect(rows.map((row) => [row.excerpt.split(" ")[1], row.batchId === firstBatch])).toEqual([
     ["first", true],
     ["second", true],
     ["third", false],
   ]);
   expect(rows[2].waitSeconds).toBe(120);
+});
+
+it("§2.6: a new member's notification channels are email", async () => {
+  const sam = await createMember();
+
+  expect(sam.notificationChannels).toEqual(["email"]);
+});
+
+it("§2.6: a member must keep at least one notification channel", async () => {
+  const sam = await createMember();
+
+  const error = await db
+    .update(members)
+    .set({ notificationChannels: [] })
+    .where(eq(members.id, sam.id))
+    .catch((caught: unknown) => caught);
+
+  expect(error).toBeInstanceOf(DrizzleQueryError);
+  expect((error as DrizzleQueryError).cause).toMatchObject({
+    constraint_name: "members_notification_channels_not_empty",
+  });
+});
+
+it("§2.6: a new batch gets one pending delivery per channel of the recipient", async () => {
+  const alex = await createMember();
+  const sam = await createMember();
+  const { issueRef } = await website();
+
+  await assign(issueRef, alex, sam);
+
+  const [{ batchId }] = await notificationsFor(sam);
+  expect(await deliveriesFor(sam)).toEqual([{ batchId, channel: "email", state: "pending", attempts: 0 }]);
+});
+
+it("§2.6: a notification joining a batch adds no deliveries", async () => {
+  const alex = await createMember();
+  const sam = await createMember();
+  const { issueRef } = await website();
+
+  await assign(issueRef, alex, sam);
+  await comment(issueRef, alex, `@${sam.username} over to you`);
+
+  expect(await notificationsFor(sam)).toHaveLength(2);
+  expect(await deliveriesFor(sam)).toHaveLength(1);
 });

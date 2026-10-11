@@ -1,12 +1,13 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { eq, inArray, type SQL, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { createMember } from "../test/factories";
+import { createMember, createNotificationBatch } from "../test/factories";
 import { deleteExpiredRows } from "./cleanup";
 import { db } from "./db";
 import {
   invitations,
-  notificationEmails,
+  notificationBatches,
+  notificationDeliveries,
   notifications,
   passwordResetRequests,
   passwordResetTokens,
@@ -15,7 +16,7 @@ import {
 } from "./schema";
 import { createToken, hashToken } from "./tokens";
 
-type EmailState = (typeof notificationEmails.$inferSelect)["state"];
+type DeliveryState = (typeof notificationDeliveries.$inferSelect)["state"];
 
 function ago(interval: string) {
   return sql`now() - ${interval}::interval`;
@@ -81,16 +82,16 @@ async function sessionExists(id: string) {
 }
 
 async function notificationEmail(
-  state: EmailState,
-  dates: { sendAfter: SQL; sentAt?: SQL; nextAttemptAt?: SQL },
+  state: DeliveryState,
+  { sendAfter, ...deliveryDates }: { sendAfter: SQL; sentAt?: SQL; nextAttemptAt?: SQL },
 ) {
   const member = await createMember();
-  const [email] = await db
-    .insert(notificationEmails)
-    .values({ recipientId: member.id, targetType: "issue", targetId: randomUUID(), state, ...dates })
-    .returning({ id: notificationEmails.id });
+  const { batch } = await createNotificationBatch(
+    { recipientId: member.id, targetType: "issue", targetId: randomUUID(), sendAfter },
+    { state, ...deliveryDates },
+  );
   await db.insert(notifications).values({
-    emailId: email.id,
+    batchId: batch.id,
     kind: "assigned",
     actorId: member.id,
     issueRef: "WEB-1",
@@ -100,13 +101,17 @@ async function notificationEmail(
     linkPath: "/issues/WEB-1",
     excerpt: "",
   });
-  return email.id;
+  return batch.id;
 }
 
-async function notificationEmailExists(id: string) {
-  const emails = await db.select().from(notificationEmails).where(eq(notificationEmails.id, id));
-  const items = await db.select().from(notifications).where(eq(notifications.emailId, id));
-  return emails.length === 1 && items.length === 1;
+async function notificationEmailExists(batchId: string) {
+  const batches = await db.select().from(notificationBatches).where(eq(notificationBatches.id, batchId));
+  const deliveries = await db
+    .select()
+    .from(notificationDeliveries)
+    .where(eq(notificationDeliveries.batchId, batchId));
+  const items = await db.select().from(notifications).where(eq(notifications.batchId, batchId));
+  return batches.length === 1 && deliveries.length === 1 && items.length === 1;
 }
 
 it("DATA-004.1: a password reset link expired 31 days ago is no longer in the database", async () => {
