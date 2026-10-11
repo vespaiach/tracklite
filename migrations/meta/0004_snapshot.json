@@ -1,5 +1,5 @@
 {
-  "id": "16cb3f28-0069-4abc-8672-a1eb74caa8cd",
+  "id": "540288a9-d061-4a26-9b13-f3e65efee8e7",
   "prevId": "be1e6c06-5814-48ca-9690-20ad953d0359",
   "version": "7",
   "dialect": "postgresql",
@@ -1293,7 +1293,7 @@
           "name": "email_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "batch_id": {
           "name": "batch_id",

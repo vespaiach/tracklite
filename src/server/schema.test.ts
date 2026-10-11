@@ -60,6 +60,7 @@ it("the migration applies to an empty database", async () => {
       "mentions",
       "notification_batches",
       "notification_deliveries",
+      "notification_emails",
       "notifications",
       "password_reset_requests",
       "password_reset_tokens",
@@ -76,6 +77,7 @@ it("the migration applies to an empty database", async () => {
       group by t.typname order by t.typname`;
     expect(enums).toEqual([
       { name: "delivery_state", values: ["pending", "sent", "dropped", "failed", "bounced"] },
+      { name: "email_state", values: ["pending", "sent", "dropped", "failed", "bounced"] },
       { name: "issue_priority", values: ["urgent", "high", "medium", "low", "none"] },
       { name: "issue_status", values: ["backlog", "in_progress", "in_review", "done", "canceled"] },
       {
@@ -157,6 +159,29 @@ it("§2.6: the migration moves notification emails into batches and deliveries, 
     );
     expect(await client`select notification_channels::text[] as notification_channels from members`).toEqual([
       { notification_channels: ["email"] },
+    ]);
+  } finally {
+    await client.end();
+  }
+});
+
+it("OPS-004: after the migration, the previous release can still queue a notification email", async () => {
+  const client = connectTo(dbName);
+  try {
+    await migrate(drizzle(client), { migrationsFolder: "migrations" });
+    const [sam] = await client`
+      insert into members (email, full_name, username, password_hash, role)
+      values ('jo@acme.com', 'Jo Park', 'jo', 'hash', 'member') returning id`;
+
+    const [email] = await client`
+      insert into notification_emails (recipient_id, target_type, target_id, send_after, state)
+      values (${sam.id}, 'issue', gen_random_uuid(), now() + interval '2 minutes', 'pending') returning id`;
+    await client`
+      insert into notifications (email_id, kind, actor_id, project_name, project_key, link_path, excerpt)
+      values (${email.id}, 'assigned', ${sam.id}, 'Website', 'WEB', '/issue/WEB-1', '')`;
+
+    expect(await client`select batch_id from notifications where email_id = ${email.id}`).toEqual([
+      { batch_id: null },
     ]);
   } finally {
     await client.end();

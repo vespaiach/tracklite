@@ -22,6 +22,7 @@ CREATE TABLE "notification_deliveries" (
 	"sent_at" timestamp with time zone
 );
 --> statement-breakpoint
+ALTER TABLE "notifications" ALTER COLUMN "email_id" DROP NOT NULL;--> statement-breakpoint
 ALTER TABLE "members" ADD COLUMN "notification_channels" "notification_channel"[] DEFAULT '{"email"}' NOT NULL;--> statement-breakpoint
 ALTER TABLE "notifications" ADD COLUMN "batch_id" uuid;--> statement-breakpoint
 ALTER TABLE "notification_batches" ADD CONSTRAINT "notification_batches_recipient_id_members_id_fk" FOREIGN KEY ("recipient_id") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

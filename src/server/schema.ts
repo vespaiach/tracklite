@@ -28,6 +28,7 @@ export const issueStatus = pgEnum("issue_status", issueStatuses);
 export const issuePriority = pgEnum("issue_priority", issuePriorities);
 export const labelColor = pgEnum("label_color", labelColors);
 export const notificationKind = pgEnum("notification_kind", ["assigned", "mentioned"]);
+export const emailState = pgEnum("email_state", ["pending", "sent", "dropped", "failed", "bounced"]);
 export const deliveryState = pgEnum("delivery_state", ["pending", "sent", "dropped", "failed", "bounced"]);
 export const notificationChannel = pgEnum("notification_channel", ["email"]);
 
@@ -246,6 +247,26 @@ export const mentions = pgTable(
   ],
 );
 
+export const notificationEmails = pgTable(
+  "notification_emails",
+  {
+    id: id(),
+    recipientId: uuid("recipient_id")
+      .notNull()
+      .references(() => members.id),
+    targetType: text("target_type").notNull(),
+    targetId: uuid("target_id").notNull(),
+    sendAfter: timestamptz("send_after").notNull(),
+    state: emailState("state").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: timestamptz("next_attempt_at"),
+    providerMessageId: text("provider_message_id"),
+    createdAt: createdAt(),
+    sentAt: timestamptz("sent_at"),
+  },
+  (t) => [check("notification_emails_target_type", sql`${t.targetType} in ('issue', 'project')`)],
+);
+
 export const notificationBatches = pgTable(
   "notification_batches",
   {
@@ -281,9 +302,8 @@ export const notificationDeliveries = pgTable(
 
 export const notifications = pgTable("notifications", {
   id: id(),
-  batchId: uuid("batch_id")
-    .notNull()
-    .references(() => notificationBatches.id, { onDelete: "cascade" }),
+  emailId: uuid("email_id").references(() => notificationEmails.id, { onDelete: "cascade" }),
+  batchId: uuid("batch_id").references(() => notificationBatches.id, { onDelete: "cascade" }),
   kind: notificationKind("kind").notNull(),
   actorId: uuid("actor_id")
     .notNull()
