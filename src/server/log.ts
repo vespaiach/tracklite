@@ -20,14 +20,14 @@ export function logEmailBounce(message: string) {
   console.log(JSON.stringify({ time: new Date().toISOString(), level: "info", event: "email", message }));
 }
 
-export function logNotificationFailure(line: { emailId: string }) {
+export function logNotificationFailure({ channel, deliveryId }: { channel: string; deliveryId: string }) {
   console.log(
     JSON.stringify({
       time: new Date().toISOString(),
       level: "error",
       event: "notification",
-      message: "email failed",
-      ...line,
+      message: `${channel} failed`,
+      deliveryId,
     }),
   );
 }

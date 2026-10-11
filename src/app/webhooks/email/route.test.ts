@@ -3,8 +3,8 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../server/db";
 import { outbox } from "../../../server/email/outbox";
-import { invitations, notificationEmails } from "../../../server/schema";
-import { createMember } from "../../../test/factories";
+import { invitations, notificationDeliveries } from "../../../server/schema";
+import { createMember, createNotificationBatch } from "../../../test/factories";
 import { invitedBy, listedInvitation, signedInAdmin, uniqueEmail } from "../../../test/invitations";
 import { POST } from "./route";
 
@@ -70,27 +70,19 @@ function signedWebhook(body: string, { timestamp = nowSeconds(), signature = "" 
 async function sentNotificationEmail() {
   const sam = await createMember();
   const providerMessageId = uniqueMessageId();
-  const [email] = await db
-    .insert(notificationEmails)
-    .values({
-      recipientId: sam.id,
-      targetType: "issue",
-      targetId: randomUUID(),
-      sendAfter: new Date(),
-      state: "sent",
-      attempts: 1,
-      providerMessageId,
-    })
-    .returning();
-  return { id: email.id, providerMessageId };
+  const { delivery } = await createNotificationBatch(
+    { recipientId: sam.id, targetType: "issue", targetId: randomUUID(), sendAfter: new Date() },
+    { state: "sent", attempts: 1, providerMessageId },
+  );
+  return { id: delivery.id, providerMessageId };
 }
 
-async function stateOf(emailId: string) {
-  const [email] = await db
-    .select({ state: notificationEmails.state })
-    .from(notificationEmails)
-    .where(eq(notificationEmails.id, emailId));
-  return email.state;
+async function stateOf(deliveryId: string) {
+  const [delivery] = await db
+    .select({ state: notificationDeliveries.state })
+    .from(notificationDeliveries)
+    .where(eq(notificationDeliveries.id, deliveryId));
+  return delivery.state;
 }
 
 it("API-003.1: a bounce for a notification email marks it Bounced, logs it and answers 200", async () => {

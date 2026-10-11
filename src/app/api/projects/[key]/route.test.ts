@@ -8,13 +8,12 @@ import {
   issues,
   labels,
   mentions,
-  notificationEmails,
   notifications,
   projectKeys,
   projects,
 } from "../../../../server/schema";
 import { createSession, type Member } from "../../../../server/sessions";
-import { createMember, createProject } from "../../../../test/factories";
+import { createMember, createNotificationBatch, createProject } from "../../../../test/factories";
 import { jsonRequest } from "../../../../test/reset-links";
 import { DELETE, GET, PATCH } from "./route";
 
@@ -239,18 +238,14 @@ it("DATA-002.1: deleting a project removes everything in it but keeps its key an
     { memberId: sam.id, projectId: project.id },
     { memberId: sam.id, commentId: issueComment.id },
   ]);
-  const [email] = await db
-    .insert(notificationEmails)
-    .values({
-      recipientId: sam.id,
-      targetType: "issue",
-      targetId: issue.id,
-      sendAfter: new Date(),
-      state: "pending",
-    })
-    .returning();
+  const { batch } = await createNotificationBatch({
+    recipientId: sam.id,
+    targetType: "issue",
+    targetId: issue.id,
+    sendAfter: new Date(),
+  });
   await db.insert(notifications).values({
-    emailId: email.id,
+    batchId: batch.id,
     kind: "mentioned",
     actorId: admin.id,
     projectName: project.name,
@@ -283,7 +278,7 @@ it("DATA-002.1: deleting a project removes everything in it but keeps its key an
       ),
   ).toEqual([]);
   expect(await db.select().from(projectKeys).where(eq(projectKeys.key, project.key))).toHaveLength(1);
-  expect(await db.select().from(notifications).where(eq(notifications.emailId, email.id))).toHaveLength(1);
+  expect(await db.select().from(notifications).where(eq(notifications.batchId, batch.id))).toHaveLength(1);
 });
 
 function saveDescription(cookie: string, key: string, description: string, descriptionVersion: number) {

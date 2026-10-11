@@ -483,3 +483,14 @@ Every task in this milestone keeps behaviour as it is: the existing route tests 
   - Done: the existing issue and board API tests pass
 
 **Done when:** no route reads `request.json()` itself, and no domain function takes `unknown` input.
+
+## M13 Notification channels
+
+**Run order:** M13.1.
+
+- [x] **M13.1 Channel-independent notifications.** Split `notification_emails` into `notification_batches` (recipient, target, send after) and `notification_deliveries` (one per batch and channel, with state, retries and provider ID); `notifications` point at their batch. `members.notification_channels` (at least one, `{email}` by default). `notify()` creates a delivery per channel of the recipient; the worker sends each delivery through its channel's sender in `src/server/notification-channels/`. The migration moves existing rows, keeping their ids. Behaviour doesn't change: email is the only channel.
+  - Reads: design §1.4, §2.6, §5.4, D-45 · spec §8 Notification and Member, REQ-043, REQ-044, REQ-045, STD-6, API-003, DATA-004
+  - Needs: M9.1, M9.2, M9.4, M9.5
+  - Done: the existing REQ-043.*, REQ-044.*, REQ-045.*, STD-6, API-003.* and DATA-004 notification tests pass against the new tables; new tests for one delivery per channel, no new deliveries when joining a batch, the channels check, and the migration carrying pending rows over
+
+**Done when:** a real assignment still shows up in Mailpit about 2 minutes later.

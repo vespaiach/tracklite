@@ -1,10 +1,10 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { readConfig } from "./config";
 import { db } from "./db";
 import { logEmailBounce } from "./log";
-import { invitations, notificationEmails } from "./schema";
+import { invitations, notificationDeliveries } from "./schema";
 
 const toleranceSeconds = 5 * 60;
 
@@ -38,10 +38,15 @@ function hasSignature(signatures: string, expected: Buffer) {
 
 async function markBounced(providerMessageId: string) {
   const [notification] = await db
-    .update(notificationEmails)
+    .update(notificationDeliveries)
     .set({ state: "bounced" })
-    .where(eq(notificationEmails.providerMessageId, providerMessageId))
-    .returning({ id: notificationEmails.id });
+    .where(
+      and(
+        eq(notificationDeliveries.channel, "email"),
+        eq(notificationDeliveries.providerMessageId, providerMessageId),
+      ),
+    )
+    .returning({ id: notificationDeliveries.id });
   if (notification) return logEmailBounce(`email bounced, notification ${notification.id}`);
 
   const [invitation] = await db

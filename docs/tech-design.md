@@ -48,10 +48,9 @@ Every expiry and time-window check uses the database's `now()` inside the query 
 
 One loop, every **5 seconds**:
 
-1. **Send due notification emails.** In a transaction, `select … from notification_emails where state = 'pending' and coalesce(next_attempt_at, send_after) <= now() order by send_after limit 10 for update skip locked`. For each email:
+1. **Send due notification deliveries.** In a transaction, select the `pending` rows of `notification_deliveries` whose `coalesce(next_attempt_at, send_after)` (`send_after` from its batch) is `<= now()`, `order by send_after limit 10 for update skip locked`. For each delivery:
    - apply the drop checks (2.6);
-   - build the email from the snapshots;
-   - call the provider;
+   - hand the kept notifications to the delivery's channel, which builds the message from the snapshots and calls its provider;
    - record `sent`, schedule a retry, or mark `failed`.
 
    Then commit.
@@ -59,9 +58,9 @@ One loop, every **5 seconds**:
 
 How it meets DEC-004's requirements:
 
-- **Survives a restart.** The queue is the `notification_emails` table, so pending emails survive a crash or deploy. systemd restarts the worker, and it picks up where it stopped.
+- **Survives a restart.** The queue is the `notification_deliveries` table, so pending notifications survive a crash or deploy. systemd restarts the worker, and it picks up where it stopped.
 - **Same VPS, no paid queue.** It's Postgres plus one Node process.
-- **Delivered at least once.** If the worker dies after the provider accepted an email but before the commit, that email is sent again on restart. The email's `id` goes out as Resend's `Idempotency-Key`, so Resend drops the duplicate (section 5).
+- **Delivered at least once.** If the worker dies after the provider accepted an email but before the commit, that email is sent again on restart. The delivery's `id` goes out as Resend's `Idempotency-Key`, so Resend drops the duplicate (section 5).
 - **Safe to run twice.** `skip locked` means a second worker, for example while a deploy is switching over, never sends the same email.
 - **Shutdown.** On `SIGTERM` it finishes the current batch, then exits.
 
@@ -189,24 +188,30 @@ Tokens (SEC-003) are 32 random bytes, sent base64url-encoded, and stored as `sha
 
 ### 2.6 Notifications
 
-**`notification_emails`** has one row per email a recipient will get about one issue or project (`target_type`, `target_id`), with its `send_after`, `state`, retry count and Resend ID.
+Notifications don't know how they're delivered. Three tables keep the *what*, the *grouping* and the *how* apart:
 
-**`notifications`** has one row per notification, attached to the email it's combined into (REQ-045), with a **snapshot** of what the email needs: issue ID, issue title, project name and key, link path, and a plain-text excerpt of up to 500 characters.
+**`notification_batches`** has one row per group of notifications a recipient gets together about one issue or project (`target_type`, `target_id`), with its `send_after` (REQ-045). It has no channel and no state.
 
-No index covers `provider_message_id` (here or on `invitations`), `notifications.email_id` or `sessions.member_id`. At one team's volume these lookups scan small tables; add an index if one shows up in NFR-003 timings.
+**`notifications`** has one row per notification, in the batch it's combined into, with a **snapshot** of what any message needs: issue ID, issue title, project name and key, link path, and a plain-text excerpt of up to 500 characters.
+
+**`notification_deliveries`** has one row per batch and channel (`channel`, unique per batch), with its `state`, retry count, next attempt and the provider's message ID. The channels come from **`members.notification_channels`** (at least one; `{email}` by default and the only choice in R1) when the batch is created, so a later change of channels applies to the next batch.
+
+**Channels.** `src/server/notification-channels/` has one module per channel, and an index maps every value of the `notification_channel` enum to its sender: `send(recipient, notifications, deliveryId) → { providerMessageId }`. The email sender builds the message with the templates (5.3) and calls `sendEmail()` (5.2). The map is typed by the enum, so adding a channel to the enum doesn't compile until its sender exists; nothing in `notify()` or the worker changes.
+
+No index covers `provider_message_id` (here or on `invitations`), `notifications.batch_id` or `sessions.member_id`. At one team's volume these lookups scan small tables; add an index if one shows up in NFR-003 timings.
 
 How the parts fit:
 
-- **No FKs to issues, projects or comments.** Notifications about deleted issues and projects must still be sent (REQ-045.7), so these rows can't be cascade-deleted. The snapshot means the email can be built after its target is gone.
-- **Joining an email (fixed wait).** In the same transaction as the user's action (spec §12), look for a `pending` email for that recipient and target with `send_after > now()`. If one exists, attach to it; if not, create one with `send_after = now() + 2 minutes`. A later notification never moves `send_after` (REQ-045.8). If two members act at the very same moment, the recipient can occasionally get two emails instead of one; that's accepted rather than adding a lock.
-- **Drop checks at send time (REQ-045).** The worker re-checks each notification:
+- **No FKs to issues, projects or comments.** Notifications about deleted issues and projects must still be sent (REQ-045.7), so these rows can't be cascade-deleted. The snapshot means the message can be built after its target is gone.
+- **Joining a batch (fixed wait).** In the same transaction as the user's action (spec §12), look for a batch for that recipient and target with `send_after > now()`. If one exists, attach to it; if not, create one with `send_after = now() + 2 minutes` and one `pending` delivery per channel of the recipient. A later notification never moves `send_after` (REQ-045.8) and adds no deliveries. If two members act at the very same moment, the recipient can occasionally get two messages instead of one; that's accepted rather than adding a lock.
+- **Drop checks at send time (REQ-045).** For each delivery, the worker re-checks each of the batch's notifications not yet dropped:
   - target issue or project no longer exists → **send** (REQ-045.7);
   - recipient deactivated → drop;
   - `assigned` but the issue's assignee is now someone else → drop;
   - `mentioned` but the comment is gone, or there's no longer a matching `mentions` row → drop.
 
-  If every notification in an email is dropped, the email becomes `dropped`.
-- **Retries (STD-6).** After a failed send, `attempts += 1` and `next_attempt_at` moves forward 1, then 4, then 10 minutes. After the third retry fails, the state becomes `failed`. A bounce sets `bounced` and isn't retried.
+  A dropped notification stays dropped for every channel. If none is left, the delivery becomes `dropped`.
+- **Retries (STD-6), per delivery.** After a failed send, `attempts += 1` and `next_attempt_at` moves forward 1, then 4, then 10 minutes. After the third retry fails, the state becomes `failed`. A bounce sets `bounced` and isn't retried.
 
 ### 2.7 Deleting and cleanup
 
@@ -492,7 +497,7 @@ The wording of every email is in the spec (§9, "Email content"). That's where t
    Otherwise answer `401`. This is about 20 lines with `node:crypto`, with no `svix` dependency.
 3. Handle the event:
    - `email.bounced` → look up `provider_message_id`:
-     - in `notification_emails`: set `bounced` and log `email bounced, notification {id}` (REQ-045.6);
+     - in `notification_deliveries` (channel `email`): set `bounced` and log `email bounced, notification {id}` with the delivery's id (REQ-045.6);
      - in `invitations`: set `bounced_at`, so the members page shows Bounced (REQ-051), and log `email bounced, invitation {id}`;
      - in neither (a reset email): log `email bounced, untracked`.
    - any other event type → ignore.
@@ -607,3 +612,4 @@ Only decisions with an alternative worth recording. Where the reason is already 
 | D-42 | Valibot body schemas declared per route and run by `apiRoute`; schemas live in `src/schemas/` (one file per area, server-only), and the domain function takes their typed output | Hand-written `typeof` checks in each domain function; Zod; parsing at the start of each domain function; each schema in the domain module that uses it | One path turns invalid input into STD-3's `422`, domain functions get typed and already-trimmed input instead of `unknown`, and a malformed body stops being a `500`. Order: session, then schema, then the domain's role check, then database rules, then the write. A signed-out caller always gets `401` and learns nothing about the body; invalid input fails before the role check and any domain query. A signed-in member without the role who sends an invalid body therefore gets `422`, not `403`; the schema reveals only the request's shape, which the browser code already shows. Lengths count characters (code points) as the spec and Postgres do, not UTF-16 units. One folder puts every input rule in one place to read and review, and keeps the schemas apart from database code. |
 | D-43 | Routes only authenticate. Every domain function called from a signed-in route takes the member as `actor` first and owns every role and ownership check, with `assertAdmin` before any lookup ([ADR 0001](ADRs/0001-permission-checks-in-domain.md)) | `apiRoute("admin")` checking the role in the route; admin-only functions typed `actor: Admin`; an `adminOnly` wrapper | Reading a domain file must show its permission rules: with the role in the route, `createProject` looked open to anyone while `updateProject` checked. Typing `actor: Admin` would push the narrowing back into the route. Nothing at typecheck enforces `assertAdmin`, so each admin-only function has a 403 test. Every admin route declares a body schema (M12.2), so a member's malformed JSON gets `422` from `apiRoute` before the domain's `403`, never a `500`. |
 | D-44 | Response types and enum values in a shared `src/contract/`; mapping functions return them | Types owned by the client and checked with `satisfies` in each route; one model shared by database, domain and API | A declared return type catches extra fields, which `satisfies` on a function call can't. One enum source keeps client lists complete. Rows and responses really differ (uuid vs `WEB-42`, `Date` vs ISO string, internal columns), so they stay separate types with a mapping between them. |
+| D-45 | Notifications in batches with one delivery per channel; senders in `src/server/notification-channels/`, mapped by the `notification_channel` enum | One `notification_emails` table; one deliveries table with the notification rows copied per channel | Keeps notifications independent of email so a channel (SMS) can be added with a new sender, an enum value and a profile setting. Batching and drop checks stay shared; state and retries are per channel, so one channel failing doesn't touch another. |

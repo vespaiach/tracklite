@@ -43,7 +43,7 @@ Check each item. If any fails, don't deploy.
    sudo systemctl start tracklite-backup.service && journalctl -u tracklite-backup.service -n 5
    ```
 
-5. **Pick a quiet moment.** `tracklite-web` restarts during the switch, so requests fail for a few seconds. Pending notification emails are safe: they stay in `notification_emails`, and the worker finishes its current batch before it stops.
+5. **Pick a quiet moment.** `tracklite-web` restarts during the switch, so requests fail for a few seconds. Pending notifications are safe: they stay in `notification_deliveries`, and the worker finishes its current batch before it stops.
 
 ## 2. Deploy
 

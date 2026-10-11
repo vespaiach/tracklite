@@ -1,14 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createIssue, createMember, createProject } from "../test/factories";
 import { deleteComment, editComment, postIssueComment } from "./comments";
 import { db } from "./db";
 import { outbox } from "./email/outbox";
 import { updateIssue } from "./issues";
-import { issues, members, notificationEmails, notifications } from "./schema";
+import { issues, members, notificationBatches, notificationDeliveries, notifications } from "./schema";
 import type { Member } from "./sessions";
-import { runWorker, sendDueEmails } from "./worker";
+import { runWorker, sendDueDeliveries } from "./worker";
 
 beforeEach(() => {
   outbox.sent = [];
@@ -35,44 +35,55 @@ async function comment(issueRef: string, by: Member, body: string) {
   return comment;
 }
 
+function batchesOf(member: { id: string }) {
+  return db
+    .select({ id: notificationBatches.id })
+    .from(notificationBatches)
+    .where(eq(notificationBatches.recipientId, member.id));
+}
+
 function emailsOf(member: { id: string }) {
   return db
     .select({
-      id: notificationEmails.id,
-      state: notificationEmails.state,
-      attempts: notificationEmails.attempts,
+      id: notificationDeliveries.id,
+      state: notificationDeliveries.state,
+      attempts: notificationDeliveries.attempts,
       retryInSeconds: sql<
         number | null
-      >`round(extract(epoch from ${notificationEmails.nextAttemptAt} - now()))::int`,
-      providerMessageId: notificationEmails.providerMessageId,
-      sentAt: notificationEmails.sentAt,
+      >`round(extract(epoch from ${notificationDeliveries.nextAttemptAt} - now()))::int`,
+      providerMessageId: notificationDeliveries.providerMessageId,
+      sentAt: notificationDeliveries.sentAt,
     })
-    .from(notificationEmails)
-    .where(eq(notificationEmails.recipientId, member.id))
-    .orderBy(asc(notificationEmails.createdAt));
+    .from(notificationDeliveries)
+    .where(
+      and(
+        eq(notificationDeliveries.channel, "email"),
+        inArray(notificationDeliveries.batchId, batchesOf(member)),
+      ),
+    )
+    .orderBy(asc(notificationDeliveries.createdAt));
 }
 
 function droppedFlagsOf(member: { id: string }) {
   return db
     .select({ kind: notifications.kind, dropped: notifications.dropped })
     .from(notifications)
-    .innerJoin(notificationEmails, eq(notificationEmails.id, notifications.emailId))
-    .where(eq(notificationEmails.recipientId, member.id))
+    .where(inArray(notifications.batchId, batchesOf(member)))
     .orderBy(asc(notifications.createdAt));
 }
 
 async function waitIsOver(member: { id: string }) {
   await db
-    .update(notificationEmails)
+    .update(notificationBatches)
     .set({ sendAfter: sql`now() - interval '1 second'` })
-    .where(eq(notificationEmails.recipientId, member.id));
+    .where(eq(notificationBatches.recipientId, member.id));
 }
 
 async function retryIsDue(member: { id: string }) {
   await db
-    .update(notificationEmails)
+    .update(notificationDeliveries)
     .set({ nextAttemptAt: sql`now() - interval '1 second'` })
-    .where(eq(notificationEmails.recipientId, member.id));
+    .where(inArray(notificationDeliveries.batchId, batchesOf(member)));
 }
 
 function mailTo(member: { email: string }) {
@@ -80,7 +91,7 @@ function mailTo(member: { email: string }) {
 }
 
 async function sendAllDue() {
-  while ((await sendDueEmails()) > 0) {}
+  while ((await sendDueDeliveries()) > 0) {}
 }
 
 it("REQ-045: an email isn't sent before its 2 minutes are up", async () => {
@@ -266,6 +277,28 @@ it("REQ-045: one notification dropped, another kept → the email is sent with t
   ]);
 });
 
+it("REQ-045: a notification already dropped isn't sent by a later delivery", async () => {
+  const alex = await createMember();
+  const sam = await createMember();
+  const { issueRef } = await website();
+  await assign(issueRef, alex, sam);
+  await comment(issueRef, alex, `@${sam.username} look`);
+  await db
+    .update(notifications)
+    .set({ dropped: true })
+    .where(and(inArray(notifications.batchId, batchesOf(sam)), eq(notifications.kind, "assigned")));
+  await waitIsOver(sam);
+
+  await sendAllDue();
+
+  expect(mailTo(sam)).toHaveLength(1);
+  expect(mailTo(sam)[0].subject).toBe(`[${issueRef}] Fix login button: ${alex.fullName} mentioned you`);
+  expect(await droppedFlagsOf(sam)).toEqual([
+    { kind: "assigned", dropped: true },
+    { kind: "mentioned", dropped: false },
+  ]);
+});
+
 it("STD-6: a failed send is retried after 1, then 4, then 10 minutes", async () => {
   const alex = await createMember();
   const sam = await createMember();
@@ -313,8 +346,8 @@ it("STD-6: after the third retry fails the email is failed and logged; nothing m
   expect(email).toEqual(expect.objectContaining({ state: "failed", attempts: 4 }));
   const failures = log.mock.calls
     .map(([line]) => JSON.parse(String(line)))
-    .filter((line) => line.event === "notification" && line.emailId === email.id);
-  expect(failures).toEqual([expect.objectContaining({ level: "error", emailId: email.id })]);
+    .filter((line) => line.event === "notification" && line.deliveryId === email.id);
+  expect(failures).toEqual([expect.objectContaining({ level: "error", deliveryId: email.id })]);
   expect(JSON.stringify(failures)).not.toContain(sam.email);
 
   outbox.failing = false;
@@ -346,10 +379,11 @@ it("REQ-045.6: a bounced email isn't picked up again", async () => {
   const sam = await createMember();
   const { issueRef } = await website();
   await assign(issueRef, alex, sam);
+  await waitIsOver(sam);
   await db
-    .update(notificationEmails)
-    .set({ state: "bounced", sendAfter: sql`now() - interval '1 second'` })
-    .where(eq(notificationEmails.recipientId, sam.id));
+    .update(notificationDeliveries)
+    .set({ state: "bounced" })
+    .where(inArray(notificationDeliveries.batchId, batchesOf(sam)));
 
   await sendAllDue();
 

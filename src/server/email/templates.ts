@@ -31,7 +31,7 @@ export function invitationEmail({ inviterName, token }: { inviterName: string; t
   };
 }
 
-type NotificationItem = {
+export type NotificationItem = {
   kind: "assigned" | "mentioned";
   actorName: string;
   commentId: string | null;
