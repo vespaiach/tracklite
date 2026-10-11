@@ -3,7 +3,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { and, asc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { deleteExpiredRows } from "./cleanup";
 import { db } from "./db";
-import { logNotificationError, logNotificationFailure } from "./log";
+import { logNotificationError, logNotificationFailure, logWorkerMetrics } from "./log";
 import { notificationSenders, type Recipient } from "./notification-channels";
 import {
   issues,
@@ -13,6 +13,7 @@ import {
   notificationDeliveries,
   notifications,
   projects,
+  workerHeartbeats,
 } from "./schema";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -20,16 +21,27 @@ type DueDelivery = Awaited<ReturnType<typeof dueDeliveries>>[number];
 type ClaimedDelivery = DueDelivery & { lease: string };
 type Item = Awaited<ReturnType<typeof itemsOf>>[number];
 type DropChecks = Awaited<ReturnType<typeof loadDropChecks>>;
+type Outcome = "sent" | "failed" | "dropped";
+type Tally = Record<Outcome, number>;
 
 const batchSize = 10;
 const pollIntervalMs = 5_000;
 const retryDelaysMinutes = [1, 4, 10];
 const cleanupIntervalMs = 60 * 60_000;
+const metricsIntervalMs = 60_000;
+const dueAt = sql`coalesce(${notificationDeliveries.nextAttemptAt}, ${notificationBatches.sendAfter})`;
 
 export async function runWorker({ signal }: { signal: AbortSignal }) {
   let nextCleanupAt = 0;
+  let nextMetricsAt = 0;
+  const tally = emptyTally();
   do {
-    const claimed = await runPass();
+    const claimed = await runPass(tally);
+
+    if (performance.now() >= nextMetricsAt) {
+      await logMetrics(tally).catch(logWorkerError);
+      nextMetricsAt = performance.now() + metricsIntervalMs;
+    }
 
     if (performance.now() >= nextCleanupAt) {
       await deleteExpiredRows().catch(logWorkerError);
@@ -40,22 +52,56 @@ export async function runWorker({ signal }: { signal: AbortSignal }) {
   } while (!signal.aborted);
 }
 
-export async function sendDueDeliveries() {
+export async function sendDueDeliveries(tally = emptyTally()) {
   const claimed = await claimDueDeliveries();
   if (claimed.length === 0) return 0;
 
   const checks = await loadDropChecks(claimed);
-  for (const delivery of claimed) await deliver(delivery, checks);
+  for (const delivery of claimed) {
+    const outcome = await deliver(delivery, checks);
+    if (outcome) tally[outcome] += 1;
+  }
   return claimed.length;
 }
 
-async function runPass() {
+function emptyTally(): Tally {
+  return { sent: 0, failed: 0, dropped: 0 };
+}
+
+async function runPass(tally: Tally) {
   try {
-    return await sendDueDeliveries();
+    await recordHeartbeat();
+    return await sendDueDeliveries(tally);
   } catch (error) {
     logWorkerError(error);
     return 0;
   }
+}
+
+function recordHeartbeat() {
+  return db
+    .insert(workerHeartbeats)
+    .values({ name: "worker", lastPassAt: sql`now()` })
+    .onConflictDoUpdate({ target: workerHeartbeats.name, set: { lastPassAt: sql`now()` } });
+}
+
+async function logMetrics(tally: Tally) {
+  const queue = await queueCounts();
+  logWorkerMetrics({ ...queue, ...tally });
+  Object.assign(tally, emptyTally());
+}
+
+async function queueCounts() {
+  const [counts] = await db
+    .select({
+      pending: sql<number>`count(*)::int`,
+      due: sql<number>`(count(*) filter (where ${dueAt} <= now()))::int`,
+      oldestDueSeconds: sql<number>`coalesce(extract(epoch from now() - min(${dueAt}) filter (where ${dueAt} <= now())), 0)::int`,
+    })
+    .from(notificationDeliveries)
+    .innerJoin(notificationBatches, eq(notificationBatches.id, notificationDeliveries.batchId))
+    .where(eq(notificationDeliveries.state, "pending"));
+  return counts;
 }
 
 function logWorkerError(error: unknown) {
@@ -96,10 +142,7 @@ function dueDeliveries(tx: Transaction) {
     .where(
       and(
         eq(notificationDeliveries.state, "pending"),
-        lte(
-          sql`coalesce(${notificationDeliveries.nextAttemptAt}, ${notificationBatches.sendAfter})`,
-          sql`now()`,
-        ),
+        lte(dueAt, sql`now()`),
         or(isNull(notificationDeliveries.lockedUntil), lte(notificationDeliveries.lockedUntil, sql`now()`)),
       ),
     )
@@ -127,24 +170,26 @@ function heldBy(delivery: ClaimedDelivery) {
 
 async function deliver(delivery: ClaimedDelivery, checks: DropChecks) {
   try {
-    await sendAndRecord(delivery, checks);
+    return await sendAndRecord(delivery, checks);
   } catch (error) {
     logNotificationError({ deliveryId: delivery.id, errorName: errorNameOf(error) });
-    await recordFailure(delivery).catch(() => {});
+    return await recordFailure(delivery).catch(() => null);
   }
 }
 
-async function sendAndRecord(delivery: ClaimedDelivery, checks: DropChecks) {
+async function sendAndRecord(delivery: ClaimedDelivery, checks: DropChecks): Promise<Outcome | null> {
   const message = await applyDropChecks(delivery, checks);
-  if (!message) return;
+  if (message === null || message === "dropped") return message;
 
   const sent = await send(delivery, message);
   if (!sent) return recordFailure(delivery);
 
-  await db
+  const recorded = await db
     .update(notificationDeliveries)
     .set({ state: "sent", providerMessageId: sent.providerMessageId, sentAt: sql`now()` })
-    .where(heldBy(delivery));
+    .where(heldBy(delivery))
+    .returning({ id: notificationDeliveries.id });
+  return recorded.length > 0 ? "sent" : null;
 }
 
 function send(delivery: ClaimedDelivery, { recipient, kept }: { recipient: Recipient; kept: Item[] }) {
@@ -251,7 +296,7 @@ function applyDropChecks(delivery: ClaimedDelivery, checks: DropChecks) {
 
     if (!recipient || kept.length === 0) {
       await tx.update(notificationDeliveries).set({ state: "dropped" }).where(heldBy(delivery));
-      return null;
+      return "dropped" as const;
     }
     return { recipient, kept };
   });
@@ -295,6 +340,7 @@ async function dropNotifications(tx: Transaction, ids: string[]) {
 async function recordFailure(delivery: ClaimedDelivery) {
   const delayMinutes = retryDelaysMinutes[delivery.attempts];
   if (delayMinutes === undefined) return markFailed(delivery);
+
   await db
     .update(notificationDeliveries)
     .set({
@@ -303,6 +349,7 @@ async function recordFailure(delivery: ClaimedDelivery) {
       lockedUntil: null,
     })
     .where(heldBy(delivery));
+  return null;
 }
 
 async function markFailed(delivery: ClaimedDelivery) {
@@ -311,5 +358,8 @@ async function markFailed(delivery: ClaimedDelivery) {
     .set({ state: "failed", attempts: delivery.attempts + 1 })
     .where(heldBy(delivery))
     .returning({ id: notificationDeliveries.id });
-  if (failed.length > 0) logNotificationFailure({ channel: delivery.channel, deliveryId: delivery.id });
+  if (failed.length === 0) return null;
+
+  logNotificationFailure({ channel: delivery.channel, deliveryId: delivery.id });
+  return "failed" as const;
 }

@@ -78,6 +78,12 @@ Spend about 5 minutes on this right after the deploy.
    ```
 
    It answers `200` with `strict-transport-security`, `x-content-type-options: nosniff` and `referrer-policy: same-origin`.
+
+   ```bash
+   curl -s https://tracklite.example.com/health/worker
+   ```
+
+   It answers `ok` once the new worker has finished a pass, within a few seconds of the switch.
 3. **Both services are active and not restarting:** `systemctl status tracklite-web tracklite-worker` shows `active (running)`, and the "since" time doesn't keep moving.
 4. **No errors in the logs:**
 
@@ -119,6 +125,14 @@ After the rollback, `/health` should answer `ok`. Then find the cause in `journa
 - `Missing environment variables: …`: a setting the release needs isn't in `/etc/tracklite/env`.
 - `/health` answers `503`: the app can't reach PostgreSQL. Check `systemctl status postgresql`.
 
+### `/health/worker` answers `503`
+
+The uptime check emails "Tracklite notifications are stuck".
+
+- **The worker isn't running or keeps restarting.** Check `systemctl status tracklite-worker` and `journalctl -u tracklite-worker -n 100`, then `sudo systemctl restart tracklite-worker`.
+- **The worker runs, but the queue doesn't drain.** The `event: "worker"` lines (`journalctl -u tracklite-worker | grep '"event":"worker"'`) show `due` and `oldestDueSeconds` growing. Look for `event: "notification"` errors nearby, such as a provider outage or a wrong `RESEND_API_KEY`.
+- **Just after a rollback** to a release from before M13.5: that worker writes no heartbeat, so `/health/worker` keeps answering `503` until a release with M13.5 is deployed again. See [Rollback rules](#5-rollback-rules).
+
 ### Deployed fine, but the change is broken
 
 Roll back if users are affected, then fix forward on `main`:
@@ -133,6 +147,7 @@ The rollback finishes in seconds (OPS-004.1 allows 2 minutes) and doesn't touch 
 
 - **One step only.** `rollback.sh` switches `current` back to `previous` and removes the `previous` link. A second rollback in a row refuses with `No previous release to roll back to.` To go back further, revert the bad commits on `main` and deploy.
 - **The database isn't rolled back.** That's why the [migration rule](#1-before-you-deploy) matters. If a release did make the schema unusable for the previous code, restoring a backup is the only way back, and it loses every change since that backup. See [Restore](README.md#restore).
+- **Rolling back past M13.5 makes `/health/worker` fail.** Releases before M13.5 don't write the `worker_heartbeats` row, so once the last heartbeat is 2 minutes old `/health/worker` answers `503` and the uptime check emails "Tracklite notifications are stuck", even though notifications still go out. Check `journalctl -u tracklite-worker` to confirm the worker is sending, and expect the alert until you deploy a release with M13.5 again.
 - **Deploying again after a rollback** builds a fresh release from `main`. If `main` still holds the bad change, revert it first.
 
 ## Changing settings
@@ -164,8 +179,8 @@ Do these once, in order. Each step links to its details.
    ```
 
 6. As your admin account, install backups, take the first one and restore it into a scratch database ([README.md → Backups](README.md#backups-m103)).
-7. Set up the uptime check on `/health` ([monitoring-and-email.md → Uptime check](monitoring-and-email.md#uptime-check-ops-005)).
-8. Run the checks by hand in both docs: HTTPS and the redirect, the token-free access log, SPF/DKIM/DMARC, the bounce webhook and the uptime alert.
+7. Set up the uptime check on `/health` and `/health/worker` ([monitoring-and-email.md → Uptime check](monitoring-and-email.md#uptime-check-ops-005)).
+8. Run the checks by hand in both docs: HTTPS and the redirect, the token-free access log, SPF/DKIM/DMARC, the bounce webhook and both uptime alerts.
 
 ## How a deploy works
 

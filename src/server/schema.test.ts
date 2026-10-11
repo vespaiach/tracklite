@@ -70,6 +70,7 @@ it("the migration applies to an empty database", async () => {
       "projects",
       "sessions",
       "sign_in_attempts",
+      "worker_heartbeats",
     ]);
 
     // Declared order matters: ORDER BY status/priority relies on it (design §2.1).
