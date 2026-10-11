@@ -198,8 +198,6 @@ Notifications don't know how they're delivered. Three tables keep the *what*, th
 
 **Channels.** `src/server/notification-channels/` has one module per channel, and an index maps every value of the `notification_channel` enum to its sender: `send(recipient, notifications, deliveryId) → { providerMessageId }`. The email sender builds the message with the templates (5.3) and calls `sendEmail()` (5.2). The map is typed by the enum, so adding a channel to the enum doesn't compile until its sender exists; nothing in `notify()` or the worker changes.
 
-**Until M13.3:** the old `notification_emails` table, its `email_state` enum and `notifications.email_id` (now nullable) stay, and `notifications.batch_id` is nullable, so the release before M13.1 still works if it's rolled back to (OPS-004). Nothing in the app reads them. M13.3 copies any rows that release wrote after the M13.1 migration, then makes `batch_id` required and drops the rest.
-
 No index covers `provider_message_id` (here or on `invitations`), `notifications.batch_id` or `sessions.member_id`. At one team's volume these lookups scan small tables; add an index if one shows up in NFR-003 timings.
 
 How the parts fit:
