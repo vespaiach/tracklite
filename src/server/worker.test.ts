@@ -191,6 +191,18 @@ async function sendFailsFor(deliveryId: string) {
   });
 }
 
+async function stateChangesOf(member: { id: string }) {
+  return db
+    .select({
+      state: notificationDeliveries.state,
+      changedJustNow: sql<
+        boolean | null
+      >`${notificationDeliveries.stateChangedAt} between now() - interval '1 minute' and now()`,
+    })
+    .from(notificationDeliveries)
+    .where(inArray(notificationDeliveries.batchId, batchesOf(member)));
+}
+
 it("REQ-045: an email isn't sent before its 2 minutes are up", async () => {
   const alex = await createMember();
   const sam = await createMember();
@@ -469,6 +481,52 @@ it("STD-6: a retry that succeeds sends the email", async () => {
 
   expect(mailTo(sam)).toHaveLength(1);
   expect(await emailsOf(sam)).toEqual([expect.objectContaining({ state: "sent", attempts: 1 })]);
+});
+
+it("REQ-053: the worker records when a delivery was sent", async () => {
+  const alex = await createMember();
+  const sam = await createMember();
+  const { issueRef } = await website();
+  await assign(issueRef, alex, sam);
+  expect(await stateChangesOf(sam)).toEqual([{ state: "pending", changedJustNow: null }]);
+  await waitIsOver(sam);
+
+  await sendAllDue();
+
+  expect(await stateChangesOf(sam)).toEqual([{ state: "sent", changedJustNow: true }]);
+});
+
+it("REQ-053: the worker records when a delivery was dropped", async () => {
+  const alex = await createMember();
+  const sam = await createMember();
+  const jo = await createMember();
+  const { issueRef } = await website();
+  await assign(issueRef, alex, sam);
+  await assign(issueRef, alex, jo);
+  await waitIsOver(sam);
+
+  await sendAllDue();
+
+  expect(await stateChangesOf(sam)).toEqual([{ state: "dropped", changedJustNow: true }]);
+});
+
+it("REQ-053: the worker records when a delivery failed, and not while it waits for a retry", async () => {
+  const alex = await createMember();
+  const sam = await createMember();
+  const { issueRef } = await website();
+  await assign(issueRef, alex, sam);
+  await waitIsOver(sam);
+  outbox.failing = true;
+  vi.spyOn(console, "log").mockImplementation(() => {});
+
+  await sendAllDue();
+  expect(await stateChangesOf(sam)).toEqual([{ state: "pending", changedJustNow: null }]);
+
+  for (let retry = 0; retry < 3; retry++) {
+    await retryIsDue(sam);
+    await sendAllDue();
+  }
+  expect(await stateChangesOf(sam)).toEqual([{ state: "failed", changedJustNow: true }]);
 });
 
 it("REQ-045.6: a bounced email isn't picked up again", async () => {

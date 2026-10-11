@@ -1,11 +1,13 @@
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import type { NotificationStats } from "../../../contract";
 import { db } from "../../../server/db";
 import { outbox } from "../../../server/email/outbox";
 import { invitations, notificationDeliveries } from "../../../server/schema";
 import { createMember, createNotificationBatch } from "../../../test/factories";
 import { invitedBy, listedInvitation, signedInAdmin, uniqueEmail } from "../../../test/invitations";
+import { GET as getNotificationStats } from "../../api/notification-stats/route";
 import { POST } from "./route";
 
 const secretBytes = randomBytes(24);
@@ -75,6 +77,14 @@ async function sentNotificationEmail() {
     { state: "sent", attempts: 1, providerMessageId },
   );
   return { id: delivery.id, providerMessageId };
+}
+
+async function emailCounts(cookie: string) {
+  const response = await getNotificationStats(
+    new Request("http://localhost:3000/api/notification-stats", { headers: { Cookie: cookie } }),
+  );
+  const stats: NotificationStats = await response.json();
+  return stats.channels.find((row) => row.channel === "email");
 }
 
 async function stateOf(deliveryId: string) {
@@ -179,4 +189,29 @@ it("§5.4: a signature matching any v1 entry in the header is accepted", async (
 
   expect(response.status).toBe(200);
   expect(await stateOf(email.id)).toBe("bounced");
+});
+
+it("REQ-053: a bounce records when the email bounced, and it then counts as bounced instead of sent", async () => {
+  const email = await sentNotificationEmail();
+  await db
+    .update(notificationDeliveries)
+    .set({ stateChangedAt: sql`now() - interval '1 hour'` })
+    .where(eq(notificationDeliveries.id, email.id));
+  const { cookie } = await signedInAdmin();
+  const before = await emailCounts(cookie);
+
+  await signedWebhook(event("email.bounced", email.providerMessageId));
+
+  const [bounced] = await db
+    .select({
+      changedJustNow: sql<boolean>`${notificationDeliveries.stateChangedAt} between now() - interval '1 minute' and now()`,
+    })
+    .from(notificationDeliveries)
+    .where(eq(notificationDeliveries.id, email.id));
+  expect(bounced.changedJustNow).toBe(true);
+  expect(await emailCounts(cookie)).toEqual({
+    ...before,
+    sent: (before?.sent ?? 0) - 1,
+    bounced: (before?.bounced ?? 0) + 1,
+  });
 });

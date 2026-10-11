@@ -5,6 +5,7 @@ import { deleteExpiredRows } from "./cleanup";
 import { db } from "./db";
 import { logNotificationError, logNotificationFailure, logWorkerMetrics } from "./log";
 import { notificationSenders, type Recipient } from "./notification-channels";
+import { dueAt, queueCounts } from "./notification-queue";
 import {
   issues,
   members,
@@ -29,7 +30,6 @@ const pollIntervalMs = 5_000;
 const retryDelaysMinutes = [1, 4, 10];
 const cleanupIntervalMs = 60 * 60_000;
 const metricsIntervalMs = 60_000;
-const dueAt = sql`coalesce(${notificationDeliveries.nextAttemptAt}, ${notificationBatches.sendAfter})`;
 
 export async function runWorker({ signal }: { signal: AbortSignal }) {
   let nextCleanupAt = 0;
@@ -89,19 +89,6 @@ async function logMetrics(tally: Tally) {
   const queue = await queueCounts();
   logWorkerMetrics({ ...queue, ...tally });
   Object.assign(tally, emptyTally());
-}
-
-async function queueCounts() {
-  const [counts] = await db
-    .select({
-      pending: sql<number>`count(*)::int`,
-      due: sql<number>`(count(*) filter (where ${dueAt} <= now()))::int`,
-      oldestDueSeconds: sql<number>`coalesce(extract(epoch from now() - min(${dueAt}) filter (where ${dueAt} <= now())), 0)::int`,
-    })
-    .from(notificationDeliveries)
-    .innerJoin(notificationBatches, eq(notificationBatches.id, notificationDeliveries.batchId))
-    .where(eq(notificationDeliveries.state, "pending"));
-  return counts;
 }
 
 function logWorkerError(error: unknown) {
@@ -186,7 +173,12 @@ async function sendAndRecord(delivery: ClaimedDelivery, checks: DropChecks): Pro
 
   const recorded = await db
     .update(notificationDeliveries)
-    .set({ state: "sent", providerMessageId: sent.providerMessageId, sentAt: sql`now()` })
+    .set({
+      state: "sent",
+      providerMessageId: sent.providerMessageId,
+      sentAt: sql`now()`,
+      stateChangedAt: sql`now()`,
+    })
     .where(heldBy(delivery))
     .returning({ id: notificationDeliveries.id });
   return recorded.length > 0 ? "sent" : null;
@@ -295,7 +287,10 @@ function applyDropChecks(delivery: ClaimedDelivery, checks: DropChecks) {
     await dropNotifications(tx, droppedIds);
 
     if (!recipient || kept.length === 0) {
-      await tx.update(notificationDeliveries).set({ state: "dropped" }).where(heldBy(delivery));
+      await tx
+        .update(notificationDeliveries)
+        .set({ state: "dropped", stateChangedAt: sql`now()` })
+        .where(heldBy(delivery));
       return "dropped" as const;
     }
     return { recipient, kept };
@@ -355,7 +350,7 @@ async function recordFailure(delivery: ClaimedDelivery) {
 async function markFailed(delivery: ClaimedDelivery) {
   const failed = await db
     .update(notificationDeliveries)
-    .set({ state: "failed", attempts: delivery.attempts + 1 })
+    .set({ state: "failed", attempts: delivery.attempts + 1, stateChangedAt: sql`now()` })
     .where(heldBy(delivery))
     .returning({ id: notificationDeliveries.id });
   if (failed.length === 0) return null;
