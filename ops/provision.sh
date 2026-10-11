@@ -48,7 +48,7 @@ SQL
   (umask 077 && sed -e "s|^DATABASE_URL=.*|DATABASE_URL=postgres://tracklite:$password@localhost:5432/tracklite|" \
       -e "s|^APP_URL=.*|APP_URL=https://$domain|" \
       "$here/env.example" > /etc/tracklite/env)
-  echo "Wrote /etc/tracklite/env. Fill in EMAIL_FROM, RESEND_API_KEY and RESEND_WEBHOOK_SECRET."
+  echo "Wrote /etc/tracklite/env. Fill in EMAIL_FROM, EMAIL_API_KEY and EMAIL_WEBHOOK_SECRET."
 fi
 chown root:deployer /etc/tracklite/env
 chmod 640 /etc/tracklite/env

@@ -1,5 +1,5 @@
 const alwaysRequired = ["DATABASE_URL", "APP_URL", "EMAIL_FROM"] as const;
-const requiredInProduction = ["RESEND_API_KEY", "RESEND_WEBHOOK_SECRET"] as const;
+const requiredInProduction = ["EMAIL_API_KEY", "EMAIL_WEBHOOK_SECRET"] as const;
 
 export function readConfig(env: NodeJS.ProcessEnv = process.env) {
   const required =
@@ -12,8 +12,8 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
     databaseUrl: env.DATABASE_URL as string,
     appUrl: env.APP_URL as string,
     emailFrom: env.EMAIL_FROM as string,
-    resendApiKey: env.RESEND_API_KEY,
-    resendWebhookSecret: env.RESEND_WEBHOOK_SECRET,
+    emailApiKey: env.EMAIL_API_KEY,
+    emailWebhookSecret: env.EMAIL_WEBHOOK_SECRET,
     mailpitHost: env.MAILPIT_HOST ?? "localhost",
     mailpitPort: env.MAILPIT_PORT ?? "8025",
   };

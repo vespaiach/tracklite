@@ -119,7 +119,7 @@ sudo ops/backup/install.sh
    sudo ops/provision.sh tracklite.example.com
    ```
 
-3. Fill in `EMAIL_FROM`, `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` in `/etc/tracklite/env`:
+3. Fill in `EMAIL_FROM`, `EMAIL_API_KEY` and `EMAIL_WEBHOOK_SECRET` in `/etc/tracklite/env`:
 
    ```bash
    sudo editor /etc/tracklite/env

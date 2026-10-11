@@ -105,7 +105,7 @@ ops/              Caddy, systemd, deploy, rollback and backup scripts
 | Validation | Valibot |
 | Database | PostgreSQL 18, Drizzle ORM over postgres.js, drizzle-kit migrations, `pg_trgm` for search |
 | Auth | Argon2id passwords (`@node-rs/argon2`), session cookies, tokens stored as sha256 hashes |
-| Email | Resend in production, Mailpit in development, an in-memory outbox in tests |
+| Email | Any provider behind `src/server/email/provider.ts`: Resend in production, Mailpit in development, an in-memory outbox in tests |
 | Markdown | react-markdown, remark-gfm, unified |
 | Testing | Vitest (node and jsdom projects), Testing Library |
 | Lint and format | Biome |

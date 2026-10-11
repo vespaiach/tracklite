@@ -1,0 +1,1 @@
+export { resend as productionEmailProvider } from "./providers/resend";

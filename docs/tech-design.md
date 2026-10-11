@@ -78,8 +78,8 @@ All email goes through one `sendEmail()` (5.2).
 
 - Settings come from environment variables: `.env.local` in development, and `/etc/tracklite/env` on the VPS (`root:deployer`, mode `640`, outside the release directory, OPS-006). The `deployer` account reads it to build and migrate; only root changes it.
 - Both processes check them at startup and refuse to start if any are missing.
-- Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5). `MAILPIT_HOST` and `MAILPIT_PORT` are optional and default to `localhost` and `8025`.
-- `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.2).
+- Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `EMAIL_FROM`, `EMAIL_API_KEY` and `EMAIL_WEBHOOK_SECRET` (section 5). The two `EMAIL_` secrets belong to whichever provider is in production (5.1), so they keep their names when the provider changes. `MAILPIT_HOST` and `MAILPIT_PORT` are optional and default to `localhost` and `8025`.
+- `EMAIL_API_KEY` and `EMAIL_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.2).
 - Tests run against `TEST_DATABASE_URL`, which must differ from `DATABASE_URL`. Before each run its schema is dropped and the migrations applied afresh.
 - The backup (1.8) isn't part of the app. Its settings (`OWNER_EMAIL`, the age public key and the R2 token) live in `/etc/tracklite/backup.env` (`root:root`, mode `600`), which the `deployer` account can't read.
 
@@ -448,35 +448,49 @@ In development `script-src` also gets `'unsafe-eval'`, which Next.js's dev tooli
 
 ## 5. Notifications and email
 
-### 5.1 Provider: Resend (DEC-003)
+### 5.1 Provider (DEC-003)
 
-| DEC-003 requirement | Resend |
+The app doesn't depend on one email provider. Every provider is a module in `src/server/email/providers/` that meets the `EmailProvider` contract in `src/server/email/provider.ts`:
+
+- `send(email, settings) → { providerMessageId }`, where `email` is `{ from, to, subject, text, idempotencyKey? }` and `settings` holds `EMAIL_API_KEY`. It throws on any failure (5.2).
+- `readBounceReport(headers, body, settings) → "unsigned" | { bouncedMessageId }`, where `settings` holds `EMAIL_WEBHOOK_SECRET`. `bouncedMessageId` is `null` for a signed report that isn't a bounce (5.4).
+
+`src/server/email/production.ts` names the provider used in production, and it's the only app file that does. Nothing outside `src/server/email/` and `email-webhook.ts` knows which provider that is.
+
+**What a provider must offer (DEC-003), and how Resend, the current one, meets it:**
+
+| Requirement | Resend |
 |---|---|
 | HTTP API | `POST https://api.resend.com/emails`, called with plain `fetch`, with no SDK. |
 | Bounce webhooks, signed (API-003) | `email.bounced` events, signed with Svix-style HMAC headers (5.4). |
 | Fits NFR-009 (< $20/month in total) | The free plan, 3,000 emails/month and 100/day at the time of writing; check on sign-up. The VPS (~$6) plus the domain (~$1) leaves plenty of headroom. |
 | Team domain with SPF and DKIM | Verified sending domain (5.5). |
-| API key only in server config | `RESEND_API_KEY` in `/etc/tracklite/env` (1.6, OPS-006). |
+| API key only in server config | `EMAIL_API_KEY` in `/etc/tracklite/env` (1.6, OPS-006). |
+| Idempotency keys (wanted, not required) | `Idempotency-Key` header, which closes the duplicate-on-crash gap in 1.4. A provider without them can send a notification twice if the worker dies between the send and the commit. |
 
-Also useful: Resend accepts an `Idempotency-Key` header, which closes the duplicate-on-crash gap in 1.4.
+**Risk: the 100/day cap.** A team of under 15 with 2-minute combining should stay well below it, but a very busy day could hit it. Sends over the cap fail and are retried like any other failure, so a notification can end up `failed`, and an invitation or reset shows STD-6's "We couldn't send the email". If that ever happens, the fix is a paid plan or another provider.
 
-**Risk: the 100/day cap.** A team of under 15 with 2-minute combining should stay well below it, but a very busy day could hit it. Sends over the cap fail and are retried like any other failure, so a notification can end up `failed`, and an invitation or reset shows STD-6's "We couldn't send the email". If that ever happens, the fix is a paid plan or Amazon SES. The `sendEmail()` module (5.2) is the only code that would change.
+**Switching providers:**
+1. Check the new provider against the table above.
+2. Write `src/server/email/providers/{name}.ts` with its tests, then point `src/server/email/production.ts` at it.
+3. Set its key and webhook secret as `EMAIL_API_KEY` and `EMAIL_WEBHOOK_SECRET` in `/etc/tracklite/env`, and register its bounce webhook at `/webhooks/email`.
+4. Update the parts outside the app: `ops/backup/notify-failure.sh` (it calls Resend's API with `curl`), the domain setup in `ops/monitoring-and-email.md`, and the key pattern `src/repository.test.ts` scans for.
 
 ### 5.2 Sending
 
-`sendEmail({ to, subject, text, idempotencyKey? })` picks its backend by `NODE_ENV`:
-- **production:** Resend's HTTP API (5.1);
-- **development:** Mailpit's send API (`http://localhost:8025/api/v1/send`), so every email shows in Mailpit's inbox with no Resend key;
+`sendEmail({ to, subject, text, idempotencyKey? })` adds `EMAIL_FROM` and picks a provider by `NODE_ENV`:
+- **production:** the production provider (5.1);
+- **development:** Mailpit's send API (`http://localhost:8025/api/v1/send`), so every email shows in Mailpit's inbox with no provider key;
 - **tests:** an in-memory outbox that tests can inspect, and make fail on demand (REQ-001.7, REQ-050 with the service down, the STD-6 retries).
 
 - **Plain text only.** No HTML templates. REQ-044 already asks for the excerpt "as plain text", text emails deliver well, and it's one template per email instead of two.
 - **From:** `EMAIL_FROM`, for example `Tracklite <notify@mail.example.com>`.
 - **Timeout:** 10 seconds (`AbortSignal.timeout`).
 - **How results are treated:**
-  - any `2xx` is a success, and the response's `id` is stored as `provider_message_id`;
+  - a success returns the provider's message ID, which is stored as `provider_message_id`;
   - anything else, a network error or a timeout is a failure;
   - for notifications, a failure is retried as in 2.6; for invitations and resets, a failure is `503` (1.5).
-- **Logging:** a failure logs the HTTP status and Resend's error *name* only, never the recipient's text (SEC-007).
+- **Logging:** a failure logs the HTTP status and the provider's error *name* only, never the recipient's text (SEC-007).
 
 ### 5.3 Email content
 
@@ -490,18 +504,18 @@ The wording of every email is in the spec (§9, "Email content"). That's where t
 
 `POST /webhooks/email`:
 1. Read the **raw** body with `request.text()`, since the signature covers the exact bytes.
-2. **Verify the signature** using `svix-id`, `svix-timestamp` and `svix-signature`:
-   - compute HMAC-SHA256 of `{id}.{timestamp}.{body}` with the base64 secret from `RESEND_WEBHOOK_SECRET` (the part after `whsec_`);
+2. **Read the report** with the production provider's `readBounceReport` (5.1). If it's `"unsigned"`, answer `401`. Resend's check uses `svix-id`, `svix-timestamp` and `svix-signature`:
+   - compute HMAC-SHA256 of `{id}.{timestamp}.{body}` with the base64 secret from `EMAIL_WEBHOOK_SECRET` (the part after `whsec_`);
    - accept if it matches any `v1,` signature in the header (constant-time compare) and the timestamp is within 5 minutes.
 
-   Otherwise answer `401`. This is about 20 lines with `node:crypto`, with no `svix` dependency.
-3. Handle the event:
-   - `email.bounced` → look up `provider_message_id`:
+   This is about 20 lines with `node:crypto`, with no `svix` dependency. Resend's `email.bounced` event gives `data.email_id` as the bounced message ID; any other event gives none.
+3. Handle the report:
+   - a bounced message ID → look up `provider_message_id`:
      - in `notification_deliveries` (channel `email`): set `bounced` and log `email bounced, notification {id}` with the delivery's id (REQ-045.6);
      - in `invitations`: set `bounced_at`, so the members page shows Bounced (REQ-051), and log `email bounced, invitation {id}`;
      - in neither (a reset email): log `email bounced, untracked`.
-   - any other event type → ignore.
-4. Answer `200` whenever the signature is valid, even for ignored events. Otherwise Resend keeps retrying.
+   - no bounced message ID → ignore.
+4. Answer `200` whenever the signature is valid, even for ignored events. Otherwise the provider keeps retrying.
 
 ### 5.5 Domain setup (one-time, before launch)
 
@@ -613,3 +627,4 @@ Only decisions with an alternative worth recording. Where the reason is already 
 | D-43 | Routes only authenticate. Every domain function called from a signed-in route takes the member as `actor` first and owns every role and ownership check, with `assertAdmin` before any lookup ([ADR 0001](ADRs/0001-permission-checks-in-domain.md)) | `apiRoute("admin")` checking the role in the route; admin-only functions typed `actor: Admin`; an `adminOnly` wrapper | Reading a domain file must show its permission rules: with the role in the route, `createProject` looked open to anyone while `updateProject` checked. Typing `actor: Admin` would push the narrowing back into the route. Nothing at typecheck enforces `assertAdmin`, so each admin-only function has a 403 test. Every admin route declares a body schema (M12.2), so a member's malformed JSON gets `422` from `apiRoute` before the domain's `403`, never a `500`. |
 | D-44 | Response types and enum values in a shared `src/contract/`; mapping functions return them | Types owned by the client and checked with `satisfies` in each route; one model shared by database, domain and API | A declared return type catches extra fields, which `satisfies` on a function call can't. One enum source keeps client lists complete. Rows and responses really differ (uuid vs `WEB-42`, `Date` vs ISO string, internal columns), so they stay separate types with a mapping between them. |
 | D-45 | Notifications in batches with one delivery per channel; senders in `src/server/notification-channels/`, mapped by the `notification_channel` enum | One `notification_emails` table; one deliveries table with the notification rows copied per channel | Keeps notifications independent of email so a channel (SMS) can be added with a new sender, an enum value and a profile setting. Batching and drop checks stay shared; state and retries are per channel, so one channel failing doesn't touch another. |
+| D-46 | Email providers behind an `EmailProvider` contract in `src/server/email/providers/`, the production one named in `src/server/email/production.ts`; provider-neutral `EMAIL_API_KEY` and `EMAIL_WEBHOOK_SECRET` | `sendEmail()` and the webhook calling Resend directly; keeping `RESEND_*` names | Changing provider (the 100/day cap, price) becomes a new module and one import. Neutral names keep `config.ts` free of provider code, which `instrumentation.ts` loads, and leave `/etc/tracklite/env` alone apart from the values. |

@@ -23,8 +23,8 @@ function stubFetch(status: number, body: unknown) {
 
 function stubProduction() {
   vi.stubEnv("NODE_ENV", "production");
-  vi.stubEnv("RESEND_API_KEY", "re_test_key");
-  vi.stubEnv("RESEND_WEBHOOK_SECRET", "whsec_test");
+  vi.stubEnv("EMAIL_API_KEY", "re_test_key");
+  vi.stubEnv("EMAIL_WEBHOOK_SECRET", "whsec_test");
   vi.stubEnv("EMAIL_FROM", "Tracklite <notify@mail.example.com>");
 }
 
