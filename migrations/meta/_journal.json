@@ -33,15 +33,8 @@
     {
       "idx": 4,
       "version": "7",
-      "when": 1791708480705,
+      "when": 1791712696196,
       "tag": "0004_notification_channels",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1791708499860,
-      "tag": "0005_drop_notification_emails",
       "breakpoints": true
     }
   ]

@@ -486,15 +486,19 @@ Every task in this milestone keeps behaviour as it is: the existing route tests 
 
 ## M13 Notification channels
 
-**Run order:** M13.1 → M13.2.
+**Run order:** M13.1 → M13.2 → M13.3, with M13.1 deployed before M13.3 merges.
 
-- [x] **M13.1 Channel-independent notifications.** Split `notification_emails` into `notification_batches` (recipient, target, send after) and `notification_deliveries` (one per batch and channel, with state, retries and provider ID); `notifications` point at their batch. `members.notification_channels` (at least one, `{email}` by default). `notify()` creates a delivery per channel of the recipient; the worker sends each delivery through its channel's sender in `src/server/notification-channels/`. The migration moves existing rows, keeping their ids. Behaviour doesn't change: email is the only channel.
+- [x] **M13.1 Channel-independent notifications.** Split `notification_emails` into `notification_batches` (recipient, target, send after) and `notification_deliveries` (one per batch and channel, with state, retries and provider ID); `notifications` point at their batch. `members.notification_channels` (at least one, `{email}` by default). `notify()` creates a delivery per channel of the recipient; the worker sends each delivery through its channel's sender in `src/server/notification-channels/`. The migration moves existing rows, keeping their ids, and leaves `notification_emails` and a nullable `notifications.email_id` in place for a rollback (OPS-004). Behaviour doesn't change: email is the only channel.
   - Reads: design §1.4, §2.6, §5.4, D-45 · spec §8 Notification and Member, REQ-043, REQ-044, REQ-045, STD-6, API-003, DATA-004
   - Needs: M9.1, M9.2, M9.4, M9.5
-  - Done: the existing REQ-043.*, REQ-044.*, REQ-045.*, STD-6, API-003.* and DATA-004 notification tests pass against the new tables; new tests for one delivery per channel, no new deliveries when joining a batch, the channels check, and the migration carrying pending rows over
+  - Done: the existing REQ-043.*, REQ-044.*, REQ-045.*, STD-6, API-003.* and DATA-004 notification tests pass against the new tables; new tests for one delivery per channel, no new deliveries when joining a batch, the channels check, the migration carrying pending rows over, and the previous release still queuing a notification email after it
 - [x] **M13.2 Email provider seam.** An `EmailProvider` contract (`send`, `readBounceReport`) in `src/server/email/provider.ts`; Resend, Mailpit and the outbox as modules in `src/server/email/providers/`; `src/server/email/production.ts` names the production one. `sendEmail()` and the bounce webhook go through it. `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` become `EMAIL_API_KEY` and `EMAIL_WEBHOOK_SECRET`, in the app and in `ops/`.
   - Reads: design §1.6, §5.1, §5.2, §5.4, D-46 · spec API-002, API-003, SEC-007
   - Needs: M1.4, M9.4
   - Done: the existing `sendEmail()`, API-003.* and start-up tests pass with the new names; new unit tests for Resend's bounce report (signed bounce, unsigned, other event)
+- [ ] **M13.3 Drop notification_emails.** Only after M13.1 is deployed and settled. One migration: copy any `notification_emails` rows without a batch (written by the previous release during the M13.1 deploy or after a rollback) into batches and email deliveries with the same ids, set `notifications.batch_id = email_id` where it's null, make `batch_id` not null, then drop `notifications.email_id`, `notification_emails` and `email_state`. Check the generated SQL: drizzle-kit puts the foreign key drop after `DROP TABLE … CASCADE`, so move it first.
+  - Reads: design §2.6 · runbook §1 (OPS-004)
+  - Needs: M13.1 (deployed)
+  - Done: the migration test carries a leftover `notification_emails` row and its notification over; the table, column and enum are gone; every existing notification test passes
 
 **Done when:** a real assignment still shows up in Mailpit about 2 minutes later.
