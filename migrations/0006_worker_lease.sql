@@ -1,0 +1,2 @@
+ALTER TABLE "notification_deliveries" ADD COLUMN "locked_until" timestamp with time zone;--> statement-breakpoint
+CREATE INDEX "notification_deliveries_pending_idx" ON "notification_deliveries" USING btree ("batch_id") WHERE "notification_deliveries"."state" = 'pending';

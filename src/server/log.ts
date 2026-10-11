@@ -31,3 +31,16 @@ export function logNotificationFailure({ channel, deliveryId }: { channel: strin
     }),
   );
 }
+
+export function logNotificationError({ deliveryId, errorName }: { deliveryId?: string; errorName: string }) {
+  console.log(
+    JSON.stringify({
+      time: new Date().toISOString(),
+      level: "error",
+      event: "notification",
+      message: "unexpected error",
+      deliveryId,
+      errorName,
+    }),
+  );
+}
