@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { PostgresJsPreparedQuery } from "drizzle-orm/postgres-js/session";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createIssue, createMember, createProject } from "../test/factories";
 import { deleteComment, editComment, postIssueComment } from "./comments";
@@ -142,6 +143,19 @@ async function recordingSentFails(deliveryId: string) {
 async function recordingSentWorks() {
   await db.execute(sql`drop trigger if exists fail_recording_sent on notification_deliveries`);
   await db.execute(sql`drop function if exists fail_recording_sent()`);
+}
+
+async function dropCheckQueriesOfOnePass() {
+  const execute = vi.spyOn(PostgresJsPreparedQuery.prototype, "execute");
+  try {
+    await sendDueDeliveries();
+    const queries = execute.mock.contexts.map((query) => (query as { queryString: string }).queryString);
+    return queries.filter((query) =>
+      /^select [\s\S]* from "(members|notifications|issues|projects|mentions)"/.test(query),
+    ).length;
+  } finally {
+    execute.mockRestore();
+  }
 }
 
 function logLines(log: { mock: { calls: unknown[][] } }) {
@@ -618,4 +632,15 @@ it("§1.4: an error outside any delivery is logged and the worker keeps running"
       expect.objectContaining({ level: "error", event: "notification", errorName: "Error" }),
     ]),
   );
+});
+
+it("REQ-045: a pass of 10 deliveries runs as many drop-check queries as a pass of 1", async () => {
+  await sendAllDue();
+  const one = await dueMentionsFor(1);
+  const queriesForOne = await dropCheckQueriesOfOnePass();
+  const ten = await dueMentionsFor(10);
+  const queriesForTen = await dropCheckQueriesOfOnePass();
+
+  expect(queriesForTen).toBe(queriesForOne);
+  expect(await statesOf([...one, ...ten])).toEqual(Array(11).fill("sent"));
 });

@@ -114,6 +114,32 @@ async function notificationEmailExists(batchId: string) {
   return batches.length === 1 && deliveries.length === 1 && items.length === 1;
 }
 
+async function rowsPerDeleteFrom(table: string, run: () => Promise<unknown>) {
+  await db.execute(sql`create table deleted_per_statement (id serial, rows int)`);
+  await db.execute(
+    sql.raw(`create function record_deleted_rows() returns trigger language plpgsql as $$
+      begin
+        insert into deleted_per_statement (rows) select count(*) from old_rows;
+        return null;
+      end $$`),
+  );
+  await db.execute(
+    sql.raw(`create trigger record_deleted_rows after delete on ${table}
+      referencing old table as old_rows for each statement execute function record_deleted_rows()`),
+  );
+  try {
+    await run();
+    const counts = await db.execute<{ rows: number }>(
+      sql`select rows from deleted_per_statement where rows > 0 order by id`,
+    );
+    return counts.map((count) => count.rows);
+  } finally {
+    await db.execute(sql.raw(`drop trigger if exists record_deleted_rows on ${table}`));
+    await db.execute(sql`drop function if exists record_deleted_rows()`);
+    await db.execute(sql`drop table if exists deleted_per_statement`);
+  }
+}
+
 it("DATA-004.1: a password reset link expired 31 days ago is no longer in the database", async () => {
   const id = await resetLink({ expiresAt: ago("31 days") });
 
@@ -224,4 +250,18 @@ it("DATA-004: password reset requests are deleted 30 days after they're a day ol
     .from(passwordResetRequests)
     .where(inArray(passwordResetRequests.email, [old, recent]));
   expect(rows.map((row) => row.email)).toEqual([recent]);
+});
+
+it("DATA-004: cleanup deletes more than one chunk's worth of rows, at most 1,000 per statement", async () => {
+  await deleteExpiredRows();
+  const email = uniqueEmail();
+  await db.execute(sql`
+    insert into sign_in_attempts (email, ip, created_at)
+    select ${email}, '127.0.0.1', now() - interval '31 days' from generate_series(1, 2500)`);
+
+  const rowsPerStatement = await rowsPerDeleteFrom("sign_in_attempts", deleteExpiredRows);
+
+  const remaining = await db.select().from(signInAttempts).where(eq(signInAttempts.email, email));
+  expect(remaining).toEqual([]);
+  expect(rowsPerStatement).toEqual([1000, 1000, 500]);
 });
