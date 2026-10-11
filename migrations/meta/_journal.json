@@ -57,6 +57,13 @@
       "when": 1791718935140,
       "tag": "0007_worker_heartbeats",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791723881455,
+      "tag": "0008_notification_state_changed_at",
+      "breakpoints": true
     }
   ]
 }

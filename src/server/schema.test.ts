@@ -11,6 +11,7 @@ const serverUrl = process.env.DATABASE_URL ?? "";
 const dbName = `tracklite_migration_${randomBytes(4).toString("hex")}`;
 const dataDbName = `${dbName}_data`;
 const leftoverDbName = `${dbName}_leftover`;
+const backfillDbName = `${dbName}_backfill`;
 const admin = postgres(serverUrl, { max: 1, onnotice: () => {} });
 
 type JournalEntry = { idx: number; tag: string };
@@ -19,12 +20,14 @@ beforeAll(async () => {
   await admin.unsafe(`create database ${dbName}`);
   await admin.unsafe(`create database ${dataDbName}`);
   await admin.unsafe(`create database ${leftoverDbName}`);
+  await admin.unsafe(`create database ${backfillDbName}`);
 });
 
 afterAll(async () => {
   await admin.unsafe(`drop database if exists ${dbName} with (force)`);
   await admin.unsafe(`drop database if exists ${dataDbName} with (force)`);
   await admin.unsafe(`drop database if exists ${leftoverDbName} with (force)`);
+  await admin.unsafe(`drop database if exists ${backfillDbName} with (force)`);
   await admin.end();
 });
 
@@ -246,3 +249,46 @@ function insertNotificationForEmail(client: postgres.Sql, emailId: string, actor
     insert into notifications (email_id, kind, actor_id, project_name, project_key, link_path, excerpt)
     values (${emailId}, 'assigned', ${actorId}, 'Website', 'WEB', '/issue/WEB-1', '')`;
 }
+
+it("§2.6: the migration backfills state_changed_at for deliveries that have left pending", async () => {
+  const client = connectTo(backfillDbName);
+  try {
+    await migrate(drizzle(client), { migrationsFolder: migrationsUpTo("0007_worker_heartbeats") });
+    const [sam] = await client`
+      insert into members (email, full_name, username, password_hash, role)
+      values ('sam@acme.com', 'Sam Lee', 'sam', 'hash', 'member') returning id`;
+    const deliveryIn = async (state: string, sentAt: string | null, nextAttemptAt: string | null) => {
+      const [batch] = await client`
+        insert into notification_batches (recipient_id, target_type, target_id, send_after)
+        values (${sam.id}, 'issue', gen_random_uuid(), now() - interval '3 hours') returning id, send_after`;
+      const [delivery] = await client`
+        insert into notification_deliveries (batch_id, channel, state, sent_at, next_attempt_at)
+        values (${batch.id}, 'email', ${state}, now() - ${sentAt}::interval, now() - ${nextAttemptAt}::interval)
+        returning id, sent_at, next_attempt_at`;
+      return {
+        id: delivery.id,
+        sentAt: delivery.sent_at,
+        nextAttemptAt: delivery.next_attempt_at,
+        sendAfter: batch.send_after,
+      };
+    };
+    const sent = await deliveryIn("sent", "2 hours", null);
+    const bounced = await deliveryIn("bounced", "90 minutes", null);
+    const failed = await deliveryIn("failed", null, "1 hour");
+    const dropped = await deliveryIn("dropped", null, null);
+    const pending = await deliveryIn("pending", null, null);
+
+    await migrate(drizzle(client), { migrationsFolder: "migrations" });
+
+    const changedAt = async (id: string) =>
+      (await client`select state_changed_at from notification_deliveries where id = ${id}`)[0]
+        .state_changed_at;
+    expect(await changedAt(sent.id)).toEqual(sent.sentAt);
+    expect(await changedAt(bounced.id)).toEqual(bounced.sentAt);
+    expect(await changedAt(failed.id)).toEqual(failed.nextAttemptAt);
+    expect(await changedAt(dropped.id)).toEqual(dropped.sendAfter);
+    expect(await changedAt(pending.id)).toBeNull();
+  } finally {
+    await client.end();
+  }
+});

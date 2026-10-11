@@ -14,7 +14,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { issuePriorities, issueStatuses, labelColors, roles } from "../contract";
+import { issuePriorities, issueStatuses, labelColors, notificationChannels, roles } from "../contract";
 
 const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
 const byteOrderedText = customType<{ data: string }>({ dataType: () => 'text COLLATE "C"' });
@@ -29,7 +29,7 @@ export const issuePriority = pgEnum("issue_priority", issuePriorities);
 export const labelColor = pgEnum("label_color", labelColors);
 export const notificationKind = pgEnum("notification_kind", ["assigned", "mentioned"]);
 export const deliveryState = pgEnum("delivery_state", ["pending", "sent", "dropped", "failed", "bounced"]);
-export const notificationChannel = pgEnum("notification_channel", ["email"]);
+export const notificationChannel = pgEnum("notification_channel", notificationChannels);
 
 export const members = pgTable(
   "members",
@@ -276,6 +276,7 @@ export const notificationDeliveries = pgTable(
     providerMessageId: text("provider_message_id"),
     createdAt: createdAt(),
     sentAt: timestamptz("sent_at"),
+    stateChangedAt: timestamptz("state_changed_at"),
   },
   (t) => [
     uniqueIndex("notification_deliveries_batch_channel_key").on(t.batchId, t.channel),

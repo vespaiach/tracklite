@@ -508,7 +508,7 @@ Every task in this milestone keeps behaviour as it is: the existing route tests 
   - Reads: design §1.4, §2.6 (`worker_heartbeats`), §3.3 (Outside `/api`) · spec OPS-005, SEC-007 · `ops/monitoring-and-email.md`, `ops/runbook.md`, `ops/uptime/`
   - Needs: M13.2
   - Done: OPS-005.2…OPS-005.5, with tests that move stored timestamps into the past and never fake the clock; a test that the metrics line holds the counts and no recipient or text, and is written at most once a minute; OPS-005.6 checked by hand
-- [ ] **M13.6 Notification stats API.** `notification_deliveries.state_changed_at` (set by the worker and the bounce webhook; existing rows backfilled by the migration); `GET /api/notification-stats` through `apiRoute("member", …)`, calling `notificationStats(actor)`, whose first statement is `assertAdmin(actor)`; the response type in `src/contract/`.
+- [x] **M13.6 Notification stats API.** `notification_deliveries.state_changed_at` (set by the worker and the bounce webhook; existing rows backfilled by the migration); `GET /api/notification-stats` through `apiRoute("member", …)`, calling `notificationStats(actor)`, whose first statement is `assertAdmin(actor)`; the response type in `src/contract/`.
   - Reads: design §2.6, §3.3 (Operations), §3.5, D-43 · spec REQ-053, STD-2, SEC-007
   - Needs: M13.5, M9.4
   - Done: REQ-053.1…REQ-053.6 against the API response; REQ-053.8 as the API's `403`, plus a `403` test calling `notificationStats` directly

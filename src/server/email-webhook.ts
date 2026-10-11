@@ -39,7 +39,7 @@ function hasSignature(signatures: string, expected: Buffer) {
 async function markBounced(providerMessageId: string) {
   const [notification] = await db
     .update(notificationDeliveries)
-    .set({ state: "bounced" })
+    .set({ state: "bounced", stateChangedAt: sql`now()` })
     .where(
       and(
         eq(notificationDeliveries.channel, "email"),
