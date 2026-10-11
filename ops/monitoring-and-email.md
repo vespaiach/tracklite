@@ -29,8 +29,8 @@ Mail is sent from a subdomain, so the app's sending reputation is kept apart fro
 
    ```
    EMAIL_FROM=Tracklite <notifications@mail.tracklite.example.com>
-   RESEND_API_KEY=re_…
-   RESEND_WEBHOOK_SECRET=whsec_…
+   EMAIL_API_KEY=re_…
+   EMAIL_WEBHOOK_SECRET=whsec_…
    ```
 
    ```bash
@@ -47,4 +47,4 @@ Mail is sent from a subdomain, so the app's sending reputation is kept apart fro
   ```
 
   In Gmail, open the message and choose **⋮ → Show original**. `SPF`, `DKIM` and `DMARC` all read `PASS`.
-- **The bounce webhook works.** Run the same command with `bounced@resend.dev`, Resend's address that always bounces. Within a minute, `journalctl -u tracklite-web | grep "email bounced"` shows `email bounced, untracked`. If nothing shows up, check the webhook's deliveries in Resend: a `401` means `RESEND_WEBHOOK_SECRET` doesn't match.
+- **The bounce webhook works.** Run the same command with `bounced@resend.dev`, Resend's address that always bounces. Within a minute, `journalctl -u tracklite-web | grep "email bounced"` shows `email bounced, untracked`. If nothing shows up, check the webhook's deliveries in Resend: a `401` means `EMAIL_WEBHOOK_SECRET` doesn't match.

@@ -20,9 +20,9 @@ it("the app refuses to start with an empty variable", () => {
   expect(() => register()).toThrow("Missing environment variables: DATABASE_URL, EMAIL_FROM");
 });
 
-it("production refuses to start without the Resend settings", () => {
+it("production refuses to start without the email provider settings", () => {
   vi.stubEnv("NODE_ENV", "production");
-  vi.stubEnv("RESEND_API_KEY", "re_test");
-  vi.stubEnv("RESEND_WEBHOOK_SECRET", undefined);
-  expect(() => register()).toThrow("Missing environment variables: RESEND_WEBHOOK_SECRET");
+  vi.stubEnv("EMAIL_API_KEY", "re_test");
+  vi.stubEnv("EMAIL_WEBHOOK_SECRET", undefined);
+  expect(() => register()).toThrow("Missing environment variables: EMAIL_WEBHOOK_SECRET");
 });

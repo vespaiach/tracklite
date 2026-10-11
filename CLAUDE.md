@@ -106,7 +106,7 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 **Email (§1.5, §1.4).**
 - Invitations and password resets are sent synchronously inside the request transaction. If the send fails, the transaction rolls back and the API answers `503`.
 - Notifications are grouped in `notification_batches`, with one `notification_deliveries` row per channel the recipient chose (only `email` in R1). The worker polls deliveries every 5 s with `for update skip locked`, hands them to the channel's sender in `src/server/notification-channels/`, and uses the delivery id as Resend's `Idempotency-Key`.
-- All mail goes through one `sendEmail()` with three backends: Resend in production, Mailpit (`:8025`) in development, and an in-memory outbox in tests.
+- All mail goes through one `sendEmail()`, which picks a provider from `src/server/email/providers/`: the one `src/server/email/production.ts` names (Resend today) in production, Mailpit (`:8025`) in development, and an in-memory outbox in tests. Provider secrets are the neutral `EMAIL_API_KEY` and `EMAIL_WEBHOOK_SECRET`.
 
 **Schema (§2, `src/server/schema.ts`).**
 - Drizzle ORM over postgres.js.

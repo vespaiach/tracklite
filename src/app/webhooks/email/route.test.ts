@@ -14,7 +14,7 @@ const secret = `whsec_${secretBytes.toString("base64")}`;
 let logLines: Record<string, unknown>[];
 
 beforeEach(() => {
-  vi.stubEnv("RESEND_WEBHOOK_SECRET", secret);
+  vi.stubEnv("EMAIL_WEBHOOK_SECRET", secret);
   logLines = [];
   vi.spyOn(console, "log").mockImplementation((line: string) => {
     logLines.push(JSON.parse(line));

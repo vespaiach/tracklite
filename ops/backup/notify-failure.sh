@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Emails OWNER_EMAIL through Resend when tracklite-backup.service fails (OPS-003.3).
+# Emails OWNER_EMAIL through Resend, the production email provider (design 5.1), when tracklite-backup.service fails (OPS-003.3).
 # Run by tracklite-backup-failed.service through the backup unit's OnFailure=.
 set -euo pipefail
 
@@ -17,7 +17,7 @@ body="$(node -e '
 ' "$EMAIL_FROM" "$OWNER_EMAIL" "$(hostname)" "$log")"
 
 curl --fail-with-body --silent --show-error \
-  --header "Authorization: Bearer $RESEND_API_KEY" \
+  --header "Authorization: Bearer $EMAIL_API_KEY" \
   --header "Content-Type: application/json" \
   --data "$body" \
   https://api.resend.com/emails
