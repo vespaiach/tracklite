@@ -94,7 +94,7 @@ REALISTIC DATA (use these, not lorem ipsum)
 
 APP STRUCTURE
 - Signed-out screens (Sign in, Forgot password, Reset password, Accept invitation) sit outside the app shell, with no sidebar.
-- Every signed-in screen uses the same shell. The sidebar, top to bottom: My issues; Projects (active projects as "Name · KEY", with a + for admins that opens New project); Archived projects; Members (admins only); and at the bottom the member's initials and name, opening a menu with Profile and Sign out.
+- Every signed-in screen uses the same shell. The sidebar, top to bottom: My issues; Projects (active projects as "Name · KEY", with a + for admins that opens New project); Archived projects; Members (admins only); Notifications (admins only); and at the bottom the member's initials and name, opening a menu with Profile and Sign out.
 - Project screens (board, list, details, labels) have a header: "Name · KEY" with a details link, Board | List tabs, a Labels link, a settings gear (admins only) and New issue (hidden when archived). Archived projects show an "Archived" badge and no create or edit controls.
 
 STANDARD BEHAVIOURS (every screen follows these, so draw them the same way everywhere)
@@ -484,17 +484,37 @@ Every task in this milestone keeps behaviour as it is: the existing route tests 
 
 **Done when:** no route reads `request.json()` itself, and no domain function takes `unknown` input.
 
-## M13 Notification channels
+## M13 Notification channels and worker health
 
-**Run order:** M13.1 → M13.3, with M13.1 deployed before M13.3 merges.
+**Run order:** M13.1 → M13.3, with M13.1 deployed before M13.3 merges. Then M13.2 → M13.4 and M13.5, in either order → M13.6 → M13.7. M13.4 and M13.5 both change `src/server/worker.ts`, so they don't run at the same time. Every migration in M13.2…M13.6 only adds (a nullable column, an index or a table), so the previous release still runs against it (OPS-004).
 
 - [x] **M13.1 Channel-independent notifications.** Split `notification_emails` into `notification_batches` (recipient, target, send after) and `notification_deliveries` (one per batch and channel, with state, retries and provider ID); `notifications` point at their batch. `members.notification_channels` (at least one, `{email}` by default). `notify()` creates a delivery per channel of the recipient; the worker sends each delivery through its channel's sender in `src/server/notification-channels/`. The migration moves existing rows, keeping their ids, and leaves `notification_emails` and a nullable `notifications.email_id` in place for a rollback (OPS-004). Behaviour doesn't change: email is the only channel.
   - Reads: design §1.4, §2.6, §5.4, D-45 · spec §8 Notification and Member, REQ-043, REQ-044, REQ-045, STD-6, API-003, DATA-004
   - Needs: M9.1, M9.2, M9.4, M9.5
   - Done: the existing REQ-043.*, REQ-044.*, REQ-045.*, STD-6, API-003.* and DATA-004 notification tests pass against the new tables; new tests for one delivery per channel, no new deliveries when joining a batch, the channels check, the migration carrying pending rows over, and the previous release still queuing a notification email after it
+- [ ] **M13.2 Worker reliability.** The lease-based claim (`notification_deliveries.locked_until` and the partial pending index), a short transaction per delivery step with the send outside any transaction, errors caught per delivery and counted as a failed attempt, writes guarded by the pass's lease, and the drain loop (no sleep after a full batch). Errors outside a delivery are logged and the loop carries on. Behaviour doesn't change: batching, drop rules, retry delays and the email wording stay as they are.
+  - Reads: design §1.4, §2.6, D-46 · spec REQ-045, STD-6
+  - Needs: M13.3
+  - Done: the existing REQ-045.*, STD-6 and §1.4 worker tests pass; new tests: a delivery claimed by an expired lease is picked up again; one delivery that throws an unexpected error doesn't stop the others in the same pass, and gets a retry; a full batch is followed at once by another pass; nothing is held in an open transaction while the sender runs (a second connection can update the delivery row during a send); SIGTERM finishes the claimed deliveries
 - [x] **M13.3 Drop notification_emails.** Only after M13.1 is deployed and settled. One migration: copy any `notification_emails` rows without a batch (written by the previous release during the M13.1 deploy or after a rollback) into batches and email deliveries with the same ids, set `notifications.batch_id = email_id` where it's null, make `batch_id` not null, then drop `notifications.email_id`, `notification_emails` and `email_state`. Check the generated SQL: drizzle-kit puts the foreign key drop after `DROP TABLE … CASCADE`, so move it first.
   - Reads: design §2.6 · runbook §1 (OPS-004)
   - Needs: M13.1 (deployed)
   - Done: the migration test carries a leftover `notification_emails` row and its notification over; the table, column and enum are gone; every existing notification test passes
+- [ ] **M13.4 Worker efficiency.** Drop checks loaded once per pass with a fixed number of queries; DATA-004 cleanup in chunks of 1,000 rows, each in its own transaction.
+  - Reads: design §2.6 (drop checks), §2.7 · spec REQ-045, DATA-004
+  - Needs: M13.2
+  - Done: the existing drop-check tests (REQ-045.2…REQ-045.5, REQ-045.7 and the two REQ-045 drop tests) and DATA-004.* pass; new tests: a pass of 10 deliveries runs as many drop-check queries as a pass of 1; cleanup deletes more than one chunk's worth of rows
+- [ ] **M13.5 Heartbeat, metrics and `/health/worker`.** The `worker_heartbeats` table, upserted with `now()` every pass; the once-a-minute `event: "worker"` log line; `GET /health/worker`. Update `ops/uptime/health-check.gs`, `ops/monitoring-and-email.md` and `ops/runbook.md` for the second uptime check; the runbook notes that a rollback to a release before this task makes `/health/worker` fail, because that worker writes no heartbeat.
+  - Reads: design §1.4, §2.6 (`worker_heartbeats`), §3.3 (Outside `/api`) · spec OPS-005, SEC-007 · `ops/monitoring-and-email.md`, `ops/runbook.md`, `ops/uptime/`
+  - Needs: M13.2
+  - Done: OPS-005.2…OPS-005.5, with tests that move stored timestamps into the past and never fake the clock; a test that the metrics line holds the counts and no recipient or text, and is written at most once a minute; OPS-005.6 checked by hand
+- [ ] **M13.6 Notification stats API.** `notification_deliveries.state_changed_at` (set by the worker and the bounce webhook; existing rows backfilled by the migration); `GET /api/notification-stats` through `apiRoute("member", …)`, calling `notificationStats(actor)`, whose first statement is `assertAdmin(actor)`; the response type in `src/contract/`.
+  - Reads: design §2.6, §3.3 (Operations), §3.5, D-43 · spec REQ-053, STD-2, SEC-007
+  - Needs: M13.5, M9.4
+  - Done: REQ-053.1…REQ-053.6 against the API response; REQ-053.8 as the API's `403`, plus a `403` test calling `notificationStats` directly
+- [ ] **M13.7 Notification status page.** `/settings/notifications`, built bottom-up from Track Lite components; an RTK Query endpoint refetched on mount, a **Refresh** button, no polling; the sidebar's **Notifications** link for admins.
+  - Reads: design §1.7, §6.1, §6.2, §6.3 (Notification status), §6.7 · spec REQ-053, STD-2, STD-7 · `docs/design-system.md`
+  - Needs: M13.6
+  - Done: REQ-053.* as component tests against a mocked API
 
-**Done when:** a real assignment still shows up in Mailpit about 2 minutes later.
+**Done when:** a real assignment still shows up in Mailpit about 2 minutes later; stopping `tracklite-worker` makes `/health/worker` answer `503` within 2 minutes; and an admin sees the sent email on `/settings/notifications`.
