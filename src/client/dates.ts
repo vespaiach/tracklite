@@ -35,3 +35,14 @@ export function formatExact(iso: string, timeZone?: string) {
     timeZone,
   });
 }
+
+function plural(count: number, unit: string) {
+  return `${count} ${unit}${count === 1 ? "" : "s"}`;
+}
+
+export function formatWait(seconds: number) {
+  if (seconds < 60) return plural(seconds, "second");
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min`;
+  if (seconds < 86_400) return plural(Math.floor(seconds / 3600), "hour");
+  return plural(Math.floor(seconds / 86_400), "day");
+}

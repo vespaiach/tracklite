@@ -1,4 +1,5 @@
 import { Archive } from "@phosphor-icons/react/dist/csr/Archive";
+import { Bell } from "@phosphor-icons/react/dist/csr/Bell";
 import { Stack } from "@phosphor-icons/react/dist/csr/Stack";
 import { Tray } from "@phosphor-icons/react/dist/csr/Tray";
 import { Users } from "@phosphor-icons/react/dist/csr/Users";
@@ -92,12 +93,20 @@ export function Sidebar({ admin, projects, pathname, onNewProject }: SidebarProp
           current={current === "/projects/archived"}
         />
         {admin && (
-          <RouterRailItem
-            href="/settings/members"
-            icon={<Users {...iconProps} />}
-            label="Members"
-            current={current === "/settings/members"}
-          />
+          <>
+            <RouterRailItem
+              href="/settings/members"
+              icon={<Users {...iconProps} />}
+              label="Members"
+              current={current === "/settings/members"}
+            />
+            <RouterRailItem
+              href="/settings/notifications"
+              icon={<Bell {...iconProps} />}
+              label="Notifications"
+              current={current === "/settings/notifications"}
+            />
+          </>
         )}
       </RailGroup>
     </Rail>

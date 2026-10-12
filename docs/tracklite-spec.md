@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.27"
+version: "0.28"
 release: "R1"
 status: Ready to build
 updated: "2026-10-11"
@@ -488,7 +488,7 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
   - REQ-045.6: The email service reports that Sam's mailbox doesn't exist → the bounce is logged; nothing is resent. (Verify: auto)
   - REQ-045.7: Alex assigns `WEB-42` to Sam, and `WEB-42` is deleted a minute later → Sam still gets the email, and its link shows Not found (STD-4). (Verify: auto)
   - REQ-045.8: Alex mentions `@sam` on `WEB-42` at 10:00 and again at 10:01:30, then at 10:02:30 → one email at about 10:02 covers the first two; the third goes in a new email at about 10:04:30. (Verify: auto)
-- **REQ-053** The system shall give admins a notification status page, `/settings/notifications`, that shows whether notifications are going out. It shows when the background worker was last seen; how many deliveries are pending, how many of those are due, and how long the oldest due one has waited; per channel, how many deliveries were sent, dropped, failed and bounced in the last 24 hours; and the 20 most recent failed or bounced deliveries, newest first, each with the recipient's username, the channel, the issue ID or project key, the number of attempts and when it failed or bounced. A delivery is counted once, under the state it's in now, so an email that was sent and then bounced counts as bounced. The page never shows email addresses or notification text (SEC-007). It's read-only: it loads when opened and again when the admin clicks **Refresh**, and never refreshes by itself. Members who aren't admins can't open it (STD-2).
+- **REQ-053** The system shall give admins a notification status page, `/settings/notifications`, that shows whether notifications are going out. It shows when the background worker was last seen; how many deliveries are pending, how many of those are due, and how long the oldest due one has waited (in seconds under a minute, then minutes, hours or days, such as "40 seconds" or "14 min", and "None" when nothing is due); per channel, how many deliveries were sent, dropped, failed and bounced in the last 24 hours; and the 20 most recent failed or bounced deliveries, newest first, each with the recipient's username, the channel, the issue ID or project key, the number of attempts and when it failed or bounced. A delivery is counted once, under the state it's in now, so an email that was sent and then bounced counts as bounced. The page never shows email addresses or notification text (SEC-007). It's read-only: it loads when opened and again when the admin clicks **Refresh**, and never refreshes by itself. Members who aren't admins can't open it (STD-2).
   - REQ-053.1: The worker finished a pass 4 seconds ago, and 3 notifications are pending, 1 of them due for 40 seconds → the page shows the worker last seen "just now", 3 pending, 1 due, and 40 seconds for the oldest due. (Verify: auto)
   - REQ-053.2: In the last 24 hours, 12 emails were sent, 2 dropped, 1 failed and 1 bounced, and one more failed 2 days ago → the Email row shows 12 sent, 2 dropped, 1 failed and 1 bounced. (Verify: auto)
   - REQ-053.3: Sam's email about `WEB-42` failed after 4 attempts → the recent list shows `sam`, Email, `WEB-42`, 4 and when it failed. Sam's email address and the excerpt appear nowhere on the page or in what the API returns. (Verify: auto)
@@ -497,6 +497,7 @@ DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5
   - REQ-053.6: Nothing has failed or bounced → the recent list shows "No failed or bounced notifications." (Verify: auto)
   - REQ-053.7: An admin has the page open while another notification is sent → the numbers don't change until they click **Refresh**, then the sent count goes up by one. (Verify: auto)
   - REQ-053.8: Alex, a member, opens `/settings/notifications` → "You don't have permission to do that." (Verify: auto)
+  - REQ-053.9: 2 notifications are pending and neither is due yet → the page shows 2 pending, 0 due, and "None" for the oldest due. (Verify: auto)
 
 **Exceptions to standard behaviors:** None.
 **Uses:** Notification, Issue, Project, Comment, Member · DATA-001 (mentions) · STD-6 · REQ-007 · API-002, API-003, API-004 · SEC-007 · OPS-005
@@ -753,6 +754,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.28 (2026-10-11):** REQ-053 names how the oldest due wait reads, such as "40 seconds" or "14 min", and "None" when nothing is due (new REQ-053.9).
 - **0.27 (2026-10-11):** Notification health becomes visible. OPS-005 adds a second uptime check, `/health/worker`, which fails when the background worker hasn't been seen for 2 minutes or a due notification has waited more than 10 (new OPS-005.2 to OPS-005.6). New REQ-053: an admin-only notification status page at `/settings/notifications` (API-004, section 7). Section 8: a delivery records its attempts and when it reached its state.
 - **0.26 (2026-10-10):** Section 8: a member has notification channels (Email is the only one in R1), and a notification has a delivery state per channel instead of one state, so another channel can be added later without changing F-008's rules.
 - **0.25 (2026-10-09):** REQ-018 lists the priorities in their sort order, Urgent to No priority, so pickers and sorting agree (REQ-039).
