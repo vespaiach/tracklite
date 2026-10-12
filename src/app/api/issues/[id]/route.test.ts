@@ -100,7 +100,7 @@ it("REQ-016.5: GET /api/issues/web-42 returns WEB-42", async () => {
   expect(await response.json()).toEqual(await created.json());
 });
 
-it("REQ-016.5: an issue ID that doesn't exist gets Not found", async () => {
+it("STD-4: an issue ID that doesn't exist gets Not found", async () => {
   const cookie = await signedIn();
   const project = await createProject();
 
@@ -111,7 +111,7 @@ it("REQ-016.5: an issue ID that doesn't exist gets Not found", async () => {
   }
 });
 
-it("REQ-020.1: GET returns the labels sorted by name, descriptionVersion and mentions", async () => {
+it("REQ-020: GET returns the labels sorted by name, descriptionVersion and mentions", async () => {
   const cookie = await signedIn();
   const project = await createProject();
   const frontend = await createLabel(project.id, { name: "frontend", color: "blue" });
@@ -179,7 +179,7 @@ it("REQ-027.4: Alex changes WEB-12 to In Review on the issue page → it's at th
   expect(column.map((row) => row.id)).toEqual([issue.id, first.id, second.id]);
 });
 
-it("REQ-017.1: saving the status an issue already has changes nothing", async () => {
+it("REQ-017: saving the status an issue already has changes nothing", async () => {
   const cookie = await signedIn();
   const project = await createProject();
   const issue = await issueIn(project);
@@ -517,7 +517,7 @@ it("STD-8: an issue description save without a whole-number descriptionVersion i
   expect((await stored(issue.id)).description).toBe("");
 });
 
-it("DATA-001: an issue description mentions active members only, outside code", async () => {
+it("DATA-001.3: an issue description mentions active members only, outside code", async () => {
   const cookie = await signedIn();
   const sam = await createMember({ fullName: "Sam Lee" });
   const jo = await createMember({ deactivatedAt: new Date() });

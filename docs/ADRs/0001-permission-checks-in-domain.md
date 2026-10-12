@@ -46,7 +46,7 @@ Someone reading only `projects.ts` would conclude that any member can create or 
 
 ## Consequences
 
-- **Reading a domain file shows its permission rules.** SEC-006 ("permission checks live in one server-side layer", spec line 699) still holds: that layer is now the domain layer.
+- **Reading a domain file shows its permission rules.** SEC-006 ("permission checks live in one server-side layer", spec §12 Boundaries) still holds: that layer is now the domain layer.
 - **No typecheck enforcement.** An admin-only function that forgets `assertAdmin` still compiles. One 403 test per admin-only function, called directly on the domain function, is the guard.
   - Rejected alternative 1: typing admin-only functions as `actor: Admin`. Routes would then have to narrow the member first, which puts the role check back in the route.
   - Rejected alternative 2: an `adminOnly` wrapper. It would add an abstraction for a check that's one line.
@@ -76,6 +76,7 @@ There's also one role check inside a domain function, on a mixed route: `updateP
 - `projects.ts`: `createProject`, `deleteProject`
 - `members.ts`: `updateMember`
 - `invitations.ts`: `listInvitations`, `createInvitation`, `resendInvitation`, `revokeInvitation`
+- `notification-stats.ts`: `notificationStats` (added later, in M13.6)
 
 **Mixed:**
 - `projects.ts`: `updateProject`. `assertAdmin` covers `name` and `archived`.

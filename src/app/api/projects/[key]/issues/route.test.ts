@@ -564,7 +564,7 @@ it("REQ-039.1: Sam clicks Priority → Urgent first and No priority last; clicki
   ]);
 });
 
-it("REQ-039.1: Status sorts in the REQ-017 order, and reverses", async () => {
+it("REQ-039: Status sorts in the REQ-017 order, and reverses", async () => {
   const { cookie } = await signedIn();
   const project = await createProject();
   const canceled = await issueIn(project, { status: "canceled" });
@@ -578,7 +578,7 @@ it("REQ-039.1: Status sorts in the REQ-017 order, and reverses", async () => {
   expect(await idsOf(cookie, project.key, "?sort=status&dir=desc")).toEqual([...order].reverse());
 });
 
-it("REQ-039.1: ID sorts by number, and reverses", async () => {
+it("REQ-039: ID sorts by number, and reverses", async () => {
   const { cookie } = await signedIn();
   const project = await createProject();
   const ten = await issueIn(project, { number: 10 });
@@ -589,7 +589,7 @@ it("REQ-039.1: ID sorts by number, and reverses", async () => {
   expect(await idsOf(cookie, project.key, "?sort=id&dir=desc")).toEqual([hundred, ten, two]);
 });
 
-it("REQ-039.1: Last updated sorts newest first, and reverses to oldest first", async () => {
+it("REQ-039: Last updated sorts newest first, and reverses to oldest first", async () => {
   const { cookie } = await signedIn();
   const project = await createProject();
   const old = await issueIn(project, { updatedAt: minutesAgo(30) });

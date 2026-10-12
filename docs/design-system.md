@@ -46,7 +46,7 @@ Don't use `/design-sync` for this. It uploads the repo to Claude Design, the opp
 
 - Plain, specific and matter-of-fact. Help text uses "you"; the product never says "I" or "we".
 - Sentence case everywhere. Uppercase is only a typographic treatment (eyebrows).
-- Actions are verbs ("Create issue", "Comment"). Feedback is a past-tense fact ("WEB-42 moved to In review").
+- Actions are verbs ("Create issue", "Post"). Feedback is a past-tense fact ("WEB-42 moved to In Review").
 - Machine values are in mono: IDs, dates, estimates, counts, key caps, relative times.
 - Use the ellipsis character (…) and curly quotes. No exclamation marks and no emoji.
 

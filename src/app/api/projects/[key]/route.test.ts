@@ -73,7 +73,7 @@ async function createIssue(projectId: string, creator: Member, number: number) {
 const notFound = { error: { message: "Not found" } };
 const noPermission = { error: { message: "You don't have permission to do that." } };
 
-it("REQ-016.5: a project is found by its key ignoring capitals", async () => {
+it("REQ-016: a project is found by its key ignoring capitals", async () => {
   const { cookie } = await signedIn("member");
   const project = await createProject({ name: "Website", description: "Hello" });
 
@@ -377,7 +377,7 @@ it("STD-8: a description save without a whole-number descriptionVersion is refus
   expect((await storedProject(project.id)).description).toBe("Old text");
 });
 
-it("DATA-001: saving a description mentions active members only, outside code", async () => {
+it("DATA-001.3: saving a description mentions active members only, outside code", async () => {
   const { cookie } = await signedIn("member");
   const sam = await createMember({ fullName: "Sam Lee" });
   const jo = await createMember({ deactivatedAt: new Date() });

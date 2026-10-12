@@ -29,7 +29,7 @@ it("DATA-003.1: a comment saved at 02:00 UTC shows 09:00 to a member on UTC+7", 
   expect(formatExact("2026-10-06T02:00:00Z", "Asia/Bangkok")).toBe("Oct 6, 2026, 09:00 GMT+7");
 });
 
-it("REQ-053.1: a wait reads in seconds under a minute, then minutes, hours or days", () => {
+it("REQ-053: a wait reads in seconds under a minute, then minutes, hours or days", () => {
   expect(formatWait(40)).toBe("40 seconds");
   expect(formatWait(840)).toBe("14 min");
   expect(formatWait(3 * 3600 + 59)).toBe("3 hours");

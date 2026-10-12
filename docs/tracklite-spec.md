@@ -1,9 +1,9 @@
 ---
 product: "Tracklite"
-version: "0.28"
+version: "0.29"
 release: "R1"
 status: Ready to build
-updated: "2026-10-11"
+updated: "2026-10-12"
 ---
 
 # Tracklite: Spec
@@ -60,13 +60,13 @@ Tracklite is an issue tracker for my own small, invite-only team, which finds Li
 
 ### 4. Open questions
 
-| ID | Question | Type | Affects |
-|---|---|---|---|
-| DEC-002 | Exact API endpoints and request and response shapes | Agent's choice (limits in section 12) | API-001 |
-| DEC-003 | Which transactional email provider to use | Agent's choice (limits in section 12) | API-002, API-003, NFR-008, NFR-009 |
-| DEC-004 | How background jobs run | Agent's choice (limits in section 12) | REQ-045, STD-6 |
+No question is open. These were left to the agent, within the limits in section 12, and are settled in `docs/tech-design.md`:
 
-DEC-002, DEC-003 and DEC-004 are settled in `docs/tech-design.md` (sections 3, 5 and 1.4 respectively).
+| ID | Question | Settled in | Affects |
+|---|---|---|---|
+| DEC-002 | Exact API endpoints and request and response shapes | Section 3 | API-001 |
+| DEC-003 | Which transactional email provider to use | Section 5 | API-002, API-003, NFR-008, NFR-009 |
+| DEC-004 | How background jobs run | Section 1.4 | REQ-045, STD-6 |
 
 ### 5. Glossary
 
@@ -584,7 +584,7 @@ There are no private projects. Nobody, including admins, can see or set another 
 
 | ID | Call or system | Used for |
 |---|---|---|
-| API-001 | The app's own HTTP API, under `/api/…`, used only by its own web front end | Every feature. It isn't public or documented for outside use. Errors follow STD-1 to STD-4 (`401`, `403`, `422`, `404`). The exact list of endpoints is the agent's choice (DEC-002). |
+| API-001 | The app's own HTTP API, under `/api/…`, used only by its own web front end | Every feature. It isn't public or documented for outside use. Errors follow STD-1 to STD-4 (`401`, `403`, `422`, `404`) and STD-8 (`409`); an expired, used or revoked invitation or reset link gets `410` (REQ-002, REQ-050). The exact list of endpoints is the agent's choice (DEC-002). |
 | API-002 | Outgoing email service (a transactional email provider, DEC-003) | Invitations (REQ-001), password reset links (REQ-050) and notifications (F-008). If it fails, see STD-6: a password reset request shows "We couldn't send the email", and notifications are retried 3 times. |
 | API-003 | `POST /webhooks/email` (bounce reports from the email service) | Marking notifications as Bounced (REQ-045.6). It accepts only requests signed by the email service; anything else gets `401`. |
 | API-004 | Page addresses: `/sign-in`, `/forgot-password`, `/reset-password?token=…`, `/invite?token=…`, `/my-issues`, `/project/{KEY}` (board), `/project/{KEY}/list`, `/project/{KEY}/detail`, `/project/{KEY}/labels`, `/project/{KEY}/settings`, `/projects/archived`, `/issue/{ID}`, `/settings/profile`, `/settings/members`, `/settings/notifications` | Links in emails and between members. Keys and IDs are matched ignoring capitals (REQ-016.5). The list view's filters go in the query string (REQ-040). |
@@ -682,7 +682,6 @@ These are accepted for a small invite-only team. The sign-in and password reset 
 - The time to answer a sign-in or password reset request may differ between member and non-member emails, so it can hint at which emails are members. No minimum response time is required.
 - During an email-service outage, only a member's email gets "We couldn't send the email. Try again." (STD-6), so that message can reveal which emails are members.
 - Someone who knows a member's email can block that member's sign-in for up to an hour by using up SEC-001's per-email limit with wrong passwords. The member waits, or an admin investigates; there's no permanent lockout.
-- SEC-001's per-IP limit uses the rightmost `X-Forwarded-For` entry. Until the app runs behind a reverse proxy that appends or overwrites that header, a client can set the value; nothing is publicly deployed before then.
 - Each password check uses about 19 MiB of memory (SEC-008), and SEC-001 only limits failures per hour, so a burst of sign-in requests at once can strain the small VPS.
 
 ### 11. Quality targets
@@ -714,7 +713,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
   - There are no real-time updates; pages show current data when they load.
   - There are two environments: local development and the production VPS. No feature flags.
 - **Agent's choices:**
-  - DEC-002 (API endpoints): JSON over HTTPS, resource-style paths such as `/api/issues/WEB-42`, the STD-1 to STD-4 status codes (signing in, `POST /api/sessions` with email and password, may also answer `429` when a SEC-001 limit is reached; requesting a password reset link may answer `429`, and `503` when the email couldn't be sent, STD-6; sending or resending an invitation may also answer `503`), and a request ID on creates (STD-5). Every endpoint needs a session except sign-in, sign-out (which succeeds with or without a session), requesting and using a password reset link, invitation acceptance and the webhook (API-003). Requesting a password reset link and sending or resending an invitation are exempt from NFR-003's 500 ms write limit, because they include the call to the email service and STD-6 needs the send result before answering.
+  - DEC-002 (API endpoints): JSON over HTTPS, resource-style paths such as `/api/issues/WEB-42`, the STD-1 to STD-4 status codes (signing in, `POST /api/sessions` with email and password, may also answer `429` when a SEC-001 limit is reached; requesting a password reset link may answer `429`, and `503` when the email couldn't be sent, STD-6; sending or resending an invitation may also answer `503`), and a request ID on creates (STD-5). Every endpoint needs a session except sign-in, sign-out (which succeeds with or without a session), requesting and using a password reset link, looking up and accepting an invitation, the webhook (API-003) and the health checks (OPS-005). Requesting a password reset link and sending or resending an invitation are exempt from NFR-003's 500 ms write limit, because they include the call to the email service and STD-6 needs the send result before answering.
   - DEC-003 (email provider): it must have an HTTP API and bounce webhooks (API-003), fit within NFR-009's budget, send from the team's domain with SPF and DKIM, and keep its API key only in server config (OPS-006). If no provider fits, stop and ask.
   - DEC-004 (background jobs): run on the same VPS with no paid queue service, and survive a restart without losing pending notifications.
 
@@ -754,6 +753,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.29 (2026-10-12):** Docs synced with the code; no behaviour changes. Section 4 says no question is open. API-001 lists `409` and `410`. DEC-002's endpoints without a session add invitation lookups and the health checks. The `X-Forwarded-For` limitation leaves section 10, since the reverse proxy now overwrites that header. The 0.9 entry cites REQ-001.7 and API-003.2, the examples that exist.
 - **0.28 (2026-10-11):** REQ-053 names how the oldest due wait reads, such as "40 seconds" or "14 min", and "None" when nothing is due (new REQ-053.9).
 - **0.27 (2026-10-11):** Notification health becomes visible. OPS-005 adds a second uptime check, `/health/worker`, which fails when the background worker hasn't been seen for 2 minutes or a due notification has waited more than 10 (new OPS-005.2 to OPS-005.6). New REQ-053: an admin-only notification status page at `/settings/notifications` (API-004, section 7). Section 8: a delivery records its attempts and when it reached its state.
 - **0.26 (2026-10-10):** Section 8: a member has notification channels (Email is the only one in R1), and a notification has a delivery state per channel instead of one state, so another channel can be added later without changing F-008's rules.
@@ -782,7 +782,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
     - DATA-004 uses section 8's entity names and also deletes failed notifications. Sign-in attempts and password reset requests are added to section 8.
   - **New:**
     - Members page (REQ-051) and admin role changes, with the last-admin rule safe against simultaneous changes (REQ-052).
-    - Inviting an email with a pending invitation resends it. Invitation email failures and bounces are handled (REQ-001.7 to REQ-001.9, STD-6, API-003).
+    - Inviting an email with a pending invitation resends it. Invitation email failures and bounces are handled (REQ-001.7, STD-6, API-003.2).
     - Mentions work in project descriptions (REQ-012, REQ-044.6), and DATA-001 defines where a mention starts and ends.
     - REQ-045 fixes the 2-minute wait from the first notification and defines the combined email's subject. A re-added mention emails again (REQ-044.7).
     - Unsaved description edits prompt before leaving (REQ-035).
