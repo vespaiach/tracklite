@@ -1,6 +1,6 @@
 # Tracklite: Build plan
 
-Milestones in build order for R1, each split into tasks small enough for one prompt. Behaviour comes from `docs/tracklite-spec.md` (v0.10); the technical design is in `docs/tech-design.md`, referred to below by section number (§).
+Milestones in build order for R1, each split into tasks small enough for one prompt. Behaviour comes from `docs/tracklite-spec.md` (v0.29); the technical design is in `docs/tech-design.md`, referred to below by section number (§).
 
 **Ground rules**
 - A task is done when the examples in its **Done** line have passing tests. Name each test after its example, such as `it("REQ-016.4: concurrent creates get distinct numbers")`, so `grep REQ-016` shows how a requirement is covered. `REQ-047.*` means every `Verify: auto` example of REQ-047.
@@ -79,7 +79,7 @@ Use only the Track Lite design system attached to this project. Don't invent com
 - Voice: plain, specific, matter-of-fact. Help text uses "you"; the product never says "I" or "we". Sentence case everywhere. Buttons are verbs ("Sign in", "Send link"). Feedback is a past-tense fact. Use the ellipsis character (…) and curly quotes. No exclamation marks, no emoji.
 - Machine values in mono: issue IDs, dates, counts, relative times.
 - There's no logo: the brand is the word Tracklite in the serif at weight 600.
-- Clay accent for interactive and primary. Terracotta only for exceptions: urgent, overdue, destructive. Never both accents in one small component.
+- Clay accent for interactive and primary. Terracotta only for exceptions: urgent, in progress, overdue, destructive. Never both accents in one small component.
 - Separate rows and panels with 1px rules, not boxes. No gradients, imagery, illustrations or motion.
 - Use the exact copy I give in quotes. Server messages appear exactly as written.
 
@@ -183,12 +183,12 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §4.1, §4.2 · spec REQ-048, SEC-003, SEC-008
   - Needs: M0.2
   - Done: REQ-048.*, SEC-003.*, SEC-008.1 (SEC-008.2 needs a member response, so it moved to M1.3)
-- [x] **M1.2 Sessions.** Creating, looking up and ending sessions; the cookie; the 30-day sliding expiry; `last_active_at` rewritten at most hourly; `requireMember` and `requireAdmin`; the signed-in `404` for unknown `/api` paths.
+- [x] **M1.2 Sessions.** Creating, looking up and ending sessions; the cookie; the 30-day sliding expiry; `last_active_at` rewritten at most hourly; `requireMember` and `requireAdmin` (role checks later moved into the domain's `assertAdmin`, D-43); the signed-in `404` for unknown `/api` paths.
   - Reads: design §2.2, §4.3 · spec REQ-006, SEC-004, SEC-006
   - Needs: M0.3, M1.1
   - Done: REQ-006.*, SEC-004.*, SEC-006.*
 - [x] **M1.3 Sign-in and sign-out API.** `POST /api/sessions`, `DELETE /api/sessions/current`, `GET /api/me`, and the SEC-001 sign-in limit.
-  - Reads: design §3.3 (sign-in table), §3.4 (last bullet), §4.5 · spec REQ-047, REQ-003.3–4, SEC-001, SEC-008.2
+  - Reads: design §3.3 (sign-in table), §4.5 · spec REQ-047, REQ-003.3–4, SEC-001, SEC-008.2
   - Needs: M1.2
   - Done: REQ-047.*, REQ-003.3–4, SEC-001's sign-in examples, SEC-008.2 (against `GET /api/me`)
 - [x] **M1.4 Sending email.** `sendEmail()` with Mailpit, in-memory and Resend implementations; the reset email template.
@@ -198,7 +198,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 - [x] **M1.5 Password reset API.** `POST /api/password-reset-links`, `/password-reset-lookups` and `/password-resets`, with the reset-request limit.
   - Reads: design §3.3, §4.5, §4.6 · spec REQ-050, SEC-001, STD-6
   - Needs: M1.3, M1.4
-  - Done: REQ-050.*, SEC-001's reset examples, STD-6's reset example
+  - Done: REQ-050.*, SEC-001's reset examples, STD-6 for a reset email
 - [x] **M1.6 Profile API and setup command.** `PATCH /api/me`, `PUT /api/me/password` (a wrong current password counts toward the sign-in limit), and the first-admin setup command.
   - Reads: design §3.3, §4.5 · spec REQ-003, REQ-049, OPS-001
   - Needs: M1.3
@@ -225,13 +225,13 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 - [x] **M2.2 Accept invitation API.** `POST /api/members`: creates the member and signs them in.
   - Reads: design §3.3, §4.6 · spec REQ-002, REQ-003, STD-2
   - Needs: M2.1
-  - Done: REQ-002.*, REQ-003.2, STD-2.*
+  - Done: REQ-002.*, REQ-003.2, STD-2
 - [x] **M2.3 Member admin API.** `GET /api/members` (emails only for admins), `PATCH /api/members/{username}` for role, deactivate and reactivate, and the last-admin guard with its row lock.
   - Reads: design §2.2, §3.3 · spec REQ-007, REQ-008, REQ-052
   - Needs: M1.2
   - Done: REQ-007.*, REQ-008.*, REQ-052.*, including two admins demoting each other at once. Issues and pickers don't exist yet, so REQ-007.2 and REQ-008.2 are checked through the `deactivated` flag in `GET /api/members`, REQ-007.4 through a `PATCH /api/me` save, and REQ-052.2 through an admin-only save; the issue parts move to M4.2 (assignee) and M4.3 (description save)
 - [x] **M2.4 Accept-invitation page.**
-  - Reads: design §3.4 (invitation bullet), §6.3 (Accept invitation) · spec REQ-002 · design claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Accept+invitation.dc.html (Accept invitation)
+  - Reads: design §4.6, §6.3 (Accept invitation) · spec REQ-002 · design claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Accept+invitation.dc.html (Accept invitation)
   - Needs: M1.7 · API description: M2.2
   - Done: component tests for the form, expired and no-longer-valid states
 - [x] **M2.5 Members page.** Invite form, invitations table with Resend and Revoke, members table with the **⋯** menu and the deactivate confirmation.
@@ -252,11 +252,11 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 - [x] **M3.2 Projects API.** List, create, get, rename, archive, unarchive, delete with its cascade; the reserved-key table; the "This project is archived" check reused by later writes.
   - Reads: design §2.3, §2.7, §3.3 (projects table) · spec REQ-009, REQ-010, REQ-011, REQ-013, REQ-014, DATA-002, DEC-001
   - Needs: M1.2
-  - Done: REQ-009.*, REQ-010.*, REQ-011.*, REQ-013.1 and REQ-013.3 (project lists), REQ-013.4 (the shared check), REQ-014.1, REQ-014.3, REQ-014.4, DATA-002's project examples
+  - Done: REQ-009.*, REQ-010.*, REQ-011.*, REQ-013.1 and REQ-013.3 (project lists), REQ-013.4 (the shared check), REQ-014.1, REQ-014.3, REQ-014.4, DATA-002.1
 - [x] **M3.3 Project description API.** Saves with a version check (`409` on conflict); mentions written as `mentions` rows.
   - Reads: design §2.5, §3.2 (409), §3.3 · spec REQ-012, REQ-046.2, STD-8, DATA-001
   - Needs: M3.1, M3.2
-  - Done: REQ-012.*, REQ-046.2, STD-8.*
+  - Done: REQ-012.*, REQ-046.2, STD-8
 - [x] **M3.4 Labels API.** List, create, rename, recolour, delete, with the 8 colours.
   - Reads: design §2.3, §3.3, §6.6 · spec REQ-021
   - Needs: M3.2
@@ -283,15 +283,15 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 - [x] **M4.1 Issue create API.** Numbering by project row lock, and `requestId`.
   - Reads: design §2.4, §3.3 · spec REQ-016, STD-5
   - Needs: M3.2
-  - Done: REQ-016.* (including .4, concurrent creates), STD-5.*
+  - Done: REQ-016.* (including .4, concurrent creates), STD-5
 - [x] **M4.2 Issue read and update API.** `GET` and `PATCH /api/issues/{ID}`, one field per save; a status change puts the issue at the top of its new column; assignee and 10-label rules.
-  - Reads: design §2.4, §3.3, §3.4 · spec REQ-017, REQ-018, REQ-019, REQ-020, REQ-027.4
+  - Reads: design §2.4, §3.3 · spec REQ-017, REQ-018, REQ-019, REQ-020, REQ-027.4
   - Needs: M4.1, M3.4
   - Done: REQ-017.*…REQ-020.*, REQ-027.4; the issue parts of REQ-007.2 and REQ-008.2 (from M2.3); REQ-013.1's read-only issue and REQ-013.4 against an issue save (from M3.2)
 - [x] **M4.3 Issue description and delete API.** Description saves with a version check and mention rows; delete by creator or admin.
   - Reads: design §2.5, §2.7 · spec REQ-022, REQ-023, DATA-001, DATA-002
   - Needs: M4.2, M3.1
-  - Done: REQ-022.*, REQ-023.*, DATA-002's issue examples; REQ-007.4 against a description save (from M2.3)
+  - Done: REQ-022.*, REQ-023.*, DATA-002 for an issue's cascade (design §2.7); REQ-007.4 against a description save (from M2.3)
 - [x] **M4.4 Issue page.** Header with in-place title, side panel pickers (status, priority, assignee), delete, New issue dialog, canonical addresses.
   - Reads: design §6.1, §6.3 (New issue), §6.4 · spec REQ-016…019, REQ-023 · design https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Issue+page.dc.html&via=share (Issue page)
   - Needs: M3.5, M3.1 · API description: M4.1, M4.2, M4.3
@@ -316,7 +316,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Needs: M4.2
   - Done: REQ-024.*, REQ-025.*, REQ-028.* (API side)
 - [x] **M5.3 Position API.** `PUT /api/issues/{ID}/position` with fractional keys; `updated_at` unchanged for moves within a column.
-  - Reads: design §2.4, §3.4 (first bullet) · spec REQ-026, REQ-027, REQ-036.5
+  - Reads: design §2.4 · spec REQ-026, REQ-027, REQ-036.5
   - Needs: M5.2
   - Done: REQ-026.*, REQ-027.*, REQ-036.5
 - [x] **M5.4 Board page.** Columns that scroll on their own, cards, the **⋯** menu (move by menu), the column **+** buttons.
@@ -335,7 +335,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 **Run order:** **M6.1 ∥ M6.2**. M6.1 needs only M4.2, so it can run alongside M4.3–M4.5 and M5.
 
 - [x] **M6.1 List API.** `pg_trgm` indexes; the search query (every typed word must match, `%` and `_` treated as plain characters); filters, sort, `offset` paging; unknown values ignored.
-  - Reads: design §2.4, §3.3, §3.4 (paging) · spec REQ-036…039, NFR-004
+  - Reads: design §2.4, §3.1 (paging), §3.3 · spec REQ-036…039, NFR-004
   - Needs: M4.2
   - Done: REQ-036.*…REQ-039.*
 - [x] **M6.2 List page.** Filters and sort kept in the URL, search after a 300 ms pause, more rows loaded on scroll.
@@ -390,7 +390,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 - [x] **M9.2 Worker.** The polling loop with `SKIP LOCKED`, the drop checks, retries, a clean stop on `SIGTERM`.
   - Reads: design §1.4, §5.2 · spec REQ-045, STD-6
   - Needs: M9.1, M1.4
-  - Done: REQ-045's timing and retry examples, STD-6's notification examples
+  - Done: REQ-045's timing and retry examples, STD-6 for notification retries
 - [x] **M9.3 Notification templates.** Single and combined emails; excerpts.
   - Reads: design §5.3 · spec §9 "Email content"
   - Needs: M9.2
@@ -418,8 +418,8 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: design §1.1 · spec OPS-002, OPS-004
   - Needs: M10.1
   - Done: a deploy from `main` and a rollback both work
-- [ ] **M10.3 Backups.** Daily at 03:00 UTC to storage off the VPS, keeping 14 copies.
-  - Reads: spec OPS-003
+- [ ] **M10.3 Backups.** Daily at 03:00 UTC to storage off the VPS, keeping 14 copies. The scripts and timer are built (`ops/backup/`, `ops/README.md`); what's left is the restore check in Done.
+  - Reads: design §1.8, D-41 · spec OPS-003
   - Needs: M10.1
   - Done: a backup has been restored into a scratch database
 - [x] **M10.4 Monitoring and email domain.** External uptime check on `/health`; Resend domain set-up (SPF, DKIM, DMARC, the webhook).
@@ -453,9 +453,9 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Reads: spec NFR-005, REQ-026 · `src/client/screens/Board.tsx`
   - Needs: M11.2a
   - Done: `NFR-005: a 300-card column renders only the cards in view` (with element sizes mocked, far fewer than 300 cards are in the page); `NFR-005: moving a card in a 300-card column shows it in its new place before the save finishes`; the existing REQ-026 and NFR-005 Board tests pass unchanged; re-measured as in M11.2a, a move shows within 100 ms
-- [ ] **M11.3 Manual checks.** REQ-015.2, REQ-024.3, REQ-030.3, REQ-031.5, REQ-036.4, REQ-041.6, REQ-042.3.
+- [ ] **M11.3 Manual checks.** REQ-015.2, REQ-024.3, REQ-030.3, REQ-031.5, REQ-035.4, REQ-036.4, REQ-041.6, REQ-042.3, SEC-010.2.
 - [ ] **M11.4 Browsers and accessibility.** Browsers (NFR-006); keyboard pass and axe contrast scan (NFR-007).
-- [ ] **M11.5 Production checks.** SEC-005.1 and the OPS-001…005 examples run on the production VPS; confirm the team's headcount against spec §3's assumptions, and check NFR-008 in Resend's delivery logs and the first month's bills against NFR-009.
+- [ ] **M11.5 Production checks.** SEC-005.1, SEC-007.2 and the `Verify: ops` examples of OPS-001…005 run on the production VPS; confirm the team's headcount against spec §3's assumptions, and check NFR-008 in Resend's delivery logs and the first month's bills against NFR-009.
 
 **Done when:** every box above is ticked. That's R1.
 
@@ -465,7 +465,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 Every task in this milestone keeps behaviour as it is: the existing route tests are the check, and messages come from the spec unchanged. Each task deletes the hand-written checks its schemas replace. Schemas live in `src/schemas/` (D-42). Lengths count characters with `maxCharacters` from `src/schemas/common.ts` (code points, as the current code and Postgres do), not Valibot's UTF-16 `maxLength` or its `maxGraphemes`. A field missing from the body gets the field error "Required".
 
-- [x] **M12.1 Body schemas in `apiRoute`, with projects as the pilot.** Add `valibot`. `apiRoute` takes an optional schema, parses and validates the body after `requireMember` and before `requireAdmin`, and passes the output to the handler; issues become STD-3's `422`; a malformed or non-object body gets `422` "Couldn't read the request.". Migrate `POST /api/projects` and `PATCH /api/projects/[key]` (a union of the description save and the settings change).
+- [x] **M12.1 Body schemas in `apiRoute`, with projects as the pilot.** Add `valibot`. `apiRoute` takes an optional schema, parses and validates the body after `requireMember` and before the role check (now the domain's `assertAdmin`, D-43), and passes the output to the handler; issues become STD-3's `422`; a malformed or non-object body gets `422` "Couldn't read the request.". Migrate `POST /api/projects` and `PATCH /api/projects/[key]` (a union of the description save and the settings change).
   - Reads: design §1.2, §3.2, §3.3 (projects table), D-42 · spec STD-3, REQ-009, REQ-010, REQ-011, REQ-012
   - Needs: M0.3, M3.3
   - Done: `api-route` tests for a malformed body, a non-object body, one message per field, parsed output reaching the handler, the cross-site `403` and signed-out `401` before validation, an invalid body getting `422` before the admin `403`, and routes without a schema unchanged; the existing REQ-009.*, REQ-010.*, REQ-011.*, REQ-012.* tests pass

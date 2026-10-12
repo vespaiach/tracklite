@@ -145,7 +145,7 @@ it("STD-5: a post without a valid requestId is refused", async () => {
   expect((await response.json()).error.fields).toEqual({ requestId: "Invalid request" });
 });
 
-it("DATA-001: comment mentions are active members only, outside code", async () => {
+it("DATA-001.3: comment mentions are active members only, outside code", async () => {
   const cookie = await cookieOf(await createMember());
   const sam = await createMember();
   const jo = await createMember({ deactivatedAt: new Date() });

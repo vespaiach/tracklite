@@ -34,7 +34,7 @@ it("REQ-001.4: revoking Sam's invitation → the link stops working", async () =
   expect(await listedInvitation(cookie, email)).toBeUndefined();
 });
 
-it("REQ-001.4: after revoking, the same email can be invited again", async () => {
+it("REQ-001: after revoking, the same email can be invited again", async () => {
   const { cookie } = await signedInAdmin();
   const email = uniqueEmail();
   const { invitation } = await invitedBy(cookie, email);

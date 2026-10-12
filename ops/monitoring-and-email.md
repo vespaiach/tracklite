@@ -33,7 +33,7 @@ Mail is sent from a subdomain, so the app's sending reputation is kept apart fro
 6. Fill in `/etc/tracklite/env`, then restart both services:
 
    ```
-   EMAIL_FROM=Tracklite <notifications@mail.tracklite.example.com>
+   EMAIL_FROM=notifications@mail.tracklite.example.com
    RESEND_API_KEY=re_…
    RESEND_WEBHOOK_SECRET=whsec_…
    ```

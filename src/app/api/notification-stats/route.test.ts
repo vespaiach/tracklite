@@ -192,7 +192,7 @@ it("REQ-053.4: 25 deliveries failed or bounced → the 20 most recent are listed
   expect(stats.recentProblems.map((problem) => problem.id)).toEqual(ids.slice(0, 20));
 });
 
-it("REQ-053.4: a failed delivery the previous release wrote without a state change time isn't listed", async () => {
+it("REQ-053: a failed delivery the previous release wrote without a state change time isn't listed", async () => {
   const listed = await finishedDelivery("failed");
   await notificationIn(listed.batchId, webIssue);
   const unknown = await finishedDelivery("failed");

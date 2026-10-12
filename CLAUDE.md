@@ -14,11 +14,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Project state
 
-Tracklite is a small issue tracker for one invite-only team. It is being **rebuilt from the docs**, one task at a time. Most of the architecture below is planned, not built yet; check `docs/build-plan.md` to see which tasks are ticked before assuming something exists.
+Tracklite is a small issue tracker for one invite-only team. It is being **rebuilt from the docs**, one task at a time. Most of R1 is built, but not all of it; check `docs/build-plan.md` to see which tasks are ticked before assuming something exists.
 
 - `docs/tracklite-spec.md`: what the product does. Rules are IDs such as `REQ-047`, `SEC-004`, `STD-5`, each with numbered examples (`REQ-047.2`). **The spec wins** over the design. If the spec is wrong or silent, fix the spec first (with a changelog line), then the code.
 - `docs/tech-design.md`: technical decisions, cited as `§1.7`, `§3.3` and so on.
-- `docs/build-plan.md`: milestones M0–M11 split into tasks (`M1.3`).
+- `docs/build-plan.md`: milestones M0–M13 split into tasks (`M1.3`).
 
 Look rules up by grep rather than reading whole docs: `grep -n "REQ-047" docs/tracklite-spec.md`.
 
@@ -43,10 +43,14 @@ npm test               # vitest run (all projects)
 npm run lint           # biome check  (auto-fix: npx biome check --write)
 npm run typecheck      # next typegen && tsc --noEmit
 npm run db:generate    # drizzle-kit: write a migration from src/server/schema.ts
+npm run db:migrate     # apply migrations to DATABASE_URL
 npm run db:studio
 npm run db:seed        # dev members and admins (password in src/server/seed.ts)
 npm run db:seed:load   # NFR-001 load data: 50 projects, 10,000 issues, 50,000 comments
-npm run db:reset       # drop the local dev database, re-run migrations, then db:seed
+npm run db:reset       # drop the local dev database's schemas, re-run migrations, then db:seed
+npm run setup          # create the first admin (OPS-001)
+npm run worker         # run the notification worker
+npm run email:dev      # send one sample email to Mailpit
 ```
 
 Run one test file, one named test, or one project:
@@ -73,7 +77,7 @@ Always run drizzle-kit through the npm scripts. They set `NODE_OPTIONS=--conditi
 - signed-out redirects (`GET /api/me`, then `/sign-in?next=…`);
 - all data loading, through `/api`.
 
-There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks` are more specific routes, so the catch-all never handles them. `src/proxy.ts` only sets the nonce-based CSP.
+There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks` are more specific routes, so the catch-all never handles them. `src/proxy.ts` only sets the nonce-based CSP and `Referrer-Policy`.
 
 **Client state (§1.7).** Redux Toolkit:
 - RTK Query holds all server data, in one `api` slice with a shared `baseQuery` that redirects on `401`.
@@ -114,7 +118,7 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 - Every timestamp is `timestamptz`.
 - Tokens are stored as sha256 `bytea` hashes.
 
-**UI.** Use the Track Lite design system in `src/components/ui/track-lite/` (import from its `index.ts`). Components are styled by plain `tl-*` classes in `styles/components.css` and tokens (`--color-*`, `--font-*`, `--space-*`, `--radius-*`, `--shadow-*`) in `styles/`. `src/app/layout.tsx` loads that stylesheet and the fonts. Read `docs/design-system.md` before building a screen: it covers voice, colour roles, sizes and icons. Icons come from `@phosphor-icons/react` (duotone weight, 15px by default). Never load fonts, icons or styles from a CDN, because the CSP allows only `'self'`. Use `react-aria-components` for complex widgets the kit doesn't cover, such as board drag and drop (D-36).
+**UI.** Use the Track Lite design system in `src/components/ui/track-lite/` (import from its `index.ts`). Components are styled by plain `tl-*` classes in its `styles/components.css` and tokens (`--color-*`, `--font-*`, `--space-*`, `--radius-*`, `--shadow-*`) in its `styles/`. `src/app/layout.tsx` loads that stylesheet and the fonts. Read `docs/design-system.md` before building a screen: it covers voice, colour roles, sizes and icons. Icons come from `@phosphor-icons/react` (duotone weight, 15px by default). Never load fonts, icons or styles from a CDN, because the CSP allows only `'self'`. Use `react-aria-components` for complex widgets the kit doesn't cover, such as board drag and drop (D-36).
 
 ## Coding rules
 

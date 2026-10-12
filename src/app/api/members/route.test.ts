@@ -190,7 +190,7 @@ it("REQ-002.3, STD-2: a signed-in member is refused", async () => {
   expect((await lookUp(token)).status).toBe(200);
 });
 
-it("REQ-002.3: a stale session cookie doesn't block accepting", async () => {
+it("REQ-002: a stale session cookie doesn't block accepting", async () => {
   const { token } = await openInvitation();
   const alex = await signedIn();
   await db.delete(sessions).where(eq(sessions.memberId, alex.member.id));

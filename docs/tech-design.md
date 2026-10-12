@@ -1,6 +1,6 @@
 # Tracklite: Technical design
 
-Companion to `docs/tracklite-spec.md` (v0.27). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
+Companion to `docs/tracklite-spec.md` (v0.29). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
 
 ## 1. Architecture
 
@@ -20,7 +20,7 @@ Companion to `docs/tracklite-spec.md` (v0.27). The spec says *what* the product 
 
 | Process | What it does | Managed by |
 |---|---|---|
-| **Caddy** | Gets and renews TLS certificates, redirects HTTP to HTTPS and sends HSTS (SEC-005). It also sets `X-Forwarded-For`, and the app reads the rightmost entry for SEC-001's per-IP limit. That closes the accepted limitation in spec §10. | systemd |
+| **Caddy** | Gets and renews TLS certificates, redirects HTTP to HTTPS and sends HSTS (SEC-005). It also overwrites `X-Forwarded-For` with the client's address, and the app reads the rightmost entry for SEC-001's per-IP limit, so a client can't choose the address that limit counts. | systemd |
 | **tracklite-web** | `next start`: the single-page-app shell (1.7), `/api/…`, `/health`, `/health/worker`, `/webhooks/email`. | systemd, `Restart=always` |
 | **tracklite-worker** | A small Node entry point in `scripts/` built from the same codebase. It sends notification emails and runs cleanup (1.4). | systemd, `Restart=always` |
 | **PostgreSQL** | All state, including the notification queue. | systemd (distro package) |
@@ -38,7 +38,7 @@ Using systemd for all four means no extra process manager. Logs go to journald, 
 3. If the route declares a body schema, parse the JSON body and validate it with Valibot (D-42), failing fast with `422`. The schema checks shape and format only, with the spec's own messages, and passes the parsed, trimmed values on.
 4. Call one domain function in `src/server/`, passing the signed-in member as its first argument, `actor`. `apiRoute` opens no transaction; the domain function opens its own with `db.transaction`. The domain layer is the single permission layer (spec §12, D-43). An admin-only function calls `assertAdmin(actor)` as its first statement, before any lookup, so a member gets `403` and learns nothing about whether the target exists. An ownership check ("author or admin") runs right after the row is loaded. The function then checks the rules that need the database (a key already used, the last admin) and writes. The action and any notification rows it creates commit together (spec §12).
 5. Map a thrown `ApiError` to `401`/`403`/`404`/`409`/`410`/`422`/`429`/`503` with `{ error: { message, fields? } }`. Map anything else to `500`.
-6. Write one JSON log line per request, without bodies or tokens (SEC-007). A signed-in request's line names the member as `actor` by username.
+6. Write one JSON log line per request, without bodies or tokens (SEC-007). A signed-in request's line names the member as `actor` by username. `/health`, `/health/worker` and `/webhooks/email` don't go through `apiRoute`, so they write no line; Caddy's access log records them.
 
 ### 1.3 Time
 
@@ -115,10 +115,10 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
   - leaves every other error to the component, which shows field errors (STD-3), an editor conflict (`409`, STD-8), or a toast.
 - **Fresh data on every visit.** Queries use `refetchOnMountOrArgChange: true`, so each screen loads current data when opened. That matches "pages show current data when they load" (spec §12). There's no `refetchOnFocus` and no polling: no live updates in R1, and REQ-041.6 expects an open page to stay as it is.
 - **Tags drive refreshing.** Tags are per type, with no IDs: `Me`, `Members`, `Invitations`, `Projects`, `Labels`, `Issue`, `Board`, `Comments`. A mutation invalidates its type, and a mounted screen showing that data refetches. `updateIssue` instead writes the saved issue into the `issue` cache, and invalidates `Labels` only on a `404` (a label deleted meanwhile). The list and My issues carry no tags; they rely on the refetch on every visit.
-- **Optimistic board moves (NFR-005, REQ-026).** `moveIssue` updates the cached board in `onQueryStarted` before the request goes out. If the request fails, it undoes the change and shows a toast: the server's message, or "Couldn't move WEB-42" for a network error or a `5xx`. If it succeeds, it invalidates `Board(KEY)`, which refreshes the columns involved.
+- **Optimistic board moves (NFR-005, REQ-026).** `moveIssue` updates the cached board in `onQueryStarted` before the request goes out. If the request fails, it undoes the change and shows a toast: the server's message, or "Couldn't move WEB-42" for a network error or a `5xx`. If it succeeds, or fails with `404` because the card was deleted meanwhile (REQ-026.5), it invalidates `Board`, which refreshes the board on screen.
 - **UI slice:** one `toast` slice (STD-9: one message at a time, 5 seconds, no dismiss).
 - **Kept out of Redux on purpose:**
-  - list-view filters, search and sort live in the URL (`useSearchParams`), since REQ-040 already makes the URL their home;
+  - list-view filters, search and sort live in the URL (`useSearchParams`), since REQ-040 already makes the URL their home. The parameters are the list endpoint's (3.3): `status`, `priority`, `assignee` (`-` for Unassigned) and `label`, each repeatable, then `q`, `sort` and `dir`, with enum values as their keys, such as `status=in_progress`. A filter or sort change adds a history entry; search replaces the current one, so Back doesn't step through each typed word;
   - form drafts live in component state.
 
 **Request IDs (STD-5).** A create form generates `crypto.randomUUID()` once, when the form opens or is reset, and reuses it for every retry of that submit.
@@ -205,7 +205,7 @@ Notifications don't know how they're delivered. Three tables keep the *what*, th
 
 **Channels.** `src/server/notification-channels/` has one module per channel, and an index maps every value of the `notification_channel` enum to its sender: `send(recipient, notifications, deliveryId) → { providerMessageId }`. The email sender builds the message with the templates (5.3) and calls `sendEmail()` (5.2). The map is typed by the enum, so adding a channel to the enum doesn't compile until its sender exists; nothing in `notify()` or the worker changes.
 
-No index covers `provider_message_id` (here or on `invitations`), `notifications.batch_id` or `sessions.member_id`. At one team's volume these lookups scan small tables; add an index if one shows up in NFR-003 timings.
+Some lookups and cascades have no index on purpose: `provider_message_id` (here or on `invitations`), `notifications.batch_id`, `notification_batches` by recipient and target, `notification_deliveries.state_changed_at`, `sessions.member_id`, `issue_labels.label_id`, and `mentions` by issue, project or comment (its unique indexes start with `member_id`). At one team's volume these scan small tables; add an index if one shows up in NFR-003 timings.
 
 How the parts fit:
 
@@ -269,7 +269,7 @@ A body schema failure gets `422` with "Check the highlighted fields" and the fir
 
 "Member" means any signed-in active member. Every write to something inside an archived project (its description, issues, comments, labels) gets `403` "This project is archived". Admins can still unarchive or delete an archived project; renaming it gets the same `403`.
 
-Request bodies are the Valibot schemas in `src/schemas/`, and response types are in `src/client/api.ts`, which every handler's return value `satisfies`. The tables give only what the types can't say.
+Request bodies are the Valibot schemas in `src/schemas/`, and response types are in `src/contract/` (3.5), which the domain functions declare as their return types. The tables give only what the types can't say.
 
 **Sign-in and account** (no session needed unless noted)
 
@@ -337,7 +337,7 @@ Request bodies are the Valibot schemas in `src/schemas/`, and response types are
 
 | Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/notification-stats` | The status page's data: the worker's `last_pass_at` (or `null`); pending, due and the oldest due wait in seconds; per channel, the sent, dropped, failed and bounced counts whose `state_changed_at` is within the last 24 hours; the 20 most recent failed or bounced deliveries by `state_changed_at`, each with the recipient's username, channel, issue ID or project key (from the batch's newest notification), attempts and `state_changed_at`. No emails and no excerpts. All windows use `now()`. The domain function `notificationStats(actor)` starts with `assertAdmin(actor)` | Admin | REQ-053, SEC-007 |
+| `GET /api/notification-stats` | The status page's data. Counts and the recent list go by `state_changed_at`, and all windows use `now()`. A delivery's issue ID or project key comes from its batch's newest notification. A bounced delivery's attempts include the send that bounced. No emails and no excerpts. The domain function `notificationStats(actor)` starts with `assertAdmin(actor)` | Admin | REQ-053, SEC-007 |
 
 **Outside `/api`**
 
@@ -355,7 +355,7 @@ Its items now sit with the design they belong to: moving a card in 2.4, list pag
 
 Every response type, and the enum values both sides need, lives in `src/contract/`. It holds types and constant arrays only, so both the browser and the server can import it.
 - **Three shapes, two boundaries.** Database rows (`*Row`, inferred from `schema.ts`) stay on the server. Contract types are what goes over the wire. Mapping functions in `src/server/` turn one into the other and declare the contract type as their return type, so a field added to a response by accident fails to compile. A mapper that builds rows with `.map` declares the row type on the callback too, since `.map` infers its element type and would skip the check.
-- **Enums have one source.** `issueStatuses`, `issuePriorities`, `labelColors` and `roles` are `as const` arrays in the contract; `schema.ts` builds its `pgEnum`s from them, so their order is still the sort order (2.1). The request schemas in `src/schemas/` take their picklists from the same arrays (D-42). Client lists keyed by an enum use `satisfies Record<…>`, so a new value fails to compile until every list covers it, and pickers list values in the contract's order, which is also the order the spec names them in (REQ-017, REQ-018).
+- **Enums have one source.** `issueStatuses`, `issuePriorities`, `labelColors`, `roles` and `notificationChannels` are `as const` arrays in the contract; `schema.ts` builds its `pgEnum`s from them, so their order is still the sort order (2.1). The request schemas in `src/schemas/` take their picklists from the same arrays (D-42). Client lists keyed by an enum use `satisfies Record<…>`, so a new value fails to compile until every list covers it, and pickers list values in the contract's order, which is also the order the spec names them in (REQ-017, REQ-018).
 - **One type per view, derived.** `ListIssue`, `BoardIssue` and `MyIssue` are `Pick`s of `Issue`, not separate models.
 
 ## 4. Auth and security
@@ -439,9 +439,9 @@ One module, `src/lib/markdown/`, used for both **rendering** in the browser and 
 
 ### 4.8 Logs (SEC-007)
 
-- The logger takes a fixed set of fields: time, level, event, method, path (without the query string), status, `durationMs`, `actor` (the member's username), and error class and message.
+- The logger takes a fixed set of fields: time, level, event, method, path (without the query string), status, `durationMs`, `actor` (the member's username), and error class and message. The worker's lines (1.4) add a delivery's `id`, an error's name and the metrics counts.
 - It never logs request or response bodies, headers or cookies.
-- Besides the request line, only email events are logged, as short phrases such as `email bounced, invitation {id}` (SEC-007.1).
+- Besides the request line, only email events, as short phrases such as `email bounced, invitation {id}`, and the worker's `notification` and `worker` lines (1.4) are logged.
 - Errors from the email provider are logged without the message content.
 
 ### 4.9 Response headers
@@ -486,7 +486,7 @@ Also useful: Resend accepts an `Idempotency-Key` header, which closes the duplic
 - **tests:** an in-memory outbox that tests can inspect, and make fail on demand (REQ-001.7, REQ-050 with the service down, the STD-6 retries).
 
 - **Plain text only.** No HTML templates. REQ-044 already asks for the excerpt "as plain text", text emails deliver well, and it's one template per email instead of two.
-- **From:** `EMAIL_FROM`, for example `Tracklite <notify@mail.example.com>`.
+- **From:** `EMAIL_FROM`, a bare address such as `notify@mail.example.com`. `deploy.sh` reads the env file with bash, which would take the `<…>` of a named address as a redirection.
 - **Timeout:** 10 seconds (`AbortSignal.timeout`).
 - **How results are treated:**
   - any `2xx` is a success, and the response's `id` is stored as `provider_message_id`;
@@ -496,7 +496,7 @@ Also useful: Resend accepts an `Idempotency-Key` header, which closes the duplic
 
 ### 5.3 Email content
 
-The wording of every email is in the spec (§9, "Email content"). That's where to change it. How the code builds each email:
+The wording of every email the app sends is in the spec (§9, "Email content"). That's where to change it. The backup failure alert (OPS-003) is sent by `ops/backup/notify-failure.sh`, not the app, and its wording lives there. How the code builds each email:
 
 - **Templates.** One plain function per email type in `src/server/email/templates.ts`. Each takes the snapshot (2.6) or the token and returns `{ subject, text }`. Tests check each one against the spec's wording.
 - **Excerpts** are made with the shared Markdown module's text extraction (4.7), when the notification is created.
@@ -578,6 +578,7 @@ The spec gives the copy for these pages; these are the layout choices it leaves 
 - **Notification status** (admin, REQ-053): the page title with **Refresh** beside it, then four sections. **Worker**: last seen, as a relative time (6.7), or "Never". **Queue**: pending, due and the oldest due wait. **Last 24 hours**: a table with one row per channel and the columns Sent, Dropped, Failed and Bounced. **Recent problems**: a table of Recipient (username), Channel, Issue or project, Attempts and When (6.7), with "No failed or bounced notifications." when empty. **Refresh** calls the RTK Query endpoint's `refetch` and is disabled while it runs; the endpoint is refetched on mount and never polled (1.7).
 - **Project settings** (admin): name with **Save**, the key read-only, **Archive** / **Unarchive**, and **Delete** in a dialog whose button stays disabled until the key is typed exactly (REQ-014).
 - **Archived projects:** each one opens its board, read-only.
+- **List and My issues rows:** up to 2 labels, then "+N" (a board card shows 3, REQ-025).
 - **New issue:** a dialog with only a title, opened from **New issue** or a column's **+** (REQ-029). On success it goes to the new issue's page (D-37).
 
 ### 6.4 Issue page
