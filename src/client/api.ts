@@ -11,6 +11,7 @@ import type {
   LabelColor,
   Me,
   MyIssueGroup,
+  NotificationStats,
   Project,
   ProjectSummary,
   ThreadComment,
@@ -161,6 +162,7 @@ export const api = createApi({
       query: (id) => ({ path: `invitations/${id}`, method: "DELETE" }),
       invalidatesTags: ["Invitations"],
     }),
+    notificationStats: build.query<NotificationStats, void>({ query: () => "notification-stats" }),
     changePassword: build.mutation<null, { currentPassword: string; newPassword: string }>({
       query: (body) => ({ path: "me/password", method: "PUT", body }),
     }),
@@ -282,6 +284,7 @@ export const {
   useCreateInvitationMutation,
   useResendInvitationMutation,
   useRevokeInvitationMutation,
+  useNotificationStatsQuery,
   useProjectsQuery,
   useProjectQuery,
   useCreateProjectMutation,

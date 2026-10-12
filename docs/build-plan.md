@@ -512,8 +512,8 @@ Every task in this milestone keeps behaviour as it is: the existing route tests 
   - Reads: design §2.6, §3.3 (Operations), §3.5, D-43 · spec REQ-053, STD-2, SEC-007
   - Needs: M13.5, M9.4
   - Done: REQ-053.1…REQ-053.6 against the API response; REQ-053.8 as the API's `403`, plus a `403` test calling `notificationStats` directly
-- [ ] **M13.7 Notification status page.** `/settings/notifications`, built bottom-up from Track Lite components; an RTK Query endpoint refetched on mount, a **Refresh** button, no polling; the sidebar's **Notifications** link for admins.
-  - Reads: design §1.7, §6.1, §6.2, §6.3 (Notification status), §6.7 · spec REQ-053, STD-2, STD-7 · `docs/design-system.md`
+- [x] **M13.7 Notification status page.** `/settings/notifications`, built bottom-up from Track Lite components; an RTK Query endpoint refetched on mount, a **Refresh** button, no polling; the sidebar's **Notifications** link for admins.
+  - Reads: design §1.7, §6.1, §6.2, §6.3 (Notification status), §6.7 · spec REQ-053, STD-2, STD-7 · `docs/design-system.md` · [Claude Design: Notification status](https://claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a?file=Notification+status.dc.html&via=share)
   - Needs: M13.6
   - Done: REQ-053.* as component tests against a mocked API
 
