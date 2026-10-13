@@ -550,7 +550,7 @@ Fixes for the gaps in `docs/remain-things.md`, where design or spec describes so
   - Reads: design §1.2, §3.1, §3.2, §3.3 (projects and issues tables), D-42 · spec STD-3, REQ-012, REQ-022 · `src/schemas/issue.ts`, `src/schemas/project.ts`, `src/server/issues.ts`, `src/server/projects.ts`
   - Needs: M12.1, M12.4
   - Done: `§3.3: an issue PATCH with description, descriptionVersion and title gets 422 "Change one field at a time"`; `§3.3: a project PATCH with a description save and a name gets 422 "Change one thing at a time"`, and the same with `archived`; nothing is saved in any of them; the existing REQ-012.*, REQ-022.* and issue PATCH tests pass
-- [ ] **M14.7 Contract return types on every mapping function.** Declare the contract type as the return type of `listProjects` (its `.map` callback included), `listLabels`, `createLabel`, `updateLabel` and `lookUpInvitation`, as D-44 asks. If a type doesn't exist in `src/contract/` yet, move it there from the client. Behaviour doesn't change. Remaining-things item 8.
+- [x] **M14.7 Contract return types on every mapping function.** Declare the contract type as the return type of `listProjects` (its `.map` callback included), `listLabels`, `createLabel`, `updateLabel` and `lookUpInvitation`, as D-44 asks. If a type doesn't exist in `src/contract/` yet, move it there from the client. Behaviour doesn't change. Remaining-things item 8.
   - Reads: design §3.5, D-44 · `src/server/projects.ts`, `src/server/labels.ts`, `src/server/invitations.ts`, `src/contract/`
   - Needs: M14.6
   - Done: `npm run typecheck` fails if any of these functions returns an extra field (check once by hand, then undo); the existing tests pass

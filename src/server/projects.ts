@@ -8,7 +8,7 @@ import { notify } from "./notifications";
 import { members, mentions, projectKeys, projects } from "./schema";
 import { assertAdmin, type Member } from "./sessions";
 import type { NewProject, ProjectChanges } from "../schemas/project";
-import type { Project } from "../contract";
+import type { Project, ProjectSummary } from "../contract";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | Transaction;
@@ -39,13 +39,19 @@ async function projectResponse(executor: Executor, project: ProjectRow): Promise
   };
 }
 
-export async function listProjects(_actor: Member, archived: boolean) {
+export async function listProjects(_actor: Member, archived: boolean): Promise<ProjectSummary[]> {
   const rows = await db
     .select({ key: projects.key, name: projects.name, archivedAt: projects.archivedAt })
     .from(projects)
     .where(archived ? isNotNull(projects.archivedAt) : isNull(projects.archivedAt))
     .orderBy(asc(projects.name), asc(projects.key));
-  return rows.map((row) => ({ ...row, archivedAt: row.archivedAt?.toISOString() ?? null }));
+  return rows.map(
+    (row): ProjectSummary => ({
+      key: row.key,
+      name: row.name,
+      archivedAt: row.archivedAt?.toISOString() ?? null,
+    }),
+  );
 }
 
 export async function getProject(_actor: Member, key: string) {
