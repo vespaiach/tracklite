@@ -2,12 +2,6 @@
 
 Gaps found while reviewing `docs/tech-design.md` against the code (2026-10-09). In each case the design or the spec describes something the code doesn't do. For each one, decide whether to fix the code or drop the claim from the docs.
 
-## 2. Reset and invitation tokens stay in the address bar
-
-- **Docs:** design §4.2. The reset page reads `?token=` once, then removes it from the address bar with `history.replaceState`.
-- **Code:** `src/client/screens/ResetPassword.tsx:25` and `src/client/screens/AcceptInvitation.tsx:31` read the token with `useSearchParams()` and never remove it.
-- **Effect:** the token stays in the address bar and the browser history. Caddy's log filter and `Referrer-Policy: same-origin` still keep it out of logs and referrers.
-
 ## 3. No re-hash when the Argon2 settings change
 
 - **Docs:** design §4.1. The settings are stored inside each hash, and a successful sign-in re-hashes the password with new settings when they change.

@@ -366,7 +366,7 @@ Every response type, and the enum values both sides need, lives in `src/contract
 
 - Invitation, reset and session tokens are 32 bytes from `crypto.randomBytes`, base64url-encoded.
 - The database stores `sha256(token)` in a `bytea` column, and lookups use that hash. A fast hash is enough because the token itself has 256 random bits; only passwords need Argon2id (SEC-008). The raw token exists only in the email or cookie, and in memory during the request.
-- The reset page reads `?token=` once, then removes it from the address bar with `history.replaceState`. The token is still in the page's memory for the submit.
+- The reset and invitation pages read `?token=` once, then remove it from the address bar with `history.replaceState`. The token is still in the page's memory for the lookup and the submit.
 
 ### 4.3 Session cookie (REQ-006, SEC-004)
 
