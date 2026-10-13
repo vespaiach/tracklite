@@ -5,6 +5,7 @@ import { ApiError } from "./api-error";
 import { db } from "./db";
 import { writableProject } from "./projects";
 import type { LabelChanges, NewLabel } from "../schemas/label";
+import type { Label } from "../contract";
 import { issueLabels, labels, projects } from "./schema";
 import type { Member } from "./sessions";
 
@@ -17,7 +18,7 @@ const labelResponse = {
   name: labels.name,
   color: labels.color,
   issueCount: sql<number>`(select count(*)::int from ${issueLabels} where ${issueLabels.labelId} = ${labels.id})`,
-};
+} satisfies Record<keyof Label, unknown>;
 
 function labelGone() {
   return new ApiError(404, "That label no longer exists");
@@ -54,7 +55,7 @@ async function lockLabelProject(tx: Transaction, id: string) {
   await writableProject(tx, label.projectKey);
 }
 
-export async function listLabels(_actor: Member, projectKey: string) {
+export async function listLabels(_actor: Member, projectKey: string): Promise<Label[]> {
   const [project] = await db
     .select({ id: projects.id })
     .from(projects)
@@ -67,8 +68,12 @@ export async function listLabels(_actor: Member, projectKey: string) {
     .orderBy(asc(sql`lower(${labels.name})`), asc(labels.name));
 }
 
-export async function createLabel(_actor: Member, projectKey: string, { name, color }: NewLabel) {
-  return db.transaction(async (tx) => {
+export async function createLabel(
+  _actor: Member,
+  projectKey: string,
+  { name, color }: NewLabel,
+): Promise<Label> {
+  return db.transaction(async (tx): Promise<Label> => {
     const project = await writableProject(tx, projectKey);
     const [created] = await refusingDuplicateNames(
       tx
@@ -76,12 +81,12 @@ export async function createLabel(_actor: Member, projectKey: string, { name, co
         .values({ projectId: project.id, name, color })
         .returning({ id: labels.id, name: labels.name, color: labels.color }),
     );
-    return { ...created, issueCount: 0 };
+    return { id: created.id, name: created.name, color: created.color, issueCount: 0 };
   });
 }
 
-export async function updateLabel(_actor: Member, id: string, changes: LabelChanges) {
-  return db.transaction(async (tx) => {
+export async function updateLabel(_actor: Member, id: string, changes: LabelChanges): Promise<Label> {
+  return db.transaction(async (tx): Promise<Label> => {
     await lockLabelProject(tx, id);
 
     if (changes.name !== undefined || changes.color !== undefined) {

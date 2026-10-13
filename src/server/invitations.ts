@@ -4,7 +4,7 @@ import { ApiError } from "./api-error";
 import { db } from "./db";
 import { sendEmail } from "./email/send";
 import { invitationEmail } from "./email/templates";
-import type { Invitation } from "../contract";
+import type { Invitation, InvitationLookup } from "../contract";
 import type { InvitationAcceptance } from "../schemas/invitation";
 import { memberSummary } from "./members";
 import { hashPassword } from "./passwords";
@@ -168,7 +168,7 @@ function usableInvitation(invitation: Awaited<ReturnType<typeof invitationByToke
   return invitation;
 }
 
-export async function lookUpInvitation(token: string) {
+export async function lookUpInvitation(token: string): Promise<InvitationLookup> {
   const [invitation] = await invitationByToken(db, token);
   return { email: usableInvitation(invitation).email };
 }
