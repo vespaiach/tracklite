@@ -538,7 +538,7 @@ Fixes for the gaps in `docs/remain-things.md`, where design or spec describes so
   - Reads: design §4.1 · spec REQ-047, SEC-008 · `src/server/passwords.ts`, `src/server/sign-in.ts`
   - Needs: M1.3
   - Done: `§4.1: signing in with a hash made with older settings stores a hash with the current ones`; `§4.1: a wrong password leaves the old hash alone`; `§4.1: a current hash isn't rewritten`; the existing REQ-047.* and SEC-001 tests pass
-- [ ] **M14.4 Canonical project addresses.** A project address in lower case, such as `/project/web/list`, is rewritten to its canonical key once the project loads (`/project/WEB/list`), with `replace`, the same way `Issue.tsx` does for issues. The rest of the path, the query string and the hash are kept. Done in `ProjectGate` so every project screen gets it. Remaining-things item 4.
+- [x] **M14.4 Canonical project addresses.** A project address in lower case, such as `/project/web/list`, is rewritten to its canonical key once the project loads (`/project/WEB/list`), with `replace`, the same way `Issue.tsx` does for issues. The rest of the path, the query string and the hash are kept. Done in `ProjectGate` so every project screen gets it. Remaining-things item 4.
   - Reads: design §6.1 (Addresses) · spec API-004, REQ-016.5, REQ-040 · `src/client/ProjectGate.tsx`, `src/client/screens/Issue.tsx`
   - Needs: M3.5, M6.2
   - Done: component tests `API-004: /project/web opens WEB and the address becomes /project/WEB` and `API-004: /project/web/list?status=done keeps its path and filters when made canonical`

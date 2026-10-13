@@ -2,12 +2,6 @@
 
 Gaps found while reviewing `docs/tech-design.md` against the code (2026-10-09). In each case the design or the spec describes something the code doesn't do. For each one, decide whether to fix the code or drop the claim from the docs.
 
-## 4. Lowercase project addresses aren't rewritten
-
-- **Docs:** design §6.1 and REQ-016.5. An address in lower case is replaced with its canonical form.
-- **Code:** `src/client/screens/Issue.tsx:58-66` rewrites `/issue/web-42` to `/issue/WEB-42`. `src/client/screens/Project.tsx` and `src/client/ProjectGate.tsx` pass `:key` through unchanged, so `/project/web` stays as typed.
-- **Effect:** the page still works, because the API matches keys ignoring capitals, but the address isn't canonical.
-
 ## 5. Webhook answers `500` to a signed body that isn't usable JSON
 
 - **Docs:** design §5.4. Answer `200` whenever the signature is valid, even for ignored events.
