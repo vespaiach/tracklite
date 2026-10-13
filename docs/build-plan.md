@@ -534,7 +534,7 @@ Fixes for the gaps in `docs/remain-things.md`, where design or spec describes so
   - Reads: design §4.2, §6.1 · spec SEC-003, REQ-050, REQ-002 · `src/client/screens/ResetPassword.tsx`, `src/client/screens/AcceptInvitation.tsx`
   - Needs: M1.7, M2.4
   - Done: component tests `§4.2: the reset page removes the token from the address` and `§4.2: the invitation page removes the token from the address` (the location has no `token` after the first render, and submitting still sends it); the existing REQ-050.* and REQ-002.* page tests pass
-- [ ] **M14.3 Re-hash on sign-in when the Argon2 settings change.** `src/server/passwords.ts` gets `needsRehash(passwordHash)`, which reads `m`, `t` and `p` from the stored PHC string (`$argon2id$v=19$m=…,t=…,p=…$…`) and compares them with the current settings. `@node-rs/argon2` has no such helper. After a successful verify, sign-in saves a new hash in the same transaction. Remaining-things item 3.
+- [x] **M14.3 Re-hash on sign-in when the Argon2 settings change.** `src/server/passwords.ts` gets `needsRehash(passwordHash)`, which reads `m`, `t` and `p` from the stored PHC string (`$argon2id$v=19$m=…,t=…,p=…$…`) and compares them with the current settings. `@node-rs/argon2` has no such helper. After a successful verify, sign-in saves a new hash in the same transaction. Remaining-things item 3.
   - Reads: design §4.1 · spec REQ-047, SEC-008 · `src/server/passwords.ts`, `src/server/sign-in.ts`
   - Needs: M1.3
   - Done: `§4.1: signing in with a hash made with older settings stores a hash with the current ones`; `§4.1: a wrong password leaves the old hash alone`; `§4.1: a current hash isn't rewritten`; the existing REQ-047.* and SEC-001 tests pass

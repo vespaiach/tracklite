@@ -1,8 +1,11 @@
 import "server-only";
+import { eq } from "drizzle-orm";
 import { ApiError } from "./api-error";
+import { db } from "./db";
 import { recordFailedSignIn, signInLimitReached, tooManyAttempts } from "./limits";
 import { activeMemberByEmail } from "./members";
-import { verifyPassword } from "./passwords";
+import { hashPassword, needsRehash, verifyPassword } from "./passwords";
+import { members } from "./schema";
 import { createSession } from "./sessions";
 
 const unmatchablePasswordHash =
@@ -18,5 +21,12 @@ export async function signIn(normalizedEmail: string, password: string, ip: stri
     throw new ApiError(422, "Incorrect email or password.");
   }
 
-  return createSession(member.id);
+  const newPasswordHash = needsRehash(member.passwordHash) ? await hashPassword(password) : undefined;
+
+  return db.transaction(async (tx) => {
+    if (newPasswordHash) {
+      await tx.update(members).set({ passwordHash: newPasswordHash }).where(eq(members.id, member.id));
+    }
+    return createSession(member.id, tx);
+  });
 }
