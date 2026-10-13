@@ -1,8 +1,9 @@
 import { randomInt } from "node:crypto";
+import { hash } from "@node-rs/argon2";
 import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { hashPassword } from "../../../server/passwords";
-import { signInAttempts } from "../../../server/schema";
+import { hashPassword, verifyPassword } from "../../../server/passwords";
+import { members, signInAttempts } from "../../../server/schema";
 import { db } from "../../../server/db";
 import { createMember } from "../../../test/factories";
 import { GET as getIssue } from "../[...path]/route";
@@ -57,6 +58,20 @@ async function expectRefused(response: Response, body: object, status: number) {
   expect(response.status).toBe(status);
   expect(await response.json()).toEqual(body);
   expect(response.headers.get("set-cookie")).toBeNull();
+}
+
+async function storedHash(memberId: string) {
+  const [member] = await db
+    .select({ passwordHash: members.passwordHash })
+    .from(members)
+    .where(eq(members.id, memberId));
+  return member.passwordHash;
+}
+
+const currentSettingsPrefix = "$argon2id$v=19$m=19456,t=2,p=1$";
+
+async function hashWithOlderSettings(plain: string) {
+  return hash(plain, { memoryCost: 8192, timeCost: 1, parallelism: 1 });
 }
 
 async function seedFailures(values: { email: string; ip: string }, count: number) {
@@ -156,4 +171,31 @@ it("SEC-001: a successful sign-in doesn't reset the count", async () => {
   expect((await signIn({ email: sam.email, password: "wrong password!!" })).status).toBe(422);
 
   await expectRefused(await signIn({ email: sam.email, password }), tooMany, 429);
+});
+
+it("§4.1: signing in with a hash made with older settings stores a hash with the current ones", async () => {
+  const sam = await createMember({ passwordHash: await hashWithOlderSettings(password) });
+
+  expect((await signIn({ email: sam.email, password })).status).toBe(204);
+
+  const rehashed = await storedHash(sam.id);
+  expect(rehashed.startsWith(currentSettingsPrefix)).toBe(true);
+  expect(await verifyPassword(rehashed, password)).toBe(true);
+});
+
+it("§4.1: a wrong password leaves the old hash alone", async () => {
+  const olderHash = await hashWithOlderSettings(password);
+  const sam = await createMember({ passwordHash: olderHash });
+
+  expect((await signIn({ email: sam.email, password: "wrong password!!" })).status).toBe(422);
+
+  expect(await storedHash(sam.id)).toBe(olderHash);
+});
+
+it("§4.1: a current hash isn't rewritten", async () => {
+  const sam = await createMember({ passwordHash });
+
+  expect((await signIn({ email: sam.email, password })).status).toBe(204);
+
+  expect(await storedHash(sam.id)).toBe(passwordHash);
 });

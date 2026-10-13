@@ -2,12 +2,6 @@
 
 Gaps found while reviewing `docs/tech-design.md` against the code (2026-10-09). In each case the design or the spec describes something the code doesn't do. For each one, decide whether to fix the code or drop the claim from the docs.
 
-## 3. No re-hash when the Argon2 settings change
-
-- **Docs:** design §4.1. The settings are stored inside each hash, and a successful sign-in re-hashes the password with new settings when they change.
-- **Code:** `src/server/passwords.ts` only wraps `hash` and `verify`, and `src/server/sign-in.ts` never checks a stored hash's settings.
-- **Effect:** none today. It matters only once the hashing settings change.
-
 ## 4. Lowercase project addresses aren't rewritten
 
 - **Docs:** design §6.1 and REQ-016.5. An address in lower case is replaced with its canonical form.
