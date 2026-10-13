@@ -542,7 +542,7 @@ Fixes for the gaps in `docs/remain-things.md`, where design or spec describes so
   - Reads: design §6.1 (Addresses) · spec API-004, REQ-016.5, REQ-040 · `src/client/ProjectGate.tsx`, `src/client/screens/Issue.tsx`
   - Needs: M3.5, M6.2
   - Done: component tests `API-004: /project/web opens WEB and the address becomes /project/WEB` and `API-004: /project/web/list?status=done keeps its path and filters when made canonical`
-- [ ] **M14.5 Webhook answers `200` to any signed body.** `receiveEmailEvent` handles a body that isn't JSON, isn't an object, or is a bounce with no `data.email_id` as an ignored event, and answers `200`. The webhook logs it as `email event ignored` and doesn't log the body. Remaining-things item 5.
+- [x] **M14.5 Webhook answers `200` to any signed body.** `receiveEmailEvent` handles a body that isn't JSON, isn't an object, or is a bounce with no `data.email_id` as an ignored event, and answers `200`. The webhook logs it as `email event ignored` and doesn't log the body. Remaining-things item 5.
   - Reads: design §5.4 · spec API-003 · `src/server/email-webhook.ts`
   - Needs: M9.4
   - Done: `§5.4: a signed body that isn't JSON gets 200 and changes nothing`; `§5.4: a signed email.bounced with no data.email_id gets 200 and changes nothing`; the existing API-003.* tests pass

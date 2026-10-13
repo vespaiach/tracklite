@@ -2,12 +2,6 @@
 
 Gaps found while reviewing `docs/tech-design.md` against the code (2026-10-09). In each case the design or the spec describes something the code doesn't do. For each one, decide whether to fix the code or drop the claim from the docs.
 
-## 5. Webhook answers `500` to a signed body that isn't usable JSON
-
-- **Docs:** design §5.4. Answer `200` whenever the signature is valid, even for ignored events.
-- **Code:** `src/server/email-webhook.ts:56` calls `JSON.parse` without catching errors, and reads `data.email_id` without checking it exists.
-- **Effect:** a correctly signed body that isn't JSON, or has no `data.email_id`, gets a `500`, and Resend keeps retrying it.
-
 ## 6. `PATCH /api/projects/{KEY}` silently drops `name` alongside a description save
 
 - **Docs:** design §3.3. The body is either `{ name?, archived? }` (admin) or `{ description, descriptionVersion }` (member).

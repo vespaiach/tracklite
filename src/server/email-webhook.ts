@@ -3,12 +3,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { readConfig } from "./config";
 import { db } from "./db";
-import { logEmailBounce } from "./log";
+import { logEmailEvent } from "./log";
 import { invitations, notificationDeliveries } from "./schema";
 
 const toleranceSeconds = 5 * 60;
-
-type EmailEvent = { type: string; data: { email_id: string } };
 
 function isSigned(headers: Headers, body: string, secret: string | undefined) {
   const id = headers.get("svix-id");
@@ -47,21 +45,50 @@ async function markBounced(providerMessageId: string) {
       ),
     )
     .returning({ id: notificationDeliveries.id });
-  if (notification) return logEmailBounce(`email bounced, notification ${notification.id}`);
+  if (notification) return logEmailEvent(`email bounced, notification ${notification.id}`);
 
   const [invitation] = await db
     .update(invitations)
     .set({ bouncedAt: sql`now()` })
     .where(eq(invitations.providerMessageId, providerMessageId))
     .returning({ id: invitations.id });
-  if (invitation) return logEmailBounce(`email bounced, invitation ${invitation.id}`);
+  if (invitation) return logEmailEvent(`email bounced, invitation ${invitation.id}`);
 
-  logEmailBounce("email bounced, untracked");
+  logEmailEvent("email bounced, untracked");
+}
+
+function parseJson(body: string): unknown {
+  try {
+    return JSON.parse(body);
+  } catch {
+    return undefined;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function bouncedMessageId(event: Record<string, unknown>) {
+  if (!isRecord(event.data)) return undefined;
+  const messageId = event.data.email_id;
+  return typeof messageId === "string" && messageId !== "" ? messageId : undefined;
+}
+
+async function handleEvent(event: unknown) {
+  if (!isRecord(event)) return logEmailEvent("email event ignored");
+  if (event.type !== "email.bounced") return;
+
+  const messageId = bouncedMessageId(event);
+  if (!messageId) return logEmailEvent("email event ignored");
+
+  await markBounced(messageId);
 }
 
 export async function receiveEmailEvent(headers: Headers, body: string) {
   if (!isSigned(headers, body, readConfig().resendWebhookSecret)) return false;
-  const event: EmailEvent = JSON.parse(body);
-  if (event.type === "email.bounced") await markBounced(event.data.email_id);
+
+  await handleEvent(parseJson(body));
+
   return true;
 }
