@@ -233,7 +233,7 @@ it("REQ-038: search waits until 300 ms after typing stops", async () => {
   await screen.findByRole("table");
   const search = screen.getByRole("searchbox", { name: "Search issues" });
 
-  vi.useFakeTimers();
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   fireEvent.change(search, { target: { value: "login" } });
   act(() => vi.advanceTimersByTime(200));
   fireEvent.change(search, { target: { value: "login button" } });
