@@ -308,6 +308,44 @@ it("REQ-012.1: a member saves a description with a heading and a bullet list", a
   });
 });
 
+it('§3.3: a project PATCH with a description save and a name gets 422 "Change one thing at a time"', async () => {
+  const { cookie } = await signedIn("admin");
+  const project = await createProject({ name: "Website", description: "Old text" });
+
+  const response = await patchWith(cookie, project.key, {
+    description: "New text",
+    descriptionVersion: 0,
+    name: "Renamed",
+  });
+
+  expect(response.status).toBe(422);
+  expect(await response.json()).toEqual({ error: { message: "Change one thing at a time" } });
+  expect(await storedProject(project.id)).toMatchObject({
+    name: "Website",
+    description: "Old text",
+    descriptionVersion: 0,
+  });
+});
+
+it('§3.3: a project PATCH with a description save and archived gets 422 "Change one thing at a time"', async () => {
+  const { cookie } = await signedIn("admin");
+  const project = await createProject({ description: "Old text" });
+
+  const response = await patchWith(cookie, project.key, {
+    description: "New text",
+    descriptionVersion: 0,
+    archived: true,
+  });
+
+  expect(response.status).toBe(422);
+  expect(await response.json()).toEqual({ error: { message: "Change one thing at a time" } });
+  expect(await storedProject(project.id)).toMatchObject({
+    description: "Old text",
+    descriptionVersion: 0,
+    archivedAt: null,
+  });
+});
+
 it("REQ-012: an empty description is allowed", async () => {
   const { cookie } = await signedIn("member");
   const project = await createProject({ description: "Old text" });
