@@ -523,6 +523,7 @@ The wording of every email the app sends is in the spec (§9, "Email content"). 
      - in `invitations`: set `bounced_at`, so the members page shows Bounced (REQ-051), and log `email bounced, invitation {id}`;
      - in neither (a reset email): log `email bounced, untracked`.
    - any other event type → ignore.
+   - a body that isn't JSON, isn't an object, or is an `email.bounced` with no `data.email_id` → ignore and log `email event ignored`, without the body.
 4. Answer `200` whenever the signature is valid, even for ignored events. Otherwise Resend keeps retrying.
 
 ### 5.5 Domain setup (one-time, before launch)

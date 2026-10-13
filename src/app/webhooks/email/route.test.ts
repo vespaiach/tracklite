@@ -191,6 +191,46 @@ it("§5.4: a signature matching any v1 entry in the header is accepted", async (
   expect(await stateOf(email.id)).toBe("bounced");
 });
 
+it("§5.4: a signed body that isn't JSON gets 200 and changes nothing", async () => {
+  const email = await sentNotificationEmail();
+  const body = `{"type":"email.bounced","data":{"email_id":"${email.providerMessageId}"`;
+
+  const response = await signedWebhook(body);
+
+  expect(response.status).toBe(200);
+  expect(await stateOf(email.id)).toBe("sent");
+  expect(logLines).toContainEqual(
+    expect.objectContaining({ event: "email", message: "email event ignored" }),
+  );
+  expect(JSON.stringify(logLines)).not.toContain(email.providerMessageId);
+});
+
+it("§5.4: a signed body that is JSON but not an object gets 200 and changes nothing", async () => {
+  const responses = await Promise.all(
+    ["null", "[]", '"email.bounced"', "42"].map((body) => signedWebhook(body)),
+  );
+
+  expect(responses.map((response) => response.status)).toEqual([200, 200, 200, 200]);
+  expect(logLines.filter((line) => line.message === "email event ignored")).toHaveLength(4);
+});
+
+it("§5.4: a signed email.bounced with no data.email_id gets 200 and changes nothing", async () => {
+  const email = await sentNotificationEmail();
+  const bodies = [
+    JSON.stringify({ type: "email.bounced" }),
+    JSON.stringify({ type: "email.bounced", data: null }),
+    JSON.stringify({ type: "email.bounced", data: { to: [email.providerMessageId] } }),
+    JSON.stringify({ type: "email.bounced", data: { email_id: 42 } }),
+  ];
+
+  const responses = await Promise.all(bodies.map((body) => signedWebhook(body)));
+
+  expect(responses.map((response) => response.status)).toEqual([200, 200, 200, 200]);
+  expect(await stateOf(email.id)).toBe("sent");
+  expect(logLines.filter((line) => line.message === "email event ignored")).toHaveLength(4);
+  expect(JSON.stringify(logLines)).not.toContain(email.providerMessageId);
+});
+
 it("REQ-053: a bounce records when the email bounced, and it then counts as bounced instead of sent", async () => {
   const email = await sentNotificationEmail();
   await db
