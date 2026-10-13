@@ -518,3 +518,41 @@ Every task in this milestone keeps behaviour as it is: the existing route tests 
   - Done: REQ-053.* as component tests against a mocked API
 
 **Done when:** a real assignment still shows up in Mailpit about 2 minutes later; stopping `tracklite-worker` makes `/health/worker` answer `503` within 2 minutes; and an admin sees the sent email on `/settings/notifications`.
+
+
+## M14 Design gaps
+
+Fixes for the gaps in `docs/remain-things.md`, where design or spec describes something the code doesn't do. Each one is fixed in the code, so the docs stay as they are. Each task also deletes its item from `docs/remain-things.md`. The last task to merge deletes the file.
+
+**Run order:** **M14.1 ∥ M14.2 ∥ M14.3 ∥ M14.4 ∥ M14.5 ∥ M14.6** → M14.7. M14.6 and M14.7 both change `src/server/projects.ts`, so M14.7 runs after M14.6. Shared file: every task edits `docs/remain-things.md`. Keep the other tasks' deletions when merging.
+
+- [ ] **M14.1 Member menu in the sidebar.** At the bottom of the sidebar, the member's initials and full name open a menu with **Profile** (goes to `/settings/profile`) and **Sign out** (uses `useSignOutMutation`, then goes to `/sign-in`). The menu works from the keyboard, and Escape closes it. Remaining-things item 1.
+  - Reads: design §1.7, §6.2 · spec REQ-006, REQ-003, API-004 · `docs/design-system.md` · `src/client/Sidebar.tsx`, `src/client/Shell.tsx`
+  - Needs: M1.7, M1.8, M3.5
+  - Done: component tests: the sidebar shows the signed-in member's initials and name; **Profile** goes to `/settings/profile`; **Sign out** ends the session and lands on `/sign-in`; Escape closes the menu
+- [ ] **M14.2 Remove tokens from the address bar.** `ResetPassword.tsx` and `AcceptInvitation.tsx` read `?token=` once, keep it in component state, then remove it with `history.replaceState` (through React Router's `navigate(…, { replace: true })`). The lookup and the submit still use the token. Nothing on screen changes, so the task needs no UI design. Remaining-things item 2.
+  - Reads: design §4.2, §6.1 · spec SEC-003, REQ-050, REQ-002 · `src/client/screens/ResetPassword.tsx`, `src/client/screens/AcceptInvitation.tsx`
+  - Needs: M1.7, M2.4
+  - Done: component tests `§4.2: the reset page removes the token from the address` and `§4.2: the invitation page removes the token from the address` (the location has no `token` after the first render, and submitting still sends it); the existing REQ-050.* and REQ-002.* page tests pass
+- [ ] **M14.3 Re-hash on sign-in when the Argon2 settings change.** `src/server/passwords.ts` gets `needsRehash(passwordHash)`, which reads `m`, `t` and `p` from the stored PHC string (`$argon2id$v=19$m=…,t=…,p=…$…`) and compares them with the current settings. `@node-rs/argon2` has no such helper. After a successful verify, sign-in saves a new hash in the same transaction. Remaining-things item 3.
+  - Reads: design §4.1 · spec REQ-047, SEC-008 · `src/server/passwords.ts`, `src/server/sign-in.ts`
+  - Needs: M1.3
+  - Done: `§4.1: signing in with a hash made with older settings stores a hash with the current ones`; `§4.1: a wrong password leaves the old hash alone`; `§4.1: a current hash isn't rewritten`; the existing REQ-047.* and SEC-001 tests pass
+- [ ] **M14.4 Canonical project addresses.** A project address in lower case, such as `/project/web/list`, is rewritten to its canonical key once the project loads (`/project/WEB/list`), with `replace`, the same way `Issue.tsx` does for issues. The rest of the path, the query string and the hash are kept. Done in `ProjectGate` so every project screen gets it. Remaining-things item 4.
+  - Reads: design §6.1 (Addresses) · spec API-004, REQ-016.5, REQ-040 · `src/client/ProjectGate.tsx`, `src/client/screens/Issue.tsx`
+  - Needs: M3.5, M6.2
+  - Done: component tests `API-004: /project/web opens WEB and the address becomes /project/WEB` and `API-004: /project/web/list?status=done keeps its path and filters when made canonical`
+- [ ] **M14.5 Webhook answers `200` to any signed body.** `receiveEmailEvent` handles a body that isn't JSON, isn't an object, or is a bounce with no `data.email_id` as an ignored event, and answers `200`. The webhook logs it as `email event ignored` and doesn't log the body. Remaining-things item 5.
+  - Reads: design §5.4 · spec API-003 · `src/server/email-webhook.ts`
+  - Needs: M9.4
+  - Done: `§5.4: a signed body that isn't JSON gets 200 and changes nothing`; `§5.4: a signed email.bounced with no data.email_id gets 200 and changes nothing`; the existing API-003.* tests pass
+- [ ] **M14.6 Refuse mixed PATCH bodies.** `src/schemas/issue.ts`: a description save holds only `description` and `descriptionVersion`. Anything more gets `422` "Change one field at a time". `src/schemas/project.ts`: a body is either a settings change (`name` and/or `archived`) or a description save, and a mix gets `422` "Change one thing at a time". Add that message to design §3.3. Once those mixes can't reach the domain, delete the code in `updateIssue` and `updateProject` that handled them. Remaining-things items 6 and 7.
+  - Reads: design §1.2, §3.1, §3.2, §3.3 (projects and issues tables), D-42 · spec STD-3, REQ-012, REQ-022 · `src/schemas/issue.ts`, `src/schemas/project.ts`, `src/server/issues.ts`, `src/server/projects.ts`
+  - Needs: M12.1, M12.4
+  - Done: `§3.3: an issue PATCH with description, descriptionVersion and title gets 422 "Change one field at a time"`; `§3.3: a project PATCH with a description save and a name gets 422 "Change one thing at a time"`, and the same with `archived`; nothing is saved in any of them; the existing REQ-012.*, REQ-022.* and issue PATCH tests pass
+- [ ] **M14.7 Contract return types on every mapping function.** Declare the contract type as the return type of `listProjects` (its `.map` callback included), `listLabels`, `createLabel`, `updateLabel` and `lookUpInvitation`, as D-44 asks. If a type doesn't exist in `src/contract/` yet, move it there from the client. Behaviour doesn't change. Remaining-things item 8.
+  - Reads: design §3.5, D-44 · `src/server/projects.ts`, `src/server/labels.ts`, `src/server/invitations.ts`, `src/contract/`
+  - Needs: M14.6
+  - Done: `npm run typecheck` fails if any of these functions returns an extra field (check once by hand, then undo); the existing tests pass
+
+**Done when:** a member signs out from the sidebar menu; reset and invitation links leave no token in the address bar; `/project/web` becomes `/project/WEB`; and `docs/remain-things.md` is gone.
