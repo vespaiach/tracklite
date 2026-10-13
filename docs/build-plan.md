@@ -526,7 +526,7 @@ Fixes for the gaps in `docs/remain-things.md`, where design or spec describes so
 
 **Run order:** **M14.1 ∥ M14.2 ∥ M14.3 ∥ M14.4 ∥ M14.5 ∥ M14.6** → M14.7. M14.6 and M14.7 both change `src/server/projects.ts`, so M14.7 runs after M14.6. Shared file: every task edits `docs/remain-things.md`. Keep the other tasks' deletions when merging.
 
-- [ ] **M14.1 Member menu in the sidebar.** At the bottom of the sidebar, the member's initials and full name open a menu with **Profile** (goes to `/settings/profile`) and **Sign out** (uses `useSignOutMutation`, then goes to `/sign-in`). The menu works from the keyboard, and Escape closes it. Remaining-things item 1.
+- [x] **M14.1 Member menu in the sidebar.** At the bottom of the sidebar, the member's initials and full name open a menu with **Profile** (goes to `/settings/profile`) and **Sign out** (uses `useSignOutMutation`, then goes to `/sign-in`). The menu works from the keyboard, and Escape closes it. Remaining-things item 1.
   - Reads: design §1.7, §6.2 · spec REQ-006, REQ-003, API-004 · `docs/design-system.md` · `src/client/Sidebar.tsx`, `src/client/Shell.tsx`
   - Needs: M1.7, M1.8, M3.5
   - Done: component tests: the sidebar shows the signed-in member's initials and name; **Profile** goes to `/settings/profile`; **Sign out** ends the session and lands on `/sign-in`; Escape closes the menu

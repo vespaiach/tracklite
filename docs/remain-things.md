@@ -2,12 +2,6 @@
 
 Gaps found while reviewing `docs/tech-design.md` against the code (2026-10-09). In each case the design or the spec describes something the code doesn't do. For each one, decide whether to fix the code or drop the claim from the docs.
 
-## 1. No sign-out or Profile in the app shell
-
-- **Docs:** design §6.2 and build plan line 96. The bottom of the sidebar shows the member's initials and name, which open a menu with **Profile** and **Sign out**.
-- **Code:** `src/client/Sidebar.tsx` and `src/client/Shell.tsx` render no member menu, and nothing links to `/settings/profile`. `useSignOutMutation` is only used by `AcceptInvitation.tsx` and `ResetPassword.tsx`.
-- **Effect:** a signed-in member has no way to sign out, and can reach their profile only by typing the address.
-
 ## 2. Reset and invitation tokens stay in the address bar
 
 - **Docs:** design §4.2. The reset page reads `?token=` once, then removes it from the address bar with `history.replaceState`.
