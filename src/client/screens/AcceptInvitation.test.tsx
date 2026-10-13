@@ -216,3 +216,21 @@ it("STD-9.3: a network error on submit shows the toast and keeps what was typed"
   expect(typedInto("Username")).toBe("sam");
   expect(typedInto("Password")).toBe("correct horse battery");
 });
+
+it("§4.2: the invitation page removes the token from the address", async () => {
+  const fetchMock = mockInvite(invitedSam, accepted);
+  renderAppAt("/invite?token=abc");
+
+  expect(await screen.findByRole("heading", { name: "Join Tracklite" })).toBeTruthy();
+  expect(window.location.pathname).toBe("/invite");
+  expect(new URLSearchParams(window.location.search).has("token")).toBe(false);
+
+  await fillIn("Sam Lee", "sam", "correct horse battery");
+  join();
+
+  expect(await screen.findByRole("heading", { name: "My issues" })).toBeTruthy();
+  expect(requestsTo(fetchMock, "POST /api/invitation-lookups")).toEqual([{ token: "abc" }]);
+  expect(requestsTo(fetchMock, "POST /api/members")).toEqual([
+    { token: "abc", fullName: "Sam Lee", username: "sam", password: "correct horse battery" },
+  ]);
+});

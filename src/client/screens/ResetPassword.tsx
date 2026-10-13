@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { useDispatch } from "react-redux";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate } from "react-router";
 import {
   Button,
   Field,
@@ -20,10 +20,10 @@ import {
 } from "../api";
 import { showToast } from "../toast";
 import { useShowLoading } from "../useShowLoading";
+import { useTokenFromAddress } from "../useTokenFromAddress";
 
 export function ResetPassword() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token") ?? "";
+  const token = useTokenFromAddress();
   const me = useMeQuery();
   const lookup = useLookUpResetLinkQuery({ token }, { skip: !me.isError });
   const [signOut, { isLoading: signingOut }] = useSignOutMutation();

@@ -148,3 +148,20 @@ it("STD-9.3: a network error on submit shows the toast and keeps the password", 
   expect((await screen.findByRole("status")).textContent).toBe("Couldn't save. Try again.");
   expect((screen.getByLabelText("New password") as HTMLInputElement).value).toBe("a much longer password");
 });
+
+it("§4.2: the reset page removes the token from the address", async () => {
+  const fetchMock = mockReset(noContent, noContent);
+  renderAppAt("/reset-password?token=abc");
+
+  expect(await screen.findByRole("heading", { name: "Set a new password" })).toBeTruthy();
+  expect(window.location.pathname).toBe("/reset-password");
+  expect(new URLSearchParams(window.location.search).has("token")).toBe(false);
+
+  await setPassword("a much longer password");
+
+  expect(await screen.findByRole("heading", { name: "My issues" })).toBeTruthy();
+  expect(requestsTo(fetchMock, "POST /api/password-reset-lookups")).toEqual([{ token: "abc" }]);
+  expect(requestsTo(fetchMock, "POST /api/password-resets")).toEqual([
+    { token: "abc", password: "a much longer password" },
+  ]);
+});

@@ -530,7 +530,7 @@ Fixes for the gaps in `docs/remain-things.md`, where design or spec describes so
   - Reads: design §1.7, §6.2 · spec REQ-006, REQ-003, API-004 · `docs/design-system.md` · `src/client/Sidebar.tsx`, `src/client/Shell.tsx`
   - Needs: M1.7, M1.8, M3.5
   - Done: component tests: the sidebar shows the signed-in member's initials and name; **Profile** goes to `/settings/profile`; **Sign out** ends the session and lands on `/sign-in`; Escape closes the menu
-- [ ] **M14.2 Remove tokens from the address bar.** `ResetPassword.tsx` and `AcceptInvitation.tsx` read `?token=` once, keep it in component state, then remove it with `history.replaceState` (through React Router's `navigate(…, { replace: true })`). The lookup and the submit still use the token. Nothing on screen changes, so the task needs no UI design. Remaining-things item 2.
+- [x] **M14.2 Remove tokens from the address bar.** `ResetPassword.tsx` and `AcceptInvitation.tsx` read `?token=` once, keep it in component state, then remove it with `history.replaceState` (through React Router's `navigate(…, { replace: true })`). The lookup and the submit still use the token. Nothing on screen changes, so the task needs no UI design. Remaining-things item 2.
   - Reads: design §4.2, §6.1 · spec SEC-003, REQ-050, REQ-002 · `src/client/screens/ResetPassword.tsx`, `src/client/screens/AcceptInvitation.tsx`
   - Needs: M1.7, M2.4
   - Done: component tests `§4.2: the reset page removes the token from the address` and `§4.2: the invitation page removes the token from the address` (the location has no `token` after the first render, and submitting still sends it); the existing REQ-050.* and REQ-002.* page tests pass
