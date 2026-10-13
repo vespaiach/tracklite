@@ -22,7 +22,15 @@ export const NewProject = v.object({
 });
 export type NewProject = v.InferOutput<typeof NewProject>;
 
+function isMixedChange(body: Record<string, unknown>) {
+  const savesDescription = "description" in body || "descriptionVersion" in body;
+  const changesSettings = "name" in body || "archived" in body;
+  return savesDescription && changesSettings;
+}
+
 export const ProjectChanges = v.pipe(
+  v.looseObject({}),
+  v.check((body) => !isMixedChange(body), "Change one thing at a time"),
   v.object({
     key: v.optional(v.never("Key can't be changed")),
     name: v.optional(projectName),

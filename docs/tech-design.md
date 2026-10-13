@@ -301,7 +301,7 @@ The domain functions declare the contract types (3.5) as their return types. The
 | `GET /api/projects?archived=false\|true` | The sidebar list, or the Archived list | Member | REQ-013, REQ-015 |
 | `POST /api/projects` | `201` | Admin | REQ-009 |
 | `GET /api/projects/{KEY}` | Includes the description's version and mentions | Member | REQ-046 |
-| `PATCH /api/projects/{KEY}` | Name or archived (Admin), or a description save (Member) | Per field | REQ-011, REQ-012, REQ-013 |
+| `PATCH /api/projects/{KEY}` | Name or archived (Admin), or a description save (Member). A body with both gets `422` "Change one thing at a time" | Per field | REQ-011, REQ-012, REQ-013 |
 | `DELETE /api/projects/{KEY}` | The typed-key confirmation is checked in the browser | Admin | REQ-014 |
 | `GET /api/projects/{KEY}/labels` | Sorted by name ignoring capitals, each with its issue count | Member | REQ-021, REQ-021.5 |
 | `POST /api/projects/{KEY}/labels` | `201` | Member | REQ-020.2, REQ-021 |

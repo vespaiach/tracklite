@@ -7,6 +7,7 @@ import { descriptionText, descriptionVersion } from "./description";
 const maxTitleLength = 200;
 const maxLabels = 10;
 const editableFields = ["title", "status", "priority", "assignee", "labelIds"];
+const descriptionFields = ["description", "descriptionVersion"];
 
 const title = v.pipe(
   v.string("Title required"),
@@ -24,7 +25,8 @@ export const NewIssue = v.object({
 export type NewIssue = v.InferOutput<typeof NewIssue>;
 
 function isDescriptionSave(body: Record<string, unknown>) {
-  return "description" in body || "descriptionVersion" in body;
+  const keys = Object.keys(body);
+  return keys.length > 0 && keys.every((key) => descriptionFields.includes(key));
 }
 
 function isOneField(body: Record<string, unknown>) {

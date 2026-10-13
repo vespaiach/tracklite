@@ -345,6 +345,26 @@ it("a save must change exactly one field", async () => {
   expect((await stored(issue.id)).title).toBe(issue.title);
 });
 
+it('§3.3: an issue PATCH with description, descriptionVersion and title gets 422 "Change one field at a time"', async () => {
+  const cookie = await signedIn();
+  const project = await createProject();
+  const issue = await issueIn(project);
+
+  const response = await patchWith(cookie, issue.displayId, {
+    description: "New text",
+    descriptionVersion: 0,
+    title: "New title",
+  });
+
+  expect(response.status).toBe(422);
+  expect(await response.json()).toEqual({ error: { message: "Change one field at a time" } });
+  expect(await stored(issue.id)).toMatchObject({
+    title: issue.title,
+    description: issue.description,
+    descriptionVersion: 0,
+  });
+});
+
 it("REQ-007.2: WEB-42 assigned to deactivated Sam still shows Sam Lee (deactivated), and Sam can't be assigned", async () => {
   const cookie = await signedIn();
   const sam = await createMember({ fullName: "Sam Lee" });
