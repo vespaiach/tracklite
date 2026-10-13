@@ -6,9 +6,11 @@ import {
   apiError,
   mockApi,
   never,
+  noContent,
   project,
   renderAppAt,
   requestsTo,
+  signedOut,
   summary,
 } from "../test/client-app";
 import type { Me, Project } from "./api";
@@ -167,4 +169,67 @@ it("STD-5: Create is disabled while the project is saving", async () => {
 
   const saving = await within(dialog).findByRole("button", { name: "Creating…" });
   expect((saving as HTMLButtonElement).disabled).toBe(true);
+});
+
+async function openMemberMenu() {
+  fireEvent.click(await within(await sidebar()).findByRole("button", { name: "Sam Lee" }));
+  return screen.findByRole("menu");
+}
+
+it("design §6.2: the bottom of the sidebar shows the signed-in member's initials and name", async () => {
+  mockSidebar({ me: alex });
+  renderAppAt("/my-issues");
+
+  const trigger = await within(await sidebar()).findByRole("button", { name: "Alex Kim" });
+
+  expect(trigger.textContent).toBe("AKAlex Kim");
+  expect(trigger.getAttribute("aria-haspopup")).toBe("true");
+});
+
+it("design §6.2: Profile in the member menu goes to /settings/profile", async () => {
+  mockSidebar();
+  renderAppAt("/my-issues");
+
+  const menu = await openMemberMenu();
+  fireEvent.click(within(menu).getByRole("menuitem", { name: "Profile" }));
+
+  expect(await screen.findByRole("heading", { name: "Profile" })).toBeTruthy();
+  expect(window.location.pathname).toBe("/settings/profile");
+});
+
+it("REQ-006: Sign out in the member menu ends the session and lands on /sign-in", async () => {
+  let signedIn = true;
+  const fetchMock = mockApi({
+    "GET /api/me": () => (signedIn ? Response.json(admin) : signedOut()),
+    "DELETE /api/sessions/current": () => {
+      signedIn = false;
+      return noContent();
+    },
+  });
+  renderAppAt("/my-issues");
+
+  const menu = await openMemberMenu();
+  fireEvent.click(within(menu).getByRole("menuitem", { name: "Sign out" }));
+
+  expect(await screen.findByRole("heading", { name: "Sign in" })).toBeTruthy();
+  expect(requestsTo(fetchMock, "DELETE /api/sessions/current")).toEqual([undefined]);
+  expect(window.location.pathname).toBe("/sign-in");
+  expect(window.location.search).toBe("");
+  expect(screen.queryByRole("complementary")).toBeNull();
+});
+
+it("design §6.2: the member menu closes on Escape and returns focus to its button", async () => {
+  mockSidebar();
+  renderAppAt("/my-issues");
+
+  const menu = await openMemberMenu();
+  await waitFor(() => expect(menu.contains(document.activeElement)).toBe(true));
+  fireEvent.keyDown(document.activeElement ?? menu, { key: "Escape" });
+
+  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      within(screen.getByRole("complementary")).getByRole("button", { name: "Sam Lee" }),
+    ),
+  );
 });

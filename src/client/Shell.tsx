@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { AppShell } from "../components/ui/track-lite";
-import { type ApiFailure, useCreateProjectMutation, useMeQuery, useProjectsQuery } from "./api";
+import {
+  type ApiFailure,
+  useCreateProjectMutation,
+  useMeQuery,
+  useProjectsQuery,
+  useSignOutMutation,
+} from "./api";
 import { useFailureToast } from "./failure";
 import { type NewProject, NewProjectDialog } from "./NewProjectDialog";
 import { Sidebar } from "./Sidebar";
@@ -11,6 +17,8 @@ export function Shell() {
   const { data: projects } = useProjectsQuery({ archived: false });
   const { pathname } = useLocation();
   const [creating, setCreating] = useState(false);
+  const navigate = useNavigate();
+  const signOut = useSignOutAndLeave();
 
   return (
     <AppShell
@@ -20,12 +28,30 @@ export function Shell() {
           projects={projects}
           pathname={pathname}
           onNewProject={() => setCreating(true)}
+          member={me}
+          onProfile={() => navigate("/settings/profile")}
+          onSignOut={signOut}
         />
       }>
       {isSuccess && <Outlet />}
       {creating && <CreateProject onDone={() => setCreating(false)} />}
     </AppShell>
   );
+}
+
+function useSignOutAndLeave() {
+  const [signOut] = useSignOutMutation();
+  const navigate = useNavigate();
+  const toastFailure = useFailureToast();
+
+  return async () => {
+    try {
+      await signOut().unwrap();
+      await navigate("/sign-in", { replace: true });
+    } catch (caught) {
+      toastFailure(caught as ApiFailure);
+    }
+  };
 }
 
 function CreateProject({ onDone }: { onDone: () => void }) {

@@ -4,7 +4,11 @@ import { Stack } from "@phosphor-icons/react/dist/csr/Stack";
 import { Tray } from "@phosphor-icons/react/dist/csr/Tray";
 import { Users } from "@phosphor-icons/react/dist/csr/Users";
 import {
+  Avatar,
   Button,
+  Lbl,
+  Menu,
+  MenuItem,
   Rail,
   RailGroup,
   RailLabel,
@@ -12,7 +16,7 @@ import {
   SettingsEmpty,
   TipTrigger,
 } from "../components/ui/track-lite";
-import type { ProjectSummary } from "./api";
+import type { MemberSummary, ProjectSummary } from "./api";
 import { RouterRailItem } from "./links";
 
 export type SidebarProps = {
@@ -20,14 +24,35 @@ export type SidebarProps = {
   projects?: ProjectSummary[];
   pathname: string;
   onNewProject: () => void;
+  member?: MemberSummary;
+  onProfile: () => void;
+  onSignOut: () => void;
 };
 
 const iconProps = { size: 15, weight: "duotone" } as const;
 
-export function Sidebar({ admin, projects, pathname, onNewProject }: SidebarProps) {
+export function Sidebar({
+  admin,
+  projects,
+  pathname,
+  onNewProject,
+  member,
+  onProfile,
+  onSignOut,
+}: SidebarProps) {
   const current = pathname.toLowerCase();
   return (
-    <Rail head={<span className="tl-nav__brand">Tracklite</span>}>
+    <Rail
+      head={<span className="tl-nav__brand">Tracklite</span>}
+      foot={
+        member && (
+          <MemberMenu
+            member={member}
+            onProfile={onProfile}
+            onSignOut={onSignOut}
+          />
+        )
+      }>
       <RailGroup>
         <RouterRailItem
           href="/my-issues"
@@ -110,5 +135,27 @@ export function Sidebar({ admin, projects, pathname, onNewProject }: SidebarProp
         )}
       </RailGroup>
     </Rail>
+  );
+}
+
+type MemberMenuProps = { member: MemberSummary; onProfile: () => void; onSignOut: () => void };
+
+function MemberMenu({ member, onProfile, onSignOut }: MemberMenuProps) {
+  return (
+    <Menu
+      label={member.fullName}
+      text={
+        <>
+          <Avatar
+            size="sm"
+            initials={member.initials}
+          />
+          <Lbl>{member.fullName}</Lbl>
+        </>
+      }
+      onAction={(key) => (key === "profile" ? onProfile() : onSignOut())}>
+      <MenuItem id="profile">Profile</MenuItem>
+      <MenuItem id="sign-out">Sign out</MenuItem>
+    </Menu>
   );
 }

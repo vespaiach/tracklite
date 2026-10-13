@@ -1028,6 +1028,16 @@ a.tl-seg__opt[data-on]:focus-visible {
   padding: 10px;
   border-top: 1px solid var(--color-hair);
 }
+.tl-rail__foot > .tl-btn {
+  max-width: 100%;
+}
+.tl-rail__foot > .tl-btn .tl-avatar {
+  flex: none;
+}
+.tl-rail__foot > .tl-btn .tl-lbl {
+  min-width: 0;
+  white-space: nowrap;
+}
 .tl-rail-group {
   display: grid;
   gap: 1px;

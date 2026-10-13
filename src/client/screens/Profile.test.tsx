@@ -55,7 +55,7 @@ it('REQ-003.3: Save sends only the full name and confirms with "Name saved."', a
   await saveName("Samuel Lee");
 
   expect(await screen.findByText("Name saved.")).toBeTruthy();
-  expect(await screen.findByText("Samuel Lee")).toBeTruthy();
+  expect(await within(screen.getByRole("main")).findByText("Samuel Lee")).toBeTruthy();
   expect(requestsTo(fetchMock, "PATCH /api/me")).toEqual([{ fullName: "Samuel Lee" }]);
 });
 
