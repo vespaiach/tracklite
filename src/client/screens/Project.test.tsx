@@ -1,4 +1,4 @@
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { admin, alex, apiError, mockApi, project, renderAppAt } from "../../test/client-app";
 import type { Me, Project } from "../api";
@@ -72,4 +72,36 @@ it("STD-4: an unknown project key shows Not found", async () => {
   renderAppAt("/project/NOPE");
 
   expect(await screen.findByRole("heading", { name: "Not found" })).toBeTruthy();
+});
+
+function mockLowerCaseProject() {
+  return mockApi({
+    "GET /api/me": () => Response.json(admin),
+    "GET /api/projects/web": () => Response.json(web),
+    "GET /api/projects/WEB": () => Response.json(web),
+    "GET /api/projects/WEB/labels": () => Response.json([]),
+    "GET /api/members": () => Response.json([]),
+    "GET /api/projects/WEB/board": () => Response.json([]),
+    "GET /api/projects/WEB/issues?status=done": () =>
+      Response.json({ issues: [], hasMore: false, deactivatedAssignees: [] }),
+  });
+}
+
+it("API-004: /project/web opens WEB and the address becomes /project/WEB", async () => {
+  mockLowerCaseProject();
+  renderAppAt("/project/web");
+
+  expect(await screen.findByRole("heading", { name: "Website · WEB" })).toBeTruthy();
+  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB"));
+});
+
+it("API-004: /project/web/list?status=done keeps its path and filters when made canonical", async () => {
+  mockLowerCaseProject();
+  renderAppAt("/project/web/list?status=done#top");
+
+  const views = await screen.findByRole("navigation", { name: "Project views" });
+  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB/list"));
+  expect(window.location.search).toBe("?status=done");
+  expect(window.location.hash).toBe("#top");
+  expect(within(views).getByRole("link", { name: "List" }).getAttribute("aria-current")).toBe("page");
 });
