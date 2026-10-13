@@ -18,7 +18,7 @@ Tracklite is a small issue tracker for one invite-only team. It is being **rebui
 
 - `docs/tracklite-spec.md`: what the product does. Rules are IDs such as `REQ-047`, `SEC-004`, `STD-5`, each with numbered examples (`REQ-047.2`). **The spec wins** over the design. If the spec is wrong or silent, fix the spec first (with a changelog line), then the code.
 - `docs/tech-design.md`: technical decisions, cited as `§1.7`, `§3.3` and so on.
-- `docs/build-plan.md`: milestones M0–M13 split into tasks (`M1.3`).
+- `docs/build-plan.md`: milestones M0–M14 split into tasks (`M1.3`).
 
 Look rules up by grep rather than reading whole docs: `grep -n "REQ-047" docs/tracklite-spec.md`.
 
