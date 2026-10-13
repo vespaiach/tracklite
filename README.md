@@ -30,7 +30,6 @@ Tracklite is being rebuilt from its documents, one task at a time:
 | [docs/tech-design.md](docs/tech-design.md) | Technical decisions, cited by section (`§1.7`) and decision ID (`D-36`). |
 | [docs/build-plan.md](docs/build-plan.md) | Milestones M0–M12 split into small tasks, with what each one reads, needs and must pass. Ticked boxes show what is built. |
 | [docs/design-system.md](docs/design-system.md) | Voice, colour roles, sizes and icons for the Track Lite UI kit. |
-| [docs/ADRs/](docs/ADRs/) | Architecture decision records. |
 | [ops/README.md](ops/README.md) | Server set-up, deploys, rollbacks and backups. |
 
 Tests are named after the spec example they prove, e.g. `it("REQ-016.4: concurrent creates get distinct numbers")`, so `grep -rn REQ-016 src` shows how a rule is covered.
@@ -75,7 +74,7 @@ Each route handler is wrapped in `apiRoute` ([src/server/api-route.ts](src/serve
 5. maps a thrown `ApiError` to `{ error: { message, fields? } }`;
 6. writes one JSON log line, without bodies or tokens.
 
-Routes never check roles. The domain functions are the only permission layer: admin-only functions start with `assertAdmin(actor)`, and ownership checks run once the row is loaded ([ADR 0001](docs/ADRs/0001-permission-checks-in-domain.md)). Each domain function opens its own transaction, so an action and the notification rows it creates commit together.
+Routes never check roles. The domain functions are the only permission layer: admin-only functions start with `assertAdmin(actor)`, and ownership checks run once the row is loaded (`docs/tech-design.md` §4.10). Each domain function opens its own transaction, so an action and the notification rows it creates commit together.
 
 Every expiry and time-window check uses the database's `now()`, never the app server's clock.
 

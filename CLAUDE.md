@@ -70,7 +70,7 @@ Always run drizzle-kit through the npm scripts. They set `NODE_OPTIONS=--conditi
 
 ## Architecture (as designed in docs/tech-design.md)
 
-**Processes (§1.1).** `tracklite-web` is `next start` behind Caddy. `tracklite-worker` is a Node entry point in `scripts/`, built from the same codebase. Both use PostgreSQL 18 and nothing else; there is no Redis and no paid queue.
+**Processes (§1.1).** `tracklite-web` is `next start` behind Caddy. `tracklite-worker` is a Node entry point in `scripts/`, run from the same codebase. Both use PostgreSQL 18 and nothing else; there is no Redis and no paid queue.
 
 **Strict single-page app (§1.7).** Every page address serves the same HTML shell. `src/app/[[...path]]/page.tsx` renders `<ClientApp />` with `next/dynamic` and `ssr: false`. The browser does all of these:
 - routing, with React Router in data mode and lazy routes;
@@ -123,7 +123,7 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 ## Coding rules
 
 - **No comments in code under `src/`.** That includes line comments, block comments and JSDoc. Say what the code means through names, types and test titles; spec IDs belong in test names, not comments.
-- **Domain functions take `actor` first and own every role and ownership check; routes never check roles.** An admin-only function's first statement is `assertAdmin(actor)`, and each one has a 403 test that calls it directly. Reading a domain file must show who may call it ([ADR 0001](docs/ADRs/0001-permission-checks-in-domain.md)).
+- **Domain functions take `actor` first and own every role and ownership check; routes never check roles.** An admin-only function's first statement is `assertAdmin(actor)`, and each one has a 403 test that calls it directly. Reading a domain file must show who may call it (`docs/tech-design.md` §4.10).
 - **Component-driven development first.** Build UI from the bottom up. Each element starts as an isolated component that holds no app state and gets its data and callbacks through props. Develop it on its own in the design sandbox, then compose it into larger layouts and finally connect it to the store and the router.
 - **Test-driven development.** Write a failing test first, run it to confirm it fails for the expected reason, then write the minimum code to make it pass, then refactor with the tests green. Two owner checkpoints apply in every coding session:
    - **Before writing tests**, list the test cases you plan to write (name, what it asserts, which R-ID it closes) and ask the owner whether to add or change any. Do not write test code until the owner confirms the list.
