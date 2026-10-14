@@ -35,7 +35,7 @@ A prompt like "Do task M1.3 from docs/build-plan.md" means following the **Worki
 
 ## Commands
 
-Node ≥ 24. Tests and migrations need a local PostgreSQL. Copy `.env.example` to `.env.local`.
+Node ≥ 24. Tests and migrations need a local PostgreSQL. Copy `.env.local.example` to `.env.local`.
 
 ```bash
 npm run dev            # next dev

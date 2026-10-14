@@ -125,7 +125,7 @@ npm install
 ```
 
 ```bash
-cp .env.example .env.local
+cp .env.local.example .env.local
 ```
 
 Fill in `DATABASE_URL` and `TEST_DATABASE_URL` in `.env.local`. They must point at different databases, because the test database is dropped and re-migrated on every run. Then create the schema and the dev accounts:
