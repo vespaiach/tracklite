@@ -216,3 +216,47 @@ Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `project
   - Done: `M15: a context imports another only through its index.ts`; `M15: context dependencies follow the context map`; both fail on a deliberately added deep import (check once by hand, then undo)
 
 **Done when:** `src/server/` holds only the five context folders, `shared/` and `architecture.test.ts`. In `npm run dev` a member signs in, creates an issue, moves it on the board and comments with an @mention, and `npm run worker` delivers the mention to Mailpit.
+
+
+## M16 Domain model
+
+Take the M15 contexts from folders to boundaries the code can't cross by accident. Each context owns its tables; identifiers are typed values; each context's rules are pure functions apart from the database code; and contexts tell `notifications` what happened through events rather than calling it. Behaviour doesn't change, so the existing tests are the guard; new tests cover only the new pure functions and the architecture rules. No repositories over Drizzle, no CQRS, no event sourcing, no extra service layer: at this size they add code without solving a problem.
+
+| Context | Tables it owns |
+|---|---|
+| `identity` | members, invitations, password_reset_tokens, sessions, sign_in_attempts, password_reset_requests |
+| `projects` | project_keys, projects, labels |
+| `issues` | issues, issue_labels |
+| `comments` | comments |
+| `notifications` | mentions, notification_batches, notification_deliveries, notifications, worker_heartbeats |
+
+Only the owning context inserts, updates or deletes a table. Another context may read it in a join, through the table its owner exports from `index.ts`, because splitting every join into calls would cost queries for nothing at this size.
+
+**Run order:** M16.1 → M16.2 → M16.3 → M16.4 → M16.5 → M16.6. Each task touches every context, so none run at the same time.
+
+- [ ] **M16.1 Domain model in the design.** Add to `docs/tech-design.md` §1.8: the table-ownership table and rule above; a glossary per context (the terms code, spec and UI share: member, invitation, project, key, label, issue, issue ID, status, priority, position, comment, mention, notification, batch, delivery); typed identifiers (M16.3); pure rules (M16.4, M16.5); domain events (M16.6), with the dependency map they lead to. Update the Bounded contexts paragraph of `CLAUDE.md`. No code changes.
+  - Reads: design §1.2, §1.4, §1.8, §2, §4.10 · spec glossary, if any
+  - Needs: M15.8
+  - Done: §1.8 holds all five parts; every glossary term matches the name used in `src/server/` and `src/contract/` (rename in the doc, not the code, where they differ)
+- [ ] **M16.2 Tables per context.** Split `src/server/shared/schema.ts` into `<context>/tables.ts` per the table above; enums and shared column helpers stay in `shared/schema.ts`. Each context's `index.ts` exports its tables for read joins. Point `drizzle.config.ts` at all the files. Extend `src/server/architecture.test.ts`.
+  - Reads: design §1.8, §2 · `src/server/shared/schema.ts`, `drizzle.config.ts`, `src/server/architecture.test.ts`
+  - Needs: M16.1
+  - Done: `npm run db:generate` reports no changes; `M16: a context writes only its own tables` (an `insert`, `update` or `delete` on another context's table fails it; check once by hand); the existing tests pass
+- [ ] **M16.3 Typed identifiers.** Branded types with one parse function each, made at the edge (the context's `schemas.ts`) and passed inward: `IssueId` (`WEB-42`) in `issues`, `ProjectKey` in `projects`, `Username` in `identity`, `RequestId` and `Uuid` in `shared/` (replacing `isUuid`). Domain functions take the branded types, so an unchecked string doesn't compile.
+  - Reads: design §3.1, D-42 · `src/server/shared/ids.ts`, each context's `schemas.ts`
+  - Needs: M16.2
+  - Done: one test per parse function covering its valid and invalid forms (named after the spec examples it closes, if any); no domain function under `src/server/` takes a plain `string` for these identifiers; the existing tests pass
+- [ ] **M16.4 Issue rules.** Move the decisions in `issues/` that need no database into `issues/rules.ts` as pure functions over plain types: board positions, status and priority changes, label changes, what an edit may touch. `create.ts`, `update.ts` and `board.ts` become load → decide → write.
+  - Reads: spec REQ-016–REQ-028 · `src/server/issues/`
+  - Needs: M16.3
+  - Done: `issues/rules.test.ts` covers each rule without the database; any database test that only checked such a rule moves to it (test each rule once); no file in `issues/` over 300 lines; the existing tests pass
+- [ ] **M16.5 Project, comment and identity rules.** The same split for the other contexts: archived-project and key rules in `projects/rules.ts`; edit/delete ownership and mention parsing in `comments/rules.ts` and `notifications/rules.ts`; last-admin, invitation and reset rules in `identity/rules.ts`. Permission checks stay `assertAdmin(actor)` first, as §4.10 says.
+  - Reads: design §4.10 · `src/server/projects/`, `src/server/comments/`, `src/server/identity/`, `src/server/notifications/descriptions.ts`
+  - Needs: M16.4
+  - Done: a `rules.test.ts` per context, as in M16.4; the existing tests pass
+- [ ] **M16.6 Domain events.** Add `shared/events.ts` with a typed union of what happened (`IssueCreated`, `IssueAssigned`, `IssueStatusChanged`, `CommentPosted`, `MemberMentioned`, … one per notification kind the spec names). Contexts return or emit events inside their transaction; `notifications` subscribes and writes its rows in the same transaction (spec §12 still holds: action and notification commit together). No context but `notifications` imports `notifications` any more; update the context map in §1.8 and `architecture.test.ts`.
+  - Reads: spec §12 · design §1.4, §1.8, §2.6, D-45 · `src/server/notifications/notifications.ts`
+  - Needs: M16.5
+  - Done: `M16: an event and its notification rows commit or roll back together`; `M15: context dependencies follow the context map` passes with the new map; the existing notification tests pass unchanged
+
+**Done when:** every box above is ticked, and the M15 hand check still holds: in `npm run dev` a member signs in, creates an issue, moves it on the board and comments with an @mention, and `npm run worker` delivers the mention to Mailpit.
