@@ -556,3 +556,56 @@ Fixes for the gaps in `docs/remain-things.md`, where design or spec describes so
   - Done: `npm run typecheck` fails if any of these functions returns an extra field (check once by hand, then undo); the existing tests pass
 
 **Done when:** a member signs out from the sidebar menu; reset and invitation links leave no token in the address bar; `/project/web` becomes `/project/WEB`; and `docs/remain-things.md` is gone.
+
+
+## M15 Bounded contexts
+
+Restructure `src/server/` from one flat folder into bounded contexts (modular DDD). Each context is a folder with a public `index.ts`, and other contexts import it only through that file. Domain functions keep their current style: `actor` first, their own transaction, Drizzle inside. The client is out of scope. Every task moves code without changing behaviour, so the existing tests are the guard. Moves use `git mv` and keep each test next to its source.
+
+| Context | Files from `src/server/` |
+|---|---|
+| `identity` | sessions, members, sign-in, profile, setup, invitations, password-resets |
+| `notifications` | notifications, notification-queue, notification-stats, notification-channels/, worker, email-webhook, descriptions |
+| `projects` | projects, labels |
+| `issues` | issues |
+| `comments` | comments |
+| `shared/` (infrastructure) | db, schema, config, log, api-error, api-route, email/, tokens, passwords, limits, cleanup, seed, seed-load |
+
+Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `projects`; every context → `identity`, `notifications`, `shared/`. No cycles.
+
+**Run order:** M15.1 → M15.2 → M15.3 → M15.4 → M15.5 → M15.6 → M15.7 → M15.8. Each task rewrites imports across `src/server/`, `src/app/api/` and `scripts/`, so none run at the same time.
+
+- [ ] **M15.1 Context map in the design.** Add a "Bounded contexts" section to `docs/tech-design.md` with the table and dependency rules above. Rewrite the paths named in §1.2, §4.10, D-42 (schemas move to `src/server/<context>/schemas.ts`) and D-44. Update the Architecture section of `CLAUDE.md`. No code changes.
+  - Reads: design §1.2, §3.5, §4.10, D-42, D-44, D-45
+  - Needs: M14.7
+  - Done: `grep -n "src/server/[a-z-]*\.ts" docs/tech-design.md CLAUDE.md` only shows paths inside a context or `shared/`
+- [ ] **M15.2 shared/.** Move the infrastructure files to `src/server/shared/`. Add `shared/transaction.ts` with one `Transaction` and one `Executor` type, and delete the copies in the other files. Update `drizzle.config.ts`, `package.json` scripts, `scripts/*` and `vitest.config.ts`.
+  - Reads: `src/server/db.ts`, `drizzle.config.ts`, `vitest.config.ts`, `scripts/`
+  - Needs: M15.1
+  - Done: `npm run db:generate` reports no changes; `npm run db:seed` and `npm run worker` still start; the existing tests pass
+- [ ] **M15.3 identity.** Move the identity files and the `account`, `invitation`, `member`, `password` and `profile` schemas into `src/server/identity/`. Add `index.ts`. Routes and other files import only from it.
+  - Reads: design §4.10 · `src/server/sessions.ts`, `src/server/members.ts`
+  - Needs: M15.2
+  - Done: no file outside `identity/` imports a file inside it other than `index.ts`; the existing tests pass
+- [ ] **M15.4 notifications.** Move the notification files and `descriptions.ts` into `src/server/notifications/`, along with the `description` schema. Add `index.ts`. Update `scripts/worker.ts` and the `/health/worker` and `/webhooks/email` routes.
+  - Reads: design §1.4, §2.6, D-45
+  - Needs: M15.3
+  - Done: the same import check for `notifications/`; `npm run worker` still starts; the existing tests pass
+- [ ] **M15.5 projects.** Move `projects.ts` and `labels.ts` with their schemas into `src/server/projects/`. Add `index.ts`, which exports `writableProject` for `issues` and `comments`.
+  - Reads: `src/server/projects.ts`, `src/server/labels.ts`
+  - Needs: M15.4
+  - Done: the same import check for `projects/`; the existing tests pass
+- [ ] **M15.6 issues.** Move `issues.ts` and its schema into `src/server/issues/`, splitting it into `create.ts`, `update.ts`, `board.ts`, `list.ts` and `rows.ts` (lookups and mappers). `index.ts` exports the domain functions and, under public names, the lookups `comments` needs (`byIssueId`, `issueGone`). Merge the duplicate UUID check with the one in `identity/invitations.ts` into `shared/`.
+  - Reads: `src/server/issues.ts`, `src/server/comments.ts`
+  - Needs: M15.5
+  - Done: the same import check for `issues/`; no file in `issues/` is over 300 lines; the existing tests pass
+- [ ] **M15.7 comments.** Move `comments.ts` and its schema into `src/server/comments/`, and add `index.ts`. It imports `issues` and `projects` only through their `index.ts` files.
+  - Reads: `src/server/comments.ts`
+  - Needs: M15.6
+  - Done: the same import check for `comments/`; the existing tests pass
+- [ ] **M15.8 Architecture test.** Add `src/server/architecture.test.ts`. It reads every import under `src/server/`, `src/app/` and `scripts/` and fails when a file imports another context's file other than its `index.ts`, or when a dependency breaks the allowed directions. Delete the now-empty `src/schemas/`.
+  - Reads: this milestone's table · `src/repository.test.ts`
+  - Needs: M15.7
+  - Done: `M15: a context imports another only through its index.ts`; `M15: context dependencies follow the context map`; both fail on a deliberately added deep import (check once by hand, then undo)
+
+**Done when:** `src/server/` holds only the five context folders, `shared/` and `architecture.test.ts`. In `npm run dev` a member signs in, creates an issue, moves it on the board and comments with an @mention, and `npm run worker` delivers the mention to Mailpit.
