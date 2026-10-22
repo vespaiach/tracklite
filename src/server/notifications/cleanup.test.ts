@@ -2,19 +2,17 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { eq, inArray, type SQL, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createMember, createNotificationBatch } from "../../test/factories";
-import { deleteExpiredRows } from "./cleanup";
-import { db } from "./db";
 import {
   invitations,
-  notificationBatches,
-  notificationDeliveries,
-  notifications,
   passwordResetRequests,
   passwordResetTokens,
   sessions,
   signInAttempts,
-} from "./schema";
-import { createToken, hashToken } from "./tokens";
+} from "../identity";
+import { db } from "../shared/db";
+import { createToken, hashToken } from "../shared/tokens";
+import { deleteExpiredRows } from "./cleanup";
+import { notificationBatches, notificationDeliveries, notifications } from "./tables";
 
 type DeliveryState = (typeof notificationDeliveries.$inferSelect)["state"];
 

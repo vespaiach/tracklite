@@ -1,10 +1,9 @@
 import "server-only";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "../shared/db";
-import type { Transaction } from "../shared/transaction";
 import type { Member } from "../identity";
-import { writableProject } from "../projects";
-import { issues, projects } from "../shared/schema";
+import { takeIssueNumber, writableProject } from "../projects";
+import { issues } from "./tables";
 import type { NewIssue } from "./schemas";
 import { findIssue, topOfColumn } from "./rows";
 
@@ -38,13 +37,4 @@ export async function createIssue(actor: Member, projectKey: string, { requestId
 
     return { issue, created: true };
   });
-}
-
-async function takeIssueNumber(tx: Transaction, projectId: string) {
-  const [{ number }] = await tx
-    .update(projects)
-    .set({ nextIssueNumber: sql`${projects.nextIssueNumber} + 1` })
-    .where(eq(projects.id, projectId))
-    .returning({ number: sql<number>`${projects.nextIssueNumber} - 1` });
-  return number;
 }

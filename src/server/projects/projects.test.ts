@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { createMember, createProject, uniqueProjectKey } from "../../test/factories";
 import { db } from "../shared/db";
 import { createProject as create, deleteProject, updateProject, writableProject } from "./projects";
-import { projects } from "../shared/schema";
+import { projects } from "./tables";
 
 const forbidden = { status: 403, message: "You don't have permission to do that." };
 

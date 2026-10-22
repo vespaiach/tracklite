@@ -5,16 +5,10 @@ import { createIssue, createMember, createProject } from "../../test/factories";
 import { moveIntoPast } from "../../test/time";
 import { editComment, postIssueComment, postProjectComment } from "../comments";
 import { db } from "../shared/db";
-import { updateIssue } from "../issues";
+import { updateIssue, issues } from "../issues";
 import { updateProject } from "../projects";
-import {
-  issues,
-  members,
-  notificationBatches,
-  notificationDeliveries,
-  notifications,
-} from "../shared/schema";
-import type { Member } from "../identity";
+import { members, type Member } from "../identity";
+import { notificationBatches, notificationDeliveries, notifications } from "./tables";
 
 async function website() {
   const project = await createProject({ name: "Website" });

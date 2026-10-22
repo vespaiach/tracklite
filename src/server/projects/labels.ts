@@ -8,7 +8,8 @@ import type { Transaction } from "../shared/transaction";
 import { writableProject } from "./projects";
 import type { LabelChanges, NewLabel } from "./schemas";
 import type { Label } from "../../contract";
-import { issueLabels, labels, projects } from "../shared/schema";
+import { issueLabels } from "../issues/tables";
+import { labels, projects } from "./tables";
 import type { Member } from "../identity";
 
 const labelResponse = {

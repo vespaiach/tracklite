@@ -3,8 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../server/shared/db";
 import { outbox } from "../../../server/shared/email/outbox";
-import { members, sessions } from "../../../server/shared/schema";
-import { createSession } from "../../../server/identity";
+import { members, sessions, createSession } from "../../../server/identity";
 import { createMember } from "../../../test/factories";
 import {
   invitedBy,

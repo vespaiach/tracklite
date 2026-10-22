@@ -1,22 +1,22 @@
 import "server-only";
 import { setTimeout as sleep } from "node:timers/promises";
 import { and, asc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
-import { deleteExpiredRows } from "../shared/cleanup";
+import { deleteExpiredRows } from "./cleanup";
 import { db } from "../shared/db";
 import type { Transaction } from "../shared/transaction";
 import { logNotificationError, logNotificationFailure, logWorkerMetrics } from "../shared/log";
 import { notificationSenders, type Recipient } from "./notification-channels";
 import { dueAt, queueCounts } from "./notification-queue";
+import { issues } from "../issues/tables";
+import { members } from "../identity";
 import {
-  issues,
-  members,
   mentions,
   notificationBatches,
   notificationDeliveries,
   notifications,
-  projects,
   workerHeartbeats,
-} from "../shared/schema";
+} from "./tables";
+import { projects } from "../projects/tables";
 
 type DueDelivery = Awaited<ReturnType<typeof dueDeliveries>>[number];
 type ClaimedDelivery = DueDelivery & { lease: string };

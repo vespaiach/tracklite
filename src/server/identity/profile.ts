@@ -4,10 +4,10 @@ import type { PasswordChange } from "./schemas";
 import type { ProfileChanges } from "./schemas";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
-import { recordFailedSignIn, signInLimitReached, tooManyAttempts } from "../shared/limits";
+import { recordFailedSignIn, signInLimitReached, tooManyAttempts } from "./limits";
 import { normalizeEmail } from "./members";
 import { hashPassword, verifyPassword } from "../shared/passwords";
-import { members, sessions } from "../shared/schema";
+import { members, sessions } from "./tables";
 import type { Member } from "./sessions";
 import { hashToken } from "../shared/tokens";
 

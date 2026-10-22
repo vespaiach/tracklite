@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { NotificationStats } from "../../../contract";
 import { db } from "../../../server/shared/db";
-import { notificationDeliveries, notifications, workerHeartbeats } from "../../../server/shared/schema";
+import { notificationDeliveries, notifications, workerHeartbeats } from "../../../server/notifications";
 import { createMember, createNotificationBatch } from "../../../test/factories";
 import { signedInAdmin } from "../../../test/invitations";
 import { GET } from "./route";

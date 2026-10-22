@@ -7,17 +7,10 @@ import { deleteComment, editComment, postIssueComment } from "../comments";
 import { db } from "../shared/db";
 import { outbox } from "../shared/email/outbox";
 import type { Transaction } from "../shared/transaction";
-import { updateIssue } from "../issues";
+import { updateIssue, issues } from "../issues";
 import { notificationSenders } from "./notification-channels";
-import {
-  issues,
-  members,
-  notificationBatches,
-  notificationDeliveries,
-  notifications,
-  workerHeartbeats,
-} from "../shared/schema";
-import type { Member } from "../identity";
+import { members, type Member } from "../identity";
+import { notificationBatches, notificationDeliveries, notifications, workerHeartbeats } from "./tables";
 import { runWorker, sendDueDeliveries } from "./worker";
 
 beforeEach(() => {

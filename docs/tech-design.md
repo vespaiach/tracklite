@@ -128,16 +128,16 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 
 | Context | Holds |
 |---|---|
-| `src/server/identity/` | sessions, members, sign-in, profile, setup, invitations, password resets; the account, invitation, member, password and profile schemas |
-| `src/server/notifications/` | notifications, the notification queue, notification stats, `notification-channels/`, the worker, the email webhook, descriptions; the description schema |
+| `src/server/identity/` | sessions, members, sign-in, profile, setup, invitations, password resets, sign-in and reset limits, the dev seed, expired account rows; the account, invitation, member, password and profile schemas |
+| `src/server/notifications/` | notifications, the notification queue, notification stats, `notification-channels/`, the worker, expired-row cleanup, the email webhook, descriptions; the description schema |
 | `src/server/projects/` | projects, labels; their schemas |
 | `src/server/issues/` | issues (`create.ts`, `update.ts`, `board.ts`, `list.ts`, `rows.ts`); its schema |
 | `src/server/comments/` | comments; its schema |
-| `src/server/shared/` (infrastructure) | db, schema, config, log, api-error, api-route, `email/`, tokens, passwords, limits, cleanup, seed, seed-load; the schema helpers every context uses (`schemas.ts`) |
+| `src/server/shared/` (infrastructure) | db, schema (enums and column helpers), config, log, api-error, api-route, `email/`, tokens, passwords, chunked-delete; the schema helpers every context uses (`schemas.ts`) |
 
 **Allowed dependencies.** `comments` → `issues`, `projects`; `issues` → `projects`; every context → `identity`, `notifications`, `shared/`; `notifications` → `identity`, but `identity` depends only on `shared/`. No cycles. `shared/` holds no domain rules and is imported by file, not through an index; its one import of a context is `api-route.ts` taking `requireMember` from `identity`. `src/server/architecture.test.ts` fails on an import that reaches past another context's `index.ts` or breaks these directions. Within a context, files import each other freely. Test files (`*.test.ts`, `*.test.tsx`) and the helpers in `src/test/` also import other contexts only through their `index.ts`, but are exempt from the directions, because they build fixtures across contexts (the notification and worker tests create projects, issues and comments).
 
-**Table ownership.** Each context owns its tables. Only the owning context inserts, updates or deletes a table. Another context may read it in a join, through the table its owner exports from `index.ts`, because splitting every join into calls would cost queries for nothing at this size. Enums and shared column helpers stay in `shared/schema.ts`; each context's tables move to its `tables.ts` (M16.2).
+**Table ownership.** Each context owns its tables. Only the owning context inserts, updates or deletes a table. Another context may read it in a join, through the table its owner exports from `index.ts`, because splitting every join into calls would cost queries for nothing at this size. Enums and shared column helpers stay in `shared/schema.ts`; each context's tables are in its `tables.ts`, exported from its `index.ts`, and `drizzle.config.ts` reads all of them. A `tables.ts` imports another context's `tables.ts` directly for its foreign keys; the foreign-key graph runs `notifications` → `comments` → `issues` → `projects` → `identity` and has no cycles. Three reads point against the context map: `notifications/notifications.ts` and `notifications/worker.ts` read `issues` and `projects` (the map allows this from M16.6), and `projects/labels.ts` counts `issue_labels`. They import the owner's `tables.ts` directly, which loads only table definitions, so no import cycle forms; `architecture.test.ts` lists each one. `M16: a context writes only its own tables` fails on an `insert`, `update` or `delete` of another context's table outside test code; test files and `src/test/` (including the NFR-001 load data, `src/test/seed-load.ts`) may write any table to build fixtures. A context that needs another's table changed calls a function the owner exports (`takeIssueNumber`, `markInvitationBounced`, `deleteExpiredAccountRows`).
 
 | Context | Tables it owns |
 |---|---|
@@ -184,7 +184,7 @@ Permission checks stay where 4.10 puts them: `assertAdmin(actor)` is still an ad
 
 ## 2. Schema
 
-PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). Tables, columns, constraints and indexes are in `src/server/shared/schema.ts`; `drizzle-kit generate` writes migrations to `migrations/`. This section records only why the schema is shaped as it is. Every table has a `uuid` id unless stated (`project_keys` is keyed by `key`, `issue_labels` by its pair), and every timestamp is `timestamptz` in UTC (DATA-003).
+PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). Enums and column helpers are in `src/server/shared/schema.ts`, and tables, columns, constraints and indexes in each context's `tables.ts` (1.8); `drizzle-kit generate` writes migrations to `migrations/`. This section records only why the schema is shaped as it is. Every table has a `uuid` id unless stated (`project_keys` is keyed by `key`, `issue_labels` by its pair), and every timestamp is `timestamptz` in UTC (DATA-003).
 
 ### 2.1 Enums
 

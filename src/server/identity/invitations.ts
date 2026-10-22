@@ -9,7 +9,7 @@ import type { Invitation, InvitationLookup } from "../../contract";
 import type { InvitationAcceptance } from "./schemas";
 import { memberSummary } from "./members";
 import { hashPassword } from "../shared/passwords";
-import { invitations, members } from "../shared/schema";
+import { invitations, members } from "./tables";
 import { assertAdmin, createSession, type Member } from "./sessions";
 import { createToken, hashToken } from "../shared/tokens";
 import type { Executor } from "../shared/transaction";
@@ -199,4 +199,13 @@ async function assertUsernameFree(executor: Pick<typeof db, "select">, username:
     .from(members)
     .where(eq(members.username, username));
   if (taken) throw new ApiError(422, "Check the highlighted fields", { username: "Username taken" });
+}
+
+export async function markInvitationBounced(providerMessageId: string) {
+  const [invitation] = await db
+    .update(invitations)
+    .set({ bouncedAt: sql`now()` })
+    .where(eq(invitations.providerMessageId, providerMessageId))
+    .returning({ id: invitations.id });
+  return invitation;
 }

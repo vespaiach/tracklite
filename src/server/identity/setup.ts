@@ -4,7 +4,7 @@ import * as v from "valibot";
 import { FirstAdmin } from "./schemas";
 import { db } from "../shared/db";
 import { hashPassword } from "../shared/passwords";
-import { members } from "../shared/schema";
+import { members } from "./tables";
 
 export async function createFirstAdmin(input: v.InferInput<typeof FirstAdmin>) {
   const result = v.safeParse(FirstAdmin, input, { abortEarly: true });

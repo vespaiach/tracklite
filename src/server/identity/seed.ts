@@ -1,8 +1,8 @@
 import "server-only";
 import { sql } from "drizzle-orm";
-import { db } from "./db";
-import { hashPassword } from "./passwords";
-import { members } from "./schema";
+import { db } from "../shared/db";
+import { hashPassword } from "../shared/passwords";
+import { members } from "./tables";
 
 export const seedPassword = "tracklite-dev-password";
 

@@ -42,10 +42,10 @@ npm run dev            # next dev
 npm test               # vitest run (all projects)
 npm run lint           # biome check  (auto-fix: npx biome check --write)
 npm run typecheck      # next typegen && tsc --noEmit
-npm run db:generate    # drizzle-kit: write a migration from src/server/shared/schema.ts
+npm run db:generate    # drizzle-kit: write a migration from shared/schema.ts and <context>/tables.ts
 npm run db:migrate     # apply migrations to DATABASE_URL
 npm run db:studio
-npm run db:seed        # dev members and admins (password in src/server/shared/seed.ts)
+npm run db:seed        # dev members and admins (password in src/server/identity/seed.ts)
 npm run db:seed:load   # NFR-001 load data: 50 projects, 10,000 issues, 50,000 comments
 npm run db:reset       # drop the local dev database's schemas, re-run migrations, then db:seed
 npm run setup          # create the first admin (OPS-001)
@@ -96,7 +96,7 @@ There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks
 
 The browser shows `message` as-is, so all user-facing copy for server outcomes lives on the server.
 
-**Bounded contexts (§1.8).** `src/server/` is split into context folders: `identity`, `notifications`, `projects`, `issues`, `comments`, plus `shared/` for infrastructure (db, schema, config, log, api-error, api-route, email, tokens, passwords, limits, cleanup, seeds).
+**Bounded contexts (§1.8).** `src/server/` is split into context folders: `identity`, `notifications`, `projects`, `issues`, `comments`, plus `shared/` for infrastructure (db, schema enums and column helpers, config, log, api-error, api-route, email, tokens, passwords, chunked-delete).
 - Each context has a public `index.ts`. Other contexts, routes and `scripts/` import a context only through it; `shared/` files are imported directly.
 - Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `projects`; every context → `identity`, `notifications`, `shared/`. No cycles.
 - A context's request schemas are in its `schemas.ts`; tests sit next to their source.
@@ -119,7 +119,7 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 - Notifications are grouped in `notification_batches`, with one `notification_deliveries` row per channel the recipient chose (only `email` in R1). The worker polls deliveries every 5 s with `for update skip locked`, hands them to the channel's sender in `src/server/notifications/notification-channels/`, and uses the delivery id as Resend's `Idempotency-Key`.
 - All mail goes through one `sendEmail()` with three backends: Resend in production, Mailpit (`:8025`) in development, and an in-memory outbox in tests.
 
-**Schema (§2, `src/server/shared/schema.ts`).**
+**Schema (§2, `src/server/shared/schema.ts` and each context's `tables.ts`).**
 - Drizzle ORM over postgres.js.
 - Enum declaration order is the sort order (status and priority), so changing the order changes the UI ordering.
 - Every timestamp is `timestamptz`.

@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { POST as requestLink } from "../app/api/password-reset-links/route";
 import { db } from "../server/shared/db";
 import { outbox } from "../server/shared/email/outbox";
-import { passwordResetTokens } from "../server/shared/schema";
+import { passwordResetTokens } from "../server/identity";
 import { hashToken } from "../server/shared/tokens";
 
 export function uniqueIp() {

@@ -4,7 +4,8 @@ import { generateKeyBetween } from "fractional-indexing";
 import { db } from "../shared/db";
 import type { Transaction } from "../shared/transaction";
 import { type Member, memberSummary } from "../identity";
-import { issues, projects } from "../shared/schema";
+import { issues } from "./tables";
+import { projects } from "../projects";
 import { type Board, type BoardIssue, type IssueStatus, issueStatuses } from "../../contract";
 import type { IssueMove } from "./schemas";
 import {

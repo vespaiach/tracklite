@@ -1,9 +1,9 @@
 import "server-only";
 import { isIP } from "node:net";
 import { and, eq, gt, or, sql } from "drizzle-orm";
-import { ApiError } from "./api-error";
-import { db } from "./db";
-import { passwordResetRequests, signInAttempts } from "./schema";
+import { ApiError } from "../shared/api-error";
+import { db } from "../shared/db";
+import { passwordResetRequests, signInAttempts } from "./tables";
 
 const failedSignInsPerEmail = 10;
 const failedSignInsPerIp = 30;

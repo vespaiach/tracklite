@@ -5,9 +5,10 @@ import { generateKeyBetween } from "fractional-indexing";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import type { Executor, Transaction } from "../shared/transaction";
-import { memberSummary } from "../identity";
-import { writableProject } from "../projects";
-import { issueLabels, issues, labels, members, mentions, projects } from "../shared/schema";
+import { memberSummary, members } from "../identity";
+import { writableProject, labels, projects } from "../projects";
+import { issueLabels, issues } from "./tables";
+import { mentions } from "../notifications";
 import type { Issue, IssueStatus } from "../../contract";
 
 export type IssueUpdate = PgUpdateSetSource<typeof issues>;

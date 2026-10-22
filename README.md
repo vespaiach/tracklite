@@ -132,7 +132,7 @@ npm run db:reset
 npm run dev
 ```
 
-Open http://localhost:3000 and sign in as one of the seeded members (the password is in `src/server/shared/seed.ts`). To send notification emails, run the worker in a second terminal:
+Open http://localhost:3000 and sign in as one of the seeded members (the password is in `src/server/identity/seed.ts`). To send notification emails, run the worker in a second terminal:
 
 ```bash
 npm run worker
@@ -147,7 +147,7 @@ npm run worker
 | `npm test` | Run every test (needs `TEST_DATABASE_URL`) |
 | `npm run lint` | Biome check (`npx biome check --write` to fix) |
 | `npm run typecheck` | `next typegen` and `tsc --noEmit` |
-| `npm run db:generate` | Write a migration from `src/server/shared/schema.ts` |
+| `npm run db:generate` | Write a migration from `src/server/shared/schema.ts` and each context's `tables.ts` |
 | `npm run db:migrate` | Apply migrations |
 | `npm run db:studio` | Open Drizzle Studio |
 | `npm run db:seed` | Add dev members and admins |

@@ -2,16 +2,10 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray, or } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../../server/shared/db";
-import {
-  comments,
-  issueLabels,
-  issues,
-  labels,
-  mentions,
-  notifications,
-  projectKeys,
-  projects,
-} from "../../../../server/shared/schema";
+import { comments } from "../../../../server/comments";
+import { issueLabels, issues } from "../../../../server/issues";
+import { labels, projectKeys, projects } from "../../../../server/projects";
+import { mentions, notifications } from "../../../../server/notifications";
 import { createSession, type Member } from "../../../../server/identity";
 import { createMember, createNotificationBatch, createProject } from "../../../../test/factories";
 import { jsonRequest } from "../../../../test/reset-links";

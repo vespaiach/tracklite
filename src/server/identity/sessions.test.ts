@@ -4,7 +4,7 @@ import { createMember } from "../../test/factories";
 import { moveIntoPast } from "../../test/time";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
-import { members, sessions } from "../shared/schema";
+import { members, sessions } from "./tables";
 import { createSession, requireMember, sessionCookie } from "./sessions";
 import { hashToken } from "../shared/tokens";
 

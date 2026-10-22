@@ -4,10 +4,10 @@ import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import { sendEmail } from "../shared/email/send";
 import { passwordResetEmail } from "../shared/email/templates";
-import { recordResetRequest, resetRequestLimitReached, tooManyAttempts } from "../shared/limits";
+import { recordResetRequest, resetRequestLimitReached, tooManyAttempts } from "./limits";
 import { activeMemberByEmail } from "./members";
 import { hashPassword } from "../shared/passwords";
-import { members, passwordResetTokens, sessions } from "../shared/schema";
+import { members, passwordResetTokens, sessions } from "./tables";
 import { createSession } from "./sessions";
 import { createToken, hashToken } from "../shared/tokens";
 

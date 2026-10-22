@@ -5,7 +5,7 @@ import { uniqueEmail } from "../../test/invitations";
 import { db } from "../shared/db";
 import { outbox } from "../shared/email/outbox";
 import { createInvitation, listInvitations, resendInvitation, revokeInvitation } from "./invitations";
-import { invitations } from "../shared/schema";
+import { invitations } from "./tables";
 import { createToken, hashToken } from "../shared/tokens";
 
 const forbidden = { status: 403, message: "You don't have permission to do that." };
