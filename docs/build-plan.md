@@ -210,7 +210,7 @@ Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `project
   - Reads: `src/server/comments.ts`
   - Needs: M15.6
   - Done: the same import check for `comments/`; the existing tests pass
-- [ ] **M15.8 Architecture test.** Add `src/server/architecture.test.ts`. It reads every import under `src/server/`, `src/app/` and `scripts/` and fails when a file imports another context's file other than its `index.ts`, or when a dependency breaks the allowed directions. Delete the now-empty `src/schemas/`.
+- [x] **M15.8 Architecture test.** Add `src/server/architecture.test.ts`. It reads every import under `src/server/`, `src/app/` and `scripts/` and fails when a file imports another context's file other than its `index.ts`, or when a dependency breaks the allowed directions. Delete the now-empty `src/schemas/`.
   - Reads: this milestone's table · `src/repository.test.ts`
   - Needs: M15.7
   - Done: `M15: a context imports another only through its index.ts`; `M15: context dependencies follow the context map`; both fail on a deliberately added deep import (check once by hand, then undo)
