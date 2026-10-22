@@ -2,8 +2,8 @@ import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   apiError,
+  deferred,
   mockApi,
-  never,
   noContent,
   renderAppAt,
   requestsTo,
@@ -25,11 +25,17 @@ async function sendLinkTo(email: string) {
   fireEvent.click(screen.getByRole("button", { name: "Send link" }));
 }
 
-it('REQ-050.1: sending posts { email } and shows "Check your email" naming the email', async () => {
-  const fetchMock = mockResetLink(noContent);
+it('REQ-050.1, STD-5: while sending, the button is disabled and reads "Sending…"; sending posts { email } and shows "Check your email" naming the email', async () => {
+  const send = deferred();
+  const fetchMock = mockResetLink(send.answer);
   renderAppAt("/forgot-password");
 
   await sendLinkTo("sam@acme.com");
+
+  const button = await screen.findByRole("button", { name: "Sending…" });
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+
+  send.resolve(noContent());
 
   expect(await screen.findByRole("heading", { name: "Check your email" })).toBeTruthy();
   expect(screen.getByText(/sam@acme\.com/)).toBeTruthy();
@@ -56,16 +62,6 @@ it('STD-6: a failed email shows the toast "We couldn\'t send the email. Try agai
   expect((await screen.findByRole("status")).textContent).toBe("We couldn't send the email. Try again.");
   expect(screen.queryByRole("alert")).toBeNull();
   expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("sam@acme.com");
-});
-
-it('STD-5: while sending, the button is disabled and reads "Sending…"', async () => {
-  mockResetLink(never);
-  renderAppAt("/forgot-password");
-
-  await sendLinkTo("sam@acme.com");
-
-  const button = await screen.findByRole("button", { name: "Sending…" });
-  expect((button as HTMLButtonElement).disabled).toBe(true);
 });
 
 it("§6.1: a signed-in member opening /forgot-password goes to /my-issues", async () => {

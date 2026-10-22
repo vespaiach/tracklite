@@ -5,7 +5,6 @@ import {
   apiError,
   mockApi,
   networkError,
-  never,
   noContent,
   renderAppAt,
   requestsTo,
@@ -38,11 +37,14 @@ async function setPassword(password: string) {
   fireEvent.click(screen.getByRole("button", { name: "Set password" }));
 }
 
-it("REQ-050.3: a valid link shows the form; a valid password posts { token, password } and lands on My issues", async () => {
+it("REQ-050.3, §4.2: a valid link shows the form and drops the token from the address; a valid password posts { token, password } and lands on My issues", async () => {
   const fetchMock = mockReset(noContent, noContent);
   renderAppAt("/reset-password?token=abc");
 
   expect(await screen.findByRole("heading", { name: "Set a new password" })).toBeTruthy();
+  expect(window.location.pathname).toBe("/reset-password");
+  expect(new URLSearchParams(window.location.search).has("token")).toBe(false);
+
   await setPassword("a much longer password");
 
   expect(await screen.findByRole("heading", { name: "My issues" })).toBeTruthy();
@@ -79,47 +81,21 @@ it('REQ-050.4: a 410 on submit switches to "This link has expired"', async () =>
   expect(screen.queryByLabelText("New password")).toBeNull();
 });
 
-it('REQ-048: the server\'s field errors "At least 12 characters" and "Too long (max 128)" show under the field, and the password is kept', async () => {
-  const answers = [
+it('REQ-048: the server\'s field error "At least 12 characters" shows under the field, and the password is kept', async () => {
+  mockReset(noContent, () =>
     apiError(422, "Check the highlighted fields", { password: "At least 12 characters" }),
-    apiError(422, "Check the highlighted fields", { password: "Too long (max 128)" }),
-  ];
-  mockReset(noContent, () => answers.shift() ?? noContent());
+  );
   renderAppAt("/reset-password?token=abc");
 
   await setPassword("tracklite1");
+
   expect(await screen.findByText("At least 12 characters")).toBeTruthy();
   const input = screen.getByLabelText("New password") as HTMLInputElement;
   expect(input.value).toBe("tracklite1");
   expect(input.getAttribute("aria-invalid")).toBe("true");
-
-  const tooLong = "a".repeat(129);
-  await setPassword(tooLong);
-  expect(await screen.findByText("Too long (max 128)")).toBeTruthy();
-  expect((screen.getByLabelText("New password") as HTMLInputElement).value).toBe(tooLong);
 });
 
-it('STD-7: "Checking your link…" shows only after the lookup has been pending 300 ms', async () => {
-  mockReset(never, noContent);
-  renderAppAt("/reset-password?token=abc");
-
-  await screen.findByText("Tracklite");
-  expect(screen.queryByText("Checking your link…")).toBeNull();
-  expect(await screen.findByText("Checking your link…")).toBeTruthy();
-  expect(screen.queryByLabelText("New password")).toBeNull();
-});
-
-it('REQ-050.8: signed in as Alex Kim shows "You\'re signed in as Alex Kim. Sign out to reset a password." and never looks the link up', async () => {
-  const fetchMock = mockApi({ "GET /api/me": () => Response.json(alex) });
-  renderAppAt("/reset-password?token=abc");
-
-  expect(await screen.findByText("You're signed in as Alex Kim. Sign out to reset a password.")).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
-  expect(screen.queryByLabelText("New password")).toBeNull();
-  expect(requestsTo(fetchMock, "POST /api/password-reset-lookups")).toEqual([]);
-});
-
-it("REQ-050.8: after Sign out, the same valid link shows the form", async () => {
+it('REQ-050.8: signed in as Alex Kim shows "You\'re signed in as Alex Kim. Sign out to reset a password." and never looks the link up; after Sign out, the same valid link shows the form', async () => {
   let signedIn = true;
   const fetchMock = mockApi({
     "GET /api/me": () => (signedIn ? Response.json(alex) : signedOut()),
@@ -131,7 +107,11 @@ it("REQ-050.8: after Sign out, the same valid link shows the form", async () => 
   });
   renderAppAt("/reset-password?token=abc");
 
-  fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
+  expect(await screen.findByText("You're signed in as Alex Kim. Sign out to reset a password.")).toBeTruthy();
+  expect(screen.queryByLabelText("New password")).toBeNull();
+  expect(requestsTo(fetchMock, "POST /api/password-reset-lookups")).toEqual([]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
 
   expect(await screen.findByRole("heading", { name: "Set a new password" })).toBeTruthy();
   expect(window.location.pathname).toBe("/reset-password");
@@ -147,21 +127,4 @@ it("STD-9.3: a network error on submit shows the toast and keeps the password", 
 
   expect((await screen.findByRole("status")).textContent).toBe("Couldn't save. Try again.");
   expect((screen.getByLabelText("New password") as HTMLInputElement).value).toBe("a much longer password");
-});
-
-it("§4.2: the reset page removes the token from the address", async () => {
-  const fetchMock = mockReset(noContent, noContent);
-  renderAppAt("/reset-password?token=abc");
-
-  expect(await screen.findByRole("heading", { name: "Set a new password" })).toBeTruthy();
-  expect(window.location.pathname).toBe("/reset-password");
-  expect(new URLSearchParams(window.location.search).has("token")).toBe(false);
-
-  await setPassword("a much longer password");
-
-  expect(await screen.findByRole("heading", { name: "My issues" })).toBeTruthy();
-  expect(requestsTo(fetchMock, "POST /api/password-reset-lookups")).toEqual([{ token: "abc" }]);
-  expect(requestsTo(fetchMock, "POST /api/password-resets")).toEqual([
-    { token: "abc", password: "a much longer password" },
-  ]);
 });

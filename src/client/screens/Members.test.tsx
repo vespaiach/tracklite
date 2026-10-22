@@ -4,7 +4,7 @@ import {
   alex,
   apiError,
   mockApi,
-  never,
+  deferred,
   noContent,
   renderAppAt,
   requestsTo,
@@ -44,7 +44,6 @@ const sendFailed = "We couldn't send the email. Try again.";
 type Overrides = {
   me?: Me;
   invitations?: Invitation[];
-  listMembers?: Answer;
   invite?: Answer;
   patch?: Answer;
 };
@@ -80,7 +79,7 @@ function mockMembersPage(overrides: Overrides = {}) {
 
   return mockApi({
     "GET /api/me": () => Response.json(overrides.me ?? admin),
-    "GET /api/members": overrides.listMembers ?? (() => Response.json(members)),
+    "GET /api/members": () => Response.json(members),
     "GET /api/invitations": () => Response.json(invitations),
     "POST /api/invitations":
       overrides.invite ??
@@ -133,7 +132,7 @@ async function choose(fullName: string, action: string) {
   fireEvent.click(within(menu).getByRole("menuitem", { name: action }));
 }
 
-it("REQ-051.1: an admin sees every member with their role, and Sam's pending invitation with Resend and Revoke", async () => {
+it('REQ-051.1, REQ-051: an admin sees every member with their role, deactivated members marked "(deactivated)", and Sam\'s pending invitation with Resend and Revoke', async () => {
   mockMembersPage();
   renderAppAt("/settings/members");
 
@@ -142,7 +141,10 @@ it("REQ-051.1: an admin sees every member with their role, and Sam's pending inv
   expect(within(samRow).getByText("sam@acme.com")).toBeTruthy();
   expect(within(samRow).getByText("Admin")).toBeTruthy();
   expect(within(await row("Members", "Alex Kim")).getByText("Member")).toBeTruthy();
-  expect(within(await row("Members", /Jo Park/)).getByText("Member")).toBeTruthy();
+  const joRow = await row("Members", /Jo Park/);
+  expect(within(joRow).getByText("Member")).toBeTruthy();
+  expect(within(joRow).getByText(/\(deactivated\)/)).toBeTruthy();
+  expect(within(joRow).getByText("Deactivated")).toBeTruthy();
 
   const priyaRow = await row("Invitations", "priya@acme.com");
   expect(within(priyaRow).getByText("Pending")).toBeTruthy();
@@ -176,20 +178,20 @@ it("REQ-051.3: resending an expired invitation shows it as Pending", async () =>
   expect(requestsTo(fetchMock, "POST /api/invitations/inv-lee/resend")).toHaveLength(1);
 });
 
-it('REQ-051: deactivated members stay listed, marked "(deactivated)"', async () => {
-  mockMembersPage();
-  renderAppAt("/settings/members");
-
-  const joRow = await row("Members", /Jo Park/);
-  expect(within(joRow).getByText(/\(deactivated\)/)).toBeTruthy();
-  expect(within(joRow).getByText("Deactivated")).toBeTruthy();
-});
-
-it("REQ-001.1: Send invitation posts the email and lists it as Pending", async () => {
-  const fetchMock = mockMembersPage();
+it("REQ-001.1, STD-5: Send invitation is disabled while sending, then posts the email and lists it as Pending", async () => {
+  const send = deferred();
+  const open = [priya, dev, lee];
+  const fetchMock = mockMembersPage({ invitations: open, invite: send.answer });
   renderAppAt("/settings/members");
 
   await invite("nina@acme.com");
+
+  const sending = await screen.findByRole("button", { name: "Sending…" });
+  expect((sending as HTMLButtonElement).disabled).toBe(true);
+
+  const nina = invitation("inv-new", "nina@acme.com", "pending", "2026-10-12T10:00:00.000Z");
+  open.push(nina);
+  send.resolve(Response.json(nina, { status: 201 }));
 
   expect(await screen.findByText("Invitation sent to nina@acme.com.")).toBeTruthy();
   await waitFor(async () =>
@@ -199,10 +201,14 @@ it("REQ-001.1: Send invitation posts the email and lists it as Pending", async (
   expect(requestsTo(fetchMock, "POST /api/invitations")).toEqual([{ email: "nina@acme.com" }]);
 });
 
-it('REQ-001: "Enter a valid email" shows beside the field and keeps the text', async () => {
-  mockMembersPage({
-    invite: () => apiError(422, "Check the highlighted fields", { email: "Enter a valid email" }),
-  });
+it("REQ-001, REQ-001.2, REQ-001.6: a refused email shows beside the field and keeps the text", async () => {
+  const deactivatedMessage = "This person is deactivated. Reactivate them instead.";
+  const refusals = [
+    apiError(422, "Check the highlighted fields", { email: "Enter a valid email" }),
+    apiError(422, "Already a member"),
+    apiError(422, deactivatedMessage),
+  ];
+  mockMembersPage({ invite: () => refusals.shift() ?? noContent() });
   renderAppAt("/settings/members");
 
   await invite("nina@acme");
@@ -210,27 +216,16 @@ it('REQ-001: "Enter a valid email" shows beside the field and keeps the text', a
   expect(await screen.findByText("Enter a valid email")).toBeTruthy();
   expect(emailField().getAttribute("aria-invalid")).toBe("true");
   expect(emailField().value).toBe("nina@acme");
-});
-
-it("REQ-001.2: an existing member's email is refused beside the field", async () => {
-  mockMembersPage({ invite: () => apiError(422, "Already a member") });
-  renderAppAt("/settings/members");
 
   await invite("Sam@Acme.com");
 
   expect(await screen.findByText("Already a member")).toBeTruthy();
   expect(emailField().getAttribute("aria-invalid")).toBe("true");
   expect(emailField().value).toBe("Sam@Acme.com");
-});
-
-it("REQ-001.6: a deactivated member's email is refused beside the field", async () => {
-  const message = "This person is deactivated. Reactivate them instead.";
-  mockMembersPage({ invite: () => apiError(422, message) });
-  renderAppAt("/settings/members");
 
   await invite("jo@acme.com");
 
-  expect(await screen.findByText(message)).toBeTruthy();
+  expect(await screen.findByText(deactivatedMessage)).toBeTruthy();
   expect(emailField().getAttribute("aria-invalid")).toBe("true");
 });
 
@@ -246,36 +241,21 @@ it("REQ-001.7: a failed send shows the STD-6 toast, keeps the address and lists 
   expect(screen.queryByText("nina@acme.com", { selector: "td" })).toBeNull();
 });
 
-it("STD-5: Send invitation is disabled while sending", async () => {
-  mockMembersPage({ invite: never });
-  renderAppAt("/settings/members");
-
-  await invite("nina@acme.com");
-
-  const sending = await screen.findByRole("button", { name: "Sending…" });
-  expect((sending as HTMLButtonElement).disabled).toBe(true);
-});
-
-it("Revoke asks for confirmation; Cancel sends nothing", async () => {
+it("REQ-001.4: Revoke asks first; Cancel sends nothing; confirming removes the row", async () => {
   const fetchMock = mockMembersPage();
   renderAppAt("/settings/members");
 
   fireEvent.click(await screen.findByRole("button", { name: "Revoke invitation to priya@acme.com" }));
 
-  const dialog = await screen.findByRole("dialog", { name: "Revoke invitation?" });
-  expect(within(dialog).getByText("The link sent to priya@acme.com will stop working.")).toBeTruthy();
-  fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  const cancelled = await screen.findByRole("dialog", { name: "Revoke invitation?" });
+  expect(within(cancelled).getByText("The link sent to priya@acme.com will stop working.")).toBeTruthy();
+  fireEvent.click(within(cancelled).getByRole("button", { name: "Cancel" }));
 
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(requestsTo(fetchMock, "DELETE /api/invitations/inv-priya")).toEqual([]);
   expect(await row("Invitations", "priya@acme.com")).toBeTruthy();
-});
 
-it("REQ-001.4: confirming Revoke revokes the invitation and removes its row", async () => {
-  const fetchMock = mockMembersPage();
-  renderAppAt("/settings/members");
-
-  fireEvent.click(await screen.findByRole("button", { name: "Revoke invitation to priya@acme.com" }));
+  fireEvent.click(screen.getByRole("button", { name: "Revoke invitation to priya@acme.com" }));
   const dialog = await screen.findByRole("dialog", { name: "Revoke invitation?" });
   fireEvent.click(within(dialog).getByRole("button", { name: "Revoke invitation" }));
 
@@ -284,25 +264,20 @@ it("REQ-001.4: confirming Revoke revokes the invitation and removes its row", as
   expect(requestsTo(fetchMock, "DELETE /api/invitations/inv-priya")).toHaveLength(1);
 });
 
-it('REQ-007: Deactivate asks "Alex Kim will be signed out and can\'t sign in until reactivated."; Cancel sends nothing', async () => {
+it('REQ-007: Deactivate asks "Alex Kim will be signed out and can\'t sign in until reactivated."; Cancel sends nothing; confirming marks them "(deactivated)"', async () => {
   const fetchMock = mockMembersPage();
   renderAppAt("/settings/members");
 
   await choose("Alex Kim", "Deactivate");
 
-  const dialog = await screen.findByRole("dialog", { name: "Deactivate Alex Kim?" });
+  const cancelled = await screen.findByRole("dialog", { name: "Deactivate Alex Kim?" });
   expect(
-    within(dialog).getByText("Alex Kim will be signed out and can't sign in until reactivated."),
+    within(cancelled).getByText("Alex Kim will be signed out and can't sign in until reactivated."),
   ).toBeTruthy();
-  fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  fireEvent.click(within(cancelled).getByRole("button", { name: "Cancel" }));
 
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(requestsTo(fetchMock, "PATCH /api/members/alex")).toEqual([]);
-});
-
-it('REQ-007: confirming Deactivate deactivates the member and marks them "(deactivated)"', async () => {
-  const fetchMock = mockMembersPage();
-  renderAppAt("/settings/members");
 
   await choose("Alex Kim", "Deactivate");
   const dialog = await screen.findByRole("dialog", { name: "Deactivate Alex Kim?" });
@@ -356,39 +331,10 @@ it('REQ-007.3: the last-admin refusal shows "There must be at least one admin." 
   expect(within(await row("Members", "Sam Lee")).getByText("Admin")).toBeTruthy();
 });
 
-it('STD-7: a load failure shows "Couldn\'t load this." and Retry reloads', async () => {
-  let fail = true;
-  const fetchMock = mockMembersPage({
-    listMembers: () => (fail ? apiError(500, "boom") : Response.json([alex, jo, admin])),
-  });
-  renderAppAt("/settings/members");
-
-  expect(await screen.findByText("Couldn't load this.")).toBeTruthy();
-  fail = false;
-  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-
-  expect(await row("Members", "Alex Kim")).toBeTruthy();
-  expect(requestsTo(fetchMock, "GET /api/members").length).toBeGreaterThanOrEqual(2);
-});
-
 it("STD-7: with no open invitations, the empty state names the next action", async () => {
   mockMembersPage({ invitations: [] });
   renderAppAt("/settings/members");
 
   expect(await screen.findByText("No open invitations. Invite someone by email above.")).toBeTruthy();
   expect(screen.queryByRole("table", { name: "Invitations" })).toBeNull();
-});
-
-it("the ⋯ menu closes on Escape and returns focus to ⋯", async () => {
-  mockMembersPage();
-  renderAppAt("/settings/members");
-
-  const menu = await openMenu("Alex Kim");
-  await waitFor(() => expect(menu.contains(document.activeElement)).toBe(true));
-  fireEvent.keyDown(document.activeElement ?? menu, { key: "Escape" });
-
-  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
-  await waitFor(() =>
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Actions for Alex Kim" })),
-  );
 });

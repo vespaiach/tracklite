@@ -42,28 +42,12 @@ it("shows the project header with its views and, for admins, the settings gear",
   );
 });
 
-it("marks List as the current view on the list address", async () => {
-  mockProject(web);
-  renderAppAt("/project/WEB/list");
-
-  const views = await screen.findByRole("navigation", { name: "Project views" });
-  expect(within(views).getByRole("link", { name: "List" }).getAttribute("aria-current")).toBe("page");
-  expect(within(views).getByRole("link", { name: "Board" }).hasAttribute("aria-current")).toBe(false);
-});
-
-it("STD-2: a member sees no settings gear in the project header", async () => {
-  mockProject(web, alex);
-  renderAppAt("/project/WEB");
-
-  await screen.findByRole("heading", { name: "Website · WEB" });
-  expect(within(header()).queryByRole("link", { name: "Project settings" })).toBeNull();
-});
-
-it("REQ-013.1: an archived project's header shows the Archived badge", async () => {
-  mockProject(old);
+it("STD-2, REQ-013.1: a member sees no settings gear; an archived project's header shows the Archived badge", async () => {
+  mockProject(old, alex);
   renderAppAt("/project/OLD");
 
   await screen.findByRole("heading", { name: "Old site · OLD" });
+  expect(within(header()).queryByRole("link", { name: "Project settings" })).toBeNull();
   expect(within(header()).getByText("Archived")).toBeTruthy();
 });
 
@@ -104,4 +88,5 @@ it("API-004: /project/web/list?status=done keeps its path and filters when made 
   expect(window.location.search).toBe("?status=done");
   expect(window.location.hash).toBe("#top");
   expect(within(views).getByRole("link", { name: "List" }).getAttribute("aria-current")).toBe("page");
+  expect(within(views).getByRole("link", { name: "Board" }).hasAttribute("aria-current")).toBe(false);
 });

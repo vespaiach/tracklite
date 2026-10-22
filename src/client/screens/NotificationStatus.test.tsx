@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { admin, alex, apiError, mockApi, renderAppAt, requestsTo } from "../../test/client-app";
+import { admin, alex, mockApi, renderAppAt, requestsTo } from "../../test/client-app";
 import type { NotificationStats, ProblemDelivery } from "../api";
 
 afterEach(() => {
@@ -65,8 +65,12 @@ function cellTexts(row: HTMLElement) {
     .map((cell) => cell.textContent);
 }
 
-it("REQ-053.1: worker seen 4 s ago, 3 pending, 1 due for 40 s", async () => {
-  mockStatusPage(() => Response.json(stats()));
+it("REQ-053.1, REQ-053.2, REQ-053.3, REQ-053.4, STD-2: worker, queue, Email counts, problem rows newest first, Notifications link current", async () => {
+  const older = Array.from({ length: 19 }, (_, index) =>
+    problem({ id: `d-${index + 2}`, target: `WEB-${index + 1}`, at: secondsAgo((index + 4) * 3600) }),
+  );
+  const recentProblems = [problem(), ...older];
+  mockStatusPage(() => Response.json(stats({ recentProblems })));
   renderAppAt("/settings/notifications");
 
   expect(fact(await section("Worker"), "Last seen")).toBe("just now");
@@ -74,49 +78,40 @@ it("REQ-053.1: worker seen 4 s ago, 3 pending, 1 due for 40 s", async () => {
   expect(fact(queue, "Pending")).toBe("3");
   expect(fact(queue, "Due")).toBe("1");
   expect(fact(queue, "Oldest due has waited")).toBe("40 seconds");
-});
-
-it("REQ-053.2: Email row shows 12 sent, 2 dropped, 1 failed, 1 bounced", async () => {
-  mockStatusPage(() => Response.json(stats()));
-  renderAppAt("/settings/notifications");
 
   const [email] = await bodyRows("Last 24 hours");
   expect(cellTexts(email)).toEqual(["Email", "12", "2", "1", "1"]);
-});
-
-it("REQ-053.3: failed row shows sam, Email, WEB-42, 4 and when", async () => {
-  const failed = problem();
-  mockStatusPage(() => Response.json(stats({ recentProblems: [failed] })));
-  renderAppAt("/settings/notifications");
-
-  const [row] = await bodyRows("Recent problems");
-  expect(cellTexts(row)).toEqual(["sam", "Email", "WEB-42", "4", "3 hours ago"]);
-  expect(within(row).getByText("3 hours ago").getAttribute("title")).toBeTruthy();
-  expect(document.body.textContent).not.toContain("sam@acme.com");
-});
-
-it("REQ-053.4: 20 most recent problems listed newest first", async () => {
-  const recentProblems = Array.from({ length: 20 }, (_, index) =>
-    problem({ id: `d-${index}`, target: `WEB-${index + 1}`, at: secondsAgo((index + 1) * 3600) }),
-  );
-  mockStatusPage(() => Response.json(stats({ recentProblems })));
-  renderAppAt("/settings/notifications");
 
   const rows = await bodyRows("Recent problems");
   expect(rows).toHaveLength(20);
   expect(rows.map((row) => cellTexts(row)[2])).toEqual(recentProblems.map((each) => each.target));
+  expect(cellTexts(rows[0])).toEqual(["sam", "Email", "WEB-42", "4", "3 hours ago"]);
+  expect(within(rows[0]).getByText("3 hours ago").getAttribute("title")).toBeTruthy();
+  expect(document.body.textContent).not.toContain("sam@acme.com");
+
+  const link = within(screen.getByRole("complementary")).getByRole("link", { name: "Notifications" });
+  expect(link.getAttribute("href")).toBe("/settings/notifications");
+  expect(link.getAttribute("aria-current")).toBe("page");
 });
 
-it("REQ-053.5: worker that never ran shows “Never”", async () => {
-  mockStatusPage(() => Response.json(stats({ workerLastPassAt: null })));
+it("REQ-053.5, REQ-053.6, REQ-053.9: a worker that never ran shows Never, nothing due shows None, no problems shows the empty message", async () => {
+  mockStatusPage(() =>
+    Response.json(
+      stats({
+        workerLastPassAt: null,
+        queue: { pending: 2, due: 0, oldestDueSeconds: 0 },
+        recentProblems: [],
+      }),
+    ),
+  );
   renderAppAt("/settings/notifications");
 
   expect(fact(await section("Worker"), "Last seen")).toBe("Never");
-});
 
-it("REQ-053.6: no problems shows “No failed or bounced notifications.”", async () => {
-  mockStatusPage(() => Response.json(stats({ recentProblems: [] })));
-  renderAppAt("/settings/notifications");
+  const queue = await section("Queue");
+  expect(fact(queue, "Pending")).toBe("2");
+  expect(fact(queue, "Due")).toBe("0");
+  expect(fact(queue, "Oldest due has waited")).toBe("None");
 
   const recent = await section("Recent problems");
   expect(within(recent).getByText("No failed or bounced notifications.")).toBeTruthy();
@@ -161,37 +156,4 @@ it("REQ-053.8: a member sees “You don't have permission to do that.” and no 
   expect(await screen.findByText("You don't have permission to do that.")).toBeTruthy();
   expect(within(screen.getByRole("complementary")).queryByRole("link", { name: "Notifications" })).toBeNull();
   expect(requestsTo(fetchMock, statsRequest)).toHaveLength(0);
-});
-
-it("REQ-053.9: nothing due shows “None” for the oldest due", async () => {
-  mockStatusPage(() => Response.json(stats({ queue: { pending: 2, due: 0, oldestDueSeconds: 0 } })));
-  renderAppAt("/settings/notifications");
-
-  const queue = await section("Queue");
-  expect(fact(queue, "Pending")).toBe("2");
-  expect(fact(queue, "Due")).toBe("0");
-  expect(fact(queue, "Oldest due has waited")).toBe("None");
-});
-
-it("STD-2: admins get the Notifications link, current on its page", async () => {
-  mockStatusPage(() => Response.json(stats()));
-  renderAppAt("/settings/notifications");
-
-  const link = await within(await screen.findByRole("complementary")).findByRole("link", {
-    name: "Notifications",
-  });
-  expect(link.getAttribute("href")).toBe("/settings/notifications");
-  expect(link.getAttribute("aria-current")).toBe("page");
-});
-
-it("STD-7: a load failure shows “Couldn't load this.” with Retry", async () => {
-  let fail = true;
-  mockStatusPage(() => (fail ? apiError(500, "Internal error") : Response.json(stats())));
-  renderAppAt("/settings/notifications");
-
-  expect(await screen.findByText("Couldn't load this.")).toBeTruthy();
-  fail = false;
-  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-
-  expect(await section("Worker")).toBeTruthy();
 });

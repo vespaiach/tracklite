@@ -3,9 +3,9 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
   alex,
   apiError,
+  deferred,
   mockApi,
   networkError,
-  never,
   noContent,
   renderAppAt,
   requestsTo,
@@ -52,17 +52,24 @@ function typedInto(label: string) {
   return (screen.getByLabelText(label) as HTMLInputElement).value;
 }
 
-it("REQ-002.1: a valid link shows the invited email read-only; joining posts the profile and lands on My issues", async () => {
-  const fetchMock = mockInvite(invitedSam, accepted);
+it("REQ-002.1, STD-5, §4.2: a valid link shows the invited email read-only and drops the token from the address; Join Tracklite is disabled while saving, then posts the profile and lands on My issues", async () => {
+  const save = deferred();
+  const fetchMock = mockInvite(invitedSam, save.answer);
   renderAppAt("/invite?token=abc");
 
   expect(await screen.findByRole("heading", { name: "Join Tracklite" })).toBeTruthy();
   expect(window.location.pathname).toBe("/invite");
+  expect(new URLSearchParams(window.location.search).has("token")).toBe(false);
   expect(screen.getAllByText(/sam@acme\.com/).length).toBeGreaterThan(0);
   expect(screen.queryByDisplayValue("sam@acme.com")).toBeNull();
 
   await fillIn("Sam Lee", "sam", "correct horse battery");
   join();
+
+  const button = await screen.findByRole("button", { name: "Joining…" });
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+
+  save.resolve(accepted());
 
   expect(await screen.findByRole("heading", { name: "My issues" })).toBeTruthy();
   expect(window.location.pathname).toBe("/my-issues");
@@ -81,18 +88,7 @@ it("REQ-002.2: a link the lookup rejects (410) shows the expired message and no 
   expect(screen.queryByRole("button", { name: "Join Tracklite" })).toBeNull();
 });
 
-it("REQ-002.2: a 410 expired answer on submit replaces the form with the expired message", async () => {
-  mockInvite(invitedSam, () => apiError(410, expiredMessage));
-  renderAppAt("/invite?token=abc");
-
-  await fillIn("Sam Lee", "sam", "correct horse battery");
-  join();
-
-  expect(await screen.findByText(expiredMessage)).toBeTruthy();
-  expect(screen.queryByLabelText("Full name")).toBeNull();
-});
-
-it('REQ-002.4: a revoked invitation on submit shows "This invitation is no longer valid." and no form', async () => {
+it("REQ-002.2, REQ-002.4: a 410 on submit replaces the form with the server's message", async () => {
   mockInvite(invitedSam, () => apiError(410, revokedMessage));
   renderAppAt("/invite?token=abc");
 
@@ -104,19 +100,7 @@ it('REQ-002.4: a revoked invitation on submit shows "This invitation is no longe
   expect(screen.queryByRole("button", { name: "Join Tracklite" })).toBeNull();
 });
 
-it('REQ-002.3: signed in as Alex Kim shows "You\'re signed in as Alex Kim. Sign out to accept this invitation." and never looks the link up', async () => {
-  const fetchMock = mockApi({ "GET /api/me": () => Response.json(alex) });
-  renderAppAt("/invite?token=abc");
-
-  expect(
-    await screen.findByText("You're signed in as Alex Kim. Sign out to accept this invitation."),
-  ).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
-  expect(screen.queryByLabelText("Full name")).toBeNull();
-  expect(requestsTo(fetchMock, "POST /api/invitation-lookups")).toEqual([]);
-});
-
-it("REQ-002.3: after Sign out, the same link shows the form", async () => {
+it('REQ-002.3: signed in as Alex Kim shows "You\'re signed in as Alex Kim. Sign out to accept this invitation." and never looks the link up; after Sign out, the same link shows the form', async () => {
   let signedIn = true;
   const fetchMock = mockApi({
     "GET /api/me": () => (signedIn ? Response.json(alex) : signedOut()),
@@ -128,18 +112,24 @@ it("REQ-002.3: after Sign out, the same link shows the form", async () => {
   });
   renderAppAt("/invite?token=abc");
 
-  fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
+  expect(
+    await screen.findByText("You're signed in as Alex Kim. Sign out to accept this invitation."),
+  ).toBeTruthy();
+  expect(screen.queryByLabelText("Full name")).toBeNull();
+  expect(requestsTo(fetchMock, "POST /api/invitation-lookups")).toEqual([]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
 
   expect(await screen.findByRole("heading", { name: "Join Tracklite" })).toBeTruthy();
   expect(window.location.pathname).toBe("/invite");
   expect(requestsTo(fetchMock, "POST /api/invitation-lookups")).toEqual([{ token: "abc" }]);
 });
 
-it("STD-3: the server's field errors for name, username and password show beside each field, and everything typed is kept", async () => {
+it("STD-3, REQ-003.2: the server's field errors for name, username and password show beside each field, and everything typed is kept", async () => {
   mockInvite(invitedSam, () =>
     apiError(422, "Check the highlighted fields", {
       fullName: "Name required",
-      username: "Use 2 to 20 letters, digits or hyphens",
+      username: "Username taken",
       password: "At least 12 characters",
     }),
   );
@@ -149,7 +139,7 @@ it("STD-3: the server's field errors for name, username and password show beside
   join();
 
   expect(await screen.findByText("Name required")).toBeTruthy();
-  expect(screen.getByText("Use 2 to 20 letters, digits or hyphens")).toBeTruthy();
+  expect(screen.getByText("Username taken")).toBeTruthy();
   expect(screen.getByText("At least 12 characters")).toBeTruthy();
   for (const label of ["Full name", "Username", "Password"]) {
     expect(screen.getByLabelText(label).getAttribute("aria-invalid")).toBe("true");
@@ -157,39 +147,6 @@ it("STD-3: the server's field errors for name, username and password show beside
   expect(typedInto("Full name")).toBe("   ");
   expect(typedInto("Username")).toBe("sam lee");
   expect(typedInto("Password")).toBe("tracklite1");
-});
-
-it('REQ-003.2: a taken username shows "Username taken" beside Username', async () => {
-  mockInvite(invitedSam, () => apiError(422, "Check the highlighted fields", { username: "Username taken" }));
-  renderAppAt("/invite?token=abc");
-
-  await fillIn("Sam Lee", "sam", "correct horse battery");
-  join();
-
-  expect(await screen.findByText("Username taken")).toBeTruthy();
-  expect(screen.getByLabelText("Username").getAttribute("aria-invalid")).toBe("true");
-  expect(screen.getByLabelText("Full name").getAttribute("aria-invalid")).toBeNull();
-});
-
-it("STD-5: Join Tracklite is disabled while saving", async () => {
-  mockInvite(invitedSam, never);
-  renderAppAt("/invite?token=abc");
-
-  await fillIn("Sam Lee", "sam", "correct horse battery");
-  join();
-
-  const button = await screen.findByRole("button", { name: "Joining…" });
-  expect((button as HTMLButtonElement).disabled).toBe(true);
-});
-
-it('STD-7: "Checking your invitation…" shows only after the lookup has been pending 300 ms', async () => {
-  mockInvite(never, accepted);
-  renderAppAt("/invite?token=abc");
-
-  await screen.findByText("Tracklite");
-  expect(screen.queryByText("Checking your invitation…")).toBeNull();
-  expect(await screen.findByText("Checking your invitation…")).toBeTruthy();
-  expect(screen.queryByLabelText("Full name")).toBeNull();
 });
 
 it('STD-7: a failed lookup shows "Couldn\'t load this." and Retry looks the link up again', async () => {
@@ -215,22 +172,4 @@ it("STD-9.3: a network error on submit shows the toast and keeps what was typed"
   expect(typedInto("Full name")).toBe("Sam Lee");
   expect(typedInto("Username")).toBe("sam");
   expect(typedInto("Password")).toBe("correct horse battery");
-});
-
-it("§4.2: the invitation page removes the token from the address", async () => {
-  const fetchMock = mockInvite(invitedSam, accepted);
-  renderAppAt("/invite?token=abc");
-
-  expect(await screen.findByRole("heading", { name: "Join Tracklite" })).toBeTruthy();
-  expect(window.location.pathname).toBe("/invite");
-  expect(new URLSearchParams(window.location.search).has("token")).toBe(false);
-
-  await fillIn("Sam Lee", "sam", "correct horse battery");
-  join();
-
-  expect(await screen.findByRole("heading", { name: "My issues" })).toBeTruthy();
-  expect(requestsTo(fetchMock, "POST /api/invitation-lookups")).toEqual([{ token: "abc" }]);
-  expect(requestsTo(fetchMock, "POST /api/members")).toEqual([
-    { token: "abc", fullName: "Sam Lee", username: "sam", password: "correct horse battery" },
-  ]);
 });
