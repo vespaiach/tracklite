@@ -182,7 +182,7 @@ Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `project
 
 **Run order:** M15.1 → M15.2 → M15.3 → M15.4 → M15.5 → M15.6 → M15.7 → M15.8. Each task rewrites imports across `src/server/`, `src/app/api/` and `scripts/`, so none run at the same time.
 
-- [ ] **M15.1 Context map in the design.** Add a "Bounded contexts" section to `docs/tech-design.md` with the table and dependency rules above. Rewrite the paths named in §1.2, §4.10, D-42 (schemas move to `src/server/<context>/schemas.ts`) and D-44. Update the Architecture section of `CLAUDE.md`. No code changes.
+- [x] **M15.1 Context map in the design.** Add a "Bounded contexts" section to `docs/tech-design.md` with the table and dependency rules above. Rewrite the paths named in §1.2, §4.10, D-42 (schemas move to `src/server/<context>/schemas.ts`) and D-44. Update the Architecture section of `CLAUDE.md`. No code changes.
   - Reads: design §1.2, §3.5, §4.10, D-42, D-44, D-45
   - Needs: none
   - Done: `grep -n "src/server/[a-z-]*\.ts" docs/tech-design.md CLAUDE.md` only shows paths inside a context or `shared/`
