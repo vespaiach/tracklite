@@ -3,6 +3,7 @@ import { expect, it } from "vitest";
 import { createMember } from "../../test/factories";
 import { uniqueEmail } from "../../test/invitations";
 import { db } from "../shared/db";
+import { parseUuid } from "../shared/ids";
 import { outbox } from "../shared/email/outbox";
 import { createInvitation, listInvitations, resendInvitation, revokeInvitation } from "./invitations";
 import { invitations } from "./tables";
@@ -49,7 +50,7 @@ it("STD-2: a member can't resend an invitation", async () => {
   const member = await createMember();
   const invitation = await openInvitation();
 
-  await expect(resendInvitation(member, invitation.id)).rejects.toMatchObject(forbidden);
+  await expect(resendInvitation(member, parseUuid(invitation.id))).rejects.toMatchObject(forbidden);
 
   expect((await storedInvitation(invitation.id)).tokenHash).toEqual(invitation.tokenHash);
   expect(outbox.sent).toEqual([]);
@@ -59,7 +60,7 @@ it("STD-2: a member can't revoke an invitation", async () => {
   const member = await createMember();
   const invitation = await openInvitation();
 
-  await expect(revokeInvitation(member, invitation.id)).rejects.toMatchObject(forbidden);
+  await expect(revokeInvitation(member, parseUuid(invitation.id))).rejects.toMatchObject(forbidden);
 
   expect((await storedInvitation(invitation.id)).revokedAt).toBeNull();
 });

@@ -1,15 +1,15 @@
-import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { PostgresJsPreparedQuery } from "drizzle-orm/postgres-js/session";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createIssue, createMember, createProject } from "../../test/factories";
+import { createIssue, createMember, createProject, newRequestId } from "../../test/factories";
 import { deleteComment, editComment, postIssueComment } from "../comments";
 import { db } from "../shared/db";
+import { parseUuid } from "../shared/ids";
 import { outbox } from "../shared/email/outbox";
 import type { Transaction } from "../shared/transaction";
-import { updateIssue, issues } from "../issues";
+import { parseIssueId, updateIssue, issues } from "../issues";
 import { notificationSenders } from "./notification-channels";
-import { members, type Member } from "../identity";
+import { members, type Member, parseUsername } from "../identity";
 import { notificationBatches, notificationDeliveries, notifications, workerHeartbeats } from "./tables";
 import { runWorker, sendDueDeliveries } from "./worker";
 
@@ -30,11 +30,13 @@ async function website() {
 }
 
 function assign(issueRef: string, by: Member, assignee: Member | null) {
-  return updateIssue(by, issueRef, { assignee: assignee?.username ?? null });
+  return updateIssue(by, parseIssueId(issueRef), {
+    assignee: assignee ? parseUsername(assignee.username) : null,
+  });
 }
 
 async function comment(issueRef: string, by: Member, body: string) {
-  const { comment } = await postIssueComment(by, issueRef, { requestId: randomUUID(), body });
+  const { comment } = await postIssueComment(by, parseIssueId(issueRef), { requestId: newRequestId(), body });
   return comment;
 }
 
@@ -276,9 +278,9 @@ it("REQ-045.3, REQ-045.4, REQ-045.5: a mention edited out, a comment deleted, or
   const deactivated = await createMember();
   const { issueRef } = await website();
   const edited = await comment(issueRef, alex, `@${editedOut.username} look`);
-  await editComment(alex, edited.id, { body: "look", version: 0 });
+  await editComment(alex, parseUuid(edited.id), { body: "look", version: 0 });
   const deleted = await comment(issueRef, alex, `@${deletedFor.username} look`);
-  await deleteComment(alex, deleted.id);
+  await deleteComment(alex, parseUuid(deleted.id));
   await assign(issueRef, alex, deactivated);
   await db.update(members).set({ deactivatedAt: sql`now()` }).where(eq(members.id, deactivated.id));
   for (const recipient of [editedOut, deletedFor, deactivated]) await waitIsOver(recipient);

@@ -2,11 +2,11 @@ import "server-only";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
-import { isUuid } from "../shared/ids";
+import type { Uuid } from "../shared/ids";
 import { sendEmail } from "../shared/email/send";
 import { invitationEmail } from "../shared/email/templates";
 import type { Invitation, InvitationLookup } from "../../contract";
-import type { InvitationAcceptance } from "./schemas";
+import type { InvitationAcceptance, Username } from "./schemas";
 import { memberSummary } from "./members";
 import { hashPassword } from "../shared/passwords";
 import { invitations, members } from "./tables";
@@ -108,10 +108,10 @@ async function assertNotMember(email: string) {
   if (member) throw new ApiError(422, "Already a member");
 }
 
-export async function resendInvitation(actor: Member, id: string) {
+export async function resendInvitation(actor: Member, id: Uuid | undefined) {
   assertAdmin(actor);
 
-  if (!isUuid(id)) throw notFound();
+  if (id === undefined) throw notFound();
 
   await db.transaction(async (tx) => {
     const invitation = await lockedOpenInvitation(tx, id);
@@ -131,10 +131,10 @@ async function lockedOpenInvitation(executor: Executor, id: string) {
   return invitation;
 }
 
-export async function revokeInvitation(actor: Member, id: string) {
+export async function revokeInvitation(actor: Member, id: Uuid | undefined) {
   assertAdmin(actor);
 
-  if (!isUuid(id)) throw notFound();
+  if (id === undefined) throw notFound();
 
   const revoked = await db
     .update(invitations)
@@ -193,7 +193,7 @@ export async function acceptInvitation({ token, fullName, username, password }: 
   });
 }
 
-async function assertUsernameFree(executor: Pick<typeof db, "select">, username: string) {
+async function assertUsernameFree(executor: Pick<typeof db, "select">, username: Username) {
   const [taken] = await executor
     .select({ id: members.id })
     .from(members)

@@ -4,7 +4,8 @@ import { generateKeyBetween } from "fractional-indexing";
 import { db } from "../server/shared/db";
 import { comments } from "../server/comments";
 import { issueLabels, issues } from "../server/issues";
-import { labels, projectKeys, projects } from "../server/projects";
+import { labels, type ProjectKey, projectKeys, projects } from "../server/projects";
+import type { RequestId } from "../server/shared/schemas";
 import { members } from "../server/identity";
 import { notificationBatches, notificationDeliveries } from "../server/notifications";
 
@@ -31,7 +32,11 @@ export async function createMember(overrides: Partial<NewMember> = {}) {
 }
 
 export function uniqueProjectKey() {
-  return Array.from({ length: 5 }, () => String.fromCharCode(65 + randomInt(26))).join("");
+  return Array.from({ length: 5 }, () => String.fromCharCode(65 + randomInt(26))).join("") as ProjectKey;
+}
+
+export function newRequestId() {
+  return randomUUID() as RequestId;
 }
 
 export async function createProject(overrides: Partial<NewProject> = {}) {

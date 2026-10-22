@@ -2,13 +2,13 @@ import "server-only";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
-import { isUuid } from "../shared/ids";
+import { parseUuid } from "../shared/ids";
 import type { Transaction } from "../shared/transaction";
 import { conflict, notify, replaceMentions } from "../notifications";
-import { type Member, members } from "../identity";
+import { type Member, members, type Username } from "../identity";
 import { issueLabels, issues } from "./tables";
 import { labels } from "../projects";
-import type { IssueChange } from "./schemas";
+import type { IssueChange, IssueId } from "./schemas";
 import { byIssueId, type IssueUpdate, issueGone, lockedIssue, topOfColumn, updatedIssue } from "./rows";
 
 function fieldError(field: string, message: string) {
@@ -19,7 +19,7 @@ function labelGone() {
   return new ApiError(404, "That label no longer exists");
 }
 
-async function activeAssigneeId(tx: Transaction, username: string | null) {
+async function activeAssigneeId(tx: Transaction, username: Username | null) {
   if (username === null) return null;
   const [assignee] = await tx
     .select({ id: members.id })
@@ -49,7 +49,7 @@ async function replaceLabels(tx: Transaction, issue: typeof issues.$inferSelect,
 }
 
 async function assertProjectLabels(tx: Transaction, projectId: string, labelIds: string[]) {
-  if (!labelIds.every(isUuid)) throw labelGone();
+  if (!labelIds.every((labelId) => parseUuid(labelId))) throw labelGone();
 
   const found =
     labelIds.length === 0
@@ -81,7 +81,12 @@ async function fieldChange(
   return {};
 }
 
-async function saveDescription(id: string, member: Member, description: string, descriptionVersion: number) {
+async function saveDescription(
+  id: IssueId | undefined,
+  member: Member,
+  description: string,
+  descriptionVersion: number,
+) {
   const where = byIssueId(id);
   if (!where) throw issueGone();
 
@@ -113,7 +118,7 @@ async function saveDescription(id: string, member: Member, description: string, 
   });
 }
 
-export async function updateIssue(actor: Member, id: string, change: IssueChange) {
+export async function updateIssue(actor: Member, id: IssueId | undefined, change: IssueChange) {
   if (change.description !== undefined && change.descriptionVersion !== undefined) {
     return saveDescription(id, actor, change.description, change.descriptionVersion);
   }
@@ -145,7 +150,7 @@ export async function updateIssue(actor: Member, id: string, change: IssueChange
   });
 }
 
-export async function deleteIssue(actor: Member, id: string) {
+export async function deleteIssue(actor: Member, id: IssueId | undefined) {
   const where = byIssueId(id);
   if (!where) throw issueGone();
 

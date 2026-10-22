@@ -6,7 +6,7 @@ import type { Executor, Transaction } from "../shared/transaction";
 import { conflict, notify, replaceMentions, mentions } from "../notifications";
 import { assertAdmin, type Member, memberSummary, members } from "../identity";
 import { projectKeys, projects } from "./tables";
-import type { NewProject, ProjectChanges } from "./schemas";
+import type { NewProject, ProjectChanges, ProjectKey } from "./schemas";
 import type { Project, ProjectSummary } from "../../contract";
 
 type ProjectRow = typeof projects.$inferSelect;
@@ -15,8 +15,8 @@ function refuseFields(fields: Record<string, string>) {
   if (Object.keys(fields).length > 0) throw new ApiError(422, "Check the highlighted fields", fields);
 }
 
-function byKey(key: string) {
-  return eq(projects.key, key.toUpperCase());
+export function byProjectKey(key: ProjectKey | undefined) {
+  return key === undefined ? sql`false` : eq(projects.key, key);
 }
 
 async function projectResponse(executor: Executor, project: ProjectRow): Promise<Project> {
@@ -51,8 +51,8 @@ export async function listProjects(_actor: Member, archived: boolean): Promise<P
   );
 }
 
-export async function getProject(_actor: Member, key: string) {
-  const [project] = await db.select().from(projects).where(byKey(key));
+export async function getProject(_actor: Member, key: ProjectKey | undefined) {
+  const [project] = await db.select().from(projects).where(byProjectKey(key));
   if (!project) throw new ApiError(404, "Not found");
   return projectResponse(db, project);
 }
@@ -68,7 +68,7 @@ export async function createProject(actor: Member, { name, key }: NewProject) {
   });
 }
 
-export async function updateProject(actor: Member, key: string, changes: ProjectChanges) {
+export async function updateProject(actor: Member, key: ProjectKey | undefined, changes: ProjectChanges) {
   const { name, archived, description, descriptionVersion } = changes;
   if (description !== undefined && descriptionVersion !== undefined)
     return saveDescription(actor, key, description, descriptionVersion);
@@ -76,7 +76,7 @@ export async function updateProject(actor: Member, key: string, changes: Project
   if (name !== undefined || archived !== undefined) assertAdmin(actor);
 
   return db.transaction(async (tx) => {
-    const [project] = await tx.select().from(projects).where(byKey(key)).for("update");
+    const [project] = await tx.select().from(projects).where(byProjectKey(key)).for("update");
     if (!project) throw new ApiError(404, "Not found");
 
     if (name !== undefined && project.archivedAt !== null)
@@ -98,13 +98,18 @@ function nameAndArchiveUpdate({ name, archived }: ProjectChanges) {
   };
 }
 
-export async function deleteProject(actor: Member, key: string) {
+export async function deleteProject(actor: Member, key: ProjectKey | undefined) {
   assertAdmin(actor);
-  const deleted = await db.delete(projects).where(byKey(key)).returning({ id: projects.id });
+  const deleted = await db.delete(projects).where(byProjectKey(key)).returning({ id: projects.id });
   if (deleted.length === 0) throw new ApiError(404, "Not found");
 }
 
-async function saveDescription(member: Member, key: string, description: string, descriptionVersion: number) {
+async function saveDescription(
+  member: Member,
+  key: ProjectKey | undefined,
+  description: string,
+  descriptionVersion: number,
+) {
   return db.transaction(async (tx) => {
     const project = await writableProject(tx, key, "update");
 
@@ -134,8 +139,12 @@ async function saveDescription(member: Member, key: string, description: string,
   });
 }
 
-export async function writableProject(tx: Transaction, key: string, lock: "share" | "update" = "share") {
-  const [project] = await tx.select().from(projects).where(byKey(key)).for(lock);
+export async function writableProject(
+  tx: Transaction,
+  key: ProjectKey | undefined,
+  lock: "share" | "update" = "share",
+) {
+  const [project] = await tx.select().from(projects).where(byProjectKey(key)).for(lock);
   if (!project) throw new ApiError(404, "Not found");
   if (project.archivedAt !== null) throw new ApiError(403, "This project is archived");
   return project;

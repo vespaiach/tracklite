@@ -4,6 +4,7 @@ import { createMember, createProject, uniqueProjectKey } from "../../test/factor
 import { db } from "../shared/db";
 import { createProject as create, deleteProject, updateProject, writableProject } from "./projects";
 import { projects } from "./tables";
+import { parseProjectKey } from "./schemas";
 
 const forbidden = { status: 403, message: "You don't have permission to do that." };
 
@@ -60,7 +61,7 @@ it("SEC-006.1: a member deleting project WEB, or a missing project, gets 403 and
   const project = await createProject();
 
   await expect(deleteProject(member, project.key)).rejects.toMatchObject(forbidden);
-  await expect(deleteProject(member, "NOPE")).rejects.toMatchObject(forbidden);
+  await expect(deleteProject(member, parseProjectKey("NOPE"))).rejects.toMatchObject(forbidden);
 
   expect(await storedProject(project.id)).toBeDefined();
 });

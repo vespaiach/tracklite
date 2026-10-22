@@ -13,14 +13,23 @@ const projectName = v.pipe(
   maxCharacters(maxProjectNameLength, `Too long (max ${maxProjectNameLength})`),
 );
 
-export const NewProject = v.object({
-  name: projectName,
-  key: v.pipe(
-    v.string("Key must be 2 to 5 letters"),
-    v.regex(/^[A-Za-z]{2,5}$/, "Key must be 2 to 5 letters"),
-    v.toUpperCase(),
-  ),
-});
+const projectKeyRule = "Key must be 2 to 5 letters";
+
+const projectKey = v.pipe(
+  v.string(projectKeyRule),
+  v.regex(/^[A-Za-z]{2,5}$/, projectKeyRule),
+  v.toUpperCase(),
+  v.brand("ProjectKey"),
+);
+
+export type ProjectKey = v.InferOutput<typeof projectKey>;
+
+export function parseProjectKey(text: string): ProjectKey | undefined {
+  const result = v.safeParse(projectKey, text);
+  return result.success ? result.output : undefined;
+}
+
+export const NewProject = v.object({ name: projectName, key: projectKey });
 export type NewProject = v.InferOutput<typeof NewProject>;
 
 function isMixedChange(body: Record<string, unknown>) {
