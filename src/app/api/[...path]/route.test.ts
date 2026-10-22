@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../server/db";
-import { sessions } from "../../../server/schema";
+import { db } from "../../../server/shared/db";
+import { sessions } from "../../../server/shared/schema";
 import { createSession, sessionCookie } from "../../../server/sessions";
-import { hashToken } from "../../../server/tokens";
+import { hashToken } from "../../../server/shared/tokens";
 import { createMember } from "../../../test/factories";
 import { moveIntoPast } from "../../../test/time";
 import { DELETE, GET, POST } from "./route";

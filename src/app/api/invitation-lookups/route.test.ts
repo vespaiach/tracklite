@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { outbox } from "../../../server/email/outbox";
+import { outbox } from "../../../server/shared/email/outbox";
 import {
   invitedBy,
   lookUp,

@@ -1,15 +1,15 @@
 import "server-only";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
-import { ApiError } from "./api-error";
-import { db } from "./db";
-import { sendEmail } from "./email/send";
-import { passwordResetEmail } from "./email/templates";
-import { recordResetRequest, resetRequestLimitReached, tooManyAttempts } from "./limits";
+import { ApiError } from "./shared/api-error";
+import { db } from "./shared/db";
+import { sendEmail } from "./shared/email/send";
+import { passwordResetEmail } from "./shared/email/templates";
+import { recordResetRequest, resetRequestLimitReached, tooManyAttempts } from "./shared/limits";
 import { activeMemberByEmail } from "./members";
-import { hashPassword } from "./passwords";
-import { members, passwordResetTokens, sessions } from "./schema";
+import { hashPassword } from "./shared/passwords";
+import { members, passwordResetTokens, sessions } from "./shared/schema";
 import { createSession } from "./sessions";
-import { createToken, hashToken } from "./tokens";
+import { createToken, hashToken } from "./shared/tokens";
 
 function expiredLink() {
   return new ApiError(410, "This link has expired");

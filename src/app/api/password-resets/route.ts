@@ -1,5 +1,5 @@
 import { PasswordReset } from "../../../schemas/account";
-import { apiRoute } from "../../../server/api-route";
+import { apiRoute } from "../../../server/shared/api-route";
 import { resetPassword } from "../../../server/password-resets";
 import { sessionCookie } from "../../../server/sessions";
 

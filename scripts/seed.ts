@@ -1,8 +1,8 @@
-import { seededMembers, seedMembers } from "../src/server/seed";
+import { seededMembers, seedMembers } from "../src/server/shared/seed";
 
 try {
   await seedMembers();
-  console.log("Seeded members (password in src/server/seed.ts):");
+  console.log("Seeded members (password in src/server/shared/seed.ts):");
   for (const { email, role, deactivated } of seededMembers) {
     console.log(`  ${email}  ${role}${deactivated ? "  deactivated" : ""}`);
   }

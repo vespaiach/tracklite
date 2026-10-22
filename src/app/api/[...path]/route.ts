@@ -1,5 +1,5 @@
-import { ApiError } from "../../../server/api-error";
-import { apiRoute } from "../../../server/api-route";
+import { ApiError } from "../../../server/shared/api-error";
+import { apiRoute } from "../../../server/shared/api-route";
 
 const notFound = apiRoute("member", () => {
   throw new ApiError(404, "Not found");

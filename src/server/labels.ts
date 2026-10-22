@@ -1,15 +1,14 @@
 import "server-only";
 import { asc, eq, sql } from "drizzle-orm";
 import { DrizzleQueryError } from "drizzle-orm/errors";
-import { ApiError } from "./api-error";
-import { db } from "./db";
+import { ApiError } from "./shared/api-error";
+import { db } from "./shared/db";
+import type { Transaction } from "./shared/transaction";
 import { writableProject } from "./projects";
 import type { LabelChanges, NewLabel } from "../schemas/label";
 import type { Label } from "../contract";
-import { issueLabels, labels, projects } from "./schema";
+import { issueLabels, labels, projects } from "./shared/schema";
 import type { Member } from "./sessions";
-
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

@@ -4,8 +4,9 @@ import { PostgresJsPreparedQuery } from "drizzle-orm/postgres-js/session";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createIssue, createMember, createProject } from "../test/factories";
 import { deleteComment, editComment, postIssueComment } from "./comments";
-import { db } from "./db";
-import { outbox } from "./email/outbox";
+import { db } from "./shared/db";
+import { outbox } from "./shared/email/outbox";
+import type { Transaction } from "./shared/transaction";
 import { updateIssue } from "./issues";
 import { notificationSenders } from "./notification-channels";
 import {
@@ -15,7 +16,7 @@ import {
   notificationDeliveries,
   notifications,
   workerHeartbeats,
-} from "./schema";
+} from "./shared/schema";
 import type { Member } from "./sessions";
 import { runWorker, sendDueDeliveries } from "./worker";
 
@@ -125,9 +126,7 @@ async function statesOf(recipients: { id: string }[]) {
   return emails.flat().map((email) => email.state);
 }
 
-function fromAnotherConnection<T>(
-  write: (tx: Parameters<Parameters<typeof db.transaction>[0]>[0]) => Promise<T>,
-) {
+function fromAnotherConnection<T>(write: (tx: Transaction) => Promise<T>) {
   return db.transaction(async (tx) => {
     await tx.execute(sql`set local lock_timeout = '1s'`);
     return write(tx);

@@ -1,7 +1,7 @@
 import "server-only";
 import * as v from "valibot";
 import { labelColors } from "../contract";
-import { maxCharacters } from "./common";
+import { maxCharacters } from "../server/shared/schemas";
 
 const maxNameLength = 30;
 

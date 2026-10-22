@@ -61,7 +61,7 @@ There is no server-side data fetching in pages, so every read and write passes t
 
 ### API
 
-Each route handler is wrapped in `apiRoute` ([src/server/api-route.ts](src/server/api-route.ts)), which:
+Each route handler is wrapped in `apiRoute` ([src/server/shared/api-route.ts](src/server/shared/api-route.ts)), which:
 
 1. rejects cross-site writes with `403`;
 2. authenticates the session (`401`), unless the route is public;
@@ -132,7 +132,7 @@ npm run db:reset
 npm run dev
 ```
 
-Open http://localhost:3000 and sign in as one of the seeded members (the password is in `src/server/seed.ts`). To send notification emails, run the worker in a second terminal:
+Open http://localhost:3000 and sign in as one of the seeded members (the password is in `src/server/shared/seed.ts`). To send notification emails, run the worker in a second terminal:
 
 ```bash
 npm run worker
@@ -147,7 +147,7 @@ npm run worker
 | `npm test` | Run every test (needs `TEST_DATABASE_URL`) |
 | `npm run lint` | Biome check (`npx biome check --write` to fix) |
 | `npm run typecheck` | `next typegen` and `tsc --noEmit` |
-| `npm run db:generate` | Write a migration from `src/server/schema.ts` |
+| `npm run db:generate` | Write a migration from `src/server/shared/schema.ts` |
 | `npm run db:migrate` | Apply migrations |
 | `npm run db:studio` | Open Drizzle Studio |
 | `npm run db:seed` | Add dev members and admins |

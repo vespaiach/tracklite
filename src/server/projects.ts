@@ -1,17 +1,16 @@
 import "server-only";
 import { asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import { ApiError } from "./api-error";
-import { db } from "./db";
+import { ApiError } from "./shared/api-error";
+import { db } from "./shared/db";
+import type { Executor, Transaction } from "./shared/transaction";
 import { conflict, replaceMentions } from "./descriptions";
 import { memberSummary } from "./members";
 import { notify } from "./notifications";
-import { members, mentions, projectKeys, projects } from "./schema";
+import { members, mentions, projectKeys, projects } from "./shared/schema";
 import { assertAdmin, type Member } from "./sessions";
 import type { NewProject, ProjectChanges } from "../schemas/project";
 import type { Project, ProjectSummary } from "../contract";
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type Executor = typeof db | Transaction;
 type ProjectRow = typeof projects.$inferSelect;
 
 function refuseFields(fields: Record<string, string>) {

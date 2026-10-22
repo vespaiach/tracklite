@@ -1,6 +1,6 @@
 import "server-only";
 import * as v from "valibot";
-import { maxCharacters, requestId, version } from "./common";
+import { maxCharacters, requestId, version } from "../server/shared/schemas";
 
 const commentBody = v.pipe(
   v.string("Comment required"),

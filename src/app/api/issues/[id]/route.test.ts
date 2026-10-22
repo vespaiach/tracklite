@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../../server/db";
+import { db } from "../../../../server/shared/db";
 import { memberSummary } from "../../../../server/members";
 import {
   comments,
@@ -14,7 +14,7 @@ import {
   notificationDeliveries,
   notifications,
   projects,
-} from "../../../../server/schema";
+} from "../../../../server/shared/schema";
 import { createSession } from "../../../../server/sessions";
 import {
   createIssue,

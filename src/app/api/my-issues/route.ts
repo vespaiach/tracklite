@@ -1,5 +1,5 @@
 import type { MyIssueGroup } from "../../../contract";
-import { apiRoute } from "../../../server/api-route";
+import { apiRoute } from "../../../server/shared/api-route";
 import { getMyIssues } from "../../../server/issues";
 
 export async function GET(request: Request) {

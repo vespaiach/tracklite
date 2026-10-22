@@ -1,5 +1,5 @@
 import type { Me } from "../../../../contract";
-import { apiRoute } from "../../../../server/api-route";
+import { apiRoute } from "../../../../server/shared/api-route";
 import { MemberChanges } from "../../../../schemas/member";
 import { profileResponse, updateMember } from "../../../../server/members";
 

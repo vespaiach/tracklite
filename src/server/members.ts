@@ -2,9 +2,10 @@ import "server-only";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import type { Me, MemberSummary } from "../contract";
 import type { MemberChanges } from "../schemas/member";
-import { ApiError } from "./api-error";
-import { db } from "./db";
-import { members, sessions } from "./schema";
+import { ApiError } from "./shared/api-error";
+import { db } from "./shared/db";
+import type { Transaction } from "./shared/transaction";
+import { members, sessions } from "./shared/schema";
 import { assertAdmin, type Member } from "./sessions";
 
 export function normalizeEmail(email: string) {
@@ -55,8 +56,6 @@ export async function listMembers(actor: Member) {
     .orderBy(asc(sql`lower(${members.fullName})`), asc(members.username));
   return all.map(actor.role === "admin" ? profileResponse : memberSummary);
 }
-
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 async function keepLastAdmin(tx: Transaction, target: Member) {
   const activeAdmins = await tx

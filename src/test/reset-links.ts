@@ -1,10 +1,10 @@
 import { randomInt } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { POST as requestLink } from "../app/api/password-reset-links/route";
-import { db } from "../server/db";
-import { outbox } from "../server/email/outbox";
-import { passwordResetTokens } from "../server/schema";
-import { hashToken } from "../server/tokens";
+import { db } from "../server/shared/db";
+import { outbox } from "../server/shared/email/outbox";
+import { passwordResetTokens } from "../server/shared/schema";
+import { hashToken } from "../server/shared/tokens";
 
 export function uniqueIp() {
   return `10.${randomInt(256)}.${randomInt(256)}.${randomInt(256)}`;

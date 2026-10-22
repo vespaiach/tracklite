@@ -1,9 +1,9 @@
 import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../../server/db";
-import { outbox } from "../../../../server/email/outbox";
-import { hashPassword } from "../../../../server/passwords";
-import { members, sessions } from "../../../../server/schema";
+import { db } from "../../../../server/shared/db";
+import { outbox } from "../../../../server/shared/email/outbox";
+import { hashPassword } from "../../../../server/shared/passwords";
+import { members, sessions } from "../../../../server/shared/schema";
 import { createSession, type Member } from "../../../../server/sessions";
 import { createMember } from "../../../../test/factories";
 import { jsonRequest, requestResetLink, resetTokenFor } from "../../../../test/reset-links";

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
-import { db } from "../../../server/db";
-import { notificationBatches, notificationDeliveries, workerHeartbeats } from "../../../server/schema";
+import { db } from "../../../server/shared/db";
+import { notificationBatches, notificationDeliveries, workerHeartbeats } from "../../../server/shared/schema";
 
 export async function GET() {
   try {

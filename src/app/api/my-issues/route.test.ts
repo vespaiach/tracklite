@@ -1,8 +1,8 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../server/db";
-import { issues } from "../../../server/schema";
+import { db } from "../../../server/shared/db";
+import { issues } from "../../../server/shared/schema";
 import { createSession } from "../../../server/sessions";
 import { createIssue, createLabel, createMember, createProject } from "../../../test/factories";
 import { jsonRequest } from "../../../test/reset-links";

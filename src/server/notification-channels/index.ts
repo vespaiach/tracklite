@@ -1,6 +1,6 @@
 import "server-only";
-import type { NotificationItem } from "../email/templates";
-import type { members, notificationChannel } from "../schema";
+import type { NotificationItem } from "../shared/email/templates";
+import type { members, notificationChannel } from "../shared/schema";
 import { sendNotificationEmail } from "./email";
 
 export type Recipient = typeof members.$inferSelect;

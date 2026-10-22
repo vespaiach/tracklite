@@ -1,6 +1,6 @@
 import { getTableColumns, sql } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
-import { db } from "../server/db";
+import { db } from "../server/shared/db";
 
 export async function moveIntoPast(column: PgColumn, id: string, interval: string) {
   const table = column.table as PgTable;

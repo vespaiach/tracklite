@@ -1,6 +1,6 @@
 import "server-only";
 import * as v from "valibot";
-import { maxCharacters } from "./common";
+import { maxCharacters } from "../server/shared/schemas";
 import { descriptionText, descriptionVersion } from "./description";
 
 const maxNameLength = 50;

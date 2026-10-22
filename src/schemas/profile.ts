@@ -1,6 +1,6 @@
 import "server-only";
 import * as v from "valibot";
-import { maxCharacters } from "./common";
+import { maxCharacters } from "../server/shared/schemas";
 
 const maxFullNameLength = 60;
 const usernameRule = "Use 2 to 20 letters, digits or hyphens";

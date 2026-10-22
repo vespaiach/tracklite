@@ -1,6 +1,6 @@
 import { ResetLinkRequest } from "../../../schemas/account";
-import { apiRoute } from "../../../server/api-route";
-import { clientIp } from "../../../server/limits";
+import { apiRoute } from "../../../server/shared/api-route";
+import { clientIp } from "../../../server/shared/limits";
 import { requestResetLink } from "../../../server/password-resets";
 
 export const POST = apiRoute("public", ResetLinkRequest, async (request, { email }) => {

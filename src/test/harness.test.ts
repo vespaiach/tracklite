@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { db } from "../server/db";
+import { db } from "../server/shared/db";
 
 it("tests run against the separate test database", async () => {
   const [{ name }] = await db.execute<{ name: string }>(sql`select current_database() as name`);

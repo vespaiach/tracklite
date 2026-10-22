@@ -1,7 +1,7 @@
 import type { Me, MemberSummary } from "../../../contract";
 import { InvitationAcceptance } from "../../../schemas/invitation";
-import { ApiError } from "../../../server/api-error";
-import { apiRoute } from "../../../server/api-route";
+import { ApiError } from "../../../server/shared/api-error";
+import { apiRoute } from "../../../server/shared/api-route";
 import { acceptInvitation } from "../../../server/invitations";
 import { listMembers, profileResponse } from "../../../server/members";
 import { sessionCookie, signedInMember } from "../../../server/sessions";

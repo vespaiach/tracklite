@@ -1,4 +1,4 @@
-import { apiRoute } from "../../../../server/api-route";
+import { apiRoute } from "../../../../server/shared/api-route";
 import { revokeInvitation } from "../../../../server/invitations";
 
 export async function DELETE(request: Request, { params }: RouteContext<"/api/invitations/[id]">) {

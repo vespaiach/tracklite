@@ -1,9 +1,9 @@
 import { randomBytes } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../server/db";
-import { outbox } from "../../../server/email/outbox";
-import { members, sessions } from "../../../server/schema";
+import { db } from "../../../server/shared/db";
+import { outbox } from "../../../server/shared/email/outbox";
+import { members, sessions } from "../../../server/shared/schema";
 import { createSession } from "../../../server/sessions";
 import { createMember } from "../../../test/factories";
 import {

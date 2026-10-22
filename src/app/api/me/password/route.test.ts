@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { hashPassword } from "../../../../server/passwords";
+import { hashPassword } from "../../../../server/shared/passwords";
 import { createSession } from "../../../../server/sessions";
 import { createMember } from "../../../../test/factories";
 import { jsonRequest } from "../../../../test/reset-links";

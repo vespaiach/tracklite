@@ -1,6 +1,6 @@
-import { sendEmail } from "../src/server/email/send";
-import { passwordResetEmail } from "../src/server/email/templates";
-import { createToken } from "../src/server/tokens";
+import { sendEmail } from "../src/server/shared/email/send";
+import { passwordResetEmail } from "../src/server/shared/email/templates";
+import { createToken } from "../src/server/shared/tokens";
 
 const to = process.argv[2] ?? "sam@acme.com";
 const { providerMessageId } = await sendEmail({

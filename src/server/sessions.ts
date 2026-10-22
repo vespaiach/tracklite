@@ -1,9 +1,9 @@
 import "server-only";
 import { and, eq, getTableColumns, gt, isNull, sql } from "drizzle-orm";
-import { ApiError } from "./api-error";
-import { db } from "./db";
-import { members, sessions } from "./schema";
-import { createToken, hashToken } from "./tokens";
+import { ApiError } from "./shared/api-error";
+import { db } from "./shared/db";
+import { members, sessions } from "./shared/schema";
+import { createToken, hashToken } from "./shared/tokens";
 
 export type Member = typeof members.$inferSelect;
 export type Admin = Member & { role: "admin" };
