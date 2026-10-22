@@ -1,7 +1,6 @@
 import type { ThreadComment } from "../../../../../contract";
-import { NewComment } from "../../../../../schemas/comment";
 import { apiRoute } from "../../../../../server/shared/api-route";
-import { listProjectComments, postProjectComment } from "../../../../../server/comments";
+import { listProjectComments, NewComment, postProjectComment } from "../../../../../server/comments";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]/comments">) {
   const { key } = await params;
