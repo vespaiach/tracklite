@@ -1,6 +1,6 @@
 # Test consolidation review
 
-Proposed: **859 → ~497 tests (−42%)**, with decisions D1–D6 applied. Nothing edited yet. The count treats each `it.each` row as one test, which is how vitest counts them.
+Applied: **858 → 501 tests (−42%)**, with decisions D1–D6. D4 was applied to Members only (the other three screens use a different layout). The count treats each `it.each` row as one test, which is how vitest counts them.
 
 | Area | Now | Proposed | Detail |
 |---|---|---|---|
@@ -8,7 +8,7 @@ Proposed: **859 → ~497 tests (−42%)**, with decisions D1–D6 applied. Nothi
 | Other API routes | 179 | 107 (applied) | Part B |
 | Server, domain and infrastructure | 174 | 100 (applied) | Part C |
 | Client screens | 199 | 117 (applied) | Part D |
-| Client components, UI kit, markdown | 139 | 72 | Part E |
+| Client components, UI kit, markdown | 139 | 72 (applied) | Part E |
 
 Where a decision below disagrees with a Part's tables, the decision wins.
 

@@ -25,40 +25,21 @@ function renderToaster() {
   return store;
 }
 
-it("STD-9.1: a failed submit shows one error toast that disappears after 5 seconds", () => {
+it("STD-9.1, STD-9.2: one toast at a time; a new one replaces it and each disappears after 5 seconds", () => {
   const store = renderToaster();
 
   act(() => {
     store.dispatch(showToast("Couldn't save. Try again."));
   });
-
   expect(screen.getAllByRole("status").map((toast) => toast.textContent)).toEqual([
     "Couldn't save. Try again.",
   ]);
   expect(screen.queryByRole("button")).toBeNull();
 
   act(() => {
-    vi.advanceTimersByTime(4999);
-  });
-  expect(screen.queryByRole("status")).not.toBeNull();
-
-  act(() => {
-    vi.advanceTimersByTime(1);
-  });
-  expect(screen.queryByRole("status")).toBeNull();
-});
-
-it("STD-9.2: a new toast replaces the current one", () => {
-  const store = renderToaster();
-
-  act(() => {
-    store.dispatch(showToast("This issue was deleted"));
-  });
-  act(() => {
     vi.advanceTimersByTime(3000);
     store.dispatch(showToast("This project is archived"));
   });
-
   expect(screen.getAllByRole("status").map((toast) => toast.textContent)).toEqual([
     "This project is archived",
   ]);

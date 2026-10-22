@@ -126,11 +126,12 @@ it("REQ-009.1: an admin creates a project, lands on its board and sees it in the
   await waitFor(() => expect(window.location.pathname).toBe("/project/BIL"));
 });
 
-it("REQ-009.3: server field errors show beside their fields and keep what was typed", async () => {
-  mockSidebar({
-    create: () =>
-      apiError(422, "Check the highlighted fields", { name: "Name required", key: "Key already used" }),
-  });
+it("REQ-009.3, REQ-009.4: server field errors show beside their fields and keep what was typed", async () => {
+  const answers = [
+    apiError(422, "Check the highlighted fields", { name: "Name required", key: "Key already used" }),
+    apiError(422, "Check the highlighted fields", { key: "Key must be 2 to 5 letters" }),
+  ];
+  mockSidebar({ create: () => answers.shift() as Response });
   renderAppAt("/my-issues");
   const dialog = await openNewProject();
 
@@ -141,14 +142,6 @@ it("REQ-009.3: server field errors show beside their fields and keep what was ty
   expect(within(dialog).getByText("Name required")).toBeTruthy();
   expect((within(dialog).getByLabelText("Key") as HTMLInputElement).value).toBe("OLD");
   expect(within(dialog).getByLabelText("Key").getAttribute("aria-invalid")).toBe("true");
-});
-
-it("REQ-009.4: a key that isn't 2 to 5 letters shows the server's field error", async () => {
-  mockSidebar({
-    create: () => apiError(422, "Check the highlighted fields", { key: "Key must be 2 to 5 letters" }),
-  });
-  renderAppAt("/my-issues");
-  const dialog = await openNewProject();
 
   fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "Website" } });
   fireEvent.change(within(dialog).getByLabelText("Key"), { target: { value: "W" } });
@@ -156,6 +149,7 @@ it("REQ-009.4: a key that isn't 2 to 5 letters shows the server's field error", 
 
   expect(await within(dialog).findByText("Key must be 2 to 5 letters")).toBeTruthy();
   expect((within(dialog).getByLabelText("Name") as HTMLInputElement).value).toBe("Website");
+  expect((within(dialog).getByLabelText("Key") as HTMLInputElement).value).toBe("W");
 });
 
 it("STD-5: Create is disabled while the project is saving", async () => {
@@ -176,19 +170,14 @@ async function openMemberMenu() {
   return screen.findByRole("menu");
 }
 
-it("design §6.2: the bottom of the sidebar shows the signed-in member's initials and name", async () => {
-  mockSidebar({ me: alex });
-  renderAppAt("/my-issues");
-
-  const trigger = await within(await sidebar()).findByRole("button", { name: "Alex Kim" });
-
-  expect(trigger.textContent).toBe("AKAlex Kim");
-  expect(trigger.getAttribute("aria-haspopup")).toBe("true");
-});
-
-it("design §6.2: Profile in the member menu goes to /settings/profile", async () => {
+it("design §6.2: the member button shows initials and name, and Profile goes to /settings/profile", async () => {
   mockSidebar();
   renderAppAt("/my-issues");
+
+  const trigger = await within(await sidebar()).findByRole("button", { name: "Sam Lee" });
+
+  expect(trigger.textContent).toBe("SLSam Lee");
+  expect(trigger.getAttribute("aria-haspopup")).toBe("true");
 
   const menu = await openMemberMenu();
   fireEvent.click(within(menu).getByRole("menuitem", { name: "Profile" }));
@@ -216,20 +205,4 @@ it("REQ-006: Sign out in the member menu ends the session and lands on /sign-in"
   expect(window.location.pathname).toBe("/sign-in");
   expect(window.location.search).toBe("");
   expect(screen.queryByRole("complementary")).toBeNull();
-});
-
-it("design §6.2: the member menu closes on Escape and returns focus to its button", async () => {
-  mockSidebar();
-  renderAppAt("/my-issues");
-
-  const menu = await openMemberMenu();
-  await waitFor(() => expect(menu.contains(document.activeElement)).toBe(true));
-  fireEvent.keyDown(document.activeElement ?? menu, { key: "Escape" });
-
-  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
-  await waitFor(() =>
-    expect(document.activeElement).toBe(
-      within(screen.getByRole("complementary")).getByRole("button", { name: "Sam Lee" }),
-    ),
-  );
 });

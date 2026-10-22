@@ -234,19 +234,9 @@ it("REQ-031.3: a too-long comment shows “Too long (max 10,000)” and keeps th
   expect((await commentBox()).getAttribute("aria-invalid")).toBe("true");
 });
 
-it("STD-5: Post is disabled and reads “Posting…” while posting", async () => {
-  mockThread({ post: never });
-  openIssue();
-
-  await type("Verified on staging.");
-  post();
-
-  const posting = (await screen.findByRole("button", { name: "Posting…" })) as HTMLButtonElement;
-  expect(posting.disabled).toBe(true);
-});
-
-it("STD-9: a failed post shows “Couldn't save. Try again.” and keeps the text", async () => {
-  const fetchMock = mockThread({ post: networkError });
+it("STD-5, STD-9: a failed post keeps the text; the retry reuses the requestId and shows Posting… disabled", async () => {
+  const answers: Answer[] = [networkError, never];
+  const fetchMock = mockThread({ post: (body) => (answers.shift() as Answer)(body) });
   openIssue();
 
   await type("Merged on staging.");
@@ -254,7 +244,11 @@ it("STD-9: a failed post shows “Couldn't save. Try again.” and keeps the tex
 
   expect(await screen.findByText("Couldn't save. Try again.")).toBeTruthy();
   expect((await commentBox()).value).toBe("Merged on staging.");
+
   post();
+
+  const posting = (await screen.findByRole("button", { name: "Posting…" })) as HTMLButtonElement;
+  expect(posting.disabled).toBe(true);
   await waitFor(() => expect(requestsTo(fetchMock, "POST /api/issues/WEB-42/comments")).toHaveLength(2));
   const [first, retry] = requestsTo(fetchMock, "POST /api/issues/WEB-42/comments");
   expect(retry.requestId).toBe(first.requestId);
@@ -274,10 +268,15 @@ it("REQ-033.1: the author's edit is saved with its version and marked “(edited
   expect(requestsTo(fetchMock, "PATCH /api/comments/c-7")).toEqual([{ body: "Console output", version: 2 }]);
 });
 
-it("REQ-033: a too-long edit shows the error under the editor and keeps the text", async () => {
+it("REQ-033, REQ-033.3, STD-8: a failed edit save shows the server's message under the editor and keeps the text", async () => {
+  const answers = [
+    apiError(422, "Check the highlighted fields", { body: "Too long (max 10,000)" }),
+    apiError(409, "This was changed by Sam Lee. Copy your text and reload."),
+    apiError(404, "This comment was deleted"),
+  ];
   mockThread({
     comments: [comment({ body: "Short note", author: memberOf(sam) })],
-    patch: () => apiError(422, "Check the highlighted fields", { body: "Too long (max 10,000)" }),
+    patch: () => answers.shift() as Response,
   });
   openIssue();
   const long = "b".repeat(10_001);
@@ -287,43 +286,44 @@ it("REQ-033: a too-long edit shows the error under the editor and keeps the text
   expect(await screen.findByText("Too long (max 10,000)")).toBeTruthy();
   expect(editor.value).toBe(long);
   expect(editor.getAttribute("aria-invalid")).toBe("true");
-});
 
-it("REQ-033.3: saving an edit to a deleted comment shows “This comment was deleted” and keeps the text", async () => {
-  mockThread({
-    comments: [comment({ body: "Typo here", author: memberOf(sam) })],
-    patch: () => apiError(404, "This comment was deleted"),
-  });
-  openIssue();
+  fireEvent.change(editor, { target: { value: "Second draft" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-  const editor = await editTo("Typo here", "Typo fixed");
+  expect(await screen.findByText("This was changed by Sam Lee. Copy your text and reload.")).toBeTruthy();
+  expect(editor.value).toBe("Second draft");
+
+  fireEvent.change(editor, { target: { value: "Typo fixed" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
   expect(await screen.findByText("This comment was deleted")).toBeTruthy();
   expect(editor.value).toBe("Typo fixed");
   expect(screen.getByRole("textbox", { name: "Edit comment (Markdown)" })).toBe(editor);
 });
 
-it("STD-8: a conflicting edit shows the server message in the editor", async () => {
-  mockThread({
-    comments: [comment({ body: "First draft", author: memberOf(sam) })],
-    patch: () => apiError(409, "This was changed by Sam Lee. Copy your text and reload."),
+it("REQ-033.2, REQ-034.2, REQ-034.4: an admin can delete but not edit others' comments, including a deactivated author's", async () => {
+  const fetchMock = mockThread({
+    me: priya,
+    comments: [
+      comment({ id: "c-4", body: "Alex's note" }),
+      comment({ id: "c-5", body: "Old note", author: { ...memberOf(sam), deactivated: true } }),
+    ],
   });
   openIssue();
 
-  const editor = await editTo("First draft", "Second draft");
-
-  expect(await screen.findByText("This was changed by Sam Lee. Copy your text and reload.")).toBeTruthy();
-  expect(editor.value).toBe("Second draft");
-});
-
-it("REQ-033.2: an admin sees Delete but not Edit on someone else's comment", async () => {
-  mockThread({ me: admin, comments: [comment({ body: "Alex wrote this" })] });
-  openIssue();
-
-  const menu = await openOptions("Alex wrote this");
-
-  expect(within(menu).getByRole("menuitem", { name: "Delete" })).toBeTruthy();
+  const menu = await openOptions("Alex's note");
   expect(within(menu).queryByRole("menuitem", { name: "Edit" })).toBeNull();
+  fireEvent.click(within(menu).getByRole("menuitem", { name: "Delete" }));
+  const dialog = await screen.findByRole("alertdialog", { name: "Delete this comment?" });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+  await waitFor(() => expect(screen.queryByText("Alex's note")).toBeNull());
+  expect(requestsTo(fetchMock, "DELETE /api/comments/c-4")).toHaveLength(1);
+
+  expect(within(await commentWith("Old note")).getByText("Sam Lee (deactivated)")).toBeTruthy();
+  await deleteConfirmed("Old note");
+
+  await waitFor(() => expect(requestsTo(fetchMock, "DELETE /api/comments/c-5")).toHaveLength(1));
 });
 
 it("REQ-034.1: the author deletes a comment after confirming", async () => {
@@ -349,16 +349,6 @@ it("REQ-034.1: the author deletes a comment after confirming", async () => {
   expect(requestsTo(fetchMock, "DELETE /api/comments/c-3")).toHaveLength(1);
 });
 
-it("REQ-034.2: an admin deletes Alex's comment", async () => {
-  const fetchMock = mockThread({ me: admin, comments: [comment({ id: "c-4", body: "Alex's note" })] });
-  openIssue();
-
-  await deleteConfirmed("Alex's note");
-
-  await waitFor(() => expect(screen.queryByText("Alex's note")).toBeNull());
-  expect(requestsTo(fetchMock, "DELETE /api/comments/c-4")).toHaveLength(1);
-});
-
 it("REQ-034.3: a member sees no options on someone else's comment", async () => {
   mockThread({ me: alex, comments: [comment({ body: "Sam's note", author: memberOf(sam) })] });
   openIssue();
@@ -366,19 +356,6 @@ it("REQ-034.3: a member sees no options on someone else's comment", async () => 
   const theirs = await commentWith("Sam's note");
 
   expect(within(theirs).queryByRole("button", { name: "Comment options" })).toBeNull();
-});
-
-it("REQ-034.4: a deactivated author shows “Sam Lee (deactivated)” and an admin can still delete", async () => {
-  const fetchMock = mockThread({
-    me: priya,
-    comments: [comment({ id: "c-5", body: "Old note", author: { ...memberOf(sam), deactivated: true } })],
-  });
-  openIssue();
-
-  expect(within(await commentWith("Old note")).getByText("Sam Lee (deactivated)")).toBeTruthy();
-  await deleteConfirmed("Old note");
-
-  await waitFor(() => expect(requestsTo(fetchMock, "DELETE /api/comments/c-5")).toHaveLength(1));
 });
 
 it("REQ-032.3: an archived project's thread has no comment box and no options", async () => {
@@ -434,17 +411,6 @@ it("REQ-035.1: leaving with an unsent comment asks first; Cancel keeps the text"
   expect((await commentBox()).value).toBe("Half a thought");
 });
 
-it("REQ-035.2: an empty comment box leaves without asking", async () => {
-  mockThread();
-  openIssue();
-  await type("   ");
-
-  fireEvent.click(await screen.findByRole("link", { name: "My issues" }));
-
-  await waitFor(() => expect(window.location.pathname).toBe("/my-issues"));
-  expect(screen.queryByRole("alertdialog")).toBeNull();
-});
-
 it("REQ-035: closing the tab with an unsent comment asks the browser to confirm", async () => {
   mockThread();
   openIssue();
@@ -460,12 +426,13 @@ it("REQ-035: closing the tab with an unsent comment asks the browser to confirm"
   expect(typed.defaultPrevented).toBe(true);
 });
 
-it("REQ-035: a posted comment no longer holds back leaving", async () => {
+it("REQ-035.2, REQ-035: a posted comment or a blank box doesn't hold back leaving", async () => {
   mockThread();
   openIssue();
   await type("Verified on staging.");
   post();
   await commentWith("Verified on staging.");
+  await type("   ");
 
   fireEvent.click(await screen.findByRole("link", { name: "My issues" }));
 
@@ -473,21 +440,14 @@ it("REQ-035: a posted comment no longer holds back leaving", async () => {
   expect(screen.queryByRole("alertdialog")).toBeNull();
 });
 
-it("REQ-031: hovering a comment's time shows the exact date and time", async () => {
+it("REQ-031, REQ-033: hovering the time or “(edited)” shows the exact time", async () => {
   const createdAt = minutesAgo(180);
-  mockThread({ comments: [comment({ body: "Reproduced on Safari 17.4.", createdAt })] });
-  openIssue();
-
-  const shown = await commentWith("Reproduced on Safari 17.4.");
-  expect(within(shown).getByText("3 hours ago").getAttribute("title")).toBe(formatExact(createdAt));
-});
-
-it("REQ-033: hovering “(edited)” shows the edit time", async () => {
   const editedAt = minutesAgo(20);
-  mockThread({ comments: [comment({ body: "Console output", editedAt })] });
+  mockThread({ comments: [comment({ body: "Console output", createdAt, editedAt })] });
   openIssue();
 
   const shown = await commentWith("Console output");
+  expect(within(shown).getByText("3 hours ago").getAttribute("title")).toBe(formatExact(createdAt));
   expect(within(shown).getByText("(edited)").getAttribute("title")).toBe(`Edited ${formatExact(editedAt)}`);
 });
 

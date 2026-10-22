@@ -4,18 +4,18 @@ import { Priority, Status } from "./Status";
 
 afterEach(cleanup);
 
-it("names the status for assistive tech", () => {
-  render(<Status status="review" />);
+it("Status and Priority icons are named; urgent is a plate and other levels light one bar per step", () => {
+  render(
+    <>
+      <Status status="review" />
+      <Priority priority="urgent" />
+      <Priority priority="med" />
+    </>,
+  );
   expect(screen.getByRole("img", { name: "review" })).toBeTruthy();
-});
 
-it("draws urgent priority as a plate instead of bars", () => {
-  render(<Priority priority="urgent" />);
   expect(screen.getByRole("img", { name: "urgent" }).textContent).toBe("!");
-});
 
-it("lights one bar per priority step", () => {
-  render(<Priority priority="med" />);
   const bars = [...screen.getByRole("img", { name: "med" }).querySelectorAll("i")];
   expect(bars.map((b) => b.style.opacity)).toEqual(["1", "1", "0.25"]);
 });

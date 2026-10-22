@@ -4,7 +4,7 @@ import { Button } from "./Button";
 
 afterEach(cleanup);
 
-it("danger variant renders the tl-btn--danger class and stays a type=button that can be disabled", () => {
+it("Button defaults to type=button and can be disabled; the danger variant adds tl-btn--danger", () => {
   render(
     <Button
       variant="danger"
@@ -14,7 +14,7 @@ it("danger variant renders the tl-btn--danger class and stays a type=button that
   );
 
   const button = screen.getByRole("button", { name: "Deactivate" }) as HTMLButtonElement;
-  expect(button.className.split(" ")).toEqual(["tl-btn", "tl-btn--md", "tl-btn--danger"]);
   expect(button.type).toBe("button");
   expect(button.disabled).toBe(true);
+  expect(button.classList.contains("tl-btn--danger")).toBe(true);
 });

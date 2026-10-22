@@ -4,28 +4,17 @@ import { Comment, IssueTitleInput } from "./IssueLayout";
 
 afterEach(cleanup);
 
-it("Comment shows “Name · time”, the edited mark and its actions in the head", () => {
-  render(
-    <Comment
-      avatar={<span>SL</span>}
-      author="Sam Lee"
-      time="2 days ago"
-      edited={<span>(edited)</span>}
-      actions={<button type="button">Comment options</button>}>
-      <p>Console output</p>
-    </Comment>,
-  );
-  const comment = screen.getByRole("article");
-  const head = comment.querySelector(".tl-comment__head") as HTMLElement;
-  expect(head.textContent).toBe("SLSam Lee·2 days ago(edited)Comment options");
-  expect(head.lastElementChild?.classList.contains("tl-comment__actions")).toBe(true);
-  expect(comment.querySelector(".tl-prose")).toBeNull();
-  expect(screen.getByText("Console output").tagName).toBe("P");
-});
-
-it("IssueTitleInput is a wrapping text area that carries its error state", () => {
+it("Comment shows “Name · time”, the edited mark and its actions in the head; IssueTitleInput is a wrapping text area that carries its error state", () => {
   render(
     <>
+      <Comment
+        avatar={<span>SL</span>}
+        author="Sam Lee"
+        time="2 days ago"
+        edited={<span>(edited)</span>}
+        actions={<button type="button">Comment options</button>}>
+        <p>Console output</p>
+      </Comment>
       <IssueTitleInput
         aria-label="Title"
         aria-invalid
@@ -35,6 +24,14 @@ it("IssueTitleInput is a wrapping text area that carries its error state", () =>
       <span id="title-error">Title required</span>
     </>,
   );
+
+  const comment = screen.getByRole("article");
+  const head = comment.querySelector(".tl-comment__head") as HTMLElement;
+  expect(head.textContent).toBe("SLSam Lee·2 days ago(edited)Comment options");
+  expect(head.lastElementChild?.classList.contains("tl-comment__actions")).toBe(true);
+  expect(comment.querySelector(".tl-prose")).toBeNull();
+  expect(screen.getByText("Console output").tagName).toBe("P");
+
   const title = screen.getByRole("textbox", { name: "Title" });
   expect(title.tagName).toBe("TEXTAREA");
   expect(title.classList.contains("tl-issue-title")).toBe(true);

@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { BoardCard, BoardColumn, BoardEmpty } from "./ListRow";
+import { BoardCard } from "./ListRow";
 
 afterEach(cleanup);
 
@@ -31,20 +31,4 @@ it("BoardCard links its title to the issue, with the handle and ⋯ as separate 
 
   fireEvent.click(link);
   expect(onOpen).toHaveBeenCalledTimes(1);
-});
-
-it("BoardColumn names its region after the status and shows the count and action", () => {
-  render(
-    <BoardColumn
-      label="In Review"
-      count={4}
-      action={<button type="button">New issue in In Review</button>}>
-      <BoardEmpty>No issues yet.</BoardEmpty>
-    </BoardColumn>,
-  );
-
-  const column = screen.getByRole("region", { name: "In Review" });
-  expect(within(column).getByText("4")).toBeTruthy();
-  expect(within(column).getByRole("button", { name: "New issue in In Review" })).toBeTruthy();
-  expect(within(column).getByText("No issues yet.")).toBeTruthy();
 });

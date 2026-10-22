@@ -11,7 +11,6 @@ import {
   requestsTo,
   sam,
 } from "../test/client-app";
-import type { Project } from "./api";
 
 afterEach(() => {
   cleanup();
@@ -23,11 +22,11 @@ type Answer = (body: unknown) => Response | Promise<Response>;
 const web = project("WEB", "Website");
 const created = issue({ id: "WEB-1", status: "backlog", priority: "none", assignee: null });
 
-function mockProject({ post, shown = web }: { post?: Answer; shown?: Project } = {}) {
+function mockProject({ post }: { post?: Answer } = {}) {
   return mockApi({
     "GET /api/me": () => Response.json(sam),
     "GET /api/members": () => Response.json([sam]),
-    "GET /api/projects/WEB": () => Response.json(shown),
+    "GET /api/projects/WEB": () => Response.json(web),
     "POST /api/projects/WEB/issues": post ?? (() => Response.json(created, { status: 201 })),
     "GET /api/issues/WEB-1": () => Response.json(created),
   });
@@ -78,41 +77,9 @@ it("REQ-016.3: a title of only spaces gets Title required and keeps what was typ
   expect(title.getAttribute("aria-invalid")).toBe("true");
 });
 
-it("STD-5: Create is disabled while the issue is saving", async () => {
-  mockProject({ post: never });
-  renderAppAt("/project/WEB");
-
-  const dialog = await openDialog();
-  typeTitle(dialog, "Fix login button");
-  fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
-
-  const saving = await within(dialog).findByRole("button", { name: "Creating…" });
-  expect((saving as HTMLButtonElement).disabled).toBe(true);
-});
-
-it("STD-5: retrying after a failed create sends the same requestId", async () => {
-  let attempts = 0;
-  const fetchMock = mockProject({
-    post: () => {
-      attempts += 1;
-      return attempts === 1 ? networkError() : Response.json(created, { status: 201 });
-    },
-  });
-  renderAppAt("/project/WEB");
-
-  const dialog = await openDialog();
-  typeTitle(dialog, "Fix login button");
-  fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
-  expect(await screen.findByText("Couldn't save. Try again.")).toBeTruthy();
-  fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
-
-  await waitFor(() => expect(window.location.pathname).toBe("/issue/WEB-1"));
-  const [first, second] = requestsTo(fetchMock, "POST /api/projects/WEB/issues") as { requestId: string }[];
-  expect(second.requestId).toBe(first.requestId);
-});
-
-it("STD-9: a server error shows the toast and keeps the title", async () => {
-  mockProject({ post: () => apiError(500, "Internal error") });
+it("STD-5, STD-9: a failed create shows the toast and keeps the title; the retry reuses the requestId and shows Creating… disabled", async () => {
+  const answers: Answer[] = [networkError, never];
+  const fetchMock = mockProject({ post: (body) => (answers.shift() as Answer)(body) });
   renderAppAt("/project/WEB");
 
   const dialog = await openDialog();
@@ -122,12 +89,11 @@ it("STD-9: a server error shows the toast and keeps the title", async () => {
   expect(await screen.findByText("Couldn't save. Try again.")).toBeTruthy();
   expect(title.value).toBe("Fix login button");
   expect(window.location.pathname).toBe("/project/WEB");
-});
 
-it("REQ-013: an archived project's header has no New issue", async () => {
-  mockProject({ shown: project("WEB", "Website", "2026-10-01T10:00:00.000Z") });
-  renderAppAt("/project/WEB");
+  fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
 
-  expect(await screen.findByText("Archived")).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "New issue" })).toBeNull();
+  const saving = await within(dialog).findByRole("button", { name: "Creating…" });
+  expect((saving as HTMLButtonElement).disabled).toBe(true);
+  const [first, second] = requestsTo(fetchMock, "POST /api/projects/WEB/issues") as { requestId: string }[];
+  expect(second.requestId).toBe(first.requestId);
 });
