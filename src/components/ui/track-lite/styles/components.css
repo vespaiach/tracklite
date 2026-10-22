@@ -1400,27 +1400,24 @@ a.tl-rail-item {
   margin-right: -5px;
 }
 .tl-board-col__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.tl-board-col__list {
   position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  display: grid;
-  gap: 7px;
-  padding: 7px;
-  align-content: start;
-}
-.tl-board-col__list {
-  display: grid;
-  gap: 7px;
   margin: 0;
-  padding: 0;
   list-style: none;
 }
-.tl-board-col__slot {
-  position: absolute;
+.tl-board-col__list[data-empty] [role="gridcell"] > * {
+  margin: 7px;
 }
-.tl-board-col__slot[data-drop-target] {
-  position: static;
+.tl-board-col__slot {
+  height: 100%;
 }
 .tl-board-empty {
   margin: 0;
@@ -1524,6 +1521,9 @@ a.tl-rail-item {
   border: 1px dashed var(--color-accent);
   border-radius: 2px;
   background: var(--color-accent-100);
+}
+.tl-board-col__slot .tl-board-drop {
+  height: 100%;
 }
 .tl-project-card {
   display: grid;
