@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
+import { isUuid } from "../shared/ids";
 import { sendEmail } from "../shared/email/send";
 import { invitationEmail } from "../shared/email/templates";
 import type { Invitation, InvitationLookup } from "../../contract";
@@ -17,10 +18,6 @@ const isOpen = and(isNull(invitations.acceptedAt), isNull(invitations.revokedAt)
 
 function notFound() {
   return new ApiError(404, "Not found");
-}
-
-function isUuid(id: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 }
 
 function openInvitations(executor: Pick<typeof db, "select">) {

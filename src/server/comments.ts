@@ -2,9 +2,10 @@ import "server-only";
 import { asc, eq, inArray, type SQL, sql } from "drizzle-orm";
 import { ApiError } from "./shared/api-error";
 import { db } from "./shared/db";
+import { isUuid } from "./shared/ids";
 import type { Executor, Transaction } from "./shared/transaction";
 import { conflict, notify, replaceMentions } from "./notifications";
-import { byIssueId, issueGone, uuidPattern } from "./issues";
+import { issueGoneError, issueIdCondition } from "./issues";
 import { type Member, memberSummary } from "./identity";
 import { writableProject } from "./projects";
 import { comments, issues, members, mentions, projects } from "./shared/schema";
@@ -84,7 +85,7 @@ async function oneComment(executor: Executor, id: string) {
 }
 
 async function issueOf(executor: Executor, id: string) {
-  const where = byIssueId(id);
+  const where = issueIdCondition(id);
   if (!where) return undefined;
   const [issue] = await executor
     .select({ id: issues.id, projectKey: projects.key })
@@ -142,7 +143,7 @@ async function postComment(
 export function postIssueComment(actor: Member, id: string, body: NewComment) {
   return postComment(actor, body, async (tx) => {
     const issue = await issueOf(tx, id);
-    if (!issue) throw issueGone();
+    if (!issue) throw issueGoneError();
 
     await writableProject(tx, issue.projectKey);
 
@@ -155,7 +156,7 @@ export function postProjectComment(actor: Member, key: string, body: NewComment)
 }
 
 async function lockedComment(tx: Transaction, id: string) {
-  if (!uuidPattern.test(id)) throw commentGone();
+  if (!isUuid(id)) throw commentGone();
 
   const [target] = await tx
     .select({ id: comments.id, projectKey: projects.key })

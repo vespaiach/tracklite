@@ -1,7 +1,6 @@
 import type { Issue } from "../../../../../contract";
-import { IssueMove } from "../../../../../schemas/issue";
 import { apiRoute } from "../../../../../server/shared/api-route";
-import { moveIssue } from "../../../../../server/issues";
+import { IssueMove, moveIssue } from "../../../../../server/issues";
 
 export async function PUT(request: Request, { params }: RouteContext<"/api/issues/[id]/position">) {
   const { id } = await params;
