@@ -250,7 +250,7 @@ Only the owning context inserts, updates or deletes a table. Another context may
   - Reads: spec REQ-016–REQ-028 · `src/server/issues/`
   - Needs: M16.3
   - Done: `issues/rules.test.ts` covers each rule without the database; any database test that only checked such a rule moves to it (test each rule once); no file in `issues/` over 300 lines; the existing tests pass
-- [ ] **M16.5 Project, comment and identity rules.** The same split for the other contexts: archived-project and key rules in `projects/rules.ts`; edit/delete ownership and mention parsing in `comments/rules.ts` and `notifications/rules.ts`; last-admin, invitation and reset rules in `identity/rules.ts`. Permission checks stay `assertAdmin(actor)` first, as §4.10 says.
+- [x] **M16.5 Project, comment and identity rules.** The same split for the other contexts: archived-project and key rules in `projects/rules.ts`; edit/delete ownership and mention parsing in `comments/rules.ts` and `notifications/rules.ts`; last-admin, invitation and reset rules in `identity/rules.ts`. Permission checks stay `assertAdmin(actor)` first, as §4.10 says.
   - Reads: design §4.10 · `src/server/projects/`, `src/server/comments/`, `src/server/identity/`, `src/server/notifications/descriptions.ts`
   - Needs: M16.4
   - Done: a `rules.test.ts` per context, as in M16.4; the existing tests pass

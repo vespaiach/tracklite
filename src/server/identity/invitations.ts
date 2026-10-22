@@ -13,6 +13,7 @@ import { invitations, members } from "./tables";
 import { assertAdmin, createSession, type Member } from "./sessions";
 import { createToken, hashToken } from "../shared/tokens";
 import type { Executor } from "../shared/transaction";
+import { checkInvitationLink, inviteRefusal } from "./rules";
 
 const isOpen = and(isNull(invitations.acceptedAt), isNull(invitations.revokedAt));
 
@@ -104,8 +105,8 @@ async function assertNotMember(email: string) {
     .select({ deactivatedAt: members.deactivatedAt })
     .from(members)
     .where(eq(sql`lower(${members.email})`, email));
-  if (member?.deactivatedAt) throw new ApiError(422, "This person is deactivated. Reactivate them instead.");
-  if (member) throw new ApiError(422, "Already a member");
+  const refusal = inviteRefusal(member);
+  if (refusal) throw new ApiError(422, refusal);
 }
 
 export async function resendInvitation(actor: Member, id: Uuid | undefined) {
@@ -158,10 +159,9 @@ function invitationByToken(executor: Pick<typeof db, "select">, token: string) {
 }
 
 function usableInvitation(invitation: Awaited<ReturnType<typeof invitationByToken>>[number] | undefined) {
-  if (invitation?.revoked) throw new ApiError(410, "This invitation is no longer valid.");
-  if (!invitation?.usable)
-    throw new ApiError(410, "This invitation has expired. Ask an admin for a new one.");
-  return invitation;
+  const link = checkInvitationLink(invitation);
+  if ("refusal" in link) throw new ApiError(410, link.refusal);
+  return link.usable;
 }
 
 export async function lookUpInvitation(token: string): Promise<InvitationLookup> {
