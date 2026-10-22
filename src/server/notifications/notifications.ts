@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, gt, sql } from "drizzle-orm";
-import { toPlainText } from "../lib/markdown/parse";
-import type { Transaction } from "./shared/transaction";
+import { toPlainText } from "../../lib/markdown/parse";
+import type { Transaction } from "../shared/transaction";
 import {
   issues,
   members,
@@ -10,7 +10,7 @@ import {
   type notificationKind,
   notifications,
   projects,
-} from "./shared/schema";
+} from "../shared/schema";
 
 type NotificationKind = (typeof notificationKind.enumValues)[number];
 type NotificationTarget = { issueId: string } | { projectId: string };

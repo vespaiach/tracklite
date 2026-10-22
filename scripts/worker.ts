@@ -1,4 +1,4 @@
-import { runWorker } from "../src/server/worker";
+import { runWorker } from "../src/server/notifications";
 
 const stop = new AbortController();
 process.on("SIGTERM", () => stop.abort());

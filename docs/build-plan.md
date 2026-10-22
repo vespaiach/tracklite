@@ -194,7 +194,7 @@ Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `project
   - Reads: design §4.10 · `src/server/sessions.ts`, `src/server/members.ts`
   - Needs: M15.2
   - Done: no file outside `identity/` imports a file inside it other than `index.ts`; the existing tests pass
-- [ ] **M15.4 notifications.** Move the notification files and `descriptions.ts` into `src/server/notifications/`, along with the `description` schema. Add `index.ts`. Update `scripts/worker.ts` and the `/health/worker` and `/webhooks/email` routes.
+- [x] **M15.4 notifications.** Move the notification files and `descriptions.ts` into `src/server/notifications/`, along with the `description` schema. Add `index.ts`. Update `scripts/worker.ts` and the `/health/worker` and `/webhooks/email` routes.
   - Reads: design §1.4, §2.6, D-45
   - Needs: M15.3
   - Done: the same import check for `notifications/`; `npm run worker` still starts; the existing tests pass

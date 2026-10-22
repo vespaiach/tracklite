@@ -1,14 +1,20 @@
 import { randomUUID } from "node:crypto";
 import { asc, DrizzleQueryError, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { createIssue, createMember, createProject } from "../test/factories";
-import { moveIntoPast } from "../test/time";
-import { editComment, postIssueComment, postProjectComment } from "./comments";
-import { db } from "./shared/db";
-import { updateIssue } from "./issues";
-import { updateProject } from "./projects";
-import { issues, members, notificationBatches, notificationDeliveries, notifications } from "./shared/schema";
-import type { Member } from "./identity";
+import { createIssue, createMember, createProject } from "../../test/factories";
+import { moveIntoPast } from "../../test/time";
+import { editComment, postIssueComment, postProjectComment } from "../comments";
+import { db } from "../shared/db";
+import { updateIssue } from "../issues";
+import { updateProject } from "../projects";
+import {
+  issues,
+  members,
+  notificationBatches,
+  notificationDeliveries,
+  notifications,
+} from "../shared/schema";
+import type { Member } from "../identity";
 
 async function website() {
   const project = await createProject({ name: "Website" });
