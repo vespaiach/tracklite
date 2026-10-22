@@ -528,6 +528,8 @@ Mail is sent from a subdomain, so the app's sending reputation is kept apart fro
 
 Behaviour and copy come from the spec; this section only adds the routes, layout and pages the spec doesn't describe. All components come from the Track Lite design system (`src/components/ui/track-lite/`). Complex widgets use React Aria Components; the kit's `Dialog` also takes `FocusScope` from the lower-level `react-aria` hooks package.
 
+Every R1 screen was designed in one Claude Design project, `claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a`, read with the DesignSync tool. Each screen is a file in it: Signed-out screens, Profile, Accept invitation, Members, Project navigation, Project details, Labels, Issue page, Issue page - labels and description, Board, List, Comments, My issues and Notification status (each `<name>.dc.html`). A change to a screen starts from its file.
+
 ### 6.1 Routes
 
 The routes are API-004's addresses (`src/client/routes.tsx`).
@@ -541,7 +543,7 @@ The routes are API-004's addresses (`src/client/routes.tsx`).
 - An unknown project key or issue ID shows Not found (STD-4).
 
 **Addresses.**
-- When an address uses lower case, such as `/issue/web-42`, the app rewrites it to the canonical form `/issue/WEB-42` with `replace` (REQ-016.5).
+- When an address uses lower case, such as `/issue/web-42`, the app rewrites it to the canonical form `/issue/WEB-42` with `replace` (REQ-016.5). Project addresses work the same way in `ProjectGate`: `/project/web/list?status=done` becomes `/project/WEB/list?status=done`, keeping the rest of the path, the query string and the hash.
 - An address ending in `#comment-{id}` scrolls to that comment once comments load, and highlights it briefly. If the comment is gone, the page stays at the top.
 
 ### 6.2 App shell

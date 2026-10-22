@@ -14,7 +14,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Project state
 
-Tracklite is a small issue tracker for one invite-only team. It is being **rebuilt from the docs**, one task at a time. Most of R1 is built, but not all of it; check `docs/build-plan.md` to see which tasks are ticked before assuming something exists.
+Tracklite is a small issue tracker for one invite-only team. It is being **rebuilt from the docs**, one task at a time. Most of R1 is built, but not all of it. Done tasks are removed from `docs/build-plan.md`, so anything still listed there, ticked or not, may not exist yet.
 
 - `docs/tracklite-spec.md`: what the product does. Rules are IDs such as `REQ-047`, `SEC-004`, `STD-5`, each with numbered examples (`REQ-047.2`). **The spec wins** over the design. If the spec is wrong or silent, fix the spec first (with a changelog line), then the code.
 - `docs/tech-design.md`: technical decisions, cited as `§1.7`, `§3.3` and so on.
