@@ -1,9 +1,11 @@
-export { conflict, replaceMentions } from "./descriptions";
+import { subscribe } from "../shared/events";
+import { onDomainEvent } from "./notifications";
+
+subscribe(onDomainEvent);
+
 export { receiveEmailEvent } from "./email-webhook";
 export { workerIsHealthy } from "./notification-queue";
 export { notificationStats } from "./notification-stats";
-export { notify } from "./notifications";
-export { descriptionText, descriptionVersion } from "./schemas";
 export { runWorker } from "./worker";
 export {
   mentions,

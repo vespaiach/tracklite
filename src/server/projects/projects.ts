@@ -3,8 +3,9 @@ import { asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import type { Executor, Transaction } from "../shared/transaction";
-import { conflict, notify, replaceMentions, mentions } from "../notifications";
-import { assertAdmin, type Member, memberSummary, members } from "../identity";
+import { mentions } from "../notifications/tables";
+import { publish } from "../shared/events";
+import { assertAdmin, editConflict, type Member, memberSummary, members } from "../identity";
 import { projectKeys, projects } from "./tables";
 import { needsAdmin, renamesArchived } from "./rules";
 import type { NewProject, ProjectChanges, ProjectKey } from "./schemas";
@@ -114,7 +115,7 @@ async function saveDescription(
     const project = await writableProject(tx, key, "update");
 
     if (project.descriptionVersion !== descriptionVersion)
-      throw await conflict(tx, project.descriptionEditedBy);
+      throw await editConflict(tx, project.descriptionEditedBy);
 
     const [updated] = await tx
       .update(projects)
@@ -126,10 +127,8 @@ async function saveDescription(
       .where(eq(projects.id, project.id))
       .returning();
 
-    const mentioned = await replaceMentions(tx, { projectId: project.id }, description);
-
-    await notify(tx, mentioned, {
-      kind: "mentioned",
+    await publish(tx, {
+      type: "DescriptionSaved",
       actorId: member.id,
       target: { projectId: project.id },
       text: description,

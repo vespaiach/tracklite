@@ -16,3 +16,11 @@ export const linkToken = v.pipe(
 );
 
 export const emailAddress = v.pipe(v.string("Enter a valid email"), v.trim(), v.toLowerCase());
+
+const maxDescriptionLength = 20_000;
+
+export const descriptionText = v.pipe(
+  v.string("Description required"),
+  maxCharacters(maxDescriptionLength, "Too long (max 20,000)"),
+);
+export const descriptionVersion = version;

@@ -98,3 +98,13 @@ function roleAndActiveUpdate({ role, deactivated }: MemberChanges) {
     ...(deactivated === false && { deactivatedAt: null }),
   };
 }
+
+export async function editConflict(tx: Transaction, editorId: string | null) {
+  const [editor] = editorId
+    ? await tx.select({ fullName: members.fullName }).from(members).where(eq(members.id, editorId))
+    : [];
+  return new ApiError(
+    409,
+    `This was changed by ${editor?.fullName ?? "someone else"}. Copy your text and reload.`,
+  );
+}

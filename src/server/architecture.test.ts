@@ -6,20 +6,22 @@ import { expect, it } from "vitest";
 type Import = { file: string; specifier: string; target: string };
 
 const allowedDependencies: Record<string, string[]> = {
-  comments: ["issues", "projects", "identity", "notifications", "shared"],
-  issues: ["projects", "identity", "notifications", "shared"],
-  projects: ["identity", "notifications", "shared"],
-  notifications: ["identity", "shared"],
+  comments: ["issues", "projects", "identity", "shared"],
+  issues: ["projects", "identity", "shared"],
+  projects: ["identity", "shared"],
+  notifications: ["comments", "issues", "projects", "identity", "shared"],
   identity: ["shared"],
   shared: [],
 };
-const allowedFileDependencies = ["src/server/shared/api-route.ts -> identity"];
+const allowedFileDependencies = [
+  "src/server/shared/api-route.ts -> identity",
+  "src/server/shared/api-route.ts -> notifications",
+];
 const tableReadsAgainstMap = [
-  "src/server/notifications/notifications.ts -> issues",
-  "src/server/notifications/notifications.ts -> projects",
-  "src/server/notifications/worker.ts -> issues",
-  "src/server/notifications/worker.ts -> projects",
+  "src/server/comments/comments.ts -> notifications",
+  "src/server/issues/rows.ts -> notifications",
   "src/server/projects/labels.ts -> issues",
+  "src/server/projects/projects.ts -> notifications",
 ];
 const tableWrite = /\.(?:insert|update|delete)\((\w+)\)/g;
 const importSpecifier = /(?:\bfrom|\bimport\(?|\bvi\.mock\()\s*["']([^"']+)["']/g;

@@ -1,22 +1,11 @@
 import "server-only";
 import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { findMentions } from "../../lib/markdown/parse";
-import { ApiError } from "../shared/api-error";
 import type { Transaction } from "../shared/transaction";
 import { members } from "../identity";
 import { mentions } from "./tables";
 
 type MentionSource = { projectId: string } | { issueId: string } | { commentId: string };
-
-export async function conflict(tx: Transaction, editorId: string | null) {
-  const [editor] = editorId
-    ? await tx.select({ fullName: members.fullName }).from(members).where(eq(members.id, editorId))
-    : [];
-  return new ApiError(
-    409,
-    `This was changed by ${editor?.fullName ?? "someone else"}. Copy your text and reload.`,
-  );
-}
 
 export async function replaceMentions(tx: Transaction, source: MentionSource, text: string) {
   const memberIds = await activeMemberIds(tx, findMentions(text));
