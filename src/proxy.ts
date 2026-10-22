@@ -24,7 +24,7 @@ export function proxy(request: NextRequest) {
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("content-security-policy", policy);
-  response.headers.set("referrer-policy", "same-origin");
+  response.headers.set("referrer-policy", "no-referrer");
   return response;
 }
 

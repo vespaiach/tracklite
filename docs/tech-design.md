@@ -431,7 +431,7 @@ One module, `src/lib/markdown/`, used for both **rendering** in the browser and 
 
 ### 4.8 Logs (SEC-007)
 
-- The logger takes a fixed set of fields: time, level, event, method, path (without the query string), status, `durationMs`, `actor` (the member's username), and `error` (its name and message). The worker's lines (1.4) add `deliveryId`, `errorName` and the metrics counts; email-failure lines add the provider's `status` and `errorName`.
+- The logger takes a fixed set of fields: time, level, event, method, path (without the query string), status, `durationMs`, `actor` (the member's username), and `error` (the error's class name only, since a message can quote request data; a failed query adds the database error's class and SQLSTATE code, such as `DrizzleQueryError (PostgresError 23505)`). The worker's lines (1.4) add `deliveryId`, `errorName` and the metrics counts; email-failure lines add the provider's `status` and `errorName`.
 - It never logs request or response bodies, headers or cookies.
 - Besides the request line, only email events, as short phrases such as `email bounced, invitation {id}`, and the worker's `notification` and `worker` lines (1.4) are logged.
 - Errors from the email provider are logged without the message content.
@@ -441,7 +441,7 @@ One module, `src/lib/markdown/`, used for both **rendering** in the browser and 
 Caddy adds these to every response:
 - `Strict-Transport-Security: max-age=31536000` (SEC-005)
 - `X-Content-Type-Options: nosniff`
-- `Referrer-Policy: same-origin`, so no referrer goes to other sites (SEC-010) and a page address containing a token never leaks through the `Referer` header. `src/proxy.ts` sets it too on page requests, so pages keep it even without Caddy.
+- `Referrer-Policy: no-referrer`, so no referrer goes to other sites (SEC-010) and a page address containing a token never reaches another site or an access log through the `Referer` header (SEC-007). `src/proxy.ts` sets it too on page requests, so pages keep it even without Caddy.
 
 **Content Security Policy (SEC-010).** Next.js puts small inline scripts in every page, so the policy needs a fresh nonce per request. `src/proxy.ts` generates it and sets, on page requests only:
 

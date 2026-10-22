@@ -164,13 +164,29 @@ it("SEC-007: the log line leaves out the query string, body, headers and cookies
   );
 });
 
-it("SEC-007: a 500 is logged at error level with the error class", async () => {
+it("SEC-007: a 500 is logged at error level with the error class only", async () => {
   await apiRoute("public", () => {
     throw new TypeError("boom");
   })(new Request(`${appOrigin}/api/issues`));
   expect(loggedLines()).toEqual([
-    expect.objectContaining({ level: "error", status: 500, error: "TypeError: boom" }),
+    expect.objectContaining({ level: "error", status: 500, error: "TypeError" }),
   ]);
+});
+
+it("SEC-007: a failed database query's 500 log line has no query values", async () => {
+  const secret = `secret-${Date.now()}@example.test`;
+  await createMember({ email: secret });
+
+  await apiRoute("public", async () => {
+    await createMember({ email: secret });
+    return ok();
+  })(new Request(`${appOrigin}/api/issues`));
+
+  const [line] = log.mock.calls.map(([raw]) => raw as string);
+  expect(line).not.toContain(secret);
+  expect(JSON.parse(line)).toEqual(
+    expect.objectContaining({ status: 500, error: "DrizzleQueryError (PostgresError 23505)" }),
+  );
 });
 
 async function signedInRequest(role: "admin" | "member", body?: unknown) {

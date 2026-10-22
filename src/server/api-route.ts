@@ -1,3 +1,4 @@
+import { DrizzleQueryError } from "drizzle-orm";
 import * as v from "valibot";
 import { ApiError } from "./api-error";
 import { readConfig } from "./config";
@@ -23,8 +24,18 @@ function errorOutcome(error: unknown): Outcome {
   }
   return {
     response: errorResponse(500, "Something went wrong."),
-    failure: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+    failure: failureName(error),
   };
+}
+
+function failureName(error: unknown) {
+  if (error instanceof DrizzleQueryError) return `DrizzleQueryError (${queryCauseName(error.cause)})`;
+  return error instanceof Error ? error.name : typeof error;
+}
+
+function queryCauseName(cause: unknown) {
+  if (!(cause instanceof Error)) return typeof cause;
+  return "code" in cause ? `${cause.name} ${cause.code}` : cause.name;
 }
 
 function unreadableRequest() {
