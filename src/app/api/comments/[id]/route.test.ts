@@ -50,7 +50,7 @@ async function archive(projectId: string) {
   await db.update(projects).set({ archivedAt: sql`now()` }).where(eq(projects.id, projectId));
 }
 
-it("REQ-033.1: Sam fixes a typo in their comment → saved and marked edited", async () => {
+it("REQ-033.1, DATA-001: Sam fixes a typo in their comment → saved and marked edited, and the mention rows follow the current text", async () => {
   const { author, comment } = await onIssue({ fullName: "Sam Lee" });
   const alex = await createMember();
 
@@ -71,41 +71,45 @@ it("REQ-033.1: Sam fixes a typo in their comment → saved and marked edited", a
   expect((await stored(comment.id)).editedAt).not.toBeNull();
   const rows = await db.select().from(mentions).where(eq(mentions.commentId, comment.id));
   expect(rows.map((row) => row.memberId)).toEqual([alex.id]);
+
+  const jo = await createMember();
+  await editWith(await cookieOf(author), comment.id, { body: `Hi @${jo.username}`, version: 1 });
+  const swapped = await db.select().from(mentions).where(eq(mentions.commentId, comment.id));
+  expect(swapped.map((row) => row.memberId)).toEqual([jo.id]);
 });
 
-it("DATA-001: comment mention rows follow the current text", async () => {
-  const { author, comment } = await onIssue();
-  const sam = await createMember();
-  const alex = await createMember();
-  const cookie = await cookieOf(author);
-
-  await editWith(cookie, comment.id, { body: `Hi @${sam.username}`, version: 0 });
-  await editWith(cookie, comment.id, { body: `Hi @${alex.username}`, version: 1 });
-
-  const rows = await db.select().from(mentions).where(eq(mentions.commentId, comment.id));
-  expect(rows.map((row) => row.memberId)).toEqual([alex.id]);
-});
-
-it("REQ-033.2: an admin can't edit Sam's comment", async () => {
+it("REQ-033.2, REQ-034.3: an admin can't edit Sam's comment, and Alex, a member, can't delete it", async () => {
   const { comment } = await onIssue();
   const admin = await createMember({ role: "admin" });
+  const alex = await createMember();
 
-  const response = await editWith(await cookieOf(admin), comment.id, { body: "Admin words", version: 0 });
+  const edited = await editWith(await cookieOf(admin), comment.id, { body: "Admin words", version: 0 });
+  const deleted = await deleteWith(await cookieOf(alex), comment.id);
 
-  expect(response.status).toBe(403);
-  expect(await response.json()).toEqual({ error: { message: "You don't have permission to do that." } });
+  for (const response of [edited, deleted]) {
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: { message: "You don't have permission to do that." } });
+  }
   expect((await stored(comment.id)).body).toBe("Teh fix is ready");
 });
 
-it("REQ-033.3: Sam saves an edit just after an admin deleted that comment → This comment was deleted", async () => {
+it("REQ-033.3, STD-4: Sam saves an edit just after an admin deleted that comment, or anyone deletes a comment that's gone or an ID that isn't one → This comment was deleted", async () => {
   const { author, comment } = await onIssue();
   const admin = await createMember({ role: "admin" });
-  expect((await deleteWith(await cookieOf(admin), comment.id)).status).toBe(204);
+  const adminCookie = await cookieOf(admin);
+  expect((await deleteWith(adminCookie, comment.id)).status).toBe(204);
 
-  const response = await editWith(await cookieOf(author), comment.id, { body: "The fix", version: 0 });
+  const responses = [
+    await editWith(await cookieOf(author), comment.id, { body: "The fix", version: 0 }),
+    await deleteWith(adminCookie, comment.id),
+    await deleteWith(adminCookie, randomUUID()),
+    await deleteWith(adminCookie, "not-an-id"),
+  ];
 
-  expect(response.status).toBe(404);
-  expect(await response.json()).toEqual({ error: { message: "This comment was deleted" } });
+  for (const response of responses) {
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: { message: "This comment was deleted" } });
+  }
 });
 
 it("STD-8: a stale comment edit is refused with 409 naming who saved, and nothing is saved", async () => {
@@ -159,26 +163,7 @@ it("REQ-034.1: Sam deletes their own comment → it's gone for everyone, with it
   expect(await thread.json()).toEqual([]);
 });
 
-it("REQ-034.2: an admin deletes Alex's comment → it's gone", async () => {
-  const { comment } = await onIssue();
-  const admin = await createMember({ role: "admin" });
-
-  expect((await deleteWith(await cookieOf(admin), comment.id)).status).toBe(204);
-  expect(await stored(comment.id)).toBeUndefined();
-});
-
-it("REQ-034.3: Alex, a member, can't delete Sam's comment", async () => {
-  const { comment } = await onIssue();
-  const alex = await createMember();
-
-  const response = await deleteWith(await cookieOf(alex), comment.id);
-
-  expect(response.status).toBe(403);
-  expect(await response.json()).toEqual({ error: { message: "You don't have permission to do that." } });
-  expect(await stored(comment.id)).toBeDefined();
-});
-
-it("REQ-034.4: Sam is deactivated → Sam's comments show (deactivated), and an admin can still delete them", async () => {
+it("REQ-034.4, REQ-034.2: Sam is deactivated → Sam's comments show (deactivated), and an admin can still delete them", async () => {
   const { author, comment, displayId } = await onIssue({ fullName: "Sam Lee" });
   await db.update(members).set({ deactivatedAt: sql`now()` }).where(eq(members.id, author.id));
   const admin = await createMember({ role: "admin" });
@@ -224,14 +209,4 @@ it("a project comment can be edited and deleted the same way", async () => {
 
   expect((await editWith(cookie, comment.id, { body: "Kickoff notes", version: 0 })).status).toBe(200);
   expect((await deleteWith(cookie, comment.id)).status).toBe(204);
-});
-
-it("deleting a comment that's gone, or an ID that isn't one, gets This comment was deleted", async () => {
-  const cookie = await cookieOf(await createMember({ role: "admin" }));
-
-  for (const id of [randomUUID(), "not-an-id"]) {
-    const response = await deleteWith(cookie, id);
-    expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({ error: { message: "This comment was deleted" } });
-  }
 });

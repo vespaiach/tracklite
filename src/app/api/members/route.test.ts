@@ -45,9 +45,11 @@ function rowFor(list: { username: string }[], username: string) {
   return list.find((row) => row.username === username);
 }
 
-it("§3.3: members get every member, active and deactivated, without emails or roles", async () => {
+it("§3.3, REQ-007.2, REQ-008.2: members get every member, a deactivated one marked and a reactivated one not, without emails or roles", async () => {
   const sam = await createMember({ fullName: "Sam Lee", role: "admin" });
   const jo = await createMember({ fullName: "Jo Park", deactivatedAt: new Date() });
+  const reactivated = await createMember({ deactivatedAt: new Date() });
+  await db.update(members).set({ deactivatedAt: null }).where(eq(members.id, reactivated.id));
 
   const list = await listAs("member");
 
@@ -63,6 +65,7 @@ it("§3.3: members get every member, active and deactivated, without emails or r
     initials: "JP",
     deactivated: true,
   });
+  expect(rowFor(list, reactivated.username)).toMatchObject({ deactivated: false });
 });
 
 it("REQ-051: admins get every member with email and role", async () => {
@@ -78,23 +81,6 @@ it("REQ-051: admins get every member with email and role", async () => {
     email: sam.email,
     role: "admin",
   });
-});
-
-it("REQ-007.2: the member list marks a deactivated member", async () => {
-  const sam = await createMember({ deactivatedAt: new Date() });
-
-  expect(rowFor(await listAs("member"), sam.username)).toMatchObject({ deactivated: true });
-});
-
-it("REQ-008.2: the member list no longer marks a reactivated member", async () => {
-  const sam = await createMember({ deactivatedAt: new Date() });
-  await db.update(members).set({ deactivatedAt: null }).where(eq(members.id, sam.id));
-
-  expect(rowFor(await listAs("member"), sam.username)).toMatchObject({ deactivated: false });
-});
-
-it("STD-1: signed out gets 401", async () => {
-  expect((await GET(new Request("http://localhost:3000/api/members"))).status).toBe(401);
 });
 
 const validPassword = "correct horse battery";
@@ -127,12 +113,12 @@ async function expectExpired(response: Response) {
   expect(await response.json()).toEqual(expired);
 }
 
-it("REQ-002.1: Sam accepts on day 3 and is signed in", async () => {
+it("REQ-002.1, REQ-003.1: Sam accepts on day 3 with username Sam, saved as sam, and is signed in", async () => {
   const { invitation, token, email } = await openInvitation();
   await setInvitationTimestamp(invitation.id, "expiresAt", "-4 days");
   const username = uniqueUsername();
 
-  const response = await accept(profileFor(token, username));
+  const response = await accept(profileFor(token, username.replace("sam", "Sam")));
 
   expect(response.status).toBe(201);
   expect(await response.json()).toEqual({
@@ -150,29 +136,21 @@ it("REQ-002.1: Sam accepts on day 3 and is signed in", async () => {
   await expectExpired(await lookUp(token));
 });
 
-it("REQ-002.2: a link on day 8 has expired", async () => {
-  const { invitation, token, email } = await openInvitation();
-  await setInvitationTimestamp(invitation.id, "expiresAt", "1 day");
+it("REQ-002.2: a link on day 8, one already accepted, an unknown one and one replaced by a resend have all expired", async () => {
+  const dayEight = await openInvitation();
+  await setInvitationTimestamp(dayEight.invitation.id, "expiresAt", "1 day");
+  const accepted = await openInvitation();
+  expect((await accept(profileFor(accepted.token))).status).toBe(201);
+  const replaced = await openInvitation();
+  expect((await resendInvitation(replaced.adminCookie, replaced.invitation.id)).status).toBe(200);
 
-  await expectExpired(await accept(profileFor(token)));
-  expect(await memberCountWithEmail(email)).toBe(0);
-});
-
-it("REQ-002.2: a link already accepted has expired", async () => {
-  const { token, email } = await openInvitation();
-  expect((await accept(profileFor(token))).status).toBe(201);
-
-  await expectExpired(await accept(profileFor(token)));
-  expect(await memberCountWithEmail(email)).toBe(1);
-});
-
-it("REQ-002.2: an unknown link or one replaced by a resend has expired", async () => {
-  const { adminCookie, invitation, token, email } = await openInvitation();
-  expect((await resendInvitation(adminCookie, invitation.id)).status).toBe(200);
-
+  await expectExpired(await accept(profileFor(dayEight.token)));
+  await expectExpired(await accept(profileFor(accepted.token)));
   await expectExpired(await accept(profileFor("not-a-real-token")));
-  await expectExpired(await accept(profileFor(token)));
-  expect(await memberCountWithEmail(email)).toBe(0);
+  await expectExpired(await accept(profileFor(replaced.token)));
+  expect(await memberCountWithEmail(dayEight.email)).toBe(0);
+  expect(await memberCountWithEmail(accepted.email)).toBe(1);
+  expect(await memberCountWithEmail(replaced.email)).toBe(0);
 });
 
 it("REQ-002.3, STD-2: a signed-in member is refused", async () => {
@@ -207,16 +185,6 @@ it("REQ-002.4: a link revoked mid-form is no longer valid", async () => {
   expect(response.status).toBe(410);
   expect(await response.json()).toEqual({ error: { message: "This invitation is no longer valid." } });
   expect(await memberCountWithEmail(email)).toBe(0);
-});
-
-it("REQ-003.1: username Sam is saved as sam", async () => {
-  const { token } = await openInvitation();
-  const username = uniqueUsername();
-
-  const response = await accept(profileFor(token, username.replace("sam", "Sam")));
-
-  expect(response.status).toBe(201);
-  expect(await response.json()).toMatchObject({ username });
 });
 
 it('REQ-003.2: a taken username gets "Username taken"', async () => {

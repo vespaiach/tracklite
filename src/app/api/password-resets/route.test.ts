@@ -1,9 +1,6 @@
-import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../server/db";
 import { outbox } from "../../../server/email/outbox";
 import { hashPassword } from "../../../server/passwords";
-import { members } from "../../../server/schema";
 import { createSession } from "../../../server/sessions";
 import { createMember } from "../../../test/factories";
 import { ageResetLink, jsonRequest, resetTokenFor } from "../../../test/reset-links";
@@ -48,8 +45,10 @@ async function expectExpired(response: Response) {
   expect(response.headers.get("set-cookie")).toBeNull();
 }
 
-it("REQ-050.3: a valid new password 10 minutes after sending is set and signs Sam in", async () => {
+it("REQ-050.3, REQ-050.4, REQ-050.6, REQ-050.7: a valid new password 10 minutes after sending is set, signs Sam in, ends the session on another computer, expires the earlier link and can't be reused", async () => {
   const sam = await createMember({ passwordHash: oldPasswordHash });
+  const otherComputer = `session=${await createSession(sam.id)}`;
+  const first = await resetTokenFor(sam.email);
   const token = await resetTokenFor(sam.email);
   await ageResetLink(token, "10 minutes");
 
@@ -57,8 +56,13 @@ it("REQ-050.3: a valid new password 10 minutes after sending is set and signs Sa
 
   expect(response.status).toBe(204);
   expect(await meStatus(response.headers.get("set-cookie")?.split(";")[0])).toBe(200);
+  expect(await meStatus(otherComputer)).toBe(401);
   expect(await signInStatus(sam.email, oldPassword)).toBe(422);
   expect(await signInStatus(sam.email, newPassword)).toBe(204);
+  expect((await lookUp(jsonRequest("POST", "/api/password-reset-lookups", { token: first }))).status).toBe(
+    410,
+  );
+  await expectExpired(await reset(token, "yet another new password"));
 });
 
 it("REQ-050.4: submitting after 31 minutes is refused and the password is unchanged", async () => {
@@ -68,44 +72,6 @@ it("REQ-050.4: submitting after 31 minutes is refused and the password is unchan
 
   await expectExpired(await reset(token));
   expect(await signInStatus(sam.email, oldPassword)).toBe(204);
-});
-
-it("REQ-050.4: a link already used is refused", async () => {
-  const sam = await createMember();
-  const token = await resetTokenFor(sam.email);
-  expect((await reset(token)).status).toBe(204);
-
-  await expectExpired(await reset(token, "yet another new password"));
-});
-
-it("REQ-050.6: resetting with the second link expires the first", async () => {
-  const sam = await createMember();
-  const first = await resetTokenFor(sam.email);
-  const second = await resetTokenFor(sam.email);
-
-  expect((await reset(second)).status).toBe(204);
-
-  expect((await lookUp(jsonRequest("POST", "/api/password-reset-lookups", { token: first }))).status).toBe(
-    410,
-  );
-});
-
-it("REQ-050.7: resetting ends Sam's session on another computer", async () => {
-  const sam = await createMember();
-  const otherComputer = `session=${await createSession(sam.id)}`;
-  const token = await resetTokenFor(sam.email);
-
-  expect((await reset(token)).status).toBe(204);
-
-  expect(await meStatus(otherComputer)).toBe(401);
-});
-
-it("REQ-050: a member deactivated since the link was sent gets 410", async () => {
-  const sam = await createMember({ passwordHash: oldPasswordHash });
-  const token = await resetTokenFor(sam.email);
-  await db.update(members).set({ deactivatedAt: new Date() }).where(eq(members.id, sam.id));
-
-  await expectExpired(await reset(token));
 });
 
 it("REQ-048: a too-short new password gets a field error and leaves the link usable", async () => {

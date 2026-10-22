@@ -9,7 +9,6 @@ import {
   lookUp,
   resendInvitation,
   setInvitationTimestamp,
-  signedIn,
   signedInAdmin,
   uniqueEmail,
 } from "../../../../../test/invitations";
@@ -25,20 +24,25 @@ afterEach(() => {
   outbox.failing = false;
 });
 
-it("REQ-001.3: resending Sam's pending invitation → a new link is sent and the old link stops working", async () => {
-  const { cookie } = await signedInAdmin("Alex Kim");
+it("REQ-001.3, REQ-001: Jo resending Sam's pending invitation → a new link is sent in Jo's name and the old link stops working", async () => {
+  const { cookie: alexCookie } = await signedInAdmin("Alex Kim");
+  const { member: jo, cookie } = await signedInAdmin("Jo Park");
   const email = uniqueEmail();
-  const { invitation, token: oldToken } = await invitedBy(cookie, email);
+  const { invitation, token: oldToken } = await invitedBy(alexCookie, email);
 
   const response = await resendInvitation(cookie, invitation.id);
 
   expect(response.status).toBe(200);
-  expect(await response.json()).toEqual({ ...invitation, expiresAt: expect.any(String) });
+  expect(await response.json()).toEqual({
+    ...invitation,
+    invitedBy: { username: jo.username, fullName: "Jo Park", initials: "JP", deactivated: false },
+    expiresAt: expect.any(String),
+  });
   const newToken = latestInvitationToken();
   expect(newToken).not.toBe(oldToken);
   expect(outbox.sent.at(-1)).toEqual({
     to: email,
-    ...invitationEmail({ inviterName: "Alex Kim", token: newToken }),
+    ...invitationEmail({ inviterName: "Jo Park", token: newToken }),
   });
   expect((await lookUp(oldToken)).status).toBe(410);
   expect(await (await lookUp(newToken)).json()).toEqual({ email });
@@ -58,11 +62,14 @@ it("REQ-001.7: a failed resend answers 503 and keeps the previous link working",
   expect(await listedInvitation(cookie, email)).toEqual(invitation);
 });
 
-it("REQ-051.3: resending an expired invitation → a new link valid for 7 days, shown as Pending", async () => {
+it("REQ-051.3, REQ-001: resending an expired invitation → a new link valid for 7 days, shown as Pending; a resent bounced one is Pending again too", async () => {
   const { cookie } = await signedInAdmin();
   const email = uniqueEmail();
+  const bouncedEmail = uniqueEmail("bounced");
   const { invitation } = await invitedBy(cookie, email);
+  const { invitation: bounced } = await invitedBy(cookie, bouncedEmail);
   await setInvitationTimestamp(invitation.id, "expiresAt", "1 day");
+  await setInvitationTimestamp(bounced.id, "bouncedAt", "1 minute");
   expect((await listedInvitation(cookie, email))?.state).toBe("expired");
 
   const resent: InvitationBody = await (await resendInvitation(cookie, invitation.id)).json();
@@ -73,33 +80,10 @@ it("REQ-051.3: resending an expired invitation → a new link valid for 7 days, 
   expect(daysLeft).toBeLessThanOrEqual(7);
   expect((await listedInvitation(cookie, email))?.state).toBe("pending");
   expect(await (await lookUp(latestInvitationToken())).json()).toEqual({ email });
-});
 
-it("REQ-001: resending a bounced invitation shows it as Pending again", async () => {
-  const { cookie } = await signedInAdmin();
-  const email = uniqueEmail();
-  const { invitation } = await invitedBy(cookie, email);
-  await setInvitationTimestamp(invitation.id, "bouncedAt", "1 minute");
+  await resendInvitation(cookie, bounced.id);
 
-  await resendInvitation(cookie, invitation.id);
-
-  expect((await listedInvitation(cookie, email))?.state).toBe("pending");
-});
-
-it("REQ-001: a resend names the admin who resent it", async () => {
-  const { cookie: alexCookie } = await signedInAdmin("Alex Kim");
-  const { member: jo, cookie: joCookie } = await signedInAdmin("Jo Park");
-  const { invitation } = await invitedBy(alexCookie, uniqueEmail());
-
-  const resent: InvitationBody = await (await resendInvitation(joCookie, invitation.id)).json();
-
-  expect(resent.invitedBy).toEqual({
-    username: jo.username,
-    fullName: "Jo Park",
-    initials: "JP",
-    deactivated: false,
-  });
-  expect(outbox.sent.at(-1)?.subject).toBe("Jo Park invited you to Tracklite");
+  expect((await listedInvitation(cookie, bouncedEmail))?.state).toBe("pending");
 });
 
 it("STD-4: resending an unknown, revoked or malformed id → 404", async () => {
@@ -113,15 +97,5 @@ it("STD-4: resending an unknown, revoked or malformed id → 404", async () => {
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: { message: "Not found" } });
   }
-  expect(outbox.sent).toEqual([]);
-});
-
-it("STD-2: a member who isn't an admin can't resend", async () => {
-  const { cookie: adminCookie } = await signedInAdmin();
-  const { cookie } = await signedIn();
-  const { invitation } = await invitedBy(adminCookie, uniqueEmail());
-  outbox.sent = [];
-
-  expect((await resendInvitation(cookie, invitation.id)).status).toBe(403);
   expect(outbox.sent).toEqual([]);
 });

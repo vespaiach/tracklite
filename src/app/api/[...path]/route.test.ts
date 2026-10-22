@@ -16,20 +16,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it("API-001: an unknown /api path answers 401 while signed out", async () => {
-  const response = await GET(new Request("http://localhost:3000/api/anything"));
-  expect(response.status).toBe(401);
-  expect(await response.json()).toEqual({ error: { message: "Sign in to continue." } });
-});
-
-it("API-001: a same-site write to an unknown /api path answers 401", async () => {
-  const response = await POST(
+it("API-001: an unknown /api path answers 401 to a signed-out read or same-site write", async () => {
+  const read = await GET(new Request("http://localhost:3000/api/anything"));
+  const write = await POST(
     new Request("http://localhost:3000/api/anything", {
       method: "POST",
       headers: { Origin: "http://localhost:3000" },
     }),
   );
-  expect(response.status).toBe(401);
+
+  expect(read.status).toBe(401);
+  expect(await read.json()).toEqual({ error: { message: "Sign in to continue." } });
+  expect(write.status).toBe(401);
 });
 
 async function signedInCookie() {
@@ -38,24 +36,22 @@ async function signedInCookie() {
   return { token, cookie: `session=${token}` };
 }
 
-it("API-001: an unknown /api path answers 404 when signed in", async () => {
+it("API-001, SEC-004.1: signed in, an unknown /api path answers 404 and a cross-site DELETE of WEB-42 is rejected with 403", async () => {
   const { cookie } = await signedInCookie();
+
   const response = await GET(
     new Request("http://localhost:3000/api/anything", { headers: { Cookie: cookie } }),
   );
-  expect(response.status).toBe(404);
-  expect(await response.json()).toEqual({ error: { message: "Not found" } });
-});
-
-it("SEC-004.1: a signed-in member's cross-site DELETE of WEB-42 is rejected with 403", async () => {
-  const { cookie } = await signedInCookie();
-  const response = await DELETE(
+  const crossSite = await DELETE(
     new Request("http://localhost:3000/api/issues/WEB-42", {
       method: "DELETE",
       headers: { Cookie: cookie, Origin: "https://evil.example", "Sec-Fetch-Site": "cross-site" },
     }),
   );
-  expect(response.status).toBe(403);
+
+  expect(response.status).toBe(404);
+  expect(await response.json()).toEqual({ error: { message: "Not found" } });
+  expect(crossSite.status).toBe(403);
 });
 
 it("REQ-006: a response to a session idle over an hour renews the cookie", async () => {

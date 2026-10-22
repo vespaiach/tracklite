@@ -25,25 +25,17 @@ async function expectExpired(response: Response) {
   expect(await response.json()).toEqual(expired);
 }
 
-it("REQ-002.2: an unknown or malformed link has expired", async () => {
+it("REQ-002.2: an unknown, malformed, day-8 or already accepted link has expired", async () => {
+  const { cookie } = await signedInAdmin();
+  const dayEight = await invitedBy(cookie, uniqueEmail());
+  await setInvitationTimestamp(dayEight.invitation.id, "expiresAt", "1 day");
+  const accepted = await invitedBy(cookie, uniqueEmail());
+  await setInvitationTimestamp(accepted.invitation.id, "acceptedAt", "1 minute");
+
   await expectExpired(await lookUp("not-a-real-token"));
   await expectExpired(await lookUp(42));
-});
-
-it("REQ-002.2: a link opened on day 8 has expired", async () => {
-  const { cookie } = await signedInAdmin();
-  const { invitation, token } = await invitedBy(cookie, uniqueEmail());
-  await setInvitationTimestamp(invitation.id, "expiresAt", "1 day");
-
-  await expectExpired(await lookUp(token));
-});
-
-it("REQ-002.2: a link that was already accepted has expired", async () => {
-  const { cookie } = await signedInAdmin();
-  const { invitation, token } = await invitedBy(cookie, uniqueEmail());
-  await setInvitationTimestamp(invitation.id, "acceptedAt", "1 minute");
-
-  await expectExpired(await lookUp(token));
+  await expectExpired(await lookUp(dayEight.token));
+  await expectExpired(await lookUp(accepted.token));
 });
 
 it("REQ-002: a valid link answers its email and isn't used up by looking", async () => {

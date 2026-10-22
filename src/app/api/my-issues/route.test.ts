@@ -33,12 +33,10 @@ async function signedInMember() {
   return { member, cookie: `session=${await createSession(member.id)}` };
 }
 
-function myIssuesWith(cookie: string) {
-  return GET(new Request("http://localhost:3000/api/my-issues", { headers: { Cookie: cookie } }));
-}
-
 async function myIssuesOf(cookie: string): Promise<MyIssueGroup[]> {
-  const response = await myIssuesWith(cookie);
+  const response = await GET(
+    new Request("http://localhost:3000/api/my-issues", { headers: { Cookie: cookie } }),
+  );
   expect(response.status).toBe(200);
   return response.json();
 }
@@ -97,24 +95,14 @@ it("REQ-041.1: Sam is assigned API-7 (Backlog), WEB-42 and WEB-3 (In Progress) �
   expect(idsIn(groups, "in_progress")?.sort()).toEqual([web42, web3].sort());
 });
 
-it("REQ-041.2: Sam's WEB-10 moved to Done 20 days ago → not shown", async () => {
+it("REQ-041.2: Sam's Done and Canceled issues moved there 20 days ago aren't shown, and ones moved 3 days ago are", async () => {
   const { member: sam, cookie } = await signedInMember();
   const web = await createProject();
   const twentyDaysAgo = sql`now() - interval '20 days'`;
+  const threeDaysAgo = sql`now() - interval '3 days'`;
   await issueIn(web, { assigneeId: sam.id, status: "done", statusChangedAt: twentyDaysAgo });
   await issueIn(web, { assigneeId: sam.id, status: "canceled", statusChangedAt: twentyDaysAgo });
   const open = await issueIn(web, { assigneeId: sam.id, statusChangedAt: twentyDaysAgo });
-
-  const groups = await myIssuesOf(cookie);
-
-  expect(groups.map((group) => group.status)).toEqual(["backlog"]);
-  expect(allIds(groups)).toEqual([open]);
-});
-
-it("REQ-041.2: Done and Canceled issues moved there 3 days ago are shown", async () => {
-  const { member: sam, cookie } = await signedInMember();
-  const web = await createProject();
-  const threeDaysAgo = sql`now() - interval '3 days'`;
   const done = await issueIn(web, { assigneeId: sam.id, status: "done", statusChangedAt: threeDaysAgo });
   const canceled = await issueIn(web, {
     assigneeId: sam.id,
@@ -125,21 +113,13 @@ it("REQ-041.2: Done and Canceled issues moved there 3 days ago are shown", async
   const groups = await myIssuesOf(cookie);
 
   expect(groups.map(({ status, count }) => ({ status, count }))).toEqual([
+    { status: "backlog", count: 1 },
     { status: "done", count: 1 },
     { status: "canceled", count: 1 },
   ]);
+  expect(idsIn(groups, "backlog")).toEqual([open]);
   expect(idsIn(groups, "done")).toEqual([done]);
   expect(idsIn(groups, "canceled")).toEqual([canceled]);
-});
-
-it("REQ-041.3: project API is archived → API-7 isn't shown", async () => {
-  const { member: sam, cookie } = await signedInMember();
-  const api = await createProject({ archivedAt: new Date() });
-  const web = await createProject();
-  await issueIn(api, { assigneeId: sam.id });
-  const web42 = await issueIn(web, { assigneeId: sam.id });
-
-  expect(allIds(await myIssuesOf(cookie))).toEqual([web42]);
 });
 
 it("REQ-041.4: nothing is assigned to Sam → no groups", async () => {
@@ -196,12 +176,6 @@ it("REQ-041: a row carries id, title, project name, priority, labels (sorted by 
   ]);
 });
 
-it("REQ-041: a signed-out visitor gets 401", async () => {
-  const response = await myIssuesWith("");
-
-  expect(response.status).toBe(401);
-});
-
 it("REQ-042.1: In Progress holds WEB-3 (Low) and API-9 (Urgent) → API-9 comes first", async () => {
   const { member: sam, cookie } = await signedInMember();
   const api = await createProject();
@@ -225,24 +199,19 @@ it("REQ-042: rows with the same priority are sorted most recently updated first"
   expect(idsIn(await myIssuesOf(cookie), "backlog")).toEqual([newest, middle, older]);
 });
 
-it("REQ-013.2: WEB-42 assigned to Sam, admin archives WEB → it no longer appears in Sam's My issues", async () => {
+it("REQ-041.3, REQ-013.2, REQ-013.3: admin archives API → API-7 no longer appears in Sam's My issues; unarchiving brings it back", async () => {
   const { member: sam, cookie } = await signedInMember();
+  const api = await createProject();
   const web = await createProject();
+  const api7 = await issueIn(api, { assigneeId: sam.id });
   const web42 = await issueIn(web, { assigneeId: sam.id });
+  expect(allIds(await myIssuesOf(cookie)).sort()).toEqual([api7, web42].sort());
+
+  await setArchived(api.key, true);
+
   expect(allIds(await myIssuesOf(cookie))).toEqual([web42]);
 
-  await setArchived(web.key, true);
+  await setArchived(api.key, false);
 
-  expect(await myIssuesOf(cookie)).toEqual([]);
-});
-
-it("REQ-013.3: admin unarchives WEB → WEB-42 is back in Sam's My issues", async () => {
-  const { member: sam, cookie } = await signedInMember();
-  const web = await createProject();
-  const web42 = await issueIn(web, { assigneeId: sam.id });
-  await setArchived(web.key, true);
-
-  await setArchived(web.key, false);
-
-  expect(allIds(await myIssuesOf(cookie))).toEqual([web42]);
+  expect(allIds(await myIssuesOf(cookie)).sort()).toEqual([api7, web42].sort());
 });

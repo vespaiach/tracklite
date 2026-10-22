@@ -78,38 +78,23 @@ async function seedFailures(values: { email: string; ip: string }, count: number
   await db.insert(signInAttempts).values(Array.from({ length: count }, () => values));
 }
 
-it("REQ-047.1: an active member with the right password is signed in", async () => {
-  const sam = await createMember({ passwordHash });
-
-  const response = await signIn({ email: sam.email, password });
-
-  expect(response.status).toBe(204);
-  expect(await signedInUsername(cookieFrom(response))).toBe(sam.username);
-});
-
-it("REQ-047.2: a wrong password is refused", async () => {
-  const sam = await createMember({ passwordHash });
-
-  await expectRefused(await signIn({ email: sam.email, password: "wrong password!!" }), incorrect, 422);
-});
-
-it("REQ-047.3: an unknown email gets the same refusal", async () => {
-  await expectRefused(await signIn({ email: "nobody-047-3@x.com", password }), incorrect, 422);
-});
-
-it("REQ-047: a deactivated member with the right password gets the same refusal", async () => {
-  const sam = await createMember({ passwordHash, deactivatedAt: new Date() });
-
-  await expectRefused(await signIn({ email: sam.email, password }), incorrect, 422);
-});
-
-it("REQ-047.4: the email matches ignoring capitals", async () => {
+it("REQ-047.1, REQ-047.4, §4.1: an active member with the right password is signed in, whatever the capitals in the email, and a current hash isn't rewritten", async () => {
   const sam = await createMember({ passwordHash });
 
   const response = await signIn({ email: sam.email.toUpperCase(), password });
 
   expect(response.status).toBe(204);
   expect(await signedInUsername(cookieFrom(response))).toBe(sam.username);
+  expect(await storedHash(sam.id)).toBe(passwordHash);
+});
+
+it("REQ-047.2, REQ-047.3, REQ-047: a wrong password, an unknown email and a deactivated member with the right password all get the same refusal", async () => {
+  const sam = await createMember({ passwordHash });
+  const jo = await createMember({ passwordHash, deactivatedAt: new Date() });
+
+  await expectRefused(await signIn({ email: sam.email, password: "wrong password!!" }), incorrect, 422);
+  await expectRefused(await signIn({ email: "nobody-047-3@x.com", password }), incorrect, 422);
+  await expectRefused(await signIn({ email: jo.email, password }), incorrect, 422);
 });
 
 it("REQ-047.5: after signing in, the page Sam was sent away from loads", async () => {
@@ -125,11 +110,13 @@ it("REQ-047.5: after signing in, the page Sam was sent away from loads", async (
   expect((await openIssue(cookie)).status).not.toBe(401);
 });
 
-it("SEC-001.1: 10 wrong passwords, then the right one, is refused", async () => {
+it("SEC-001.1: 10 wrong passwords lock out the right one, and a successful sign-in in between doesn't reset the count", async () => {
   const sam = await createMember({ passwordHash });
-  for (let attempt = 0; attempt < 10; attempt++) {
+  for (let attempt = 0; attempt < 9; attempt++) {
     expect((await signIn({ email: sam.email, password: "wrong password!!" })).status).toBe(422);
   }
+  expect((await signIn({ email: sam.email, password })).status).toBe(204);
+  expect((await signIn({ email: sam.email, password: "wrong password!!" })).status).toBe(422);
 
   await expectRefused(await signIn({ email: sam.email, password }), tooMany, 429);
 });
@@ -162,40 +149,16 @@ it("SEC-001: failures older than an hour don't count", async () => {
   expect((await signIn({ email: sam.email, password })).status).toBe(204);
 });
 
-it("SEC-001: a successful sign-in doesn't reset the count", async () => {
-  const sam = await createMember({ passwordHash });
-  for (let attempt = 0; attempt < 9; attempt++) {
-    await signIn({ email: sam.email, password: "wrong password!!" });
-  }
-  expect((await signIn({ email: sam.email, password })).status).toBe(204);
+it("§4.1: a wrong password leaves a hash made with older settings alone; the right one stores a hash with the current settings", async () => {
+  const olderHash = await hashWithOlderSettings(password);
+  const sam = await createMember({ passwordHash: olderHash });
+
   expect((await signIn({ email: sam.email, password: "wrong password!!" })).status).toBe(422);
-
-  await expectRefused(await signIn({ email: sam.email, password }), tooMany, 429);
-});
-
-it("§4.1: signing in with a hash made with older settings stores a hash with the current ones", async () => {
-  const sam = await createMember({ passwordHash: await hashWithOlderSettings(password) });
+  expect(await storedHash(sam.id)).toBe(olderHash);
 
   expect((await signIn({ email: sam.email, password })).status).toBe(204);
 
   const rehashed = await storedHash(sam.id);
   expect(rehashed.startsWith(currentSettingsPrefix)).toBe(true);
   expect(await verifyPassword(rehashed, password)).toBe(true);
-});
-
-it("§4.1: a wrong password leaves the old hash alone", async () => {
-  const olderHash = await hashWithOlderSettings(password);
-  const sam = await createMember({ passwordHash: olderHash });
-
-  expect((await signIn({ email: sam.email, password: "wrong password!!" })).status).toBe(422);
-
-  expect(await storedHash(sam.id)).toBe(olderHash);
-});
-
-it("§4.1: a current hash isn't rewritten", async () => {
-  const sam = await createMember({ passwordHash });
-
-  expect((await signIn({ email: sam.email, password })).status).toBe(204);
-
-  expect(await storedHash(sam.id)).toBe(passwordHash);
 });

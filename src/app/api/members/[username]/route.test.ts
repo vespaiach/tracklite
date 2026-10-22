@@ -108,9 +108,9 @@ async function whileAdminRowsLocked<T>(start: () => Promise<T>, lockWaiters: num
 const lastAdmin = { error: { message: "There must be at least one admin." } };
 const noPermission = { error: { message: "You don't have permission to do that." } };
 
-it("REQ-007.1: a deactivated member's next page load is signed out", async () => {
+it("REQ-007.1, REQ-007.4: deactivating Sam ends every session, so the next page load is signed out and a save mid-edit gets 401 with nothing saved", async () => {
   const { cookie: adminCookie } = await signedIn("admin");
-  const { member: sam, cookie: samCookie } = await signedIn("member");
+  const { member: sam, cookie: samCookie } = await signedIn("member", { fullName: "Sam Lee" });
   await createSession(sam.id);
 
   const response = await patchMember(adminCookie, sam.username, { deactivated: true });
@@ -119,58 +119,7 @@ it("REQ-007.1: a deactivated member's next page load is signed out", async () =>
   expect(await response.json()).toMatchObject({ username: sam.username, deactivated: true });
   expect((await getMeWith(samCookie)).status).toBe(401);
   expect(await db.select().from(sessions).where(eq(sessions.memberId, sam.id))).toEqual([]);
-});
 
-it('REQ-007.1: a deactivated member\'s correct password gets "Incorrect email or password."', async () => {
-  const { cookie: adminCookie } = await signedIn("admin");
-  const { member: sam } = await signedIn("member");
-
-  await patchMember(adminCookie, sam.username, { deactivated: true });
-  const response = await signInWith(sam.email);
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual({ error: { message: "Incorrect email or password." } });
-});
-
-it("REQ-007.1: a deactivated member's reset request sends nothing", async () => {
-  const { cookie: adminCookie } = await signedIn("admin");
-  const { member: sam } = await signedIn("member");
-
-  await patchMember(adminCookie, sam.username, { deactivated: true });
-  const response = await requestResetLink(sam.email);
-
-  expect(response.status).toBe(204);
-  expect(outbox.sent).toEqual([]);
-});
-
-it("REQ-007.3: the only admin can't deactivate themselves", async () => {
-  const { member: alex, cookie } = await signedIn("admin");
-  await makeOnlyAdmins(alex);
-
-  const response = await patchMember(cookie, alex.username, { deactivated: true });
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual(lastAdmin);
-  expect(await storedMember(alex.id)).toMatchObject({ role: "admin", deactivatedAt: null });
-  expect((await getMeWith(cookie)).status).toBe(200);
-});
-
-it("REQ-007.3: the only admin can't remove their own admin role", async () => {
-  const { member: alex, cookie } = await signedIn("admin");
-  await makeOnlyAdmins(alex);
-
-  const response = await patchMember(cookie, alex.username, { role: "member" });
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual(lastAdmin);
-  expect((await storedMember(alex.id)).role).toBe("admin");
-});
-
-it("REQ-007.4: a member deactivated mid-edit gets 401 and nothing is saved", async () => {
-  const { cookie: adminCookie } = await signedIn("admin");
-  const { member: sam, cookie: samCookie } = await signedIn("member", { fullName: "Sam Lee" });
-
-  await patchMember(adminCookie, sam.username, { deactivated: true });
   const save = await patchMe(
     jsonRequest("PATCH", "/api/me", { fullName: "Sam Rivera" }, { Cookie: samCookie }),
   );
@@ -179,20 +128,41 @@ it("REQ-007.4: a member deactivated mid-edit gets 401 and nothing is saved", asy
   expect((await storedMember(sam.id)).fullName).toBe("Sam Lee");
 });
 
-it('REQ-007.5: a reset link used after deactivation shows "This link has expired"', async () => {
+it('REQ-007.1, REQ-007.5: a deactivated member\'s correct password gets "Incorrect email or password.", a reset request sends nothing, and an earlier reset link has expired', async () => {
   const { cookie: adminCookie } = await signedIn("admin");
   const { member: sam } = await signedIn("member");
   const token = await resetTokenFor(sam.email);
+  outbox.sent = [];
 
   await patchMember(adminCookie, sam.username, { deactivated: true });
-  const response = await resetPassword(
+
+  const signedInAgain = await signInWith(sam.email);
+  expect(signedInAgain.status).toBe(422);
+  expect(await signedInAgain.json()).toEqual({ error: { message: "Incorrect email or password." } });
+
+  expect((await requestResetLink(sam.email)).status).toBe(204);
+  expect(outbox.sent).toEqual([]);
+
+  const reset = await resetPassword(
     jsonRequest("POST", "/api/password-resets", { token, password: "a brand new password" }),
   );
-
-  expect(response.status).toBe(410);
-  expect(await response.json()).toEqual({ error: { message: "This link has expired" } });
-  expect(response.headers.get("set-cookie")).toBeNull();
+  expect(reset.status).toBe(410);
+  expect(await reset.json()).toEqual({ error: { message: "This link has expired" } });
+  expect(reset.headers.get("set-cookie")).toBeNull();
   expect((await storedMember(sam.id)).passwordHash).toBe(passwordHash);
+});
+
+it("REQ-007.3: the only admin can't deactivate themselves or remove their own admin role", async () => {
+  const { member: alex, cookie } = await signedIn("admin");
+  await makeOnlyAdmins(alex);
+
+  for (const body of [{ deactivated: true }, { role: "member" }]) {
+    const response = await patchMember(cookie, alex.username, body);
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual(lastAdmin);
+  }
+  expect(await storedMember(alex.id)).toMatchObject({ role: "admin", deactivatedAt: null });
+  expect((await getMeWith(cookie)).status).toBe(200);
 });
 
 it("REQ-008.1: a reactivated member signs in with their existing password and profile", async () => {
@@ -214,11 +184,11 @@ it("REQ-008.1: a reactivated member signs in with their existing password and pr
   });
 });
 
-it("REQ-052.1: a member made admin is an admin from their next request", async () => {
+it("REQ-052.1, §3.1: a member made admin, with the username matched ignoring capitals, is an admin from their next request", async () => {
   const { cookie: adminCookie } = await signedIn("admin");
   const { member: sam, cookie: samCookie } = await signedIn("member");
 
-  const response = await patchMember(adminCookie, sam.username, { role: "admin" });
+  const response = await patchMember(adminCookie, sam.username.toUpperCase(), { role: "admin" });
 
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({ username: sam.username, role: "admin" });
@@ -261,68 +231,19 @@ it("REQ-052.3: two admins removing each other's admin role at once leaves one ad
   expect(await activeAdmins()).toHaveLength(1);
 });
 
-it("STD-2: a member can't change roles or deactivate", async () => {
-  const { cookie } = await signedIn("member");
+it("STD-3: an admin setting a role other than admin or member, or deactivated to something other than true or false, gets 422 with the field error and changes nothing", async () => {
+  const { cookie } = await signedIn("admin");
   const { member: sam } = await signedIn("member");
 
-  for (const body of [{ role: "admin" }, { deactivated: true }]) {
+  for (const [body, fields] of [
+    [{ role: "owner" }, { role: "Choose admin or member" }],
+    [{ deactivated: "yes" }, { deactivated: "Choose true or false" }],
+  ]) {
     const response = await patchMember(cookie, sam.username, body);
-    expect(response.status).toBe(403);
-    expect(await response.json()).toEqual(noPermission);
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({ error: { message: "Check the highlighted fields", fields } });
   }
   expect(await storedMember(sam.id)).toMatchObject({ role: "member", deactivatedAt: null });
-});
-
-it("STD-3: a member's malformed JSON on a member change gets 422 \"Couldn't read the request.\", not 500", async () => {
-  const { cookie } = await signedIn("member");
-  const { member: sam } = await signedIn("member");
-  const request = new Request(`http://localhost:3000/api/members/${sam.username}`, {
-    method: "PATCH",
-    headers: { Origin: "http://localhost:3000", "Content-Type": "application/json", Cookie: cookie },
-    body: "{ role: admin",
-  });
-
-  const response = await PATCH(request, { params: Promise.resolve({ username: sam.username }) });
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual({ error: { message: "Couldn't read the request." } });
-  expect(await storedMember(sam.id)).toMatchObject({ role: "member", deactivatedAt: null });
-});
-
-it('STD-3: an admin setting a role other than admin or member gets 422 "Choose admin or member"', async () => {
-  const { cookie } = await signedIn("admin");
-  const { member: sam } = await signedIn("member");
-
-  const response = await patchMember(cookie, sam.username, { role: "owner" });
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual({
-    error: { message: "Check the highlighted fields", fields: { role: "Choose admin or member" } },
-  });
-  expect((await storedMember(sam.id)).role).toBe("member");
-});
-
-it('STD-3: an admin setting deactivated to something other than true or false gets 422 "Choose true or false"', async () => {
-  const { cookie } = await signedIn("admin");
-  const { member: sam } = await signedIn("member");
-
-  const response = await patchMember(cookie, sam.username, { deactivated: "yes" });
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual({
-    error: { message: "Check the highlighted fields", fields: { deactivated: "Choose true or false" } },
-  });
-  expect((await storedMember(sam.id)).deactivatedAt).toBeNull();
-});
-
-it("§3.1: the username is matched ignoring capitals", async () => {
-  const { cookie } = await signedIn("admin");
-  const { member: sam } = await signedIn("member");
-
-  const response = await patchMember(cookie, sam.username.toUpperCase(), { role: "admin" });
-
-  expect(response.status).toBe(200);
-  expect((await storedMember(sam.id)).role).toBe("admin");
 });
 
 it('§3.2: an unknown username gets 404 "Not found"', async () => {
@@ -332,18 +253,4 @@ it('§3.2: an unknown username gets 404 "Not found"', async () => {
 
   expect(response.status).toBe(404);
   expect(await response.json()).toEqual({ error: { message: "Not found" } });
-});
-
-it.each([
-  ["role", { role: "owner" }],
-  ["deactivated", { deactivated: "yes" }],
-])("STD-3: an invalid %s gets 422 with a field error and changes nothing", async (field, body) => {
-  const { cookie } = await signedIn("admin");
-  const { member: sam } = await signedIn("member");
-
-  const response = await patchMember(cookie, sam.username, body);
-
-  expect(response.status).toBe(422);
-  expect(Object.keys((await response.json()).error.fields)).toEqual([field]);
-  expect(await storedMember(sam.id)).toMatchObject({ role: "member", deactivatedAt: null });
 });

@@ -54,7 +54,7 @@ async function storedIssues(ids: string[]) {
 
 const archived = { error: { message: "This project is archived" } };
 
-it("REQ-021.1: renaming bug to defect shows defect on every issue that had it", async () => {
+it("REQ-021.1, REQ-021: renaming bug to defect and recoloring it shows defect on every issue that had it", async () => {
   const cookie = await signedIn();
   const project = await createProject();
   const bug = await createLabel(project.id, { name: "bug", color: "red" });
@@ -63,25 +63,14 @@ it("REQ-021.1: renaming bug to defect shows defect on every issue that had it", 
   const second = await createIssue(project.id, [bug.id, ui.id]);
   const before = await storedIssues([first.id, second.id]);
 
-  const response = await patchWith(cookie, bug.id, { name: " defect " });
+  const response = await patchWith(cookie, bug.id, { name: " defect ", color: "blue" });
 
   expect(response.status).toBe(200);
-  expect(await response.json()).toEqual({ id: bug.id, name: "defect", color: "red", issueCount: 2 });
+  expect(await response.json()).toEqual({ id: bug.id, name: "defect", color: "blue", issueCount: 2 });
+  expect(await storedLabel(bug.id)).toMatchObject({ name: "defect", color: "blue" });
   expect(await labelNamesOf(first.id)).toEqual(["defect"]);
   expect(await labelNamesOf(second.id)).toEqual(["defect", "ui"]);
   expect(await storedIssues([first.id, second.id])).toEqual(before);
-});
-
-it("REQ-021: a label is recolored", async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
-  const bug = await createLabel(project.id, { name: "bug", color: "red" });
-
-  const response = await patchWith(cookie, bug.id, { color: "blue" });
-
-  expect(response.status).toBe(200);
-  expect(await response.json()).toEqual({ id: bug.id, name: "bug", color: "blue", issueCount: 0 });
-  expect(await storedLabel(bug.id)).toMatchObject({ name: "bug", color: "blue" });
 });
 
 it("REQ-021.2: renaming to another label's name ignoring capitals is refused", async () => {
@@ -137,30 +126,21 @@ it("REQ-021.3: deleting frontend removes it from every issue and leaves the issu
   expect(await storedIssues([first.id, second.id])).toEqual(before);
 });
 
-it("REQ-013.6: renaming a label in an archived project is refused and the label is unchanged", async () => {
-  const cookie = await signedIn();
-  const project = await createProject({ archivedAt: new Date() });
-  const bug = await createLabel(project.id, { name: "bug" });
-
-  const response = await patchWith(cookie, bug.id, { name: "defect" });
-
-  expect(response.status).toBe(403);
-  expect(await response.json()).toEqual(archived);
-  expect((await storedLabel(bug.id)).name).toBe("bug");
-});
-
-it("REQ-013.4: recoloring or deleting a label in an archived project is refused", async () => {
+it("REQ-013.6, REQ-013.4: renaming, recoloring or deleting a label in an archived project is refused and the label is unchanged", async () => {
   const cookie = await signedIn();
   const project = await createProject({ archivedAt: new Date() });
   const bug = await createLabel(project.id, { name: "bug", color: "red" });
 
-  const recolor = await patchWith(cookie, bug.id, { color: "blue" });
-  const remove = await deleteWith(cookie, bug.id);
+  const responses = [
+    await patchWith(cookie, bug.id, { name: "defect" }),
+    await patchWith(cookie, bug.id, { color: "blue" }),
+    await deleteWith(cookie, bug.id),
+  ];
 
-  expect(recolor.status).toBe(403);
-  expect(await recolor.json()).toEqual(archived);
-  expect(remove.status).toBe(403);
-  expect(await remove.json()).toEqual(archived);
+  for (const response of responses) {
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual(archived);
+  }
   expect(await storedLabel(bug.id)).toMatchObject({ name: "bug", color: "red" });
 });
 
