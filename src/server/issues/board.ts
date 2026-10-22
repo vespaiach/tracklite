@@ -1,6 +1,5 @@
 import "server-only";
 import { and, asc, desc, eq, gt, ne, type SQL, sql } from "drizzle-orm";
-import { generateKeyBetween } from "fractional-indexing";
 import { db } from "../shared/db";
 import type { Transaction } from "../shared/transaction";
 import { type Member, memberSummary } from "../identity";
@@ -20,6 +19,7 @@ import {
   recentlyClosedOrOpen,
   updatedIssue,
 } from "./rows";
+import { positionBetween } from "./rules";
 
 async function positionIn(
   tx: Transaction,
@@ -39,7 +39,7 @@ async function positionIn(
 
   const nextPosition = await firstPositionAfter(tx, otherCards, afterPosition);
 
-  return generateKeyBetween(afterPosition, nextPosition);
+  return positionBetween(afterPosition, nextPosition);
 }
 
 async function bottomOf(tx: Transaction, cards: SQL | undefined) {
@@ -49,7 +49,7 @@ async function bottomOf(tx: Transaction, cards: SQL | undefined) {
     .where(cards)
     .orderBy(desc(issues.position), desc(issues.id))
     .limit(1);
-  return generateKeyBetween(last?.position ?? null, null);
+  return positionBetween(last?.position ?? null, null);
 }
 
 async function positionOf(tx: Transaction, cards: SQL | undefined, id: IssueId | undefined) {

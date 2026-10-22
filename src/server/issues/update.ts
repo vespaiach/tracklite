@@ -10,6 +10,7 @@ import { issueLabels, issues } from "./tables";
 import { labels } from "../projects";
 import type { IssueChange, IssueId } from "./schemas";
 import { byIssueId, type IssueUpdate, issueGone, lockedIssue, topOfColumn, updatedIssue } from "./rows";
+import { descriptionSaveOf, editOf, type IssueEdit, mayDeleteIssue, sameLabels } from "./rules";
 
 function fieldError(field: string, message: string) {
   return new ApiError(422, "Check the highlighted fields", { [field]: message });
@@ -36,9 +37,13 @@ async function replaceLabels(tx: Transaction, issue: typeof issues.$inferSelect,
     .select({ labelId: issueLabels.labelId })
     .from(issueLabels)
     .where(eq(issueLabels.issueId, issue.id));
-  const unchanged =
-    current.length === labelIds.length && current.every((row) => labelIds.includes(row.labelId));
-  if (unchanged) return false;
+  if (
+    sameLabels(
+      current.map((row) => row.labelId),
+      labelIds,
+    )
+  )
+    return false;
 
   await tx.delete(issueLabels).where(eq(issueLabels.issueId, issue.id));
 
@@ -65,20 +70,28 @@ async function assertProjectLabels(tx: Transaction, projectId: string, labelIds:
 async function fieldChange(
   tx: Transaction,
   issue: typeof issues.$inferSelect,
-  { title, status, priority, assignee, labelIds }: IssueChange,
+  edit: IssueEdit,
 ): Promise<IssueUpdate> {
-  if (title !== undefined) return title === issue.title ? {} : { title };
-  if (status !== undefined) {
-    if (status === issue.status) return {};
-    return { status, position: await topOfColumn(tx, issue.projectId, status), statusChangedAt: sql`now()` };
+  switch (edit.field) {
+    case "title":
+      return { title: edit.title };
+    case "status":
+      return {
+        status: edit.status,
+        position: await topOfColumn(tx, issue.projectId, edit.status),
+        statusChangedAt: sql`now()`,
+      };
+    case "priority":
+      return { priority: edit.priority };
+    case "assignee": {
+      const assigneeId = await activeAssigneeId(tx, edit.assignee);
+      return assigneeId === issue.assigneeId ? {} : { assigneeId };
+    }
+    case "labels":
+      return (await replaceLabels(tx, issue, edit.labelIds)) ? { updatedAt: sql`now()` } : {};
+    case "none":
+      return {};
   }
-  if (priority !== undefined) return priority === issue.priority ? {} : { priority };
-  if (assignee !== undefined) {
-    const assigneeId = await activeAssigneeId(tx, assignee);
-    return assigneeId === issue.assigneeId ? {} : { assigneeId };
-  }
-  if (labelIds !== undefined && (await replaceLabels(tx, issue, labelIds))) return { updatedAt: sql`now()` };
-  return {};
 }
 
 async function saveDescription(
@@ -119,8 +132,9 @@ async function saveDescription(
 }
 
 export async function updateIssue(actor: Member, id: IssueId | undefined, change: IssueChange) {
-  if (change.description !== undefined && change.descriptionVersion !== undefined) {
-    return saveDescription(id, actor, change.description, change.descriptionVersion);
+  const descriptionSave = descriptionSaveOf(change);
+  if (descriptionSave) {
+    return saveDescription(id, actor, descriptionSave.description, descriptionSave.descriptionVersion);
   }
 
   const where = byIssueId(id);
@@ -129,7 +143,7 @@ export async function updateIssue(actor: Member, id: IssueId | undefined, change
   return db.transaction(async (tx) => {
     const issue = await lockedIssue(tx, where);
 
-    const update = await fieldChange(tx, issue, change);
+    const update = await fieldChange(tx, issue, editOf(issue, change));
 
     if (Object.keys(update).length > 0) {
       await tx
@@ -157,7 +171,7 @@ export async function deleteIssue(actor: Member, id: IssueId | undefined) {
   await db.transaction(async (tx) => {
     const issue = await lockedIssue(tx, where);
 
-    if (issue.createdBy !== actor.id && actor.role !== "admin") {
+    if (!mayDeleteIssue(actor, issue.createdBy)) {
       throw new ApiError(403, "You don't have permission to do that.");
     }
 
