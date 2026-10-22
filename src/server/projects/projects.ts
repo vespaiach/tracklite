@@ -3,9 +3,9 @@ import { asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import type { Executor, Transaction } from "../shared/transaction";
-import { conflict, notify, replaceMentions } from "../notifications";
-import { assertAdmin, type Member, memberSummary } from "../identity";
-import { members, mentions, projectKeys, projects } from "../shared/schema";
+import { conflict, notify, replaceMentions, mentions } from "../notifications";
+import { assertAdmin, type Member, memberSummary, members } from "../identity";
+import { projectKeys, projects } from "./tables";
 import type { NewProject, ProjectChanges } from "./schemas";
 import type { Project, ProjectSummary } from "../../contract";
 
@@ -139,4 +139,13 @@ export async function writableProject(tx: Transaction, key: string, lock: "share
   if (!project) throw new ApiError(404, "Not found");
   if (project.archivedAt !== null) throw new ApiError(403, "This project is archived");
   return project;
+}
+
+export async function takeIssueNumber(tx: Transaction, projectId: string) {
+  const [{ number }] = await tx
+    .update(projects)
+    .set({ nextIssueNumber: sql`${projects.nextIssueNumber} + 1` })
+    .where(eq(projects.id, projectId))
+    .returning({ number: sql<number>`${projects.nextIssueNumber} - 1` });
+  return number;
 }

@@ -2,10 +2,10 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
-import { recordFailedSignIn, signInLimitReached, tooManyAttempts } from "../shared/limits";
+import { recordFailedSignIn, signInLimitReached, tooManyAttempts } from "./limits";
 import { activeMemberByEmail } from "./members";
 import { hashPassword, needsRehash, verifyPassword } from "../shared/passwords";
-import { members } from "../shared/schema";
+import { members } from "./tables";
 import { createSession } from "./sessions";
 
 const unmatchablePasswordHash =

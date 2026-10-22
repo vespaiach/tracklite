@@ -2,8 +2,8 @@ import { isNotNull, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { POST as signIn } from "../../app/api/sessions/route";
 import { jsonRequest } from "../../test/reset-links";
-import { db } from "./db";
-import { members } from "./schema";
+import { db } from "../shared/db";
+import { members } from "./tables";
 import { seededMembers, seedMembers, seedPassword } from "./seed";
 
 beforeEach(async () => {

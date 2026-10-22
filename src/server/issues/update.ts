@@ -5,8 +5,9 @@ import { db } from "../shared/db";
 import { isUuid } from "../shared/ids";
 import type { Transaction } from "../shared/transaction";
 import { conflict, notify, replaceMentions } from "../notifications";
-import type { Member } from "../identity";
-import { issueLabels, issues, labels, members } from "../shared/schema";
+import { type Member, members } from "../identity";
+import { issueLabels, issues } from "./tables";
+import { labels } from "../projects";
 import type { IssueChange } from "./schemas";
 import { byIssueId, type IssueUpdate, issueGone, lockedIssue, topOfColumn, updatedIssue } from "./rows";
 

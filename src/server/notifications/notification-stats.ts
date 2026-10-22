@@ -8,14 +8,8 @@ import {
 } from "../../contract";
 import { db } from "../shared/db";
 import { queueCounts } from "./notification-queue";
-import {
-  members,
-  notificationBatches,
-  notificationDeliveries,
-  notifications,
-  workerHeartbeats,
-} from "../shared/schema";
-import { assertAdmin, type Member } from "../identity";
+import { members, assertAdmin, type Member } from "../identity";
+import { notificationBatches, notificationDeliveries, notifications, workerHeartbeats } from "./tables";
 
 type ProblemRow = Awaited<ReturnType<typeof problemRows>>[number];
 

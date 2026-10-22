@@ -2,8 +2,9 @@ import "server-only";
 import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, type SQL, sql } from "drizzle-orm";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
-import { type Member, memberSummary } from "../identity";
-import { issueLabels, issues, labels, members, projects } from "../shared/schema";
+import { type Member, memberSummary, members } from "../identity";
+import { issueLabels, issues } from "./tables";
+import { labels, projects } from "../projects";
 import {
   type IssueListPage,
   issuePriorities,

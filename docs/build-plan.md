@@ -238,7 +238,7 @@ Only the owning context inserts, updates or deletes a table. Another context may
   - Reads: design §1.2, §1.4, §1.8, §2, §4.10 · spec glossary, if any
   - Needs: M15.8
   - Done: §1.8 holds all five parts; every glossary term matches the name used in `src/server/` and `src/contract/` (rename in the doc, not the code, where they differ)
-- [ ] **M16.2 Tables per context.** Split `src/server/shared/schema.ts` into `<context>/tables.ts` per the table above; enums and shared column helpers stay in `shared/schema.ts`. Each context's `index.ts` exports its tables for read joins. Point `drizzle.config.ts` at all the files. Extend `src/server/architecture.test.ts`.
+- [x] **M16.2 Tables per context.** Split `src/server/shared/schema.ts` into `<context>/tables.ts` per the table above; enums and shared column helpers stay in `shared/schema.ts`. Each context's `index.ts` exports its tables for read joins. Point `drizzle.config.ts` at all the files. Extend `src/server/architecture.test.ts`.
   - Reads: design §1.8, §2 · `src/server/shared/schema.ts`, `drizzle.config.ts`, `src/server/architecture.test.ts`
   - Needs: M16.1
   - Done: `npm run db:generate` reports no changes; `M16: a context writes only its own tables` (an `insert`, `update` or `delete` on another context's table fails it; check once by hand); the existing tests pass

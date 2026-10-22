@@ -1,7 +1,7 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { db } from "../shared/db";
-import { notificationBatches, notificationDeliveries, workerHeartbeats } from "../shared/schema";
+import { notificationBatches, notificationDeliveries, workerHeartbeats } from "./tables";
 
 export const dueAt = sql`coalesce(${notificationDeliveries.nextAttemptAt}, ${notificationBatches.sendAfter})`;
 

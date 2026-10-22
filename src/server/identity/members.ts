@@ -5,7 +5,7 @@ import type { MemberChanges } from "./schemas";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import type { Transaction } from "../shared/transaction";
-import { members, sessions } from "../shared/schema";
+import { members, sessions } from "./tables";
 import { assertAdmin, type Member } from "./sessions";
 
 export function normalizeEmail(email: string) {

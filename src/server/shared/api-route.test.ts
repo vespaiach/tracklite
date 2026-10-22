@@ -5,8 +5,7 @@ import { createMember } from "../../test/factories";
 import { ApiError } from "./api-error";
 import { apiRoute } from "./api-route";
 import { db } from "./db";
-import { members } from "./schema";
-import { createSession } from "../identity";
+import { createSession, members } from "../identity";
 
 const appOrigin = "http://localhost:3000";
 let log: MockInstance<typeof console.log>;

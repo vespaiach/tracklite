@@ -2,15 +2,11 @@ import "server-only";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { toPlainText } from "../../lib/markdown/parse";
 import type { Transaction } from "../shared/transaction";
-import {
-  issues,
-  members,
-  notificationBatches,
-  notificationDeliveries,
-  type notificationKind,
-  notifications,
-  projects,
-} from "../shared/schema";
+import { issues } from "../issues/tables";
+import { members } from "../identity";
+import { notificationBatches, notificationDeliveries, notifications } from "./tables";
+import type { notificationKind } from "../shared/schema";
+import { projects } from "../projects/tables";
 
 type NotificationKind = (typeof notificationKind.enumValues)[number];
 type NotificationTarget = { issueId: string } | { projectId: string };

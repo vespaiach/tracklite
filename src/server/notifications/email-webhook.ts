@@ -4,7 +4,8 @@ import { and, eq, sql } from "drizzle-orm";
 import { readConfig } from "../shared/config";
 import { db } from "../shared/db";
 import { logEmailEvent } from "../shared/log";
-import { invitations, notificationDeliveries } from "../shared/schema";
+import { markInvitationBounced } from "../identity";
+import { notificationDeliveries } from "./tables";
 
 const toleranceSeconds = 5 * 60;
 
@@ -47,11 +48,7 @@ async function markBounced(providerMessageId: string) {
     .returning({ id: notificationDeliveries.id });
   if (notification) return logEmailEvent(`email bounced, notification ${notification.id}`);
 
-  const [invitation] = await db
-    .update(invitations)
-    .set({ bouncedAt: sql`now()` })
-    .where(eq(invitations.providerMessageId, providerMessageId))
-    .returning({ id: invitations.id });
+  const invitation = await markInvitationBounced(providerMessageId);
   if (invitation) return logEmailEvent(`email bounced, invitation ${invitation.id}`);
 
   logEmailEvent("email bounced, untracked");

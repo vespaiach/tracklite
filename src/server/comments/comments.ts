@@ -4,11 +4,11 @@ import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import { isUuid } from "../shared/ids";
 import type { Executor, Transaction } from "../shared/transaction";
-import { conflict, notify, replaceMentions } from "../notifications";
-import { issueGoneError, issueIdCondition } from "../issues";
-import { type Member, memberSummary } from "../identity";
-import { writableProject } from "../projects";
-import { comments, issues, members, mentions, projects } from "../shared/schema";
+import { conflict, notify, replaceMentions, mentions } from "../notifications";
+import { issueGoneError, issueIdCondition, issues } from "../issues";
+import { type Member, memberSummary, members } from "../identity";
+import { writableProject, projects } from "../projects";
+import { comments } from "./tables";
 import type { CommentEdit, NewComment } from "./schemas";
 import type { ThreadComment } from "../../contract";
 

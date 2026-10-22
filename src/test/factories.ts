@@ -2,17 +2,11 @@ import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import type { PgInsertValue } from "drizzle-orm/pg-core";
 import { generateKeyBetween } from "fractional-indexing";
 import { db } from "../server/shared/db";
-import {
-  comments,
-  issueLabels,
-  issues,
-  labels,
-  members,
-  notificationBatches,
-  notificationDeliveries,
-  projectKeys,
-  projects,
-} from "../server/shared/schema";
+import { comments } from "../server/comments";
+import { issueLabels, issues } from "../server/issues";
+import { labels, projectKeys, projects } from "../server/projects";
+import { members } from "../server/identity";
+import { notificationBatches, notificationDeliveries } from "../server/notifications";
 
 type NewMember = typeof members.$inferInsert;
 type NewProject = typeof projects.$inferInsert;
