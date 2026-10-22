@@ -6,7 +6,7 @@ Proposed: **859 → ~497 tests (−42%)**, with decisions D1–D6 applied. Nothi
 |---|---|---|---|
 | Project and issue API routes | 168 | 102 (applied) | Part A |
 | Other API routes | 179 | 107 (applied) | Part B |
-| Server, domain and infrastructure | 174 | 100 | Part C |
+| Server, domain and infrastructure | 174 | 100 (applied) | Part C |
 | Client screens | 199 | 116 | Part D |
 | Client components, UI kit, markdown | 139 | 72 | Part E |
 

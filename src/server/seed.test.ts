@@ -16,12 +16,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it("seed: creates admins, members and a deactivated member", async () => {
+it("seed: creates 2 admins, 5 members and a deactivated member, and running it twice adds no duplicates", async () => {
+  await seedMembers();
   await seedMembers();
 
   expect(await db.$count(members, sql`${members.role} = 'admin'`)).toBe(2);
   expect(await db.$count(members, sql`${members.role} = 'member'`)).toBe(5);
   expect(await db.$count(members, isNotNull(members.deactivatedAt))).toBe(1);
+  expect(await db.$count(members)).toBe(7);
 });
 
 it("seed: a seeded admin and member can sign in", async () => {
@@ -33,13 +35,6 @@ it("seed: a seeded admin and member can sign in", async () => {
     const response = await signIn(jsonRequest("POST", "/api/sessions", { email, password: seedPassword }));
     expect(response.status).toBe(204);
   }
-});
-
-it("seed: running twice adds no duplicates", async () => {
-  await seedMembers();
-  await seedMembers();
-
-  expect(await db.$count(members)).toBe(7);
 });
 
 it("seed: refuses when NODE_ENV is production", async () => {
