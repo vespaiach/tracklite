@@ -65,7 +65,7 @@ Each route handler is wrapped in `apiRoute` ([src/server/shared/api-route.ts](sr
 
 1. rejects cross-site writes with `403`;
 2. authenticates the session (`401`), unless the route is public;
-3. validates the JSON body against a Valibot schema from `src/schemas/` (`422`);
+3. validates the JSON body against a Valibot schema from the context's `schemas.ts` (`422`);
 4. calls one domain function in `src/server/`, passing the signed-in member as `actor`;
 5. maps a thrown `ApiError` to `{ error: { message, fields? } }`;
 6. writes one JSON log line, without bodies or tokens.
