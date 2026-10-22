@@ -1,7 +1,6 @@
 import "server-only";
 import { and, asc, eq, inArray, notInArray, or, type SQL, sql } from "drizzle-orm";
 import { alias, type PgUpdateSetSource } from "drizzle-orm/pg-core";
-import { generateKeyBetween } from "fractional-indexing";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import type { Executor, Transaction } from "../shared/transaction";
@@ -11,6 +10,7 @@ import { issueLabels, issues } from "./tables";
 import { mentions } from "../notifications";
 import type { Issue, IssueStatus } from "../../contract";
 import type { IssueId } from "./schemas";
+import { positionBetween } from "./rules";
 
 export type IssueUpdate = PgUpdateSetSource<typeof issues>;
 
@@ -112,7 +112,7 @@ export async function topOfColumn(tx: Transaction, projectId: string, status: Is
     .where(and(eq(issues.projectId, projectId), eq(issues.status, status)))
     .orderBy(asc(issues.position), asc(issues.id))
     .limit(1);
-  return generateKeyBetween(null, first?.position ?? null);
+  return positionBetween(null, first?.position ?? null);
 }
 
 export async function lockedIssue(tx: Transaction, where: SQL) {

@@ -246,7 +246,7 @@ Only the owning context inserts, updates or deletes a table. Another context may
   - Reads: design §3.1, D-42 · `src/server/shared/ids.ts`, each context's `schemas.ts`
   - Needs: M16.2
   - Done: one test per parse function covering its valid and invalid forms (named after the spec examples it closes, if any); no domain function under `src/server/` takes a plain `string` for these identifiers; the existing tests pass
-- [ ] **M16.4 Issue rules.** Move the decisions in `issues/` that need no database into `issues/rules.ts` as pure functions over plain types: board positions, status and priority changes, label changes, what an edit may touch. `create.ts`, `update.ts` and `board.ts` become load → decide → write.
+- [x] **M16.4 Issue rules.** Move the decisions in `issues/` that need no database into `issues/rules.ts` as pure functions over plain types: board positions, status and priority changes, label changes, what an edit may touch. `create.ts`, `update.ts` and `board.ts` become load → decide → write.
   - Reads: spec REQ-016–REQ-028 · `src/server/issues/`
   - Needs: M16.3
   - Done: `issues/rules.test.ts` covers each rule without the database; any database test that only checked such a rule moves to it (test each rule once); no file in `issues/` over 300 lines; the existing tests pass
