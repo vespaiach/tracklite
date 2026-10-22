@@ -16,7 +16,7 @@ Tracklite keeps the core and drops the rest:
 - **Email notifications** for assignments and mentions.
 - **Invitation-only accounts** with member and admin roles. No public sign-up, no SSO.
 
-Everything runs on one small VPS with PostgreSQL and nothing else: no Redis, no paid queue, no third-party services except an email provider and off-site backup storage.
+The app needs PostgreSQL and nothing else: no Redis, no paid queue, no third-party services except an email provider.
 
 The full scope, including what is deliberately left out, is in the [spec](docs/tracklite-spec.md).
 
@@ -30,28 +30,24 @@ Tracklite is being rebuilt from its documents, one task at a time:
 | [docs/tech-design.md](docs/tech-design.md) | Technical decisions, cited by section (`§1.7`) and decision ID (`D-36`). |
 | [docs/build-plan.md](docs/build-plan.md) | Milestones M0–M12 split into small tasks, with what each one reads, needs and must pass. Ticked boxes show what is built. |
 | [docs/design-system.md](docs/design-system.md) | Voice, colour roles, sizes and icons for the Track Lite UI kit. |
-| [ops/README.md](ops/README.md) | Server set-up, deploys, rollbacks and backups. |
 
 Tests are named after the spec example they prove, e.g. `it("REQ-016.4: concurrent creates get distinct numbers")`, so `grep -rn REQ-016 src` shows how a rule is covered.
 
 ## Architecture
 
 ```
-                       ┌──────────────────────────── VPS ────────────────────────────┐
- browser ──HTTPS──▶    │ Caddy ──▶ tracklite-web (next start)  ──┐                   │
-                       │                                         ├──▶ PostgreSQL 18  │
-                       │           tracklite-worker (node)  ─────┘                   │
-                       └──────────────┬──────────────────────────────┬───────────────┘
-                                      ▼                              ▼
-                              Resend (email API)            Cloudflare R2 (backups)
+ browser ──HTTPS──▶ reverse proxy ──▶ tracklite-web (next start)  ──┐
+                                                                     ├──▶ PostgreSQL 18
+                                    tracklite-worker (node)  ────────┘
+                                              │
+                                              ▼
+                                      Resend (email API)
 ```
 
-- **Caddy** terminates TLS, sends HSTS and the security headers, and proxies to the web process.
+- **The reverse proxy** is part of the deployment, which lives outside this repository. It terminates TLS, sends HSTS and the security headers, sets `X-Forwarded-For`, and proxies to the web process.
 - **tracklite-web** is `next start`. It serves the single-page-app shell, the JSON API under `/api`, `/health` and the email bounce webhook under `/webhooks`.
 - **tracklite-worker** is a Node entry point (`scripts/worker.ts`) from the same codebase. Every 5 seconds it sends queued notification emails using `for update skip locked`, and once an hour it deletes expired data.
 - **PostgreSQL 18** holds all state, including the notification email queue.
-
-All four run under systemd. A daily `pg_dump` is encrypted with `age` and uploaded to R2.
 
 ### Browser app
 
@@ -91,7 +87,6 @@ src/
   test/           test harness and data factories
 scripts/          worker, migrations, seed and setup commands
 migrations/       drizzle-kit migrations
-ops/              Caddy, systemd, deploy, rollback and backup scripts
 ```
 
 ## Stack
@@ -108,7 +103,6 @@ ops/              Caddy, systemd, deploy, rollback and backup scripts
 | Markdown | react-markdown, remark-gfm, unified |
 | Testing | Vitest (node and jsdom projects), Testing Library |
 | Lint and format | Biome |
-| Hosting | One Debian VPS, Caddy, systemd, Cloudflare R2 for backups |
 
 ## Development
 
@@ -190,4 +184,4 @@ More detail for contributors and coding agents is in [CLAUDE.md](CLAUDE.md).
 
 ## Deployment
 
-Production is one VPS set up by `ops/provision.sh`. `ops/deploy.sh` builds a release, runs migrations and switches to it, keeping the previous release for `ops/rollback.sh`. See [ops/README.md](ops/README.md) and the [runbook](ops/runbook.md).
+Deployment (servers, the reverse proxy, process supervision, deploys, rollbacks and backups) is maintained outside this repository.

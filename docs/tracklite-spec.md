@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.29"
+version: "0.30"
 release: "R1"
 status: Ready to build
 updated: "2026-10-12"
@@ -48,7 +48,7 @@ Tracklite is an issue tracker for my own small, invite-only team, which finds Li
   - Issue activity history: a log of who changed which field and when
   - Searching or jumping to issues across projects: the list view searches one project, and any issue opens by its address (API-004)
   - Changing a member's email address, by the member or an admin
-  - Exporting data: the daily backups (OPS-003) are the only copy outside the app
+  - Exporting data
 - **Assumptions:**
   - The team has fewer than about 15 people, so one small server is enough. Confirm against the team's headcount before launch.
   - Everyone reads their work email reliably, since invitations and password resets depend on it.
@@ -56,7 +56,6 @@ Tracklite is an issue tracker for my own small, invite-only team, which finds Li
 - **Known limitations in R1:**
   - No live updates: members see teammates' changes after a reload.
   - Desktop browsers first. Phones work but aren't polished, and dragging cards on the board needs a mouse or trackpad.
-  - One VPS holds everything, so any VPS failure takes the whole app down. Daily backups cap data loss at one day (OPS-003).
 
 ### 4. Open questions
 
@@ -682,7 +681,7 @@ These are accepted for a small invite-only team. The sign-in and password reset 
 - The time to answer a sign-in or password reset request may differ between member and non-member emails, so it can hint at which emails are members. No minimum response time is required.
 - During an email-service outage, only a member's email gets "We couldn't send the email. Try again." (STD-6), so that message can reveal which emails are members.
 - Someone who knows a member's email can block that member's sign-in for up to an hour by using up SEC-001's per-email limit with wrong passwords. The member waits, or an admin investigates; there's no permanent lockout.
-- Each password check uses about 19 MiB of memory (SEC-008), and SEC-001 only limits failures per hour, so a burst of sign-in requests at once can strain the small VPS.
+- Each password check uses about 19 MiB of memory (SEC-008), and SEC-001 only limits failures per hour, so a burst of sign-in requests at once can strain a small server.
 
 ### 11. Quality targets
 
@@ -698,11 +697,11 @@ These are accepted for a small invite-only team. The sign-in and password reset 
 | NFR-008 | 95% of password reset emails arrive within 1 minute. | Email provider's delivery logs |
 | NFR-009 | Running cost, including hosting, email and domain, stays under $20 per month for the team. | Monthly bills |
 
-There's no uptime target: one server has no redundancy (section 3). Section 13 covers backups instead.
+There's no uptime target. Hosting, backups and redundancy belong to the deployment, which is maintained outside this repository.
 
 ### 12. Stack and constraints
 
-- **Stack:** Next.js (TypeScript), PostgreSQL via Drizzle ORM (its query builder, with raw SQL only where the builder can't express a query), all on a single VPS. The front end is a single-page app: Next.js serves one HTML shell for every page address, and routing, page transitions and data fetching all happen in the browser, using React Router and Redux Toolkit (RTK Query for server data). Email goes through a transactional email service (API-002). Automated tests are unit and component tests only, using Vitest with React Testing Library on jsdom, run through npm scripts; there are no browser end-to-end tests (DEC-005). Lint uses Biome. UI uses the Track Lite design system (React components styled by its own CSS classes and design tokens), with React Aria Components for complex interactive widgets.
+- **Stack:** Next.js (TypeScript), PostgreSQL via Drizzle ORM (its query builder, with raw SQL only where the builder can't express a query). Deployment is maintained outside this repository. The front end is a single-page app: Next.js serves one HTML shell for every page address, and routing, page transitions and data fetching all happen in the browser, using React Router and Redux Toolkit (RTK Query for server data). Email goes through a transactional email service (API-002). Automated tests are unit and component tests only, using Vitest with React Testing Library on jsdom, run through npm scripts; there are no browser end-to-end tests (DEC-005). Lint uses Biome. UI uses the Track Lite design system (React components styled by its own CSS classes and design tokens), with React Aria Components for complex interactive widgets.
 - **Commands:** build, test and lint commands live in the npm scripts in `package.json`. AGENTS.md tells agents to use them and doesn't copy them.
 - **Boundaries:**
   - This spec is the source of truth for product behavior.
@@ -711,34 +710,27 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
   - Issues, project descriptions and comments carry a version number, used to detect stale saves (STD-8).
   - Markdown is rendered by one shared, sanitising renderer (SEC-002) and nowhere else.
   - There are no real-time updates; pages show current data when they load.
-  - There are two environments: local development and the production VPS. No feature flags.
+  - There are two environments: local development and production. No feature flags.
 - **Agent's choices:**
   - DEC-002 (API endpoints): JSON over HTTPS, resource-style paths such as `/api/issues/WEB-42`, the STD-1 to STD-4 status codes (signing in, `POST /api/sessions` with email and password, may also answer `429` when a SEC-001 limit is reached; requesting a password reset link may answer `429`, and `503` when the email couldn't be sent, STD-6; sending or resending an invitation may also answer `503`), and a request ID on creates (STD-5). Every endpoint needs a session except sign-in, sign-out (which succeeds with or without a session), requesting and using a password reset link, looking up and accepting an invitation, the webhook (API-003) and the health checks (OPS-005). Requesting a password reset link and sending or resending an invitation are exempt from NFR-003's 500 ms write limit, because they include the call to the email service and STD-6 needs the send result before answering.
   - DEC-003 (email provider): it must have an HTTP API and bounce webhooks (API-003), fit within NFR-009's budget, send from the team's domain with SPF and DKIM, and keep its API key only in server config (OPS-006). If no provider fits, stop and ask.
-  - DEC-004 (background jobs): run on the same VPS with no paid queue service, and survive a restart without losing pending notifications.
+  - DEC-004 (background jobs): run alongside the app with no paid queue service, and survive a restart without losing pending notifications.
 
 ### 13. Release and operations
+
+Deploys, rollbacks, backups, log retention and uptime monitoring are part of the deployment, which is maintained outside this repository. This section covers only what the app itself provides.
+
 
 - **OPS-001** The system shall provide a setup command that creates the first admin from an email, full name, username and password, only when no members exist. The command asks for the password twice without showing it (REQ-048) and never takes it as an argument, so it doesn't end up in shell history.
   - OPS-001.1: Run on a fresh install → admin created, who can then sign in with that email and password. (Verify: ops)
   - OPS-001.2: Run when members already exist → refuses with "Setup already done", nothing changed. (Verify: ops)
-- **OPS-002** A deploy shall be one command run from `main`. It runs the database migrations first and switches to the new version only if they succeed.
-  - OPS-002.1: The migrations succeed → the new version serves traffic, with no manual steps. (Verify: ops)
-  - OPS-002.2: A migration fails → the old version keeps running unchanged, and the command reports the error. (Verify: ops)
-- **OPS-003** The system shall back up the database daily at 03:00 UTC to storage off the VPS, keeping 14 daily backups. Backups are encrypted before they leave the VPS, and the storage fits within NFR-009. If a backup fails, the owner is emailed. A restore is tested once before launch.
-  - OPS-003.1: The VPS disk is lost → the data is restored from the most recent backup, losing at most one day. (Verify: ops)
-  - OPS-003.2: The 15th backup is taken → the oldest is deleted. (Verify: ops)
-  - OPS-003.3: The 03:00 backup fails → the owner gets an email about it. (Verify: ops)
-- **OPS-004** The previous release shall stay on the server, so one command switches back to it. Each release's migrations must also work with the previous release's code.
-  - OPS-004.1: A deploy causes errors → the rollback command restores the previous version within 2 minutes, with no database restore needed. (Verify: ops)
-- **OPS-005** An external uptime check shall call `/health` and `/health/worker` every 5 minutes and email the owner when either fails twice in a row. `/health` answers `200` only when the database responds. `/health/worker` answers `503` when the background worker hasn't finished a pass in the last 2 minutes (or never has), or when the oldest due pending notification delivery has waited more than 10 minutes; otherwise it answers `200`. Neither shows anything about members or notifications.
-  - OPS-005.1: The database stops → `/health` returns `503`, and the owner is emailed within about 10 minutes. (Verify: ops)
+- **OPS-005** The app shall provide `/health` and `/health/worker` for an external uptime check. `/health` answers `200` only when the database responds. `/health/worker` answers `503` when the background worker hasn't finished a pass in the last 2 minutes (or never has), or when the oldest due pending notification delivery has waited more than 10 minutes; otherwise it answers `200`. Neither shows anything about members or notifications.
+  - OPS-005.1: The database stops → `/health` returns `503`. (Verify: auto)
   - OPS-005.2: The worker's last pass was 3 minutes ago → `/health/worker` returns `503`. (Verify: auto)
   - OPS-005.3: The worker has never finished a pass → `/health/worker` returns `503`. (Verify: auto)
   - OPS-005.4: The worker finished a pass 10 seconds ago, but the oldest due pending delivery has waited 11 minutes → `/health/worker` returns `503`. (Verify: auto)
   - OPS-005.5: The worker finished a pass 10 seconds ago, and the oldest due pending delivery has waited 1 minute, or nothing is due → `/health/worker` returns `200`. A delivery waiting for a retry isn't due yet, so it doesn't count. (Verify: auto)
-  - OPS-005.6: The worker is stopped → the owner is emailed within about 15 minutes. (Verify: ops)
-- **OPS-006** Secrets, such as the email API key and the database password, shall live in a config file on the server, never in the repository. Logs are rotated and kept for 14 days.
+- **OPS-006** Secrets, such as the email API key and the database password, shall live in server config, never in the repository.
   - OPS-006.1: A search of the repository for the email API key → no match. (Verify: auto)
 
 ## Appendix: Decisions and changes
@@ -753,6 +745,7 @@ There's no uptime target: one server has no redundancy (section 3). Section 13 c
 
 **Changelog**
 
+- **0.30 (2026-10-22):** Deployment leaves the repository. OPS-002 (deploy), OPS-003 (backups) and OPS-004 (rollback) are removed. OPS-005 keeps the two health endpoints but no longer sets up the uptime checker or its emails (OPS-005.6 removed). OPS-006 drops log rotation. Section 3 drops the single-VPS limitation and backups as the data export.
 - **0.29 (2026-10-12):** Docs synced with the code; no behaviour changes. Section 4 says no question is open. API-001 lists `409` and `410`. DEC-002's endpoints without a session add invitation lookups and the health checks. The `X-Forwarded-For` limitation leaves section 10, since the reverse proxy now overwrites that header. The 0.9 entry cites REQ-001.7 and API-003.2, the examples that exist.
 - **0.28 (2026-10-11):** REQ-053 names how the oldest due wait reads, such as "40 seconds" or "14 min", and "None" when nothing is due (new REQ-053.9).
 - **0.27 (2026-10-11):** Notification health becomes visible. OPS-005 adds a second uptime check, `/health/worker`, which fails when the background worker hasn't been seen for 2 minutes or a due notification has waited more than 10 (new OPS-005.2 to OPS-005.6). New REQ-053: an admin-only notification status page at `/settings/notifications` (API-004, section 7). Section 8: a delivery records its attempts and when it reached its state.

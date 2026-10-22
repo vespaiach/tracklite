@@ -70,7 +70,7 @@ Always run drizzle-kit through the npm scripts. They set `NODE_OPTIONS=--conditi
 
 ## Architecture (as designed in docs/tech-design.md)
 
-**Processes (§1.1).** `tracklite-web` is `next start` behind Caddy. `tracklite-worker` is a Node entry point in `scripts/`, run from the same codebase. Both use PostgreSQL 18 and nothing else; there is no Redis and no paid queue.
+**Processes (§1.1).** `tracklite-web` is `next start` behind a reverse proxy. Deployment (servers, proxy, deploys, backups) is maintained outside this repository. `tracklite-worker` is a Node entry point in `scripts/`, run from the same codebase. Both use PostgreSQL 18 and nothing else; there is no Redis and no paid queue.
 
 **Strict single-page app (§1.7).** Every page address serves the same HTML shell. `src/app/[[...path]]/page.tsx` renders `<ClientApp />` with `next/dynamic` and `ssr: false`. The browser does all of these:
 - routing, with React Router in data mode and lazy routes;
