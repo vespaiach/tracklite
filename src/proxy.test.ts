@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
 import { expect, it } from "vitest";
@@ -26,7 +27,11 @@ it("SEC-010.1: a page response forbids framing by other sites", () => {
 });
 
 it("SEC-010.1: a page response sends no referrer to other sites", () => {
-  expect(pageResponse().headers.get("referrer-policy")).toBe("same-origin");
+  expect(pageResponse().headers.get("referrer-policy")).toBe("no-referrer");
+});
+
+it("SEC-007: Caddy sends the same Referrer-Policy as the app, so a token in the address reaches no log", () => {
+  expect(readFileSync("ops/Caddyfile", "utf8")).toMatch(/^\s*Referrer-Policy "no-referrer"$/m);
 });
 
 it("D-26: each request gets a fresh nonce", () => {

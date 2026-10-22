@@ -77,7 +77,7 @@ Spend about 5 minutes on this right after the deploy.
    curl -sI https://tracklite.example.com/health
    ```
 
-   It answers `200` with `strict-transport-security`, `x-content-type-options: nosniff` and `referrer-policy: same-origin`.
+   It answers `200` with `strict-transport-security`, `x-content-type-options: nosniff` and `referrer-policy: no-referrer`.
 
    ```bash
    curl -s https://tracklite.example.com/health/worker
