@@ -7,7 +7,7 @@ import { GET as list, POST as create } from "../app/api/invitations/route";
 import { db } from "../server/shared/db";
 import { outbox } from "../server/shared/email/outbox";
 import { invitations } from "../server/shared/schema";
-import { createSession } from "../server/sessions";
+import { createSession } from "../server/identity";
 import { createMember } from "./factories";
 import { jsonRequest } from "./reset-links";
 

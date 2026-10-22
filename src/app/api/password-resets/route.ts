@@ -1,7 +1,5 @@
-import { PasswordReset } from "../../../schemas/account";
+import { PasswordReset, resetPassword, sessionCookie } from "../../../server/identity";
 import { apiRoute } from "../../../server/shared/api-route";
-import { resetPassword } from "../../../server/password-resets";
-import { sessionCookie } from "../../../server/sessions";
 
 export const POST = apiRoute("public", PasswordReset, async (_request, { token, password }) => {
   const sessionToken = await resetPassword(token, password);

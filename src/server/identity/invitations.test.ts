@@ -1,12 +1,12 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { createMember } from "../test/factories";
-import { uniqueEmail } from "../test/invitations";
-import { db } from "./shared/db";
-import { outbox } from "./shared/email/outbox";
+import { createMember } from "../../test/factories";
+import { uniqueEmail } from "../../test/invitations";
+import { db } from "../shared/db";
+import { outbox } from "../shared/email/outbox";
 import { createInvitation, listInvitations, resendInvitation, revokeInvitation } from "./invitations";
-import { invitations } from "./shared/schema";
-import { createToken, hashToken } from "./shared/tokens";
+import { invitations } from "../shared/schema";
+import { createToken, hashToken } from "../shared/tokens";
 
 const forbidden = { status: 403, message: "You don't have permission to do that." };
 

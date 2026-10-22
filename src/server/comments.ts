@@ -5,11 +5,10 @@ import { db } from "./shared/db";
 import type { Executor, Transaction } from "./shared/transaction";
 import { conflict, replaceMentions } from "./descriptions";
 import { byIssueId, issueGone, uuidPattern } from "./issues";
-import { memberSummary } from "./members";
+import { type Member, memberSummary } from "./identity";
 import { notify } from "./notifications";
 import { writableProject } from "./projects";
 import { comments, issues, members, mentions, projects } from "./shared/schema";
-import type { Member } from "./sessions";
 import type { CommentEdit, NewComment } from "../schemas/comment";
 import type { ThreadComment } from "../contract";
 

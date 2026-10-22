@@ -8,7 +8,7 @@ import { db } from "./shared/db";
 import { updateIssue } from "./issues";
 import { updateProject } from "./projects";
 import { issues, members, notificationBatches, notificationDeliveries, notifications } from "./shared/schema";
-import type { Member } from "./sessions";
+import type { Member } from "./identity";
 
 async function website() {
   const project = await createProject({ name: "Website" });

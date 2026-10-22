@@ -1,8 +1,6 @@
-import { SignIn } from "../../../schemas/account";
+import { sessionCookie, SignIn, signIn } from "../../../server/identity";
 import { apiRoute } from "../../../server/shared/api-route";
 import { clientIp } from "../../../server/shared/limits";
-import { sessionCookie } from "../../../server/sessions";
-import { signIn } from "../../../server/sign-in";
 
 export const POST = apiRoute("public", SignIn, async (request, { email, password }) => {
   const token = await signIn(email, password, clientIp(request));

@@ -1,10 +1,10 @@
 import "server-only";
 import { sql } from "drizzle-orm";
 import * as v from "valibot";
-import { FirstAdmin } from "../schemas/member";
-import { db } from "./shared/db";
-import { hashPassword } from "./shared/passwords";
-import { members } from "./shared/schema";
+import { FirstAdmin } from "./schemas";
+import { db } from "../shared/db";
+import { hashPassword } from "../shared/passwords";
+import { members } from "../shared/schema";
 
 export async function createFirstAdmin(input: v.InferInput<typeof FirstAdmin>) {
   const result = v.safeParse(FirstAdmin, input, { abortEarly: true });

@@ -1,17 +1,17 @@
 import "server-only";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { ApiError } from "./shared/api-error";
-import { db } from "./shared/db";
-import { sendEmail } from "./shared/email/send";
-import { invitationEmail } from "./shared/email/templates";
-import type { Invitation, InvitationLookup } from "../contract";
-import type { InvitationAcceptance } from "../schemas/invitation";
+import { ApiError } from "../shared/api-error";
+import { db } from "../shared/db";
+import { sendEmail } from "../shared/email/send";
+import { invitationEmail } from "../shared/email/templates";
+import type { Invitation, InvitationLookup } from "../../contract";
+import type { InvitationAcceptance } from "./schemas";
 import { memberSummary } from "./members";
-import { hashPassword } from "./shared/passwords";
-import { invitations, members } from "./shared/schema";
+import { hashPassword } from "../shared/passwords";
+import { invitations, members } from "../shared/schema";
 import { assertAdmin, createSession, type Member } from "./sessions";
-import { createToken, hashToken } from "./shared/tokens";
-import type { Executor } from "./shared/transaction";
+import { createToken, hashToken } from "../shared/tokens";
+import type { Executor } from "../shared/transaction";
 
 const isOpen = and(isNull(invitations.acceptedAt), isNull(invitations.revokedAt));
 

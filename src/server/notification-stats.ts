@@ -15,7 +15,7 @@ import {
   notifications,
   workerHeartbeats,
 } from "./shared/schema";
-import { assertAdmin, type Member } from "./sessions";
+import { assertAdmin, type Member } from "./identity";
 
 type ProblemRow = Awaited<ReturnType<typeof problemRows>>[number];
 

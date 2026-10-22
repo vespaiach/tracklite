@@ -1,8 +1,6 @@
-import { PasswordChange } from "../../../../schemas/account";
+import { changePassword, PasswordChange, readSessionToken } from "../../../../server/identity";
 import { apiRoute } from "../../../../server/shared/api-route";
 import { clientIp } from "../../../../server/shared/limits";
-import { changePassword } from "../../../../server/profile";
-import { readSessionToken } from "../../../../server/sessions";
 
 export const PUT = apiRoute("member", PasswordChange, async (request, member, change) => {
   await changePassword(member, readSessionToken(request) ?? "", change, clientIp(request));

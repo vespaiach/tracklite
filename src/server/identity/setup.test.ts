@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { POST as signIn } from "../app/api/sessions/route";
-import { jsonRequest } from "../test/reset-links";
-import { db } from "./shared/db";
-import { members } from "./shared/schema";
+import { POST as signIn } from "../../app/api/sessions/route";
+import { jsonRequest } from "../../test/reset-links";
+import { db } from "../shared/db";
+import { members } from "../shared/schema";
 import { createFirstAdmin } from "./setup";
 
 const admin = {

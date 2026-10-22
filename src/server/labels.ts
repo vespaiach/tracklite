@@ -8,7 +8,7 @@ import { writableProject } from "./projects";
 import type { LabelChanges, NewLabel } from "../schemas/label";
 import type { Label } from "../contract";
 import { issueLabels, labels, projects } from "./shared/schema";
-import type { Member } from "./sessions";
+import type { Member } from "./identity";
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { outbox } from "../../../server/shared/email/outbox";
 import { hashPassword } from "../../../server/shared/passwords";
-import { createSession } from "../../../server/sessions";
+import { createSession } from "../../../server/identity";
 import { createMember } from "../../../test/factories";
 import { ageResetLink, jsonRequest, resetTokenFor } from "../../../test/reset-links";
 import { GET as getMe } from "../me/route";

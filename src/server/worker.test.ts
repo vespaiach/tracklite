@@ -17,7 +17,7 @@ import {
   notifications,
   workerHeartbeats,
 } from "./shared/schema";
-import type { Member } from "./sessions";
+import type { Member } from "./identity";
 import { runWorker, sendDueDeliveries } from "./worker";
 
 beforeEach(() => {

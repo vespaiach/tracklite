@@ -4,10 +4,9 @@ import { ApiError } from "./shared/api-error";
 import { db } from "./shared/db";
 import type { Executor, Transaction } from "./shared/transaction";
 import { conflict, replaceMentions } from "./descriptions";
-import { memberSummary } from "./members";
+import { assertAdmin, type Member, memberSummary } from "./identity";
 import { notify } from "./notifications";
 import { members, mentions, projectKeys, projects } from "./shared/schema";
-import { assertAdmin, type Member } from "./sessions";
 import type { NewProject, ProjectChanges } from "../schemas/project";
 import type { Project, ProjectSummary } from "../contract";
 

@@ -1,12 +1,12 @@
 import { eq, sql } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
-import { createMember } from "../test/factories";
-import { moveIntoPast } from "../test/time";
-import { ApiError } from "./shared/api-error";
-import { db } from "./shared/db";
-import { members, sessions } from "./shared/schema";
+import { createMember } from "../../test/factories";
+import { moveIntoPast } from "../../test/time";
+import { ApiError } from "../shared/api-error";
+import { db } from "../shared/db";
+import { members, sessions } from "../shared/schema";
 import { createSession, requireMember, sessionCookie } from "./sessions";
-import { hashToken } from "./shared/tokens";
+import { hashToken } from "../shared/tokens";
 
 afterEach(() => {
   vi.unstubAllEnvs();

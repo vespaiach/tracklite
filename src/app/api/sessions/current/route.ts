@@ -1,5 +1,5 @@
 import { apiRoute } from "../../../../server/shared/api-route";
-import { clearedSessionCookie, endSession, readSessionToken } from "../../../../server/sessions";
+import { clearedSessionCookie, endSession, readSessionToken } from "../../../../server/identity";
 
 export const DELETE = apiRoute("public", async (request) => {
   const token = readSessionToken(request);

@@ -1,11 +1,11 @@
 import "server-only";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
-import type { Me, MemberSummary } from "../contract";
-import type { MemberChanges } from "../schemas/member";
-import { ApiError } from "./shared/api-error";
-import { db } from "./shared/db";
-import type { Transaction } from "./shared/transaction";
-import { members, sessions } from "./shared/schema";
+import type { Me, MemberSummary } from "../../contract";
+import type { MemberChanges } from "./schemas";
+import { ApiError } from "../shared/api-error";
+import { db } from "../shared/db";
+import type { Transaction } from "../shared/transaction";
+import { members, sessions } from "../shared/schema";
 import { assertAdmin, type Member } from "./sessions";
 
 export function normalizeEmail(email: string) {

@@ -6,7 +6,7 @@ import { ApiError } from "./api-error";
 import { apiRoute } from "./api-route";
 import { db } from "./db";
 import { members } from "./schema";
-import { createSession } from "../sessions";
+import { createSession } from "../identity";
 
 const appOrigin = "http://localhost:3000";
 let log: MockInstance<typeof console.log>;

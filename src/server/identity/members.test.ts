@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { createMember } from "../test/factories";
-import { db } from "./shared/db";
+import { createMember } from "../../test/factories";
+import { db } from "../shared/db";
 import { initials, updateMember } from "./members";
-import { members } from "./shared/schema";
+import { members } from "../shared/schema";
 
 it("REQ-003.4: initials of long, single, bracketed, numeric and CJK names", () => {
   expect(initials("Alexandria Catherine Montgomery-Fitzwilliam van der Bergholt")).toBe("AB");
