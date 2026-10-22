@@ -9,7 +9,7 @@ export {
 } from "./invitations";
 export { deleteExpiredAccountRows } from "./cleanup";
 export { clientIp } from "./limits";
-export { listMembers, memberSummary, profileResponse, updateMember } from "./members";
+export { editConflict, listMembers, memberSummary, profileResponse, updateMember } from "./members";
 export { checkResetLink, requestResetLink, resetPassword } from "./password-resets";
 export { changePassword, updateProfile } from "./profile";
 export {

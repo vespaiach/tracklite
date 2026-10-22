@@ -7,7 +7,7 @@ import type { Transaction } from "../shared/transaction";
 import { logNotificationError, logNotificationFailure, logWorkerMetrics } from "../shared/log";
 import { notificationSenders, type Recipient } from "./notification-channels";
 import { dueAt, queueCounts } from "./notification-queue";
-import { issues } from "../issues/tables";
+import { issues } from "../issues";
 import { members } from "../identity";
 import {
   mentions,
@@ -16,7 +16,7 @@ import {
   notifications,
   workerHeartbeats,
 } from "./tables";
-import { projects } from "../projects/tables";
+import { projects } from "../projects";
 
 type DueDelivery = Awaited<ReturnType<typeof dueDeliveries>>[number];
 type ClaimedDelivery = DueDelivery & { lease: string };

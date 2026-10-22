@@ -1,19 +1,20 @@
 import "server-only";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { toPlainText } from "../../lib/markdown/parse";
+import type { DomainEvent, EventTarget } from "../shared/events";
 import type { Transaction } from "../shared/transaction";
-import { issues } from "../issues/tables";
+import { issues } from "../issues";
 import { members } from "../identity";
+import { replaceMentions } from "./descriptions";
 import { notificationBatches, notificationDeliveries, notifications } from "./tables";
 import type { notificationKind } from "../shared/schema";
-import { projects } from "../projects/tables";
+import { projects } from "../projects";
 
 type NotificationKind = (typeof notificationKind.enumValues)[number];
-type NotificationTarget = { issueId: string } | { projectId: string };
 type Notice = {
   kind: NotificationKind;
   actorId: string;
-  target: NotificationTarget;
+  target: EventTarget;
   commentId?: string;
   text?: string;
 };
@@ -26,7 +27,7 @@ function excerptOf(markdown: string) {
   return `${characters.slice(0, maxExcerptLength).join("")}…`;
 }
 
-function snapshotOf(tx: Transaction, target: NotificationTarget) {
+function snapshotOf(tx: Transaction, target: EventTarget) {
   return "issueId" in target ? issueSnapshot(tx, target.issueId) : projectSnapshot(tx, target.projectId);
 }
 
@@ -105,7 +106,7 @@ async function createBatch(tx: Transaction, recipientId: string, targetType: str
   return batch.id;
 }
 
-export async function notify(tx: Transaction, recipientIds: string[], notice: Notice) {
+async function notify(tx: Transaction, recipientIds: string[], notice: Notice) {
   const recipients = recipientIds.filter((recipientId) => recipientId !== notice.actorId);
   if (recipients.length === 0) return;
 
@@ -122,4 +123,30 @@ export async function notify(tx: Transaction, recipientIds: string[], notice: No
       excerpt: notice.text === undefined ? "" : excerptOf(notice.text),
     });
   }
+}
+
+export async function onDomainEvent(tx: Transaction, event: DomainEvent) {
+  if (event.type === "IssueAssigned") {
+    await notify(tx, [event.assigneeId], {
+      kind: "assigned",
+      actorId: event.actorId,
+      target: { issueId: event.issueId },
+    });
+    return;
+  }
+
+  const commentId = event.type === "DescriptionSaved" ? undefined : event.commentId;
+  const mentioned = await replaceMentions(tx, mentionSourceOf(event.target, commentId), event.text);
+
+  await notify(tx, mentioned, {
+    kind: "mentioned",
+    actorId: event.actorId,
+    target: event.target,
+    commentId,
+    text: event.text,
+  });
+}
+
+function mentionSourceOf(target: EventTarget, commentId: string | undefined) {
+  return commentId === undefined ? target : { commentId };
 }

@@ -254,7 +254,7 @@ Only the owning context inserts, updates or deletes a table. Another context may
   - Reads: design §4.10 · `src/server/projects/`, `src/server/comments/`, `src/server/identity/`, `src/server/notifications/descriptions.ts`
   - Needs: M16.4
   - Done: a `rules.test.ts` per context, as in M16.4; the existing tests pass
-- [ ] **M16.6 Domain events.** Add `shared/events.ts` with a typed union of what happened (`IssueCreated`, `IssueAssigned`, `IssueStatusChanged`, `CommentPosted`, `MemberMentioned`, … one per notification kind the spec names). Contexts return or emit events inside their transaction; `notifications` subscribes and writes its rows in the same transaction (spec §12 still holds: action and notification commit together). No context but `notifications` imports `notifications` any more; update the context map in §1.8 and `architecture.test.ts`.
+- [x] **M16.6 Domain events.** Add `shared/events.ts` with a typed union of what happened (`IssueCreated`, `IssueAssigned`, `IssueStatusChanged`, `CommentPosted`, `MemberMentioned`, … one per notification kind the spec names). Contexts return or emit events inside their transaction; `notifications` subscribes and writes its rows in the same transaction (spec §12 still holds: action and notification commit together). No context but `notifications` imports `notifications` any more; update the context map in §1.8 and `architecture.test.ts`.
   - Reads: spec §12 · design §1.4, §1.8, §2.6, D-45 · `src/server/notifications/notifications.ts`
   - Needs: M16.5
   - Done: `M16: an event and its notification rows commit or roll back together`; `M15: context dependencies follow the context map` passes with the new map; the existing notification tests pass unchanged

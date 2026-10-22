@@ -1,8 +1,7 @@
 import "server-only";
 import * as v from "valibot";
 import { labelColors } from "../../contract";
-import { descriptionText, descriptionVersion } from "../notifications";
-import { maxCharacters } from "../shared/schemas";
+import { descriptionText, descriptionVersion, maxCharacters } from "../shared/schemas";
 
 const maxProjectNameLength = 50;
 

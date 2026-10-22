@@ -4,8 +4,8 @@ import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import { parseUuid } from "../shared/ids";
 import type { Transaction } from "../shared/transaction";
-import { conflict, notify, replaceMentions } from "../notifications";
-import { type Member, members, type Username } from "../identity";
+import { publish } from "../shared/events";
+import { editConflict, type Member, members, type Username } from "../identity";
 import { issueLabels, issues } from "./tables";
 import { labels } from "../projects";
 import type { IssueChange, IssueId } from "./schemas";
@@ -106,7 +106,8 @@ async function saveDescription(
   return db.transaction(async (tx) => {
     const issue = await lockedIssue(tx, where);
 
-    if (issue.descriptionVersion !== descriptionVersion) throw await conflict(tx, issue.descriptionEditedBy);
+    if (issue.descriptionVersion !== descriptionVersion)
+      throw await editConflict(tx, issue.descriptionEditedBy);
 
     await tx
       .update(issues)
@@ -118,10 +119,8 @@ async function saveDescription(
       })
       .where(eq(issues.id, issue.id));
 
-    const mentioned = await replaceMentions(tx, { issueId: issue.id }, description);
-
-    await notify(tx, mentioned, {
-      kind: "mentioned",
+    await publish(tx, {
+      type: "DescriptionSaved",
       actorId: member.id,
       target: { issueId: issue.id },
       text: description,
@@ -153,10 +152,11 @@ export async function updateIssue(actor: Member, id: IssueId | undefined, change
     }
 
     if (typeof update.assigneeId === "string") {
-      await notify(tx, [update.assigneeId], {
-        kind: "assigned",
+      await publish(tx, {
+        type: "IssueAssigned",
         actorId: actor.id,
-        target: { issueId: issue.id },
+        issueId: issue.id,
+        assigneeId: update.assigneeId,
       });
     }
 

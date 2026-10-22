@@ -7,7 +7,7 @@ import type { Executor, Transaction } from "../shared/transaction";
 import { memberSummary, members } from "../identity";
 import { byProjectKey, type ProjectKey, writableProject, labels, projects } from "../projects";
 import { issueLabels, issues } from "./tables";
-import { mentions } from "../notifications";
+import { mentions } from "../notifications/tables";
 import type { Issue, IssueStatus } from "../../contract";
 import type { IssueId } from "./schemas";
 import { positionBetween } from "./rules";

@@ -1,8 +1,7 @@
 import "server-only";
 import * as v from "valibot";
 import { issuePriorities, issueStatuses } from "../../contract";
-import { maxCharacters, requestId } from "../shared/schemas";
-import { descriptionText, descriptionVersion } from "../notifications";
+import { descriptionText, descriptionVersion, maxCharacters, requestId } from "../shared/schemas";
 import { usernameFormat } from "../identity";
 
 const maxTitleLength = 200;

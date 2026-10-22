@@ -4,6 +4,7 @@ import { createIssue, createMember, createProject, newRequestId } from "../../te
 import { moveIntoPast } from "../../test/time";
 import { editComment, postIssueComment, postProjectComment } from "../comments";
 import { db } from "../shared/db";
+import { publish } from "../shared/events";
 import { parseUuid } from "../shared/ids";
 import { parseIssueId, updateIssue, issues } from "../issues";
 import { updateProject } from "../projects";
@@ -335,4 +336,32 @@ it("§2.6: a member must keep at least one notification channel", async () => {
   expect((error as DrizzleQueryError).cause).toMatchObject({
     constraint_name: "members_notification_channels_not_empty",
   });
+});
+
+it("M16: an event and its notification rows commit or roll back together", async () => {
+  const alex = await createMember();
+  const sam = await createMember();
+  const { issue } = await website();
+  const assigned = {
+    type: "IssueAssigned",
+    actorId: alex.id,
+    issueId: issue.id,
+    assigneeId: sam.id,
+  } as const;
+
+  const rolledBack = db.transaction(async (tx) => {
+    await publish(tx, assigned);
+    tx.rollback();
+  });
+
+  await expect(rolledBack).rejects.toThrow();
+  expect(await notificationsFor(sam)).toEqual([]);
+  expect(await deliveriesFor(sam)).toEqual([]);
+
+  await db.transaction((tx) => publish(tx, assigned));
+
+  expect(await notificationsFor(sam)).toEqual([
+    expect.objectContaining({ kind: "assigned", targetId: issue.id }),
+  ]);
+  expect(await deliveriesFor(sam)).toEqual([expect.objectContaining({ state: "pending" })]);
 });

@@ -4,9 +4,10 @@ import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import type { Uuid } from "../shared/ids";
 import type { Executor, Transaction } from "../shared/transaction";
-import { conflict, notify, replaceMentions, mentions } from "../notifications";
+import { mentions } from "../notifications/tables";
+import { publish } from "../shared/events";
 import { type IssueId, issueGoneError, issueIdCondition, issues } from "../issues";
-import { type Member, memberSummary, members } from "../identity";
+import { editConflict, type Member, memberSummary, members } from "../identity";
 import { byProjectKey, type ProjectKey, writableProject, projects } from "../projects";
 import { comments } from "./tables";
 import type { CommentEdit, NewComment } from "./schemas";
@@ -124,10 +125,8 @@ async function postComment(
       .values({ ...parent, authorId: member.id, body: text, requestId })
       .returning({ id: comments.id });
 
-    const mentioned = await replaceMentions(tx, { commentId: inserted.id }, text);
-
-    await notify(tx, mentioned, {
-      kind: "mentioned",
+    await publish(tx, {
+      type: "CommentPosted",
       actorId: member.id,
       target: parent,
       commentId: inserted.id,
@@ -176,17 +175,15 @@ export async function editComment(actor: Member, id: Uuid | undefined, { body, v
     const comment = await lockedComment(tx, id);
 
     if (comment.authorId !== actor.id) throw notAllowed();
-    if (comment.version !== version) throw await conflict(tx, comment.authorId);
+    if (comment.version !== version) throw await editConflict(tx, comment.authorId);
 
     await tx
       .update(comments)
       .set({ body, version: sql`${comments.version} + 1`, editedAt: sql`now()` })
       .where(eq(comments.id, comment.id));
 
-    const mentioned = await replaceMentions(tx, { commentId: comment.id }, body);
-
-    await notify(tx, mentioned, {
-      kind: "mentioned",
+    await publish(tx, {
+      type: "CommentEdited",
       actorId: actor.id,
       target: parentOf(comment),
       commentId: comment.id,

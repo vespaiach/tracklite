@@ -4,6 +4,7 @@ import { ApiError } from "./api-error";
 import { readConfig } from "./config";
 import { logRequest } from "./log";
 import { type Member, requireMember } from "../identity";
+import "../notifications";
 
 const writeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
