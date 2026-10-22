@@ -10,7 +10,7 @@ const allowedDependencies: Record<string, string[]> = {
   issues: ["projects", "identity", "notifications", "shared"],
   projects: ["identity", "notifications", "shared"],
   notifications: ["identity", "shared"],
-  identity: ["notifications", "shared"],
+  identity: ["shared"],
   shared: [],
 };
 const allowedFileDependencies = ["src/server/shared/api-route.ts -> identity"];
