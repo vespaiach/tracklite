@@ -2,7 +2,7 @@ import "server-only";
 import * as v from "valibot";
 import { issuePriorities, issueStatuses } from "../contract";
 import { maxCharacters, requestId } from "../server/shared/schemas";
-import { descriptionText, descriptionVersion } from "./description";
+import { descriptionText, descriptionVersion } from "../server/notifications";
 
 const maxTitleLength = 200;
 const maxLabels = 10;

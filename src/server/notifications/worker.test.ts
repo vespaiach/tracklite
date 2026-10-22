@@ -2,12 +2,12 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { PostgresJsPreparedQuery } from "drizzle-orm/postgres-js/session";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createIssue, createMember, createProject } from "../test/factories";
-import { deleteComment, editComment, postIssueComment } from "./comments";
-import { db } from "./shared/db";
-import { outbox } from "./shared/email/outbox";
-import type { Transaction } from "./shared/transaction";
-import { updateIssue } from "./issues";
+import { createIssue, createMember, createProject } from "../../test/factories";
+import { deleteComment, editComment, postIssueComment } from "../comments";
+import { db } from "../shared/db";
+import { outbox } from "../shared/email/outbox";
+import type { Transaction } from "../shared/transaction";
+import { updateIssue } from "../issues";
 import { notificationSenders } from "./notification-channels";
 import {
   issues,
@@ -16,8 +16,8 @@ import {
   notificationDeliveries,
   notifications,
   workerHeartbeats,
-} from "./shared/schema";
-import type { Member } from "./identity";
+} from "../shared/schema";
+import type { Member } from "../identity";
 import { runWorker, sendDueDeliveries } from "./worker";
 
 beforeEach(() => {

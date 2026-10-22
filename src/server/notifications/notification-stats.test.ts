@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { createMember } from "../test/factories";
+import { createMember } from "../../test/factories";
 import { notificationStats } from "./notification-stats";
 
 it("REQ-053.8, STD-2: a member can't read notification stats", async () => {
