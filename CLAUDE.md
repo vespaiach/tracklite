@@ -138,6 +138,7 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 - **Write function bodies as short, named steps.** Split a function into steps, such as guard checks, each query or write, and building the result. Put one blank line between steps and none inside a statement or chain. If a step has a clear name, needs only one or two inputs and hides detail the caller doesn't need, move it into a function with that name, even if it is used once. If you can't name a step, or extracting it would need many parameters, leave it as a blank-line group. A function with one or two steps stays as one block. There are no comments under `src/`, so blank lines and function names are how the code shows its steps.
 - **Run the code checks after implementing.** When a task's implementation is done, run these in order and fix any failure before moving on: `npm run typecheck`, `npm run lint`, `npm test`.
 - **Commit, push and open a PR when done.** Once the implementation is done and every check in *Run the code checks* passes, commit, push the branch and open a PR without waiting to be asked.
+- **Before opening a PR, run all three and make sure they pass.** GitHub CI is temporarily turned off (`.github/workflows/ci.yml` runs only on manual dispatch), so nothing else checks the branch. Run `npm run lint`, `npm run typecheck` and `npm test`, and do not open the PR until all three are green.
 
 ## Code style
 
