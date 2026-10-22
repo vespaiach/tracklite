@@ -146,7 +146,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 ## Done and removed
 
-M0–M9, M12, M13, M14, M11.1 and M11.2a are done. Their entries were removed from this file once the spec and design held what they built; `git log -- docs/build-plan.md` has them. A **Needs** that names a task missing from this file counts as ticked. M10 (operations) was dropped: deployment is maintained outside this repository.
+M0–M9, M12–M16, M11.1 and M11.2a are done. Their entries were removed from this file once the spec and design held what they built; `git log -- docs/build-plan.md` has them. A **Needs** that names a task missing from this file counts as ticked. M10 (operations) was dropped: deployment is maintained outside this repository.
 
 ## M11 Launch check
 
@@ -163,100 +163,3 @@ M0–M9, M12, M13, M14, M11.1 and M11.2a are done. Their entries were removed fr
 - [ ] **M11.5 Production checks.** SEC-005.1, SEC-007.2 and the `Verify: ops` examples of OPS-001 run against production; confirm the team's headcount against spec §3's assumptions, and check NFR-008 in Resend's delivery logs and the first month's bills against NFR-009.
 
 **Done when:** every box above is ticked. That's R1.
-
-
-## M15 Bounded contexts
-
-Restructure `src/server/` from one flat folder into bounded contexts (modular DDD). Each context is a folder with a public `index.ts`, and other contexts import it only through that file. Domain functions keep their current style: `actor` first, their own transaction, Drizzle inside. The client is out of scope. Every task moves code without changing behaviour, so the existing tests are the guard. Moves use `git mv` and keep each test next to its source.
-
-| Context | Files from `src/server/` |
-|---|---|
-| `identity` | sessions, members, sign-in, profile, setup, invitations, password-resets |
-| `notifications` | notifications, notification-queue, notification-stats, notification-channels/, worker, email-webhook, descriptions |
-| `projects` | projects, labels |
-| `issues` | issues |
-| `comments` | comments |
-| `shared/` (infrastructure) | db, schema, config, log, api-error, api-route, email/, tokens, passwords, limits, cleanup, seed, seed-load |
-
-Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `projects`; every context → `identity`, `notifications`, `shared/`. No cycles.
-
-**Run order:** M15.1 → M15.2 → M15.3 → M15.4 → M15.5 → M15.6 → M15.7 → M15.8. Each task rewrites imports across `src/server/`, `src/app/api/` and `scripts/`, so none run at the same time.
-
-- [x] **M15.1 Context map in the design.** Add a "Bounded contexts" section to `docs/tech-design.md` with the table and dependency rules above. Rewrite the paths named in §1.2, §4.10, D-42 (schemas move to `src/server/<context>/schemas.ts`) and D-44. Update the Architecture section of `CLAUDE.md`. No code changes.
-  - Reads: design §1.2, §3.5, §4.10, D-42, D-44, D-45
-  - Needs: none
-  - Done: `grep -n "src/server/[a-z-]*\.ts" docs/tech-design.md CLAUDE.md` only shows paths inside a context or `shared/`
-- [x] **M15.2 shared/.** Move the infrastructure files to `src/server/shared/`. Add `shared/transaction.ts` with one `Transaction` and one `Executor` type, and delete the copies in the other files. Update `drizzle.config.ts`, `package.json` scripts, `scripts/*` and `vitest.config.ts`.
-  - Reads: `src/server/db.ts`, `drizzle.config.ts`, `vitest.config.ts`, `scripts/`
-  - Needs: M15.1
-  - Done: `npm run db:generate` reports no changes; `npm run db:seed` and `npm run worker` still start; the existing tests pass
-- [x] **M15.3 identity.** Move the identity files and the `account`, `invitation`, `member`, `password` and `profile` schemas into `src/server/identity/`. Add `index.ts`. Routes and other files import only from it.
-  - Reads: design §4.10 · `src/server/sessions.ts`, `src/server/members.ts`
-  - Needs: M15.2
-  - Done: no file outside `identity/` imports a file inside it other than `index.ts`; the existing tests pass
-- [x] **M15.4 notifications.** Move the notification files and `descriptions.ts` into `src/server/notifications/`, along with the `description` schema. Add `index.ts`. Update `scripts/worker.ts` and the `/health/worker` and `/webhooks/email` routes.
-  - Reads: design §1.4, §2.6, D-45
-  - Needs: M15.3
-  - Done: the same import check for `notifications/`; `npm run worker` still starts; the existing tests pass
-- [x] **M15.5 projects.** Move `projects.ts` and `labels.ts` with their schemas into `src/server/projects/`. Add `index.ts`, which exports `writableProject` for `issues` and `comments`.
-  - Reads: `src/server/projects.ts`, `src/server/labels.ts`
-  - Needs: M15.4
-  - Done: the same import check for `projects/`; the existing tests pass
-- [x] **M15.6 issues.** Move `issues.ts` and its schema into `src/server/issues/`, splitting it into `create.ts`, `update.ts`, `board.ts`, `list.ts` and `rows.ts` (lookups and mappers). `index.ts` exports the domain functions and, under public names, the lookups `comments` needs (`byIssueId`, `issueGone`). Merge the duplicate UUID check with the one in `identity/invitations.ts` into `shared/`.
-  - Reads: `src/server/issues.ts`, `src/server/comments.ts`
-  - Needs: M15.5
-  - Done: the same import check for `issues/`; no file in `issues/` is over 300 lines; the existing tests pass
-- [x] **M15.7 comments.** Move `comments.ts` and its schema into `src/server/comments/`, and add `index.ts`. It imports `issues` and `projects` only through their `index.ts` files.
-  - Reads: `src/server/comments.ts`
-  - Needs: M15.6
-  - Done: the same import check for `comments/`; the existing tests pass
-- [x] **M15.8 Architecture test.** Add `src/server/architecture.test.ts`. It reads every import under `src/server/`, `src/app/` and `scripts/` and fails when a file imports another context's file other than its `index.ts`, or when a dependency breaks the allowed directions. Delete the now-empty `src/schemas/`.
-  - Reads: this milestone's table · `src/repository.test.ts`
-  - Needs: M15.7
-  - Done: `M15: a context imports another only through its index.ts`; `M15: context dependencies follow the context map`; both fail on a deliberately added deep import (check once by hand, then undo)
-
-**Done when:** `src/server/` holds only the five context folders, `shared/` and `architecture.test.ts`. In `npm run dev` a member signs in, creates an issue, moves it on the board and comments with an @mention, and `npm run worker` delivers the mention to Mailpit.
-
-
-## M16 Domain model
-
-Take the M15 contexts from folders to boundaries the code can't cross by accident. Each context owns its tables; identifiers are typed values; each context's rules are pure functions apart from the database code; and contexts tell `notifications` what happened through events rather than calling it. Behaviour doesn't change, so the existing tests are the guard; new tests cover only the new pure functions and the architecture rules. No repositories over Drizzle, no CQRS, no event sourcing, no extra service layer: at this size they add code without solving a problem.
-
-| Context | Tables it owns |
-|---|---|
-| `identity` | members, invitations, password_reset_tokens, sessions, sign_in_attempts, password_reset_requests |
-| `projects` | project_keys, projects, labels |
-| `issues` | issues, issue_labels |
-| `comments` | comments |
-| `notifications` | mentions, notification_batches, notification_deliveries, notifications, worker_heartbeats |
-
-Only the owning context inserts, updates or deletes a table. Another context may read it in a join, through the table its owner exports from `index.ts`, because splitting every join into calls would cost queries for nothing at this size.
-
-**Run order:** M16.1 → M16.2 → M16.3 → M16.4 → M16.5 → M16.6. Each task touches every context, so none run at the same time.
-
-- [x] **M16.1 Domain model in the design.** Add to `docs/tech-design.md` §1.8: the table-ownership table and rule above; a glossary per context (the terms code, spec and UI share: member, invitation, project, key, label, issue, issue ID, status, priority, position, comment, mention, notification, batch, delivery); typed identifiers (M16.3); pure rules (M16.4, M16.5); domain events (M16.6), with the dependency map they lead to. Update the Bounded contexts paragraph of `CLAUDE.md`. No code changes.
-  - Reads: design §1.2, §1.4, §1.8, §2, §4.10 · spec glossary, if any
-  - Needs: M15.8
-  - Done: §1.8 holds all five parts; every glossary term matches the name used in `src/server/` and `src/contract/` (rename in the doc, not the code, where they differ)
-- [x] **M16.2 Tables per context.** Split `src/server/shared/schema.ts` into `<context>/tables.ts` per the table above; enums and shared column helpers stay in `shared/schema.ts`. Each context's `index.ts` exports its tables for read joins. Point `drizzle.config.ts` at all the files. Extend `src/server/architecture.test.ts`.
-  - Reads: design §1.8, §2 · `src/server/shared/schema.ts`, `drizzle.config.ts`, `src/server/architecture.test.ts`
-  - Needs: M16.1
-  - Done: `npm run db:generate` reports no changes; `M16: a context writes only its own tables` (an `insert`, `update` or `delete` on another context's table fails it; check once by hand); the existing tests pass
-- [x] **M16.3 Typed identifiers.** Branded types with one parse function each, made at the edge (the context's `schemas.ts`) and passed inward: `IssueId` (`WEB-42`) in `issues`, `ProjectKey` in `projects`, `Username` in `identity`, `RequestId` and `Uuid` in `shared/` (replacing `isUuid`). Domain functions take the branded types, so an unchecked string doesn't compile.
-  - Reads: design §3.1, D-42 · `src/server/shared/ids.ts`, each context's `schemas.ts`
-  - Needs: M16.2
-  - Done: one test per parse function covering its valid and invalid forms (named after the spec examples it closes, if any); no domain function under `src/server/` takes a plain `string` for these identifiers; the existing tests pass
-- [x] **M16.4 Issue rules.** Move the decisions in `issues/` that need no database into `issues/rules.ts` as pure functions over plain types: board positions, status and priority changes, label changes, what an edit may touch. `create.ts`, `update.ts` and `board.ts` become load → decide → write.
-  - Reads: spec REQ-016–REQ-028 · `src/server/issues/`
-  - Needs: M16.3
-  - Done: `issues/rules.test.ts` covers each rule without the database; any database test that only checked such a rule moves to it (test each rule once); no file in `issues/` over 300 lines; the existing tests pass
-- [x] **M16.5 Project, comment and identity rules.** The same split for the other contexts: archived-project and key rules in `projects/rules.ts`; edit/delete ownership and mention parsing in `comments/rules.ts` and `notifications/rules.ts`; last-admin, invitation and reset rules in `identity/rules.ts`. Permission checks stay `assertAdmin(actor)` first, as §4.10 says.
-  - Reads: design §4.10 · `src/server/projects/`, `src/server/comments/`, `src/server/identity/`, `src/server/notifications/descriptions.ts`
-  - Needs: M16.4
-  - Done: a `rules.test.ts` per context, as in M16.4; the existing tests pass
-- [x] **M16.6 Domain events.** Add `shared/events.ts` with a typed union of what happened (`IssueCreated`, `IssueAssigned`, `IssueStatusChanged`, `CommentPosted`, `MemberMentioned`, … one per notification kind the spec names). Contexts return or emit events inside their transaction; `notifications` subscribes and writes its rows in the same transaction (spec §12 still holds: action and notification commit together). No context but `notifications` imports `notifications` any more; update the context map in §1.8 and `architecture.test.ts`.
-  - Reads: spec §12 · design §1.4, §1.8, §2.6, D-45 · `src/server/notifications/notifications.ts`
-  - Needs: M16.5
-  - Done: `M16: an event and its notification rows commit or roll back together`; `M15: context dependencies follow the context map` passes with the new map; the existing notification tests pass unchanged
-
-**Done when:** every box above is ticked, and the M15 hand check still holds: in `npm run dev` a member signs in, creates an issue, moves it on the board and comments with an @mention, and `npm run worker` delivers the mention to Mailpit.
