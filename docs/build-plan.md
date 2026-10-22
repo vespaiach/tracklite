@@ -1,6 +1,6 @@
 # Tracklite: Build plan
 
-Milestones in build order for R1, each split into tasks small enough for one prompt. Behaviour comes from `docs/tracklite-spec.md` (v0.29); the technical design is in `docs/tech-design.md`, referred to below by section number (§).
+Milestones in build order for R1, each split into tasks small enough for one prompt. Behaviour comes from `docs/tracklite-spec.md` (v0.30); the technical design is in `docs/tech-design.md`, referred to below by section number (§).
 
 **Ground rules**
 - A task is done when the examples in its **Done** line have passing tests. Name each test after its example, such as `it("REQ-016.4: concurrent creates get distinct numbers")`, so `grep REQ-016` shows how a requirement is covered. `REQ-047.*` means every `Verify: auto` example of REQ-047.
@@ -408,26 +408,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
 
 ## M10 Operations
 
-**Run order:** M10.1 → **M10.2 ∥ M10.3 ∥ M10.4**. All three change the same VPS, so make each one's changes in its own script or config file.
-
-- [x] **M10.1 Server.** PostgreSQL; Caddy with TLS, HSTS, security headers, `X-Forwarded-For` and an access log without `token`; systemd units for web and worker; journald keeping 14 days; `/etc/tracklite/env` with secrets.
-  - Reads: design §1.1, §4.9 · spec SEC-005, OPS-006
-  - Needs: M9.2
-  - Done: the app serves over HTTPS; SEC-005.1 checked by hand
-- [x] **M10.2 Deploy and rollback.** One deploy command (migrate, then switch, keeping the previous release) and one rollback command.
-  - Reads: design §1.1 · spec OPS-002, OPS-004
-  - Needs: M10.1
-  - Done: a deploy from `main` and a rollback both work
-- [ ] **M10.3 Backups.** Daily at 03:00 UTC to storage off the VPS, keeping 14 copies. The scripts and timer are built (`ops/backup/`, `ops/README.md`); what's left is the restore check in Done.
-  - Reads: design §1.8, D-41 · spec OPS-003
-  - Needs: M10.1
-  - Done: a backup has been restored into a scratch database
-- [x] **M10.4 Monitoring and email domain.** External uptime check on `/health`; Resend domain set-up (SPF, DKIM, DMARC, the webhook).
-  - Reads: design §5.5 · spec OPS-005
-  - Needs: M10.1, M9.4
-  - Done: the uptime check alerts when the web service is stopped; a test email passes SPF and DKIM
-
-**Done when:** a deploy from `main` and a rollback both work, and a backup has been restored into a scratch database.
+Removed. Servers, the reverse proxy, deploys, rollbacks, backups and uptime monitoring are maintained outside this repository.
 
 ## M11 Launch check
 
@@ -455,7 +436,7 @@ Read the design with the DesignSync tool. Build the page from Track Lite compone
   - Done: `NFR-005: a 300-card column renders only the cards in view` (with element sizes mocked, far fewer than 300 cards are in the page); `NFR-005: moving a card in a 300-card column shows it in its new place before the save finishes`; the existing REQ-026 and NFR-005 Board tests pass unchanged; re-measured as in M11.2a, a move shows within 100 ms
 - [ ] **M11.3 Manual checks.** REQ-015.2, REQ-024.3, REQ-030.3, REQ-031.5, REQ-035.4, REQ-036.4, REQ-041.6, REQ-042.3, SEC-010.2.
 - [ ] **M11.4 Browsers and accessibility.** Browsers (NFR-006); keyboard pass and axe contrast scan (NFR-007).
-- [ ] **M11.5 Production checks.** SEC-005.1, SEC-007.2 and the `Verify: ops` examples of OPS-001…005 run on the production VPS; confirm the team's headcount against spec §3's assumptions, and check NFR-008 in Resend's delivery logs and the first month's bills against NFR-009.
+- [ ] **M11.5 Production checks.** SEC-005.1, SEC-007.2 and the `Verify: ops` examples of OPS-001 run against production; confirm the team's headcount against spec §3's assumptions, and check NFR-008 in Resend's delivery logs and the first month's bills against NFR-009.
 
 **Done when:** every box above is ticked. That's R1.
 
@@ -497,15 +478,15 @@ Every task in this milestone keeps behaviour as it is: the existing route tests 
   - Needs: M13.3
   - Done: the existing REQ-045.*, STD-6 and §1.4 worker tests pass; new tests: a delivery claimed by an expired lease is picked up again; one delivery that throws an unexpected error doesn't stop the others in the same pass, and gets a retry; a full batch is followed at once by another pass; nothing is held in an open transaction while the sender runs (a second connection can update the delivery row during a send); SIGTERM finishes the claimed deliveries
 - [x] **M13.3 Drop notification_emails.** Only after M13.1 is deployed and settled. One migration: copy any `notification_emails` rows without a batch (written by the previous release during the M13.1 deploy or after a rollback) into batches and email deliveries with the same ids, set `notifications.batch_id = email_id` where it's null, make `batch_id` not null, then drop `notifications.email_id`, `notification_emails` and `email_state`. Check the generated SQL: drizzle-kit puts the foreign key drop after `DROP TABLE … CASCADE`, so move it first.
-  - Reads: design §2.6 · runbook §1 (OPS-004)
+  - Reads: design §2.6
   - Needs: M13.1 (deployed)
   - Done: the migration test carries a leftover `notification_emails` row and its notification over; the table, column and enum are gone; every existing notification test passes
 - [x] **M13.4 Worker efficiency.** Drop checks loaded once per pass with a fixed number of queries; DATA-004 cleanup in chunks of 1,000 rows, each in its own transaction.
   - Reads: design §2.6 (drop checks), §2.7 · spec REQ-045, DATA-004
   - Needs: M13.2
   - Done: the existing drop-check tests (REQ-045.2…REQ-045.5, REQ-045.7 and the two REQ-045 drop tests) and DATA-004.* pass; new tests: a pass of 10 deliveries runs as many drop-check queries as a pass of 1; cleanup deletes more than one chunk's worth of rows
-- [x] **M13.5 Heartbeat, metrics and `/health/worker`.** The `worker_heartbeats` table, upserted with `now()` every pass; the once-a-minute `event: "worker"` log line; `GET /health/worker`. Update `ops/uptime/health-check.gs`, `ops/monitoring-and-email.md` and `ops/runbook.md` for the second uptime check; the runbook notes that a rollback to a release before this task makes `/health/worker` fail, because that worker writes no heartbeat.
-  - Reads: design §1.4, §2.6 (`worker_heartbeats`), §3.3 (Outside `/api`) · spec OPS-005, SEC-007 · `ops/monitoring-and-email.md`, `ops/runbook.md`, `ops/uptime/`
+- [x] **M13.5 Heartbeat, metrics and `/health/worker`.** The `worker_heartbeats` table, upserted with `now()` every pass; the once-a-minute `event: "worker"` log line; `GET /health/worker`.
+  - Reads: design §1.4, §2.6 (`worker_heartbeats`), §3.3 (Outside `/api`) · spec OPS-005, SEC-007
   - Needs: M13.2
   - Done: OPS-005.2…OPS-005.5, with tests that move stored timestamps into the past and never fake the clock; a test that the metrics line holds the counts and no recipient or text, and is written at most once a minute; OPS-005.6 checked by hand
 - [x] **M13.6 Notification stats API.** `notification_deliveries.state_changed_at` (set by the worker and the bounce webhook; existing rows backfilled by the migration); `GET /api/notification-stats` through `apiRoute("member", …)`, calling `notificationStats(actor)`, whose first statement is `assertAdmin(actor)`; the response type in `src/contract/`.

@@ -1,31 +1,30 @@
 # Tracklite: Technical design
 
-Companion to `docs/tracklite-spec.md` (v0.29). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
+Companion to `docs/tracklite-spec.md` (v0.30). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
 
 ## 1. Architecture
 
 ### 1.1 What runs where
 
 ```
-                       ┌──────────────────────────── VPS ────────────────────────────┐
- browser ──HTTPS──▶    │ Caddy ──▶ tracklite-web (next start)  ──┐                   │
-                       │                                         ├──▶ PostgreSQL 18  │
-                       │           tracklite-worker (node)  ─────┘                   │
-                       └──────────────┬──────────────────────────────┬───────────────┘
-                                      ▼                              ▼
-                           email provider HTTP API        off-VPS backup storage
- uptime checker ──GET /health, /health/worker──▶ (through Caddy)   (OPS-003)
- email provider ──POST /webhooks/email──▶ (through Caddy)
+ browser ──HTTPS──▶ reverse proxy ──▶ tracklite-web (next start)  ──┐
+                                                                     ├──▶ PostgreSQL 18
+                                    tracklite-worker (node)  ────────┘
+                                              │
+                                              ▼
+                                   email provider HTTP API
+ uptime checker ──GET /health, /health/worker──▶ (through the proxy)
+ email provider ──POST /webhooks/email──▶ (through the proxy)
 ```
 
-| Process | What it does | Managed by |
-|---|---|---|
-| **Caddy** | Gets and renews TLS certificates, redirects HTTP to HTTPS and sends HSTS (SEC-005). It also overwrites `X-Forwarded-For` with the client's address, and the app reads the rightmost entry for SEC-001's per-IP limit, so a client can't choose the address that limit counts. | systemd |
-| **tracklite-web** | `next start`: the single-page-app shell (1.7), `/api/…`, `/health`, `/health/worker`, `/webhooks/email`. | systemd, `Restart=always` |
-| **tracklite-worker** | A small Node entry point, `scripts/worker.ts`, run with `tsx` from the same codebase. It sends notification emails and runs cleanup (1.4). | systemd, `Restart=always` |
-| **PostgreSQL** | All state, including the notification queue. | systemd (`postgresql-18` from the PGDG apt repository) |
+Deployment (servers, the reverse proxy, process supervision, deploys, rollbacks, backups and log retention) is maintained outside this repository. The app expects the following from it.
 
-Using systemd for all four means no extra process manager. The app's and Caddy's logs go to journald, configured to keep 14 days; PostgreSQL's own log files are rotated by logrotate (OPS-006).
+| Process | What it does |
+|---|---|
+| **Reverse proxy** | Terminates TLS, redirects HTTP to HTTPS and sends HSTS and the 4.9 headers (SEC-005). It also overwrites `X-Forwarded-For` with the client's address, and the app reads the rightmost entry for SEC-001's per-IP limit, so a client can't choose the address that limit counts. Its access log drops the `token` query parameter (SEC-007). |
+| **tracklite-web** | `next start`: the single-page-app shell (1.7), `/api/…`, `/health`, `/health/worker`, `/webhooks/email`. Restarted if it exits. |
+| **tracklite-worker** | A small Node entry point, `scripts/worker.ts`, run with `tsx` from the same codebase. It sends notification emails and runs cleanup (1.4). Restarted if it exits. |
+| **PostgreSQL** | All state, including the notification queue. |
 
 ### 1.2 Request flow
 
@@ -61,11 +60,11 @@ Every expiry and time-window check uses the database's `now()` inside the query 
 
 How it meets DEC-004's requirements:
 
-- **Survives a restart.** The queue is the `notification_deliveries` table, so pending notifications survive a crash or deploy. systemd restarts the worker. A delivery claimed by the crashed process is picked up again by a later pass once its lease runs out, at most 2 minutes later.
-- **Same VPS, no paid queue.** It's Postgres plus one Node process.
+- **Survives a restart.** The queue is the `notification_deliveries` table, so pending notifications survive a crash or deploy, and the worker is restarted. A delivery claimed by the crashed process is picked up again by a later pass once its lease runs out, at most 2 minutes later.
+- **No paid queue.** It's Postgres plus one Node process.
 - **Delivered at least once.** If the worker dies after the provider accepted a message but before it was recorded, the delivery is sent again after its lease runs out. The same happens if a send outlasts its lease and another pass reclaims it. Both sends carry the delivery's `id` as Resend's `Idempotency-Key`, so Resend drops the duplicate (section 5).
 - **Safe to run twice.** `skip locked` and the lease mean a second worker, for example while a deploy is switching over, never claims a delivery whose lease is still running.
-- **Shutdown.** On `SIGTERM` or `SIGINT` the worker claims nothing more. It finishes and records the deliveries already claimed in the current pass, then exits. A sleep in progress ends at once. systemd allows 30 seconds (`TimeoutStopSec`), so a slow pass can be cut off; its deliveries come back when the lease runs out, as after a crash.
+- **Shutdown.** On `SIGTERM` or `SIGINT` the worker claims nothing more. It finishes and records the deliveries already claimed in the current pass, then exits. A sleep in progress ends at once. The process supervisor may cut off a slow pass; its deliveries come back when the lease runs out, as after a crash.
 
 ### 1.5 Emails sent during the request
 
@@ -77,12 +76,11 @@ All email goes through one `sendEmail()` (5.2).
 
 ### 1.6 Configuration
 
-- Settings come from environment variables: `.env.local` in development, and `/etc/tracklite/env` on the VPS (`root:deployer`, mode `640`, outside the release directory, OPS-006). The `deployer` account reads it to build and migrate; only root changes it.
+- Settings come from environment variables: `.env.local` in development, and the deployment's server config in production (OPS-006).
 - Both processes check them at startup and refuse to start if any are missing.
 - Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5). `MAILPIT_HOST` and `MAILPIT_PORT` are optional and default to `localhost` and `8025`.
 - `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.2).
 - Tests run against `TEST_DATABASE_URL`, which must differ from `DATABASE_URL`. Before each run its schema is dropped and the migrations applied afresh.
-- The backup (1.8) isn't part of the app. Its settings (`OWNER_EMAIL`, the age public key and the R2 token) live in `/etc/tracklite/backup.env` (`root:root`, mode `600`), which the `deployer` account can't read.
 
 ### 1.7 Browser app (single-page app)
 
@@ -123,10 +121,6 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 **Request IDs (STD-5).** A create form generates `crypto.randomUUID()` once, when the form opens or is reset, and reuses it for every retry of that submit.
 
 **Loading states (STD-7).** One shared hook shows the loading indicator only after a request has been pending for 300 ms.
-
-### 1.8 Backups (OPS-003)
-
-A systemd timer runs a daily `pg_dump`, encrypts it with `age` to a public key and uploads it with `rclone` to Cloudflare R2, keeping the newest 14 (OPS-003). The private age key is kept off the VPS, so neither the VPS nor the R2 token can read a backup. A failure triggers the unit's `OnFailure=`, which emails `OWNER_EMAIL` through Resend (OPS-003.3). R2's free tier holds 14 dumps at no cost (NFR-009). Set-up and restore steps are in `ops/README.md`.
 
 ## 2. Schema
 
@@ -355,8 +349,8 @@ Every response type, and the enum values both sides need, lives in `src/contract
 
 ### 4.1 Passwords (REQ-048, SEC-008)
 
-- **Hashing.** Argon2id via `@node-rs/argon2`, which ships prebuilt binaries, so nothing is compiled on the VPS.
-  - Settings: memory 19 MiB, 2 iterations, parallelism 1 (OWASP's baseline). That takes about 50 ms per hash on a small VPS.
+- **Hashing.** Argon2id via `@node-rs/argon2`, which ships prebuilt binaries, so nothing is compiled on the server.
+  - Settings: memory 19 MiB, 2 iterations, parallelism 1 (OWASP's baseline). That takes about 50 ms per hash on a small server.
   - The settings are stored inside each hash. When they change, a successful sign-in re-hashes the password with the new ones.
 - **Length rule.** 12 to 128 is counted in Unicode code points (`[...password].length`), not JavaScript string length. Otherwise an emoji would count as 2.
 - **No changes to the password.** No trimming and no Unicode normalisation (REQ-048.4): the exact bytes typed are what get hashed.
@@ -407,7 +401,7 @@ Anything else gets `403`. `SameSite=Lax` is a second layer of protection. Togeth
 **Reset request** (`POST /api/password-reset-links`): the same count against `password_reset_requests` (5 per email, 20 per IP), but **every** request is recorded, not just failures. The email is sent only if the address belongs to an active member.
 
 **Details:**
-- **IP address.** Taken from the rightmost `X-Forwarded-For` entry, which Caddy sets (1.1). In development without Caddy, it falls back to `127.0.0.1`.
+- **IP address.** Taken from the rightmost `X-Forwarded-For` entry, which the reverse proxy sets (1.1). In development without a proxy, it falls back to `127.0.0.1`.
 - **Races.** Two requests arriving at the same moment can both pass the count, so a limit can be exceeded by one. That's accepted rather than adding a lock.
 
 ### 4.6 Invitation and reset links
@@ -438,10 +432,10 @@ One module, `src/lib/markdown/`, used for both **rendering** in the browser and 
 
 ### 4.9 Response headers
 
-Caddy adds these to every response:
+The reverse proxy (1.1) adds these to every response:
 - `Strict-Transport-Security: max-age=31536000` (SEC-005)
 - `X-Content-Type-Options: nosniff`
-- `Referrer-Policy: no-referrer`, so no referrer goes to other sites (SEC-010) and a page address containing a token never reaches another site or an access log through the `Referer` header (SEC-007). `src/proxy.ts` sets it too on page requests, so pages keep it even without Caddy.
+- `Referrer-Policy: no-referrer`, so no referrer goes to other sites (SEC-010) and a page address containing a token never reaches another site or an access log through the `Referer` header (SEC-007). `src/proxy.ts` sets it too on page requests, so pages keep it even without the proxy.
 
 **Content Security Policy (SEC-010).** Next.js puts small inline scripts in every page, so the policy needs a fresh nonce per request. `src/proxy.ts` generates it and sets, on page requests only:
 
@@ -452,7 +446,7 @@ img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none
 
 In development `script-src` also gets `'unsafe-eval'`, which Next.js's dev tooling needs. Next.js reads the nonce from the request and adds it to its own scripts; the root layout awaits `connection()` so the shell is rendered per request. A nonce makes the shell render per request instead of being cached, which costs nothing here because there's one small shell.
 
-**Access logs (SEC-007).** Caddy's access log uses a `query` filter that deletes the `token` parameter, so `/invite` and `/reset-password` addresses are logged without it.
+**Access logs (SEC-007).** The reverse proxy's access log drops the `token` query parameter, so `/invite` and `/reset-password` addresses are logged without it.
 
 ### 4.10 Permissions (SEC-006, STD-2)
 
@@ -476,9 +470,9 @@ The route says who you are; the domain says what you may do (D-43). SEC-006's si
 |---|---|
 | HTTP API | `POST https://api.resend.com/emails`, called with plain `fetch`, with no SDK. |
 | Bounce webhooks, signed (API-003) | `email.bounced` events, signed with Svix-style HMAC headers (5.4). |
-| Fits NFR-009 (< $20/month in total) | The free plan, 3,000 emails/month and 100/day at the time of writing; check on sign-up. The VPS (~$6) plus the domain (~$1) leaves plenty of headroom. |
+| Fits NFR-009 (< $20/month in total) | The free plan, 3,000 emails/month and 100/day at the time of writing; check on sign-up. That leaves plenty of headroom for hosting. |
 | Team domain with SPF and DKIM | Verified sending domain (5.5). |
-| API key only in server config | `RESEND_API_KEY` in `/etc/tracklite/env` (1.6, OPS-006). |
+| API key only in server config | `RESEND_API_KEY` in server config (1.6, OPS-006). |
 
 Also useful: Resend accepts an `Idempotency-Key` header, which closes the duplicate-on-crash gap in 1.4.
 
@@ -492,7 +486,7 @@ Also useful: Resend accepts an `Idempotency-Key` header, which closes the duplic
 - **tests:** an in-memory outbox that tests can inspect, and make fail on demand (REQ-001.7, REQ-050 with the service down, the STD-6 retries).
 
 - **Plain text only.** No HTML templates. REQ-044 already asks for the excerpt "as plain text", text emails deliver well, and it's one template per email instead of two.
-- **From:** `EMAIL_FROM`, a bare address such as `notify@mail.example.com`. `deploy.sh` reads the env file with bash, which would take the `<…>` of a named address as a redirection.
+- **From:** `EMAIL_FROM`, a bare address such as `notify@mail.example.com`.
 - **Timeout:** 10 seconds (`AbortSignal.timeout`).
 - **How results are treated:**
   - any `2xx` is a success, and the response's `id` is stored as `provider_message_id`;
@@ -502,7 +496,7 @@ Also useful: Resend accepts an `Idempotency-Key` header, which closes the duplic
 
 ### 5.3 Email content
 
-The wording of every email the app sends is in the spec (§9, "Email content"). That's where to change it. The backup failure alert (OPS-003) is sent by `ops/backup/notify-failure.sh`, not the app, and its wording lives there. How the code builds each email:
+The wording of every email the app sends is in the spec (§9, "Email content"). That's where to change it. How the code builds each email:
 
 - **Templates.** One plain function per email type in `src/server/email/templates.ts`. Each takes the snapshot (2.6) or the token and returns `{ subject, text }`. Tests check each one against the spec's wording.
 - **Excerpts** are made with the shared Markdown module's text extraction (4.7), when the notification is created.
@@ -528,7 +522,7 @@ The wording of every email the app sends is in the spec (§9, "Email content"). 
 
 ### 5.5 Domain setup (one-time, before launch)
 
-Mail is sent from a subdomain, so the app's sending reputation is kept apart from the team's normal email. The SPF, DKIM and DMARC records and the webhook registration are in `ops/monitoring-and-email.md`.
+Mail is sent from a subdomain, so the app's sending reputation is kept apart from the team's normal email. The SPF, DKIM and DMARC records and the webhook registration are part of the deployment, outside this repository.
 
 ## 6. Screens
 
@@ -619,17 +613,14 @@ Only decisions with an alternative worth recording. Where the reason is already 
 | D-5 | `pg_trgm` + `ILIKE` per word | Postgres full-text search | The spec asks for substring matching (`"42"` → `WEB-42`, `"100%"`), which full-text search doesn't do. |
 | D-9 | Separate worker process polling Postgres with `skip locked` (DEC-004) | A timer inside the Next.js server; pg-boss or similar | A web restart can't interrupt sends, there's no new dependency, and the queue is just a table. |
 | D-10 | Strict single-page app: one HTML shell, all page data loaded through the API | Server-rendered pages | Owner's choice. Also gives one code path for permissions and tests. |
-| D-13 | Caddy as the reverse proxy | nginx | Automatic TLS and HSTS with a few lines of config. |
-| D-14 | systemd + journald for processes and logs | pm2; logrotate for the app's logs | Already on the VPS. Retention is one setting. |
 | D-26 | Nonce-based CSP set in `src/proxy.ts` (SEC-010) | A CSP without script rules | SEC-010 requires that only the app's own scripts run, and Next.js's inline scripts need a nonce for that. |
 | D-27 | React Router (data mode) inside the shell | Next.js routing; hand-rolled `pushState` | One HTML document for every route, plus `useBlocker` for REQ-035. |
-| D-32 | Resend (DEC-003) | Postmark, Amazon SES | Free plan fits NFR-009, signed webhooks, idempotency keys, simple domain setup. Postmark's paid plan (~$15) plus the VPS goes over the $20 budget, and its webhooks aren't signed. SES is cheapest at volume, but its bounces come through SNS, which needs an AWS account and much more setup for 15 people. |
+| D-32 | Resend (DEC-003) | Postmark, Amazon SES | Free plan fits NFR-009, signed webhooks, idempotency keys, simple domain setup. Postmark's paid plan (~$15) plus hosting goes over the $20 budget, and its webhooks aren't signed. SES is cheapest at volume, but its bounces come through SNS, which needs an AWS account and much more setup for 15 people. |
 | D-34 | `fetch` + hand-written signature check | Resend SDK, `svix` package | Two small functions instead of two dependencies. |
 | D-36 | React Aria `GridList` drag and drop | dnd-kit | Already in the stack, and accessible by keyboard and screen reader out of the box. Edge auto-scroll confirmed by the M5.1 spike (D-40). |
 | D-37 | New issue: title-only dialog, then go to the issue | A full create form | Matches REQ-016's flow ("enters a title"); everything else is edited on the issue page. |
 | D-39 | Track Lite design system, ported from its Claude Design project into `src/components/ui/track-lite/` | Hairline; a component library from npm | Made for this product. Fonts load through `next/font` and icons through `@phosphor-icons/react` instead of the project's CDN links, which the CSP (D-26) would block. |
 | D-40 | Keep D-36 with no fallback, after the M5.1 spike. Each column's body around its `GridList` is the scroll box, with `position: relative`; each card has a `<Button slot="drag">` | Writing our own edge auto-scroll; a separate drag library | Mouse drags across 5 columns, into an empty column (`onRootDrop`) and within a column (`onReorder`) all landed in the right place. Near a column's edge, the browser scrolls it natively, or React Aria's `useAutoScroll` does in Safari. Keyboard drags (Enter on the drag button, Tab between columns, arrows, Enter) work and are announced. Without `position: relative` on the scroll box, the hidden keyboard drop targets scroll the whole page instead of the column. Without the drag button, cards that open the issue on click can only be dragged with Alt+Enter. |
-| D-41 | Daily `pg_dump`, encrypted with `age` and copied to Cloudflare R2 with `rclone`, from a systemd timer | restic; Backblaze B2; a Hetzner Storage Box | Owner's choice. One plain encrypted file per day is easy to inspect and restore by hand, R2's free tier keeps the cost at zero (NFR-009), and the timer's `OnFailure=` gives the failure email with no extra service. |
 | D-42 | Valibot body schemas declared per route and run by `apiRoute`; schemas live in `src/schemas/` (one file per area, server-only), and the domain function takes their typed output | Hand-written `typeof` checks in each domain function; Zod; parsing at the start of each domain function; each schema in the domain module that uses it | One path turns invalid input into STD-3's `422`, domain functions get typed and already-trimmed input instead of `unknown`, and a malformed body stops being a `500`. The order of checks is in 4.10. A signed-out caller always gets `401` and learns nothing about the body; invalid input fails before the role check and any domain query. A signed-in member without the role who sends an invalid body therefore gets `422`, not `403`; the schema reveals only the request's shape, which the browser code already shows. Lengths count characters (code points) as the spec and Postgres do, not UTF-16 units. One folder puts every input rule in one place to read and review, and keeps the schemas apart from database code. |
 | D-43 | Routes only authenticate. Every domain function called from a signed-in route takes the member as `actor` first and owns every role and ownership check, with `assertAdmin` before any lookup (4.10) | `apiRoute("admin")` checking the role in the route; admin-only functions typed `actor: Admin`; an `adminOnly` wrapper | Reading a domain file must show its permission rules: with the role in the route, `createProject` looked open to anyone while `updateProject` checked. Typing `actor: Admin` would push the narrowing back into the route. A wrapper adds an abstraction for a one-line check. |
 | D-44 | Response types and enum values in a shared `src/contract/`; mapping functions return them | Types owned by the client and checked with `satisfies` in each route; one model shared by database, domain and API | A declared return type catches extra fields, which `satisfies` on a function call can't. One enum source keeps client lists complete. Rows and responses really differ (uuid vs `WEB-42`, `Date` vs ISO string, internal columns), so they stay separate types with a mapping between them. |
