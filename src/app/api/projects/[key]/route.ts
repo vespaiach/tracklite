@@ -1,7 +1,6 @@
 import type { Project } from "../../../../contract";
 import { apiRoute } from "../../../../server/shared/api-route";
-import { ProjectChanges } from "../../../../schemas/project";
-import { deleteProject, getProject, updateProject } from "../../../../server/projects";
+import { deleteProject, getProject, ProjectChanges, updateProject } from "../../../../server/projects";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]">) {
   const { key } = await params;

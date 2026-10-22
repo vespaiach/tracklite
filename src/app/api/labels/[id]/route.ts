@@ -1,7 +1,6 @@
 import type { Label } from "../../../../contract";
-import { LabelChanges } from "../../../../schemas/label";
+import { deleteLabel, LabelChanges, updateLabel } from "../../../../server/projects";
 import { apiRoute } from "../../../../server/shared/api-route";
-import { deleteLabel, updateLabel } from "../../../../server/labels";
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/labels/[id]">) {
   const { id } = await params;

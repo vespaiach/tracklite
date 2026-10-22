@@ -1,15 +1,16 @@
 import "server-only";
 import * as v from "valibot";
-import { maxCharacters } from "../server/shared/schemas";
-import { descriptionText, descriptionVersion } from "../server/notifications";
+import { labelColors } from "../../contract";
+import { descriptionText, descriptionVersion } from "../notifications";
+import { maxCharacters } from "../shared/schemas";
 
-const maxNameLength = 50;
+const maxProjectNameLength = 50;
 
 const projectName = v.pipe(
   v.string("Name required"),
   v.trim(),
   v.nonEmpty("Name required"),
-  maxCharacters(maxNameLength, `Too long (max ${maxNameLength})`),
+  maxCharacters(maxProjectNameLength, `Too long (max ${maxProjectNameLength})`),
 );
 
 export const NewProject = v.object({
@@ -56,3 +57,19 @@ export const ProjectChanges = v.pipe(
   ),
 );
 export type ProjectChanges = v.InferOutput<typeof ProjectChanges>;
+
+const maxLabelNameLength = 30;
+
+const labelName = v.pipe(
+  v.string("Name required"),
+  v.trim(),
+  v.nonEmpty("Name required"),
+  maxCharacters(maxLabelNameLength, `Too long (max ${maxLabelNameLength})`),
+);
+const color = v.picklist(labelColors, "Choose a color");
+
+export const NewLabel = v.object({ name: labelName, color });
+export type NewLabel = v.InferOutput<typeof NewLabel>;
+
+export const LabelChanges = v.object({ name: v.optional(labelName), color: v.optional(color) });
+export type LabelChanges = v.InferOutput<typeof LabelChanges>;
