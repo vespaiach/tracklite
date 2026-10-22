@@ -234,7 +234,7 @@ Only the owning context inserts, updates or deletes a table. Another context may
 
 **Run order:** M16.1 → M16.2 → M16.3 → M16.4 → M16.5 → M16.6. Each task touches every context, so none run at the same time.
 
-- [ ] **M16.1 Domain model in the design.** Add to `docs/tech-design.md` §1.8: the table-ownership table and rule above; a glossary per context (the terms code, spec and UI share: member, invitation, project, key, label, issue, issue ID, status, priority, position, comment, mention, notification, batch, delivery); typed identifiers (M16.3); pure rules (M16.4, M16.5); domain events (M16.6), with the dependency map they lead to. Update the Bounded contexts paragraph of `CLAUDE.md`. No code changes.
+- [x] **M16.1 Domain model in the design.** Add to `docs/tech-design.md` §1.8: the table-ownership table and rule above; a glossary per context (the terms code, spec and UI share: member, invitation, project, key, label, issue, issue ID, status, priority, position, comment, mention, notification, batch, delivery); typed identifiers (M16.3); pure rules (M16.4, M16.5); domain events (M16.6), with the dependency map they lead to. Update the Bounded contexts paragraph of `CLAUDE.md`. No code changes.
   - Reads: design §1.2, §1.4, §1.8, §2, §4.10 · spec glossary, if any
   - Needs: M15.8
   - Done: §1.8 holds all five parts; every glossary term matches the name used in `src/server/` and `src/contract/` (rename in the doc, not the code, where they differ)
