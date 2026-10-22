@@ -137,6 +137,51 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 
 **Allowed dependencies.** `comments` → `issues`, `projects`; `issues` → `projects`; every context → `identity`, `notifications`, `shared/`; `notifications` → `identity`, but `identity` depends only on `shared/`. No cycles. `shared/` holds no domain rules and is imported by file, not through an index; its one import of a context is `api-route.ts` taking `requireMember` from `identity`. `src/server/architecture.test.ts` fails on an import that reaches past another context's `index.ts` or breaks these directions. Within a context, files import each other freely. Test files (`*.test.ts`, `*.test.tsx`) and the helpers in `src/test/` also import other contexts only through their `index.ts`, but are exempt from the directions, because they build fixtures across contexts (the notification and worker tests create projects, issues and comments).
 
+**Table ownership.** Each context owns its tables. Only the owning context inserts, updates or deletes a table. Another context may read it in a join, through the table its owner exports from `index.ts`, because splitting every join into calls would cost queries for nothing at this size. Enums and shared column helpers stay in `shared/schema.ts`; each context's tables move to its `tables.ts` (M16.2).
+
+| Context | Tables it owns |
+|---|---|
+| `identity` | `members`, `invitations`, `password_reset_tokens`, `sessions`, `sign_in_attempts`, `password_reset_requests` |
+| `projects` | `project_keys`, `projects`, `labels` |
+| `issues` | `issues`, `issue_labels` |
+| `comments` | `comments` |
+| `notifications` | `mentions`, `notification_batches`, `notification_deliveries`, `notifications`, `worker_heartbeats` |
+
+**Glossary.** The words code, spec and UI share, by owning context. The code name is the table, type or column that holds the term in `src/server/` and `src/contract/`.
+
+| Context | Term | Meaning | Code name |
+|---|---|---|---|
+| `identity` | member | a person with an account; `role` is `admin` or `member` | `members`, `Member`, `MemberSummary`, `Me` |
+| `identity` | username | a member's lowercase handle, used in addresses and mentions | `username` |
+| `identity` | invitation | an admin's email invite; its state (Pending, Accepted, Revoked, Bounced, Expired) is derived (2.2) | `invitations`, `Invitation` |
+| `projects` | project | a named container for issues, possibly archived | `projects`, `Project`, `ProjectSummary`, `archivedAt` |
+| `projects` | key | a project's short uppercase code, reserved forever | `key`, `project_keys` |
+| `projects` | label | a coloured tag belonging to one project | `labels`, `Label`, `LabelColor` |
+| `issues` | issue | a unit of work in one project | `issues`, `Issue` |
+| `issues` | issue ID | the project key plus a number, `WEB-42`; the database `uuid` is never shown | `Issue.id`, `number` |
+| `issues` | status | where an issue is in the workflow; a board column | `status`, `IssueStatus` |
+| `issues` | priority | how urgent an issue is | `priority`, `IssuePriority` |
+| `issues` | position | an issue's sort key within its board column (2.4) | `position` |
+| `comments` | comment | a message on one issue or one project | `comments`, `ThreadComment` |
+| `notifications` | mention | an `@username` in a description or comment, mirrored as a row (2.5) | `mentions` |
+| `notifications` | notification | one thing to tell a member: `assigned` or `mentioned` | `notifications`, `notificationKind` |
+| `notifications` | batch | the notifications a recipient gets together about one target (2.6) | `notification_batches` |
+| `notifications` | delivery | one batch sent over one channel, with its state | `notification_deliveries`, `deliveryState`, `ProblemDelivery` |
+
+**Typed identifiers (M16.3).** Identifiers are branded types, each with one parse function, made at the edge (the context's `schemas.ts`) and passed inward: `IssueId` (`WEB-42`) in `issues`, `ProjectKey` in `projects`, `Username` in `identity`, `RequestId` and `Uuid` in `shared/` (replacing `isUuid` in `shared/ids.ts`). Domain functions take the branded types, so an unchecked string doesn't compile. Parsing normalises once (keys uppercase, usernames lowercase), so lookups ignore case without each query doing it.
+
+**Pure rules (M16.4, M16.5).** Each context keeps the decisions that need no database in its `rules.ts`, as pure functions over plain types, tested by its `rules.test.ts` without a database. A domain function reads as load → decide → write: load rows in its transaction, call the rules, write the result.
+- `issues/rules.ts`: board positions, status and priority changes, label changes, what an edit may touch.
+- `projects/rules.ts`: archived-project and key rules.
+- `comments/rules.ts`: edit and delete ownership. `notifications/rules.ts`: mention parsing (which members a text newly mentions).
+- `identity/rules.ts`: the last admin, invitation state and reset-link rules.
+
+Permission checks stay where 4.10 puts them: `assertAdmin(actor)` is still an admin-only function's first statement, before any load.
+
+**Domain events (M16.6).** `shared/events.ts` holds a typed union of what happened, one member per notification-causing fact the spec names (`IssueCreated`, `IssueAssigned`, `IssueStatusChanged`, `CommentPosted`, `MemberMentioned`, …), and a `publish(tx, events)` that hands them to the subscriber. A context publishes inside its own transaction; `notifications` subscribes from its `index.ts` and writes its rows (mentions, batches, deliveries, notifications) on the same `tx`, so the action and its notifications still commit or roll back together (spec §12). The entry points that run domain code (`shared/api-route.ts`, `scripts/`) import `notifications` once so the subscription is in place. No other context imports `notifications`.
+
+**Dependency map after M16.6.** `comments` → `issues`, `projects`; `issues` → `projects`; `notifications` → `comments`, `issues`, `projects` (reads for its drop checks and snapshots); every context → `identity`, `shared/`; `identity` → `shared/` only. No cycles. `shared/`'s imports of a context are `api-route.ts` taking `requireMember` from `identity` and importing `notifications` for its subscription. Until M16.6 lands, the directions in the paragraph above hold.
+
 ## 2. Schema
 
 PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). Tables, columns, constraints and indexes are in `src/server/shared/schema.ts`; `drizzle-kit generate` writes migrations to `migrations/`. This section records only why the schema is shaped as it is. Every table has a `uuid` id unless stated (`project_keys` is keyed by `key`, `issue_labels` by its pair), and every timestamp is `timestamptz` in UTC (DATA-003).

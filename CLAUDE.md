@@ -100,6 +100,8 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 - Each context has a public `index.ts`. Other contexts, routes and `scripts/` import a context only through it; `shared/` files are imported directly.
 - Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `projects`; every context → `identity`, `notifications`, `shared/`. No cycles.
 - A context's request schemas are in its `schemas.ts`; tests sit next to their source.
+- Each context owns its tables (§1.8 table): only the owner inserts, updates or deletes them; others may read them in joins through the owner's `index.ts`.
+- Domain model (§1.8, M16): identifiers are branded types parsed in `schemas.ts` (`IssueId`, `ProjectKey`, `Username`, `RequestId`, `Uuid`); decisions that need no database live in each context's `rules.ts` as pure functions (load → decide → write); contexts publish domain events from `shared/events.ts` inside their transaction and `notifications` subscribes, so after M16.6 no other context imports `notifications`. Use the §1.8 glossary's terms in code.
 
 **API conventions (§3.1).**
 - Issues are addressed by ID (`WEB-42`), projects by key, members by username, all matched ignoring case.
