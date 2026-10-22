@@ -1,6 +1,6 @@
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
-import { createFirstAdmin } from "../src/server/setup";
+import { createFirstAdmin } from "../src/server/identity";
 
 async function ask(question: string) {
   const prompt = createInterface({ input: stdin, output: stdout });

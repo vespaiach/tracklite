@@ -1,7 +1,6 @@
 import type { Me } from "../../../../contract";
 import { apiRoute } from "../../../../server/shared/api-route";
-import { MemberChanges } from "../../../../schemas/member";
-import { profileResponse, updateMember } from "../../../../server/members";
+import { MemberChanges, profileResponse, updateMember } from "../../../../server/identity";
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/members/[username]">) {
   const { username } = await params;

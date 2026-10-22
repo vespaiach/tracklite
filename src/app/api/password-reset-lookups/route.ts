@@ -1,6 +1,5 @@
-import { ResetLinkLookup } from "../../../schemas/account";
+import { checkResetLink, ResetLinkLookup } from "../../../server/identity";
 import { apiRoute } from "../../../server/shared/api-route";
-import { checkResetLink } from "../../../server/password-resets";
 
 export const POST = apiRoute("public", ResetLinkLookup, async (_request, { token }) => {
   await checkResetLink(token);

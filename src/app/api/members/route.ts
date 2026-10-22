@@ -1,10 +1,14 @@
 import type { Me, MemberSummary } from "../../../contract";
-import { InvitationAcceptance } from "../../../schemas/invitation";
+import {
+  acceptInvitation,
+  InvitationAcceptance,
+  listMembers,
+  profileResponse,
+  sessionCookie,
+  signedInMember,
+} from "../../../server/identity";
 import { ApiError } from "../../../server/shared/api-error";
 import { apiRoute } from "../../../server/shared/api-route";
-import { acceptInvitation } from "../../../server/invitations";
-import { listMembers, profileResponse } from "../../../server/members";
-import { sessionCookie, signedInMember } from "../../../server/sessions";
 
 export const GET = apiRoute("member", async (_request, member) =>
   Response.json((await listMembers(member)) satisfies (Me | MemberSummary)[]),

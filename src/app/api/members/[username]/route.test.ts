@@ -4,7 +4,7 @@ import { db } from "../../../../server/shared/db";
 import { outbox } from "../../../../server/shared/email/outbox";
 import { hashPassword } from "../../../../server/shared/passwords";
 import { members, sessions } from "../../../../server/shared/schema";
-import { createSession, type Member } from "../../../../server/sessions";
+import { createSession, type Member } from "../../../../server/identity";
 import { createMember } from "../../../../test/factories";
 import { jsonRequest, requestResetLink, resetTokenFor } from "../../../../test/reset-links";
 import { GET as getMe, PATCH as patchMe } from "../../me/route";

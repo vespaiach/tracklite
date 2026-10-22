@@ -21,11 +21,10 @@ import { ApiError } from "./shared/api-error";
 import { db } from "./shared/db";
 import type { Executor, Transaction } from "./shared/transaction";
 import { conflict, replaceMentions } from "./descriptions";
-import { memberSummary } from "./members";
+import { type Member, memberSummary } from "./identity";
 import { notify } from "./notifications";
 import { writableProject } from "./projects";
 import { issueLabels, issues, labels, members, mentions, projects } from "./shared/schema";
-import type { Member } from "./sessions";
 import type { IssueChange, IssueMove, NewIssue } from "../schemas/issue";
 import {
   type Board,

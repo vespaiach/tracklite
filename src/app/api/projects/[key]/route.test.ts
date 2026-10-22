@@ -12,7 +12,7 @@ import {
   projectKeys,
   projects,
 } from "../../../../server/shared/schema";
-import { createSession, type Member } from "../../../../server/sessions";
+import { createSession, type Member } from "../../../../server/identity";
 import { createMember, createNotificationBatch, createProject } from "../../../../test/factories";
 import { jsonRequest } from "../../../../test/reset-links";
 import { DELETE, GET, PATCH } from "./route";

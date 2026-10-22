@@ -1,8 +1,6 @@
 import type { Me } from "../../../contract";
-import { ProfileChanges } from "../../../schemas/profile";
+import { ProfileChanges, profileResponse, updateProfile } from "../../../server/identity";
 import { apiRoute } from "../../../server/shared/api-route";
-import { profileResponse } from "../../../server/members";
-import { updateProfile } from "../../../server/profile";
 
 export const GET = apiRoute("member", (_request, member) =>
   Response.json(profileResponse(member) satisfies Me),

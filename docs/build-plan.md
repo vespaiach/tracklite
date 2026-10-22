@@ -190,7 +190,7 @@ Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `project
   - Reads: `src/server/db.ts`, `drizzle.config.ts`, `vitest.config.ts`, `scripts/`
   - Needs: M15.1
   - Done: `npm run db:generate` reports no changes; `npm run db:seed` and `npm run worker` still start; the existing tests pass
-- [ ] **M15.3 identity.** Move the identity files and the `account`, `invitation`, `member`, `password` and `profile` schemas into `src/server/identity/`. Add `index.ts`. Routes and other files import only from it.
+- [x] **M15.3 identity.** Move the identity files and the `account`, `invitation`, `member`, `password` and `profile` schemas into `src/server/identity/`. Add `index.ts`. Routes and other files import only from it.
   - Reads: design §4.10 · `src/server/sessions.ts`, `src/server/members.ts`
   - Needs: M15.2
   - Done: no file outside `identity/` imports a file inside it other than `index.ts`; the existing tests pass
