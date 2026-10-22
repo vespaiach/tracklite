@@ -198,7 +198,7 @@ Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `project
   - Reads: design §1.4, §2.6, D-45
   - Needs: M15.3
   - Done: the same import check for `notifications/`; `npm run worker` still starts; the existing tests pass
-- [ ] **M15.5 projects.** Move `projects.ts` and `labels.ts` with their schemas into `src/server/projects/`. Add `index.ts`, which exports `writableProject` for `issues` and `comments`.
+- [x] **M15.5 projects.** Move `projects.ts` and `labels.ts` with their schemas into `src/server/projects/`. Add `index.ts`, which exports `writableProject` for `issues` and `comments`.
   - Reads: `src/server/projects.ts`, `src/server/labels.ts`
   - Needs: M15.4
   - Done: the same import check for `projects/`; the existing tests pass

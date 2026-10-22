@@ -1,9 +1,9 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { createMember, createProject } from "../test/factories";
-import { db } from "./shared/db";
+import { createMember, createProject } from "../../test/factories";
+import { db } from "../shared/db";
 import { createLabel } from "./labels";
-import { labels } from "./shared/schema";
+import { labels } from "../shared/schema";
 
 async function waitForLockWaiters(count: number) {
   for (;;) {
