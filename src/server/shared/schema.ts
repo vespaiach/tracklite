@@ -14,7 +14,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { issuePriorities, issueStatuses, labelColors, notificationChannels, roles } from "../contract";
+import { issuePriorities, issueStatuses, labelColors, notificationChannels, roles } from "../../contract";
 
 const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
 const byteOrderedText = customType<{ data: string }>({ dataType: () => 'text COLLATE "C"' });

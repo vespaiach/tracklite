@@ -1,19 +1,18 @@
 import "server-only";
 import { asc, eq, inArray, type SQL, sql } from "drizzle-orm";
-import { ApiError } from "./api-error";
-import { db } from "./db";
+import { ApiError } from "./shared/api-error";
+import { db } from "./shared/db";
+import type { Executor, Transaction } from "./shared/transaction";
 import { conflict, replaceMentions } from "./descriptions";
 import { byIssueId, issueGone, uuidPattern } from "./issues";
 import { memberSummary } from "./members";
 import { notify } from "./notifications";
 import { writableProject } from "./projects";
-import { comments, issues, members, mentions, projects } from "./schema";
+import { comments, issues, members, mentions, projects } from "./shared/schema";
 import type { Member } from "./sessions";
 import type { CommentEdit, NewComment } from "../schemas/comment";
 import type { ThreadComment } from "../contract";
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type Executor = typeof db | Transaction;
 type CommentParent = { issueId: string } | { projectId: string };
 
 function commentGone() {

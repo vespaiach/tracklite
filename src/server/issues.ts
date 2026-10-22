@@ -17,13 +17,14 @@ import {
 } from "drizzle-orm";
 import { alias, type PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { generateKeyBetween } from "fractional-indexing";
-import { ApiError } from "./api-error";
-import { db } from "./db";
+import { ApiError } from "./shared/api-error";
+import { db } from "./shared/db";
+import type { Executor, Transaction } from "./shared/transaction";
 import { conflict, replaceMentions } from "./descriptions";
 import { memberSummary } from "./members";
 import { notify } from "./notifications";
 import { writableProject } from "./projects";
-import { issueLabels, issues, labels, members, mentions, projects } from "./schema";
+import { issueLabels, issues, labels, members, mentions, projects } from "./shared/schema";
 import type { Member } from "./sessions";
 import type { IssueChange, IssueMove, NewIssue } from "../schemas/issue";
 import {
@@ -39,8 +40,6 @@ import {
   type MyIssueGroup,
 } from "../contract";
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type Executor = typeof db | Transaction;
 type IssueUpdate = PgUpdateSetSource<typeof issues>;
 type SortColumn = keyof typeof sortColumns;
 

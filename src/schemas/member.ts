@@ -1,7 +1,7 @@
 import "server-only";
 import * as v from "valibot";
 import { roles } from "../contract";
-import { emailAddress } from "./common";
+import { emailAddress } from "../server/shared/schemas";
 import { newPassword } from "./password";
 import { fullName, username } from "./profile";
 

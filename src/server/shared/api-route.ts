@@ -3,7 +3,7 @@ import * as v from "valibot";
 import { ApiError } from "./api-error";
 import { readConfig } from "./config";
 import { logRequest } from "./log";
-import { type Member, requireMember } from "./sessions";
+import { type Member, requireMember } from "../sessions";
 
 const writeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 

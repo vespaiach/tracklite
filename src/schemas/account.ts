@@ -1,6 +1,6 @@
 import "server-only";
 import * as v from "valibot";
-import { emailAddress, linkToken } from "./common";
+import { emailAddress, linkToken } from "../server/shared/schemas";
 import { newPassword } from "./password";
 
 export const SignIn = v.object({ email: emailAddress, password: v.string("Incorrect password") });

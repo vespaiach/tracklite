@@ -1,6 +1,6 @@
 import type { Issue, IssueListPage } from "../../../../../contract";
 import { NewIssue } from "../../../../../schemas/issue";
-import { apiRoute } from "../../../../../server/api-route";
+import { apiRoute } from "../../../../../server/shared/api-route";
 import { createIssue, listIssues } from "../../../../../server/issues";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]/issues">) {

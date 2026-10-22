@@ -4,10 +4,10 @@ import { expect, it } from "vitest";
 import { createIssue, createMember, createProject } from "../test/factories";
 import { moveIntoPast } from "../test/time";
 import { editComment, postIssueComment, postProjectComment } from "./comments";
-import { db } from "./db";
+import { db } from "./shared/db";
 import { updateIssue } from "./issues";
 import { updateProject } from "./projects";
-import { issues, members, notificationBatches, notificationDeliveries, notifications } from "./schema";
+import { issues, members, notificationBatches, notificationDeliveries, notifications } from "./shared/schema";
 import type { Member } from "./sessions";
 
 async function website() {

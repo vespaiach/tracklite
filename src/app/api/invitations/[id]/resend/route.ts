@@ -1,5 +1,5 @@
 import type { Invitation } from "../../../../../contract";
-import { apiRoute } from "../../../../../server/api-route";
+import { apiRoute } from "../../../../../server/shared/api-route";
 import { resendInvitation } from "../../../../../server/invitations";
 
 export async function POST(request: Request, { params }: RouteContext<"/api/invitations/[id]/resend">) {

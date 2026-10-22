@@ -1,6 +1,6 @@
 import "server-only";
 import * as v from "valibot";
-import { emailAddress, linkToken } from "./common";
+import { emailAddress, linkToken } from "../server/shared/schemas";
 import { newPassword } from "./password";
 import { fullName, username } from "./profile";
 

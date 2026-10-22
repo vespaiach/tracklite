@@ -1,6 +1,6 @@
 import type { Invitation } from "../../../contract";
 import { NewInvitation } from "../../../schemas/invitation";
-import { apiRoute } from "../../../server/api-route";
+import { apiRoute } from "../../../server/shared/api-route";
 import { createInvitation, listInvitations } from "../../../server/invitations";
 
 export const GET = apiRoute("member", async (_request, member) =>

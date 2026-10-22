@@ -1,5 +1,5 @@
 import type { Project } from "../../../../contract";
-import { apiRoute } from "../../../../server/api-route";
+import { apiRoute } from "../../../../server/shared/api-route";
 import { ProjectChanges } from "../../../../schemas/project";
 import { deleteProject, getProject, updateProject } from "../../../../server/projects";
 

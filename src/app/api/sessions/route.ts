@@ -1,6 +1,6 @@
 import { SignIn } from "../../../schemas/account";
-import { apiRoute } from "../../../server/api-route";
-import { clientIp } from "../../../server/limits";
+import { apiRoute } from "../../../server/shared/api-route";
+import { clientIp } from "../../../server/shared/limits";
 import { sessionCookie } from "../../../server/sessions";
 import { signIn } from "../../../server/sign-in";
 

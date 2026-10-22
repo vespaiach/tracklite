@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { eq, inArray, type SQL, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { createMember, createNotificationBatch } from "../test/factories";
+import { createMember, createNotificationBatch } from "../../test/factories";
 import { deleteExpiredRows } from "./cleanup";
 import { db } from "./db";
 import {

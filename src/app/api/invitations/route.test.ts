@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../server/db";
-import { outbox } from "../../../server/email/outbox";
-import { invitationEmail } from "../../../server/email/templates";
-import { invitations } from "../../../server/schema";
+import { db } from "../../../server/shared/db";
+import { outbox } from "../../../server/shared/email/outbox";
+import { invitationEmail } from "../../../server/shared/email/templates";
+import { invitations } from "../../../server/shared/schema";
 import { createMember } from "../../../test/factories";
 import {
   type InvitationBody,

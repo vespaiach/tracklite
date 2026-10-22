@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../../server/db";
-import { issueLabels, issues, labels } from "../../../../server/schema";
+import { db } from "../../../../server/shared/db";
+import { issueLabels, issues, labels } from "../../../../server/shared/schema";
 import { createSession } from "../../../../server/sessions";
 import { createIssue, createLabel, createMember, createProject } from "../../../../test/factories";
 import { jsonRequest } from "../../../../test/reset-links";

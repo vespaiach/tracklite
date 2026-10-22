@@ -3,11 +3,11 @@ import { randomUUID } from "node:crypto";
 import { asc, isNull, like } from "drizzle-orm";
 import { generateNKeysBetween } from "fractional-indexing";
 import { db } from "./db";
-import { issuePriorities, issueStatuses } from "../contract";
+import type { Transaction } from "./transaction";
+import { issuePriorities, issueStatuses } from "../../contract";
 import { comments, issues, members, projectKeys, projects } from "./schema";
 import { seedMembers } from "./seed";
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Person = { id: string };
 
 const projectCount = 50;

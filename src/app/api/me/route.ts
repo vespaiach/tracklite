@@ -1,6 +1,6 @@
 import type { Me } from "../../../contract";
 import { ProfileChanges } from "../../../schemas/profile";
-import { apiRoute } from "../../../server/api-route";
+import { apiRoute } from "../../../server/shared/api-route";
 import { profileResponse } from "../../../server/members";
 import { updateProfile } from "../../../server/profile";
 

@@ -186,7 +186,7 @@ Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `project
   - Reads: design §1.2, §3.5, §4.10, D-42, D-44, D-45
   - Needs: none
   - Done: `grep -n "src/server/[a-z-]*\.ts" docs/tech-design.md CLAUDE.md` only shows paths inside a context or `shared/`
-- [ ] **M15.2 shared/.** Move the infrastructure files to `src/server/shared/`. Add `shared/transaction.ts` with one `Transaction` and one `Executor` type, and delete the copies in the other files. Update `drizzle.config.ts`, `package.json` scripts, `scripts/*` and `vitest.config.ts`.
+- [x] **M15.2 shared/.** Move the infrastructure files to `src/server/shared/`. Add `shared/transaction.ts` with one `Transaction` and one `Executor` type, and delete the copies in the other files. Update `drizzle.config.ts`, `package.json` scripts, `scripts/*` and `vitest.config.ts`.
   - Reads: `src/server/db.ts`, `drizzle.config.ts`, `vitest.config.ts`, `scripts/`
   - Needs: M15.1
   - Done: `npm run db:generate` reports no changes; `npm run db:seed` and `npm run worker` still start; the existing tests pass

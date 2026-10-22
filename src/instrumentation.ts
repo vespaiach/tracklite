@@ -1,4 +1,4 @@
-import { readConfig } from "./server/config";
+import { readConfig } from "./server/shared/config";
 
 export function register() {
   readConfig();

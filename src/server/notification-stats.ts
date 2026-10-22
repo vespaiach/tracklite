@@ -6,7 +6,7 @@ import {
   notificationChannels,
   type ProblemDelivery,
 } from "../contract";
-import { db } from "./db";
+import { db } from "./shared/db";
 import { queueCounts } from "./notification-queue";
 import {
   members,
@@ -14,7 +14,7 @@ import {
   notificationDeliveries,
   notifications,
   workerHeartbeats,
-} from "./schema";
+} from "./shared/schema";
 import { assertAdmin, type Member } from "./sessions";
 
 type ProblemRow = Awaited<ReturnType<typeof problemRows>>[number];

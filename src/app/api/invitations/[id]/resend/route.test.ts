@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { outbox } from "../../../../../server/email/outbox";
-import { invitationEmail } from "../../../../../server/email/templates";
+import { outbox } from "../../../../../server/shared/email/outbox";
+import { invitationEmail } from "../../../../../server/shared/email/templates";
 import {
   type InvitationBody,
   invitedBy,

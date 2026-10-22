@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 import { afterEach, beforeEach, expect, it, type MockInstance, vi } from "vitest";
-import { createMember } from "../test/factories";
+import { createMember } from "../../test/factories";
 import { ApiError } from "./api-error";
 import { apiRoute } from "./api-route";
 import { db } from "./db";
 import { members } from "./schema";
-import { createSession } from "./sessions";
+import { createSession } from "../sessions";
 
 const appOrigin = "http://localhost:3000";
 let log: MockInstance<typeof console.log>;

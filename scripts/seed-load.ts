@@ -1,4 +1,4 @@
-import { seedLoadData } from "../src/server/seed-load";
+import { seedLoadData } from "../src/server/shared/seed-load";
 
 try {
   const { seeded } = await seedLoadData();

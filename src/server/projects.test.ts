@@ -1,9 +1,9 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createMember, createProject, uniqueProjectKey } from "../test/factories";
-import { db } from "./db";
+import { db } from "./shared/db";
 import { createProject as create, deleteProject, updateProject, writableProject } from "./projects";
-import { projects } from "./schema";
+import { projects } from "./shared/schema";
 
 const forbidden = { status: 403, message: "You don't have permission to do that." };
 

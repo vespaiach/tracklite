@@ -1,6 +1,6 @@
 import { PasswordChange } from "../../../../schemas/account";
-import { apiRoute } from "../../../../server/api-route";
-import { clientIp } from "../../../../server/limits";
+import { apiRoute } from "../../../../server/shared/api-route";
+import { clientIp } from "../../../../server/shared/limits";
 import { changePassword } from "../../../../server/profile";
 import { readSessionToken } from "../../../../server/sessions";
 

@@ -1,11 +1,10 @@
 import "server-only";
 import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { findMentions } from "../lib/markdown/parse";
-import { ApiError } from "./api-error";
-import type { db } from "./db";
-import { members, mentions } from "./schema";
+import { ApiError } from "./shared/api-error";
+import type { Transaction } from "./shared/transaction";
+import { members, mentions } from "./shared/schema";
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type MentionSource = { projectId: string } | { issueId: string } | { commentId: string };
 
 export async function conflict(tx: Transaction, editorId: string | null) {
