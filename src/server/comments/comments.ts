@@ -11,8 +11,9 @@ import { byProjectKey, type ProjectKey, writableProject, projects } from "../pro
 import { comments } from "./tables";
 import type { CommentEdit, NewComment } from "./schemas";
 import type { ThreadComment } from "../../contract";
+import { mayDeleteComment, parentOf } from "./rules";
 
-type CommentParent = { issueId: string } | { projectId: string };
+type CommentParent = ReturnType<typeof parentOf>;
 
 function commentGone() {
   return new ApiError(404, "This comment was deleted");
@@ -196,15 +197,11 @@ export async function editComment(actor: Member, id: Uuid | undefined, { body, v
   });
 }
 
-function parentOf(comment: typeof comments.$inferSelect): CommentParent {
-  return comment.issueId ? { issueId: comment.issueId } : { projectId: comment.projectId as string };
-}
-
 export async function deleteComment(actor: Member, id: Uuid | undefined) {
   await db.transaction(async (tx) => {
     const comment = await lockedComment(tx, id);
 
-    if (comment.authorId !== actor.id && actor.role !== "admin") throw notAllowed();
+    if (!mayDeleteComment(actor, comment.authorId)) throw notAllowed();
 
     await tx.delete(comments).where(eq(comments.id, comment.id));
   });

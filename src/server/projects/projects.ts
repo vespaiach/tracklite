@@ -6,6 +6,7 @@ import type { Executor, Transaction } from "../shared/transaction";
 import { conflict, notify, replaceMentions, mentions } from "../notifications";
 import { assertAdmin, type Member, memberSummary, members } from "../identity";
 import { projectKeys, projects } from "./tables";
+import { needsAdmin, renamesArchived } from "./rules";
 import type { NewProject, ProjectChanges, ProjectKey } from "./schemas";
 import type { Project, ProjectSummary } from "../../contract";
 
@@ -69,18 +70,17 @@ export async function createProject(actor: Member, { name, key }: NewProject) {
 }
 
 export async function updateProject(actor: Member, key: ProjectKey | undefined, changes: ProjectChanges) {
-  const { name, archived, description, descriptionVersion } = changes;
+  const { description, descriptionVersion } = changes;
   if (description !== undefined && descriptionVersion !== undefined)
     return saveDescription(actor, key, description, descriptionVersion);
 
-  if (name !== undefined || archived !== undefined) assertAdmin(actor);
+  if (needsAdmin(changes)) assertAdmin(actor);
 
   return db.transaction(async (tx) => {
     const [project] = await tx.select().from(projects).where(byProjectKey(key)).for("update");
     if (!project) throw new ApiError(404, "Not found");
 
-    if (name !== undefined && project.archivedAt !== null)
-      throw new ApiError(403, "This project is archived");
+    if (renamesArchived(project, changes)) throw new ApiError(403, "This project is archived");
 
     const update = nameAndArchiveUpdate(changes);
     if (Object.keys(update).length === 0) return projectResponse(tx, project);

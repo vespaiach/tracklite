@@ -7,6 +7,7 @@ import { db } from "../shared/db";
 import type { Transaction } from "../shared/transaction";
 import { members, sessions } from "./tables";
 import { assertAdmin, type Member } from "./sessions";
+import { isLastAdmin, mayLeaveNoAdmin } from "./rules";
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -63,9 +64,9 @@ async function keepLastAdmin(tx: Transaction, target: Member) {
     .from(members)
     .where(and(eq(members.role, "admin"), isNull(members.deactivatedAt)))
     .for("update");
-  if (activeAdmins.length === 1 && activeAdmins[0].id === target.id) {
-    throw new ApiError(422, "There must be at least one admin.");
-  }
+
+  const adminIds = activeAdmins.map((admin) => admin.id);
+  if (isLastAdmin(adminIds, target.id)) throw new ApiError(422, "There must be at least one admin.");
 }
 
 export async function updateMember(
@@ -78,7 +79,7 @@ export async function updateMember(
     const [target] = username ? await tx.select().from(members).where(eq(members.username, username)) : [];
     if (!target) throw new ApiError(404, "Not found");
 
-    if (role === "member" || deactivated === true) await keepLastAdmin(tx, target);
+    if (mayLeaveNoAdmin({ role, deactivated })) await keepLastAdmin(tx, target);
 
     const changes = roleAndActiveUpdate({ role, deactivated });
     if (Object.keys(changes).length === 0) return target;
