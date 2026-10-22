@@ -206,7 +206,7 @@ Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `project
   - Reads: `src/server/issues.ts`, `src/server/comments.ts`
   - Needs: M15.5
   - Done: the same import check for `issues/`; no file in `issues/` is over 300 lines; the existing tests pass
-- [ ] **M15.7 comments.** Move `comments.ts` and its schema into `src/server/comments/`, and add `index.ts`. It imports `issues` and `projects` only through their `index.ts` files.
+- [x] **M15.7 comments.** Move `comments.ts` and its schema into `src/server/comments/`, and add `index.ts`. It imports `issues` and `projects` only through their `index.ts` files.
   - Reads: `src/server/comments.ts`
   - Needs: M15.6
   - Done: the same import check for `comments/`; the existing tests pass

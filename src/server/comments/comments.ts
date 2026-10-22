@@ -1,16 +1,16 @@
 import "server-only";
 import { asc, eq, inArray, type SQL, sql } from "drizzle-orm";
-import { ApiError } from "./shared/api-error";
-import { db } from "./shared/db";
-import { isUuid } from "./shared/ids";
-import type { Executor, Transaction } from "./shared/transaction";
-import { conflict, notify, replaceMentions } from "./notifications";
-import { issueGoneError, issueIdCondition } from "./issues";
-import { type Member, memberSummary } from "./identity";
-import { writableProject } from "./projects";
-import { comments, issues, members, mentions, projects } from "./shared/schema";
-import type { CommentEdit, NewComment } from "../schemas/comment";
-import type { ThreadComment } from "../contract";
+import { ApiError } from "../shared/api-error";
+import { db } from "../shared/db";
+import { isUuid } from "../shared/ids";
+import type { Executor, Transaction } from "../shared/transaction";
+import { conflict, notify, replaceMentions } from "../notifications";
+import { issueGoneError, issueIdCondition } from "../issues";
+import { type Member, memberSummary } from "../identity";
+import { writableProject } from "../projects";
+import { comments, issues, members, mentions, projects } from "../shared/schema";
+import type { CommentEdit, NewComment } from "./schemas";
+import type { ThreadComment } from "../../contract";
 
 type CommentParent = { issueId: string } | { projectId: string };
 
