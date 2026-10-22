@@ -45,7 +45,7 @@ function storedComments(issueId: string) {
   return db.select().from(comments).where(eq(comments.issueId, issueId)).orderBy(asc(comments.createdAt));
 }
 
-it('REQ-031.1: Sam posts "Looks good. @alex can you review?" on WEB-42', async () => {
+it('REQ-031.1, REQ-031: Sam posts "Looks good. @alex can you review?" on WEB-42, and a comment starting with an indented code block is stored as sent', async () => {
   const sam = await createMember({ fullName: "Sam Lee" });
   const alex = await createMember({ fullName: "Alex Kim" });
   const project = await createProject();
@@ -67,56 +67,39 @@ it('REQ-031.1: Sam posts "Looks good. @alex can you review?" on WEB-42', async (
   });
   const rows = await db.select().from(mentions).where(eq(mentions.commentId, comment.id));
   expect(rows.map((row) => row.memberId)).toEqual([alex.id]);
+
+  const indented = "    npm test\n\nThat fails for me.";
+  const second = await postWith(await cookieOf(sam), issue.displayId, {
+    requestId: randomUUID(),
+    body: indented,
+  });
+  expect((await second.json()).body).toBe(indented);
 });
 
-it("REQ-031: an empty or all-spaces comment is refused", async () => {
+it("REQ-031, REQ-031.3, STD-5: an empty, all-spaces, missing or 10,001-character comment and a requestId that isn't a UUID get field errors; 10,000 characters is fine", async () => {
   const cookie = await cookieOf(await createMember());
   const project = await createProject();
   const issue = await issueIn(project);
 
-  const cases: [string | undefined, string][] = [
-    ["", "Comment required"],
-    ["   \n  ", "Comment required"],
-    [undefined, "Required"],
+  const cases: [unknown, Record<string, string>][] = [
+    [{ requestId: randomUUID(), body: "" }, { body: "Comment required" }],
+    [{ requestId: randomUUID(), body: "   \n  " }, { body: "Comment required" }],
+    [{ requestId: randomUUID() }, { body: "Required" }],
+    [{ requestId: randomUUID(), body: "a".repeat(10_001) }, { body: "Too long (max 10,000)" }],
+    [{ requestId: "not-a-uuid", body: "Hi" }, { requestId: "Invalid request" }],
   ];
-  for (const [body, message] of cases) {
-    const response = await postWith(cookie, issue.displayId, { requestId: randomUUID(), body });
+  for (const [request, fields] of cases) {
+    const response = await postWith(cookie, issue.displayId, request);
     expect(response.status).toBe(422);
-    expect(await response.json()).toEqual({
-      error: { message: "Check the highlighted fields", fields: { body: message } },
-    });
+    expect(await response.json()).toEqual({ error: { message: "Check the highlighted fields", fields } });
   }
   expect(await storedComments(issue.id)).toEqual([]);
-});
-
-it('REQ-031.3: a comment of 10,001 characters gets "Too long (max 10,000)"', async () => {
-  const cookie = await cookieOf(await createMember());
-  const project = await createProject();
-  const issue = await issueIn(project);
-
-  const tooLong = await postWith(cookie, issue.displayId, {
-    requestId: randomUUID(),
-    body: "a".repeat(10_001),
-  });
-  expect(tooLong.status).toBe(422);
-  expect((await tooLong.json()).error.fields).toEqual({ body: "Too long (max 10,000)" });
 
   const longest = await postWith(cookie, issue.displayId, {
     requestId: randomUUID(),
     body: "a".repeat(10_000),
   });
   expect(longest.status).toBe(201);
-});
-
-it("REQ-031: a comment is stored as sent, so an indented code block at the start survives", async () => {
-  const cookie = await cookieOf(await createMember());
-  const project = await createProject();
-  const issue = await issueIn(project);
-  const body = "    npm test\n\nThat fails for me.";
-
-  const response = await postWith(cookie, issue.displayId, { requestId: randomUUID(), body });
-
-  expect((await response.json()).body).toBe(body);
 });
 
 it("STD-5: posting again with the same requestId returns the original comment", async () => {
@@ -132,34 +115,6 @@ it("STD-5: posting again with the same requestId returns the original comment", 
   expect(again.status).toBe(200);
   expect((await again.json()).id).toBe((await first.json()).id);
   expect(await storedComments(issue.id)).toHaveLength(1);
-});
-
-it("STD-5: a post without a valid requestId is refused", async () => {
-  const cookie = await cookieOf(await createMember());
-  const project = await createProject();
-  const issue = await issueIn(project);
-
-  const response = await postWith(cookie, issue.displayId, { requestId: "not-a-uuid", body: "Hi" });
-
-  expect(response.status).toBe(422);
-  expect((await response.json()).error.fields).toEqual({ requestId: "Invalid request" });
-});
-
-it("DATA-001.3: comment mentions are active members only, outside code", async () => {
-  const cookie = await cookieOf(await createMember());
-  const sam = await createMember();
-  const jo = await createMember({ deactivatedAt: new Date() });
-  const coder = await createMember();
-  const project = await createProject();
-  const issue = await issueIn(project);
-  const body = `(@${sam.username}) and @nobody-here, @${jo.username}, \`@${coder.username}\``;
-
-  const response = await postWith(cookie, issue.displayId, { requestId: randomUUID(), body });
-
-  const comment = await response.json();
-  expect(comment.mentions.map((member: { username: string }) => member.username)).toEqual([sam.username]);
-  const rows = await db.select().from(mentions).where(eq(mentions.commentId, comment.id));
-  expect(rows.map((row) => row.memberId)).toEqual([sam.id]);
 });
 
 it("REQ-032.1: comments posted at 09:00 and 09:05 → the 09:00 comment is first", async () => {

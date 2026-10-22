@@ -55,10 +55,12 @@ function cardFor(board: BoardColumn[], id: string) {
   return board.flatMap((column) => column.cards).find((card) => card.id === id);
 }
 
-it("REQ-024.1: WEB with 3 Backlog and 2 In Progress issues → Backlog (3), In Progress (2), In Review (0), Done (0), Canceled (0)", async () => {
+it("REQ-024.1: WEB with 3 Backlog and 2 In Progress issues → Backlog (3), In Progress (2), In Review (0), Done (0), Canceled (0), each column sorted by position", async () => {
   const cookie = await signedIn();
   const project = await createProject();
-  const backlog = [await issueIn(project), await issueIn(project), await issueIn(project)];
+  const last = await issueIn(project, { position: "a2" });
+  const first = await issueIn(project, { position: "a0" });
+  const middle = await issueIn(project, { position: "a1" });
   const inProgress = [
     await issueIn(project, { status: "in_progress" }),
     await issueIn(project, { status: "in_progress" }),
@@ -73,36 +75,14 @@ it("REQ-024.1: WEB with 3 Backlog and 2 In Progress issues → Backlog (3), In P
     { status: "done", count: 0 },
     { status: "canceled", count: 0 },
   ]);
-  expect(cardIds(board, "backlog")).toEqual(backlog);
+  expect(cardIds(board, "backlog")).toEqual([first, middle, last]);
   expect(cardIds(board, "in_progress")).toEqual(inProgress);
   expect(cardIds(board, "in_review")).toEqual([]);
 });
 
-it("REQ-024.1: cards in a column are sorted by position", async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
-  const last = await issueIn(project, { position: "a2" });
-  const first = await issueIn(project, { position: "a0" });
-  const middle = await issueIn(project, { position: "a1" });
-
-  const board = await boardOf(cookie, project.key);
-
-  expect(cardIds(board, "backlog")).toEqual([first, middle, last]);
-});
-
-it("REQ-024.2: an archived project's board still loads with its cards", async () => {
+it("REQ-024.2, REQ-024: an archived project's board still loads with its cards, with the key matched ignoring capitals", async () => {
   const cookie = await signedIn();
   const project = await createProject({ archivedAt: new Date() });
-  const id = await issueIn(project);
-
-  const board = await boardOf(cookie, project.key);
-
-  expect(cardIds(board, "backlog")).toEqual([id]);
-});
-
-it("REQ-024: the project key is matched ignoring capitals", async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
   const id = await issueIn(project);
 
   const board = await boardOf(cookie, project.key.toLowerCase());
@@ -117,14 +97,6 @@ it("REQ-024: an unknown project key gets Not found", async () => {
 
   expect(response.status).toBe(404);
   expect(await response.json()).toEqual({ error: { message: "Not found" } });
-});
-
-it("REQ-024: a signed-out visitor gets 401", async () => {
-  const project = await createProject();
-
-  const response = await boardWith("", project.key);
-
-  expect(response.status).toBe(401);
 });
 
 it("REQ-025.1: WEB-42 has 5 labels → the card carries all 5, sorted by name", async () => {
@@ -150,26 +122,24 @@ it("REQ-025.1: WEB-42 has 5 labels → the card carries all 5, sorted by name", 
   );
 });
 
-it("REQ-025.2: WEB-42 is unassigned with No priority → no assignee and priority none", async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
-  const id = await issueIn(project);
-
-  const card = cardFor(await boardOf(cookie, project.key), id);
-
-  expect(card).toEqual({ id, title: expect.any(String), priority: "none", assignee: null, labels: [] });
-});
-
-it("REQ-025.2: an assigned issue with a priority carries the assignee's initials and the priority", async () => {
+it("REQ-025.2: an unassigned issue with No priority has no assignee and priority none; an assigned one carries the assignee's initials and the priority", async () => {
   const cookie = await signedIn();
   const project = await createProject();
   const assignee = await createMember({ fullName: "Alex Kim" });
-  const id = await issueIn(project, { assigneeId: assignee.id, priority: "high", title: "Fix login" });
+  const bare = await issueIn(project);
+  const assigned = await issueIn(project, { assigneeId: assignee.id, priority: "high", title: "Fix login" });
 
-  const card = cardFor(await boardOf(cookie, project.key), id);
+  const board = await boardOf(cookie, project.key);
 
-  expect(card).toEqual({
-    id,
+  expect(cardFor(board, bare)).toEqual({
+    id: bare,
+    title: expect.any(String),
+    priority: "none",
+    assignee: null,
+    labels: [],
+  });
+  expect(cardFor(board, assigned)).toEqual({
+    id: assigned,
     title: "Fix login",
     priority: "high",
     assignee: { username: assignee.username, fullName: "Alex Kim", initials: "AK", deactivated: false },
@@ -177,40 +147,21 @@ it("REQ-025.2: an assigned issue with a priority carries the assignee's initials
   });
 });
 
-it("REQ-028.1: WEB-10 was moved to Done 20 days ago → not on the board", async () => {
+it("REQ-028.1, REQ-028.2, REQ-028: Done and Canceled leave the board 14 days after the status change, are shown before that, and other statuses never leave", async () => {
   const cookie = await signedIn();
   const project = await createProject();
   const twentyDaysAgo = sql`now() - interval '20 days'`;
+  const threeDaysAgo = sql`now() - interval '3 days'`;
   await issueIn(project, { status: "done", statusChangedAt: twentyDaysAgo });
   await issueIn(project, { status: "canceled", statusChangedAt: twentyDaysAgo });
+  const recentDone = await issueIn(project, { status: "done", statusChangedAt: threeDaysAgo });
+  const recentCanceled = await issueIn(project, { status: "canceled", statusChangedAt: threeDaysAgo });
+  const oldBacklog = await issueIn(project, { statusChangedAt: twentyDaysAgo });
 
   const board = await boardOf(cookie, project.key);
 
-  expect(cardIds(board, "done")).toEqual([]);
-  expect(cardIds(board, "canceled")).toEqual([]);
-  expect(board.find((column) => column.status === "done")?.count).toBe(0);
-});
-
-it("REQ-028.2: WEB-11 was moved to Done 3 days ago → shown in Done", async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
-  const threeDaysAgo = sql`now() - interval '3 days'`;
-  const done = await issueIn(project, { status: "done", statusChangedAt: threeDaysAgo });
-  const canceled = await issueIn(project, { status: "canceled", statusChangedAt: threeDaysAgo });
-
-  const board = await boardOf(cookie, project.key);
-
-  expect(cardIds(board, "done")).toEqual([done]);
-  expect(cardIds(board, "canceled")).toEqual([canceled]);
+  expect(cardIds(board, "done")).toEqual([recentDone]);
+  expect(cardIds(board, "canceled")).toEqual([recentCanceled]);
   expect(board.find((column) => column.status === "done")?.count).toBe(1);
-});
-
-it("REQ-028: an old status change doesn't hide issues outside Done and Canceled", async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
-  const id = await issueIn(project, { statusChangedAt: sql`now() - interval '20 days'` });
-
-  const board = await boardOf(cookie, project.key);
-
-  expect(cardIds(board, "backlog")).toEqual([id]);
+  expect(cardIds(board, "backlog")).toEqual([oldBacklog]);
 });

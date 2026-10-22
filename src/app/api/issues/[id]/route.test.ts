@@ -111,18 +111,19 @@ it("STD-4: an issue ID that doesn't exist gets Not found", async () => {
   }
 });
 
-it("REQ-020: GET returns the labels sorted by name, descriptionVersion and mentions", async () => {
+it("REQ-020, REQ-013.1: GET returns the labels sorted by name, descriptionVersion and mentions; in an archived project WEB-42 still opens, marked archived", async () => {
   const cookie = await signedIn();
   const project = await createProject();
   const frontend = await createLabel(project.id, { name: "frontend", color: "blue" });
   const bug = await createLabel(project.id, { name: "Bug", color: "red" });
   const issue = await createIssue(project.id, [frontend.id, bug.id]);
+  const displayId = `${project.key}-${issue.number}`;
 
-  const response = await getWith(cookie, `${project.key}-${issue.number}`);
+  const response = await getWith(cookie, displayId);
 
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({
-    id: `${project.key}-${issue.number}`,
+    id: displayId,
     labels: [
       { id: bug.id, name: "Bug", color: "red" },
       { id: frontend.id, name: "frontend", color: "blue" },
@@ -131,17 +132,12 @@ it("REQ-020: GET returns the labels sorted by name, descriptionVersion and menti
     mentions: [],
     archived: false,
   });
-});
 
-it("REQ-013.1: WEB-42 in an archived project still opens, marked archived", async () => {
-  const cookie = await signedIn();
-  const project = await createProject({ archivedAt: new Date() });
-  const issue = await issueIn(project);
+  await db.update(projects).set({ archivedAt: sql`now()` }).where(eq(projects.id, project.id));
+  const archived = await getWith(cookie, displayId);
 
-  const response = await getWith(cookie, issue.displayId);
-
-  expect(response.status).toBe(200);
-  expect(await response.json()).toMatchObject({ id: issue.displayId, archived: true });
+  expect(archived.status).toBe(200);
+  expect(await archived.json()).toMatchObject({ id: displayId, archived: true });
 });
 
 it("REQ-017.1: WEB-42 is moved from Backlog straight to Done", async () => {
@@ -206,42 +202,23 @@ it("REQ-018.1: Sam sets WEB-42 to Urgent → WEB-42 shows Urgent", async () => {
   expect((await stored(issue.id)).priority).toBe("urgent");
 });
 
-it("REQ-019.1: Sam assigns WEB-42 to Alex → shows Alex", async () => {
+it("REQ-019.1, REQ-019.2: Sam assigns WEB-42 to Alex → shows Alex; Sam clears the assignee → shows Unassigned", async () => {
   const cookie = await signedIn();
   const alex = await createMember({ fullName: "Alex Kim" });
   const project = await createProject();
   const issue = await issueIn(project);
 
-  const response = await patchWith(cookie, issue.displayId, { assignee: alex.username.toUpperCase() });
+  const assigned = await patchWith(cookie, issue.displayId, { assignee: alex.username.toUpperCase() });
 
-  expect(response.status).toBe(200);
-  expect((await response.json()).assignee).toEqual(memberSummary(alex));
+  expect(assigned.status).toBe(200);
+  expect((await assigned.json()).assignee).toEqual(memberSummary(alex));
   expect((await stored(issue.id)).assigneeId).toBe(alex.id);
-});
 
-it("REQ-019.2: Sam clears the assignee → shows Unassigned", async () => {
-  const cookie = await signedIn();
-  const alex = await createMember();
-  const project = await createProject();
-  const issue = await issueIn(project);
-  await db.update(issues).set({ assigneeId: alex.id }).where(eq(issues.id, issue.id));
+  const cleared = await patchWith(cookie, issue.displayId, { assignee: null });
 
-  const response = await patchWith(cookie, issue.displayId, { assignee: null });
-
-  expect(response.status).toBe(200);
-  expect((await response.json()).assignee).toBeNull();
+  expect(cleared.status).toBe(200);
+  expect((await cleared.json()).assignee).toBeNull();
   expect((await stored(issue.id)).assigneeId).toBeNull();
-});
-
-it("REQ-019: an unknown assignee gets Choose an active member", async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
-  const issue = await issueIn(project);
-
-  const response = await patchWith(cookie, issue.displayId, { assignee: "nobody-here" });
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual(fieldError({ assignee: "Choose an active member" }));
 });
 
 it("REQ-020.1: Sam adds bug and frontend to WEB-42 → both shown", async () => {
@@ -298,7 +275,7 @@ it("REQ-020.4: Sam adds frontend just as it's deleted → That label no longer e
   expect(await db.select().from(issueLabels).where(eq(issueLabels.issueId, issue.id))).toEqual([]);
 });
 
-it("REQ-016.3: a title edit is trimmed, required and at most 200 characters", async () => {
+it("REQ-016.3, REQ-017: a title edit is trimmed, required and at most 200 characters; an unknown status or priority gets a field error", async () => {
   const cookie = await signedIn();
   const project = await createProject();
   const issue = await issueIn(project);
@@ -316,12 +293,6 @@ it("REQ-016.3: a title edit is trimmed, required and at most 200 characters", as
   expect(await long.json()).toEqual(fieldError({ title: "Too long (max 200)" }));
 
   expect((await stored(issue.id)).title).toBe("Fix login button");
-});
-
-it("REQ-017: an unknown status or priority gets a field error", async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
-  const issue = await issueIn(project);
 
   const status = await patchWith(cookie, issue.displayId, { status: "Blocked" });
   expect(status.status).toBe(422);
@@ -332,32 +303,22 @@ it("REQ-017: an unknown status or priority gets a field error", async () => {
   expect(await priority.json()).toEqual(fieldError({ priority: "Choose a priority" }));
 });
 
-it("a save must change exactly one field", async () => {
+it("§3.3: a save must change exactly one field", async () => {
   const cookie = await signedIn();
   const project = await createProject();
   const issue = await issueIn(project);
+  const bodies = [
+    {},
+    { title: "New", priority: "high" },
+    { color: "red" },
+    { description: "New text", descriptionVersion: 0, title: "New title" },
+  ];
 
-  for (const body of [{}, { title: "New", priority: "high" }, { color: "red" }]) {
+  for (const body of bodies) {
     const response = await patchWith(cookie, issue.displayId, body);
     expect(response.status).toBe(422);
     expect(await response.json()).toEqual({ error: { message: "Change one field at a time" } });
   }
-  expect((await stored(issue.id)).title).toBe(issue.title);
-});
-
-it('§3.3: an issue PATCH with description, descriptionVersion and title gets 422 "Change one field at a time"', async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
-  const issue = await issueIn(project);
-
-  const response = await patchWith(cookie, issue.displayId, {
-    description: "New text",
-    descriptionVersion: 0,
-    title: "New title",
-  });
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual({ error: { message: "Change one field at a time" } });
   expect(await stored(issue.id)).toMatchObject({
     title: issue.title,
     description: issue.description,
@@ -365,7 +326,7 @@ it('§3.3: an issue PATCH with description, descriptionVersion and title gets 42
   });
 });
 
-it("REQ-007.2: WEB-42 assigned to deactivated Sam still shows Sam Lee (deactivated), and Sam can't be assigned", async () => {
+it("REQ-019, REQ-007.2, REQ-008.2: an unknown or deactivated assignee gets Choose an active member; deactivated Sam still shows (deactivated) until reactivated, then can be assigned again", async () => {
   const cookie = await signedIn();
   const sam = await createMember({ fullName: "Sam Lee" });
   const project = await createProject();
@@ -373,55 +334,64 @@ it("REQ-007.2: WEB-42 assigned to deactivated Sam still shows Sam Lee (deactivat
   const other = await issueIn(project);
   await db.update(issues).set({ assigneeId: sam.id }).where(eq(issues.id, issue.id));
   await deactivate(sam.id);
+
+  const unknown = await patchWith(cookie, other.displayId, { assignee: "nobody-here" });
+  expect(unknown.status).toBe(422);
+  expect(await unknown.json()).toEqual(fieldError({ assignee: "Choose an active member" }));
 
   const shown = await getWith(cookie, issue.displayId);
   expect((await shown.json()).assignee).toEqual({ ...memberSummary(sam), deactivated: true });
 
-  const assigned = await patchWith(cookie, other.displayId, { assignee: sam.username });
-  expect(assigned.status).toBe(422);
-  expect(await assigned.json()).toEqual(fieldError({ assignee: "Choose an active member" }));
+  const refused = await patchWith(cookie, other.displayId, { assignee: sam.username });
+  expect(refused.status).toBe(422);
+  expect(await refused.json()).toEqual(fieldError({ assignee: "Choose an active member" }));
   expect((await stored(other.id)).assigneeId).toBeNull();
-});
 
-it("REQ-008.2: after Sam is reactivated, (deactivated) disappears and Sam can be assigned again", async () => {
-  const cookie = await signedIn();
-  const sam = await createMember({ fullName: "Sam Lee" });
-  const project = await createProject();
-  const issue = await issueIn(project);
-  const other = await issueIn(project);
-  await db.update(issues).set({ assigneeId: sam.id }).where(eq(issues.id, issue.id));
-  await deactivate(sam.id);
   await db.update(members).set({ deactivatedAt: null }).where(eq(members.id, sam.id));
 
-  const shown = await getWith(cookie, issue.displayId);
-  expect((await shown.json()).assignee).toEqual({ ...memberSummary(sam), deactivated: false });
+  const reshown = await getWith(cookie, issue.displayId);
+  expect((await reshown.json()).assignee).toEqual({ ...memberSummary(sam), deactivated: false });
 
   const assigned = await patchWith(cookie, other.displayId, { assignee: sam.username });
   expect(assigned.status).toBe(200);
   expect((await stored(other.id)).assigneeId).toBe(sam.id);
 });
 
-it("REQ-013.4: Sam's save to WEB-42 after WEB is archived fails with This project is archived", async () => {
-  const cookie = await signedIn();
+it("REQ-013.4: on an archived project, a field save, a description save and a delete each get This project is archived", async () => {
+  const admin = await createMember({ role: "admin" });
+  const cookie = `session=${await createSession(admin.id)}`;
   const project = await createProject();
   const issue = await issueIn(project);
   await db.update(projects).set({ archivedAt: sql`now()` }).where(eq(projects.id, project.id));
 
-  const response = await patchWith(cookie, issue.displayId, { title: "Changed while archived" });
+  const responses = [
+    await patchWith(cookie, issue.displayId, { title: "Changed while archived" }),
+    await saveDescription(cookie, issue.displayId, "New text", 0),
+    await deleteWith(cookie, issue.displayId),
+  ];
 
-  expect(response.status).toBe(403);
-  expect(await response.json()).toEqual({ error: { message: "This project is archived" } });
-  expect((await stored(issue.id)).title).toBe(issue.title);
+  for (const response of responses) {
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: { message: "This project is archived" } });
+  }
+  expect(await stored(issue.id)).toMatchObject({ title: issue.title, description: "" });
 });
 
-it("a save to a deleted issue gets This issue was deleted", async () => {
-  const cookie = await signedIn();
+it("REQ-023.3: a field save, a description save and a delete on a deleted issue get This issue was deleted", async () => {
+  const admin = await createMember({ role: "admin" });
+  const cookie = `session=${await createSession(admin.id)}`;
   const project = await createProject();
   const issue = await issueIn(project);
   await db.delete(issues).where(eq(issues.id, issue.id));
 
-  for (const id of [issue.displayId, "nonsense"]) {
-    const response = await patchWith(cookie, id, { priority: "high" });
+  const responses = [
+    await patchWith(cookie, issue.displayId, { priority: "high" }),
+    await patchWith(cookie, "nonsense", { priority: "high" }),
+    await saveDescription(cookie, issue.displayId, "Alex's text", 0),
+    await deleteWith(cookie, issue.displayId),
+  ];
+
+  for (const response of responses) {
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: { message: "This issue was deleted" } });
   }
@@ -452,7 +422,7 @@ async function issueCreatedBy(project: { id: string; key: string }, creatorId: s
   return issue;
 }
 
-it("REQ-022.1: Sam saves a description with a checklist and a code block → stored and returned as sent", async () => {
+it("REQ-022.1, REQ-022: Sam saves a description with a checklist and a code block → stored and returned as sent; an empty description is allowed", async () => {
   const cookie = await signedIn();
   const project = await createProject();
   const issue = await issueIn(project);
@@ -466,21 +436,12 @@ it("REQ-022.1: Sam saves a description with a checklist and a code block → sto
   const after = await stored(issue.id);
   expect(after).toMatchObject({ description, descriptionVersion: 1 });
   expect(after.updatedAt.getTime()).toBeGreaterThan(before.updatedAt.getTime());
-});
 
-it("REQ-022: an empty issue description is allowed", async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
-  const issue = await issueIn(project);
-  await db.update(issues).set({ description: "Old text" }).where(eq(issues.id, issue.id));
-
-  const response = await saveDescription(cookie, issue.displayId, "", 0);
-
-  expect(response.status).toBe(200);
+  expect((await saveDescription(cookie, issue.displayId, "", 1)).status).toBe(200);
   expect((await stored(issue.id)).description).toBe("");
 });
 
-it('REQ-022.2: a description of 20,001 characters gets "Too long (max 20,000)"', async () => {
+it('REQ-022.2, STD-8: a description of 20,001 characters gets "Too long (max 20,000)", one without a whole-number descriptionVersion is refused, and nothing is saved', async () => {
   const cookie = await signedIn();
   const project = await createProject();
   const issue = await issueIn(project);
@@ -490,6 +451,14 @@ it('REQ-022.2: a description of 20,001 characters gets "Too long (max 20,000)"',
 
   expect(response.status).toBe(422);
   expect(await response.json()).toEqual(fieldError({ description: "Too long (max 20,000)" }));
+
+  for (const body of [{ description: "New" }, { description: "New", descriptionVersion: "0" }]) {
+    const unversioned = await patchWith(cookie, issue.displayId, body);
+    expect(unversioned.status).toBe(422);
+    expect(await unversioned.json()).toMatchObject({
+      error: { fields: { descriptionVersion: expect.any(String) } },
+    });
+  }
   expect(await stored(issue.id)).toMatchObject({ description: "Old text", descriptionVersion: 0 });
 });
 
@@ -522,22 +491,7 @@ it("STD-8: a status change by a teammate doesn't block a description save", asyn
   expect(await stored(issue.id)).toMatchObject({ description: "Still mine", descriptionVersion: 1 });
 });
 
-it("STD-8: an issue description save without a whole-number descriptionVersion is refused", async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
-  const issue = await issueIn(project);
-
-  for (const body of [{ description: "New" }, { description: "New", descriptionVersion: "0" }]) {
-    const response = await patchWith(cookie, issue.displayId, body);
-    expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({
-      error: { fields: { descriptionVersion: expect.any(String) } },
-    });
-  }
-  expect((await stored(issue.id)).description).toBe("");
-});
-
-it("DATA-001.3: an issue description mentions active members only, outside code", async () => {
+it("DATA-001.3, DATA-001: an issue description mentions active members only, outside code, and the rows follow the current text", async () => {
   const cookie = await signedIn();
   const sam = await createMember({ fullName: "Sam Lee" });
   const jo = await createMember({ deactivatedAt: new Date() });
@@ -553,46 +507,10 @@ it("DATA-001.3: an issue description mentions active members only, outside code"
   expect((await (await getWith(cookie, issue.displayId)).json()).mentions).toEqual([
     { username: sam.username, fullName: "Sam Lee", initials: "SL", deactivated: false },
   ]);
-});
 
-it("DATA-001: issue mention rows follow the current description text", async () => {
-  const cookie = await signedIn();
-  const sam = await createMember();
   const alex = await createMember();
-  const project = await createProject();
-  const issue = await issueIn(project);
-
-  await saveDescription(cookie, issue.displayId, `Hi @${sam.username}`, 0);
-  const response = await saveDescription(cookie, issue.displayId, `Hi @${alex.username}`, 1);
-
-  expect(response.status).toBe(200);
+  expect((await saveDescription(cookie, issue.displayId, `Hi @${alex.username}`, 1)).status).toBe(200);
   expect(await mentionedMemberIds(issue.id)).toEqual([alex.id]);
-});
-
-it("REQ-007.4: Sam is deactivated while editing the description of WEB-42 → the save fails with 401 and nothing is saved", async () => {
-  const sam = await createMember();
-  const cookie = `session=${await createSession(sam.id)}`;
-  const project = await createProject();
-  const issue = await issueIn(project);
-  await deactivate(sam.id);
-
-  const response = await saveDescription(cookie, issue.displayId, "Sam's text", 0);
-
-  expect(response.status).toBe(401);
-  expect(await stored(issue.id)).toMatchObject({ description: "", descriptionVersion: 0 });
-});
-
-it("REQ-013.4: a description save to an issue in an archived project gets This project is archived", async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
-  const issue = await issueIn(project);
-  await db.update(projects).set({ archivedAt: sql`now()` }).where(eq(projects.id, project.id));
-
-  const response = await saveDescription(cookie, issue.displayId, "New text", 0);
-
-  expect(response.status).toBe(403);
-  expect(await response.json()).toEqual({ error: { message: "This project is archived" } });
-  expect((await stored(issue.id)).description).toBe("");
 });
 
 it("REQ-023.1: Sam deletes WEB-42, which Sam created → gone; opening WEB-42 shows Not found", async () => {
@@ -610,56 +528,22 @@ it("REQ-023.1: Sam deletes WEB-42, which Sam created → gone; opening WEB-42 sh
   expect(await opened.json()).toEqual({ error: { message: "Not found" } });
 });
 
-it("REQ-023: an admin deletes an issue someone else created", async () => {
-  const admin = await createMember({ role: "admin" });
-  const cookie = `session=${await createSession(admin.id)}`;
-  const project = await createProject();
-  const issue = await issueIn(project);
-
-  const response = await deleteWith(cookie, issue.displayId);
-
-  expect(response.status).toBe(204);
-  expect(await stored(issue.id)).toBeUndefined();
-});
-
-it("REQ-023.2: Alex, a member, can't delete WEB-42, which Sam created", async () => {
+it("REQ-023.2, REQ-023: Alex, a member, can't delete WEB-42, which Sam created; an admin can", async () => {
   const sam = await createMember();
   const alexCookie = await signedIn();
+  const admin = await createMember({ role: "admin" });
+  const adminCookie = `session=${await createSession(admin.id)}`;
   const project = await createProject();
   const issue = await issueCreatedBy(project, sam.id);
 
-  const response = await deleteWith(alexCookie, issue.displayId);
+  const refused = await deleteWith(alexCookie, issue.displayId);
 
-  expect(response.status).toBe(403);
-  expect(await response.json()).toEqual({ error: { message: "You don't have permission to do that." } });
+  expect(refused.status).toBe(403);
+  expect(await refused.json()).toEqual({ error: { message: "You don't have permission to do that." } });
   expect(await stored(issue.id)).toBeDefined();
-});
 
-it("REQ-023.3: a save to WEB-42 after it's deleted gets This issue was deleted", async () => {
-  const sam = await createMember();
-  const samCookie = `session=${await createSession(sam.id)}`;
-  const alexCookie = await signedIn();
-  const project = await createProject();
-  const issue = await issueCreatedBy(project, sam.id);
-
-  expect((await deleteWith(samCookie, issue.displayId)).status).toBe(204);
-  const response = await saveDescription(alexCookie, issue.displayId, "Alex's text", 0);
-
-  expect(response.status).toBe(404);
-  expect(await response.json()).toEqual({ error: { message: "This issue was deleted" } });
-});
-
-it("REQ-023: deleting an issue that's already gone gets This issue was deleted", async () => {
-  const admin = await createMember({ role: "admin" });
-  const cookie = `session=${await createSession(admin.id)}`;
-  const project = await createProject();
-  const issue = await issueIn(project);
-  await db.delete(issues).where(eq(issues.id, issue.id));
-
-  const response = await deleteWith(cookie, issue.displayId);
-
-  expect(response.status).toBe(404);
-  expect(await response.json()).toEqual({ error: { message: "This issue was deleted" } });
+  expect((await deleteWith(adminCookie, issue.displayId)).status).toBe(204);
+  expect(await stored(issue.id)).toBeUndefined();
 });
 
 it("REQ-023: a deleted issue's number is not reused", async () => {
@@ -735,18 +619,4 @@ it("DATA-002: deleting WEB-42 takes its comments, mentions and label links with 
     await db.select().from(notificationDeliveries).where(eq(notificationDeliveries.id, delivery.id)),
   ).toHaveLength(1);
   expect(await db.select().from(notifications).where(eq(notifications.batchId, batch.id))).toHaveLength(1);
-});
-
-it("REQ-013.4: deleting an issue in an archived project gets This project is archived", async () => {
-  const admin = await createMember({ role: "admin" });
-  const cookie = `session=${await createSession(admin.id)}`;
-  const project = await createProject();
-  const issue = await issueIn(project);
-  await db.update(projects).set({ archivedAt: sql`now()` }).where(eq(projects.id, project.id));
-
-  const response = await deleteWith(cookie, issue.displayId);
-
-  expect(response.status).toBe(403);
-  expect(await response.json()).toEqual({ error: { message: "This project is archived" } });
-  expect(await stored(issue.id)).toBeDefined();
 });

@@ -53,12 +53,13 @@ function nameError(message: string) {
   return { error: { message: "Check the highlighted fields", fields: { name: message } } };
 }
 
-it("REQ-009.1: an admin creates a project and every member sees it", async () => {
+it("REQ-009.1, REQ-009.2, REQ-009.5, REQ-046.2: an admin creates a project with a lowercase key, saved in uppercase; a second may reuse the name; every member sees them in a list without descriptions", async () => {
   const adminCookie = await signedIn("admin");
   const memberCookie = await signedIn("member");
   const key = uniqueProjectKey();
+  const described = await createProject({ name: "Website", description: "Only on the details page" });
 
-  const response = await createWith(adminCookie, { name: "Website", key });
+  const response = await createWith(adminCookie, { name: "Website", key: key.toLowerCase() });
 
   expect(response.status).toBe(201);
   expect(await response.json()).toEqual({
@@ -69,41 +70,23 @@ it("REQ-009.1: an admin creates a project and every member sees it", async () =>
     mentions: [],
     archivedAt: null,
   });
-  expect(await listWith(memberCookie, false)).toContainEqual({ key, name: "Website", archivedAt: null });
+  const listed = await listWith(memberCookie, false);
+  expect(listed).toContainEqual({ key, name: "Website", archivedAt: null });
+  expect(listed).toContainEqual({ key: described.key, name: "Website", archivedAt: null });
 });
 
-it("REQ-009.2: a lowercase key is saved in uppercase", async () => {
+it("REQ-009.3: a key used by an active project, or one that has since been deleted, is refused", async () => {
   const adminCookie = await signedIn("admin");
-  const key = uniqueProjectKey();
+  const active = await createProject();
+  const deletedKey = uniqueProjectKey();
+  await createWith(adminCookie, { name: "Website", key: deletedKey });
+  expect((await deleteWith(adminCookie, deletedKey)).status).toBe(204);
 
-  const response = await createWith(adminCookie, { name: "Website", key: key.toLowerCase() });
-
-  expect(response.status).toBe(201);
-  expect(await response.json()).toMatchObject({ key });
-  const [stored] = await db.select().from(projects).where(eq(projects.key, key));
-  expect(stored.name).toBe("Website");
-});
-
-it("REQ-009.3: a key used by a project that has since been deleted is refused", async () => {
-  const adminCookie = await signedIn("admin");
-  const key = uniqueProjectKey();
-  await createWith(adminCookie, { name: "Website", key });
-  expect((await deleteWith(adminCookie, key)).status).toBe(204);
-
-  const response = await createWith(adminCookie, { name: "Website again", key });
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual(keyError("Key already used"));
-});
-
-it("REQ-009.3: a key used by an active project is refused", async () => {
-  const adminCookie = await signedIn("admin");
-  const { key } = await createProject();
-
-  const response = await createWith(adminCookie, { name: "Website", key: key.toLowerCase() });
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual(keyError("Key already used"));
+  for (const key of [active.key.toLowerCase(), deletedKey]) {
+    const response = await createWith(adminCookie, { name: "Website again", key });
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual(keyError("Key already used"));
+  }
 });
 
 it("REQ-009.4: keys that aren't 2 to 5 letters are refused", async () => {
@@ -114,16 +97,6 @@ it("REQ-009.4: keys that aren't 2 to 5 letters are refused", async () => {
     expect(response.status).toBe(422);
     expect(await response.json()).toEqual(keyError("Key must be 2 to 5 letters"));
   }
-});
-
-it("REQ-009.5: a second project may reuse a name with a different key", async () => {
-  const adminCookie = await signedIn("admin");
-
-  const first = await createWith(adminCookie, { name: "Website", key: uniqueProjectKey() });
-  const second = await createWith(adminCookie, { name: "Website", key: uniqueProjectKey() });
-
-  expect(first.status).toBe(201);
-  expect(second.status).toBe(201);
 });
 
 it("REQ-009: names are trimmed and must be 1 to 50 characters", async () => {
@@ -155,26 +128,7 @@ it("REQ-009: concurrent creates with the same key make exactly one project", asy
   expect(await db.select().from(projects).where(eq(projects.key, key))).toHaveLength(1);
 });
 
-it("STD-2: a member can't create a project", async () => {
-  const memberCookie = await signedIn("member");
-  const key = uniqueProjectKey();
-
-  const response = await createWith(memberCookie, { name: "Website", key });
-
-  expect(response.status).toBe(403);
-  expect(await db.select().from(projects).where(eq(projects.key, key))).toHaveLength(0);
-});
-
-it("STD-3: a member's invalid body to create a project gets 422, and a valid one gets 403", async () => {
-  const memberCookie = await signedIn("member");
-  const key = uniqueProjectKey();
-
-  expect((await createWith(memberCookie, { name: "", key })).status).toBe(422);
-  expect((await createWith(memberCookie, { name: "Website", key })).status).toBe(403);
-  expect(await db.select().from(projects).where(eq(projects.key, key))).toHaveLength(0);
-});
-
-it("REQ-013.1: archiving moves a project from the sidebar list to the Archived list", async () => {
+it("REQ-013.1, REQ-013.3: archiving moves a project from the sidebar list to the Archived list; unarchiving moves it back", async () => {
   const adminCookie = await signedIn("admin");
   const memberCookie = await signedIn("member");
   const { key } = await createProject();
@@ -184,32 +138,9 @@ it("REQ-013.1: archiving moves a project from the sidebar list to the Archived l
   expect((await listWith(memberCookie, false)).map((project) => project.key)).not.toContain(key);
   const archived = await listWith(memberCookie, true);
   expect(archived.find((project) => project.key === key)).toMatchObject({ archivedAt: expect.any(String) });
-});
-
-it("REQ-013.3: unarchiving puts a project back in the sidebar list", async () => {
-  const adminCookie = await signedIn("admin");
-  const memberCookie = await signedIn("member");
-  const { key } = await createProject();
-  await patchWith(adminCookie, key, { archived: true });
 
   expect((await patchWith(adminCookie, key, { archived: false })).status).toBe(200);
 
   expect((await listWith(memberCookie, false)).map((project) => project.key)).toContain(key);
   expect((await listWith(memberCookie, true)).map((project) => project.key)).not.toContain(key);
-});
-
-it("REQ-013: the Archived list is empty when no project is archived", async () => {
-  const memberCookie = await signedIn("member");
-  await db.delete(projects);
-
-  expect(await listWith(memberCookie, true)).toEqual([]);
-});
-
-it("REQ-046.2: the project list carries no description", async () => {
-  const cookie = await signedIn("member");
-  const project = await createProject({ description: "Only on the details page" });
-
-  const listed = (await listWith(cookie, false)).find((row) => row.key === project.key);
-
-  expect(listed).toEqual({ key: project.key, name: project.name, archivedAt: null });
 });

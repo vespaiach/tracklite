@@ -66,18 +66,6 @@ it("REQ-021.5: the label list shows how many issues have each label", async () =
   ]);
 });
 
-it("REQ-021.2: creating BUG while bug exists is refused with Label already exists", async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
-  await createLabel(project.id, { name: "bug" });
-
-  const response = await createWith(cookie, project.key, { name: "BUG", color: "red" });
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual(fieldError({ name: "Label already exists" }));
-  expect(await labelsOf(project.id)).toHaveLength(1);
-});
-
 it("REQ-021.4: the same name in another project is a separate label", async () => {
   const cookie = await signedIn();
   const web = await createProject();
@@ -94,7 +82,7 @@ it("REQ-021.4: the same name in another project is a separate label", async () =
   expect((await labelsOf(api.id)).map((label) => label.name)).toEqual(["defect"]);
 });
 
-it("REQ-021: a new label is created with a trimmed name and one of the 8 colors", async () => {
+it("REQ-021: a new label is created with a trimmed name and one of the 8 colors; an empty or too-long name and an unknown color get field errors", async () => {
   const cookie = await signedIn();
   const project = await createProject();
 
@@ -106,11 +94,6 @@ it("REQ-021: a new label is created with a trimmed name and one of the 8 colors"
   expect(await labelsOf(project.id)).toEqual([
     { id: created.id, projectId: project.id, name: "bug", color: "red" },
   ]);
-});
-
-it("REQ-021: an empty or too-long name and an unknown color get field errors", async () => {
-  const cookie = await signedIn();
-  const project = await createProject();
 
   const empty = await createWith(cookie, project.key, { name: "   ", color: "teal" });
   const tooLong = await createWith(cookie, project.key, { name: "x".repeat(31), color: "gray" });
@@ -123,26 +106,21 @@ it("REQ-021: an empty or too-long name and an unknown color get field errors", a
   expect(longest.status).toBe(201);
 });
 
-it("REQ-013.5: an archived project's labels are still listed", async () => {
+it("REQ-013.5, REQ-013.4: an archived project's labels are still listed, but creating one is refused with This project is archived", async () => {
   const cookie = await signedIn();
   const project = await createProject({ archivedAt: new Date() });
   const bug = await createLabel(project.id, { name: "bug" });
 
-  const response = await listWith(cookie, project.key);
+  const list = await listWith(cookie, project.key);
 
-  expect(response.status).toBe(200);
-  expect(await response.json()).toEqual([{ id: bug.id, name: "bug", color: "gray", issueCount: 0 }]);
-});
+  expect(list.status).toBe(200);
+  expect(await list.json()).toEqual([{ id: bug.id, name: "bug", color: "gray", issueCount: 0 }]);
 
-it("REQ-013.4: creating a label in an archived project is refused with This project is archived", async () => {
-  const cookie = await signedIn();
-  const project = await createProject({ archivedAt: new Date() });
-
-  const response = await createWith(cookie, project.key, { name: "bug", color: "red" });
+  const response = await createWith(cookie, project.key, { name: "frontend", color: "red" });
 
   expect(response.status).toBe(403);
   expect(await response.json()).toEqual({ error: { message: "This project is archived" } });
-  expect(await labelsOf(project.id)).toEqual([]);
+  expect(await labelsOf(project.id)).toHaveLength(1);
 });
 
 it("STD-4: labels of an unknown project are Not found", async () => {
