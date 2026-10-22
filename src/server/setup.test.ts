@@ -26,11 +26,16 @@ async function memberCount() {
   return db.$count(members);
 }
 
-it("OPS-001.1: on a fresh install the admin is created and can sign in", async () => {
-  await createFirstAdmin(admin);
+it('OPS-001.1, REQ-003.1: on a fresh install the admin is created, with username "Sam" saved as "sam", and can sign in', async () => {
+  await createFirstAdmin({ ...admin, username: "Sam" });
 
   const [stored] = await db.select().from(members);
-  expect(stored).toMatchObject({ email: admin.email, fullName: admin.fullName, role: "admin" });
+  expect(stored).toMatchObject({
+    email: admin.email,
+    fullName: admin.fullName,
+    username: "sam",
+    role: "admin",
+  });
   const response = await signIn(
     jsonRequest("POST", "/api/sessions", { email: admin.email, password: admin.password }),
   );
@@ -46,19 +51,14 @@ it('OPS-001.2: when members exist it refuses with "Setup already done"', async (
   expect(await memberCount()).toBe(1);
 });
 
-it('REQ-003.1: username "Sam" is saved as "sam"', async () => {
-  await createFirstAdmin({ ...admin, username: "Sam" });
-
-  const [stored] = await db.select().from(members);
-  expect(stored.username).toBe("sam");
-});
-
-it.each([
-  [{ fullName: "   " }, "Name required"],
-  [{ username: "s" }, "Use 2 to 20 letters, digits or hyphens"],
-  [{ username: "sam_rivera" }, "Use 2 to 20 letters, digits or hyphens"],
-  [{ password: "Sh0rt!pass" }, "At least 12 characters"],
-])("OPS-001: %o is refused with %s", async (change, message) => {
-  await expect(createFirstAdmin({ ...admin, ...change })).rejects.toThrow(message);
+it("OPS-001: a blank name, a bad username or a short password is refused and nothing is saved", async () => {
+  for (const [change, message] of [
+    [{ fullName: "   " }, "Name required"],
+    [{ username: "s" }, "Use 2 to 20 letters, digits or hyphens"],
+    [{ username: "sam_rivera" }, "Use 2 to 20 letters, digits or hyphens"],
+    [{ password: "Sh0rt!pass" }, "At least 12 characters"],
+  ] as const) {
+    await expect(createFirstAdmin({ ...admin, ...change })).rejects.toThrow(message);
+  }
   expect(await memberCount()).toBe(0);
 });

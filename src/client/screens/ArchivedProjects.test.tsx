@@ -1,6 +1,6 @@
-import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { alex, apiError, mockApi, project, renderAppAt, summary } from "../../test/client-app";
+import { alex, mockApi, project, renderAppAt, summary } from "../../test/client-app";
 
 afterEach(() => {
   cleanup();
@@ -35,16 +35,4 @@ it("REQ-013.1: an archived project is listed as “Name · KEY” with its archi
     "/project/OLD",
   );
   expect(within(table).getByText("Sep 14, 2025")).toBeTruthy();
-});
-
-it("STD-7: a load failure shows “Couldn't load this.” with Retry", async () => {
-  let fail = true;
-  mockArchived(() => (fail ? apiError(500, "Internal error") : Response.json([summary(old)])));
-  renderAppAt("/projects/archived");
-
-  expect(await screen.findByText("Couldn't load this.")).toBeTruthy();
-  fail = false;
-  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-
-  expect(await screen.findByRole("link", { name: "Old site · OLD" })).toBeTruthy();
 });

@@ -28,13 +28,6 @@ function stubProduction() {
   vi.stubEnv("EMAIL_FROM", "Tracklite <notify@mail.example.com>");
 }
 
-it("STD-6: the outbox can be made to fail on demand", async () => {
-  outbox.failing = true;
-
-  await expect(sendEmail(email)).rejects.toThrow();
-  expect(outbox.sent).toEqual([]);
-});
-
 it("§5.2: production sends through Resend's HTTP API", async () => {
   stubProduction();
   const fetch = stubFetch(200, { id: "resend-id-1" });

@@ -4,57 +4,36 @@ import { Field, Input } from "./Field";
 
 afterEach(cleanup);
 
-it("links the label to the control", () => {
-  render(<Field label="Email">{(props) => <Input {...props} />}</Field>);
-  expect(screen.getByLabelText("Email").tagName).toBe("INPUT");
-});
+const help = "12 to 128 characters. Spaces count.";
 
-it("marks the control invalid and describes it with the error", () => {
-  render(
+it("Field: help, then error, then neither, sets aria-invalid and aria-describedby, and an error replaces the help", () => {
+  const { rerender } = render(
     <Field
-      label="Email"
-      error="Enter an email address">
+      label="New password"
+      help={help}>
       {(props) => <Input {...props} />}
     </Field>,
   );
-  const input = screen.getByLabelText("Email");
-  expect(input.getAttribute("aria-invalid")).toBe("true");
-  const errorId = input.getAttribute("aria-describedby") ?? "";
-  expect(document.getElementById(errorId)?.textContent).toContain("Enter an email address");
-});
+  const input = () => screen.getByLabelText("New password");
+  expect(input().tagName).toBe("INPUT");
+  const helpId = input().getAttribute("aria-describedby") ?? "";
+  expect(document.getElementById(helpId)?.textContent).toBe(help);
+  expect(input().hasAttribute("aria-invalid")).toBe(false);
 
-it("leaves a valid control unflagged", () => {
-  render(<Field label="Email">{(props) => <Input {...props} />}</Field>);
-  const input = screen.getByLabelText("Email");
-  expect(input.hasAttribute("aria-invalid")).toBe(false);
-  expect(input.hasAttribute("aria-describedby")).toBe(false);
-});
-
-it("Field: help text shows under the control and is linked by aria-describedby", () => {
-  render(
+  rerender(
     <Field
       label="New password"
-      help="12 to 128 characters. Spaces count.">
-      {(props) => <Input {...props} />}
-    </Field>,
-  );
-  const input = screen.getByLabelText("New password");
-  const helpId = input.getAttribute("aria-describedby") ?? "";
-  expect(document.getElementById(helpId)?.textContent).toBe("12 to 128 characters. Spaces count.");
-  expect(input.hasAttribute("aria-invalid")).toBe(false);
-});
-
-it("Field: an error replaces the help text", () => {
-  render(
-    <Field
-      label="New password"
-      help="12 to 128 characters. Spaces count."
+      help={help}
       error="At least 12 characters">
       {(props) => <Input {...props} />}
     </Field>,
   );
-  const input = screen.getByLabelText("New password");
-  const describedBy = input.getAttribute("aria-describedby") ?? "";
-  expect(document.getElementById(describedBy)?.textContent).toContain("At least 12 characters");
-  expect(screen.queryByText("12 to 128 characters. Spaces count.")).toBeNull();
+  expect(input().getAttribute("aria-invalid")).toBe("true");
+  const errorId = input().getAttribute("aria-describedby") ?? "";
+  expect(document.getElementById(errorId)?.textContent).toContain("At least 12 characters");
+  expect(screen.queryByText(help)).toBeNull();
+
+  rerender(<Field label="New password">{(props) => <Input {...props} />}</Field>);
+  expect(input().hasAttribute("aria-invalid")).toBe(false);
+  expect(input().hasAttribute("aria-describedby")).toBe(false);
 });

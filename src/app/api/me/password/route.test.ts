@@ -52,17 +52,20 @@ it("REQ-049.1: the right current password and a valid new one are saved; this se
   expect(await signInStatus(sam.email, newPassword)).toBe(204);
 });
 
-it('REQ-049.2: a wrong current password gets "Incorrect password" and the old password still works', async () => {
+it('REQ-049.2, REQ-048: a wrong current password gets "Incorrect password", a new one that is too short gets "At least 12 characters", and the old password still works', async () => {
   const { sam, cookie } = await signedInSam();
 
-  const response = await changePassword(cookie, "not my password at all");
+  const wrongCurrent = await changePassword(cookie, "not my password at all");
+  const tooShort = await changePassword(cookie, oldPassword, "Sh0rt!pass");
 
-  expect(response.status).toBe(422);
-  expect((await response.json()).error.fields).toEqual({ currentPassword: "Incorrect password" });
+  expect(wrongCurrent.status).toBe(422);
+  expect((await wrongCurrent.json()).error.fields).toEqual({ currentPassword: "Incorrect password" });
+  expect(tooShort.status).toBe(422);
+  expect((await tooShort.json()).error.fields).toEqual({ newPassword: "At least 12 characters" });
   expect(await signInStatus(sam.email, oldPassword)).toBe(204);
 });
 
-it("REQ-049.3: after 10 wrong current passwords the 11th try is refused even when right", async () => {
+it("REQ-049.3, SEC-001: after 10 wrong current passwords the 11th try is refused even when right, and they count toward the sign-in limit", async () => {
   const { sam, cookie } = await signedInSam();
   for (let i = 0; i < 10; i++) {
     expect((await changePassword(cookie, "not my password at all")).status).toBe(422);
@@ -73,22 +76,6 @@ it("REQ-049.3: after 10 wrong current passwords the 11th try is refused even whe
   expect(response.status).toBe(429);
   expect(await response.json()).toEqual({ error: { message: "Too many attempts. Try again later." } });
   expect(await signInStatus(sam.email, newPassword)).toBe(429);
-  expect(await meStatus(cookie)).toBe(200);
-});
-
-it("SEC-001: wrong current passwords count toward the sign-in limit", async () => {
-  const { sam, cookie } = await signedInSam();
-  for (let i = 0; i < 10; i++) await changePassword(cookie, "not my password at all");
-
   expect(await signInStatus(sam.email, oldPassword)).toBe(429);
-});
-
-it('REQ-048: a new password that is too short gets "At least 12 characters"', async () => {
-  const { sam, cookie } = await signedInSam();
-
-  const response = await changePassword(cookie, oldPassword, "Sh0rt!pass");
-
-  expect(response.status).toBe(422);
-  expect((await response.json()).error.fields).toEqual({ newPassword: "At least 12 characters" });
-  expect(await signInStatus(sam.email, oldPassword)).toBe(204);
+  expect(await meStatus(cookie)).toBe(200);
 });

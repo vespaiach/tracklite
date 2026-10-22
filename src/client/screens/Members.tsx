@@ -35,6 +35,7 @@ import {
 } from "../api";
 import { formatDate } from "../dates";
 import { useFailureToast } from "../failure";
+import { LoadFailed, Loading } from "../LoadStates";
 import { useShowLoading } from "../useShowLoading";
 
 export function Members() {
@@ -62,24 +63,17 @@ function MembersAdmin() {
 
   if (members.isError || invitations.isError) {
     return (
-      <SettingsLayout>
-        <SettingsActions>
-          <FormStatus>Couldn't load this.</FormStatus>
-          <Button
-            size="sm"
-            onClick={() => {
-              if (members.isError) members.refetch();
-              if (invitations.isError) invitations.refetch();
-            }}>
-            Retry
-          </Button>
-        </SettingsActions>
-      </SettingsLayout>
+      <LoadFailed
+        onRetry={() => {
+          if (members.isError) members.refetch();
+          if (invitations.isError) invitations.refetch();
+        }}
+      />
     );
   }
 
   if (!members.data || !invitations.data) {
-    return <SettingsLayout>{showLoading && <FormStatus>Loading…</FormStatus>}</SettingsLayout>;
+    return <Loading show={showLoading} />;
   }
 
   return (

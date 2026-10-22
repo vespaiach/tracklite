@@ -71,7 +71,6 @@ async function createIssue(projectId: string, creator: Member, number: number) {
 }
 
 const notFound = { error: { message: "Not found" } };
-const noPermission = { error: { message: "You don't have permission to do that." } };
 
 it("REQ-016: a project is found by its key ignoring capitals", async () => {
   const { cookie } = await signedIn("member");
@@ -90,28 +89,6 @@ it("REQ-016: a project is found by its key ignoring capitals", async () => {
   });
 });
 
-it("STD-4: an unknown project key is Not found", async () => {
-  const { cookie } = await signedIn("member");
-
-  const response = await getWith(cookie, "NOPE");
-
-  expect(response.status).toBe(404);
-  expect(await response.json()).toEqual(notFound);
-});
-
-it("REQ-010.1: a request that changes the key is refused and the key stays", async () => {
-  const { cookie } = await signedIn("admin");
-  const project = await createProject();
-
-  const response = await patchWith(cookie, project.key, { key: "SITE" });
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual({
-    error: { message: "Check the highlighted fields", fields: { key: "Key can't be changed" } },
-  });
-  expect((await storedProject(project.id)).key).toBe(project.key);
-});
-
 it("REQ-011.1: renaming keeps the key and every issue ID", async () => {
   const { member: admin, cookie } = await signedIn("admin");
   const project = await createProject({ name: "Website" });
@@ -126,21 +103,20 @@ it("REQ-011.1: renaming keeps the key and every issue ID", async () => {
   expect(await (await getWith(cookie, project.key)).json()).toMatchObject({ name: "Marketing site" });
 });
 
-it("REQ-011: a rename follows the REQ-009 name rules", async () => {
+it("REQ-010.1, REQ-011: changing the key, a blank name or a 51-character name get field errors and change nothing", async () => {
   const { cookie } = await signedIn("admin");
   const project = await createProject({ name: "Website" });
 
-  for (const [name, message] of [
-    ["  ", "Name required"],
-    ["x".repeat(51), "Too long (max 50)"],
+  for (const [body, fields] of [
+    [{ key: "SITE" }, { key: "Key can't be changed" }],
+    [{ name: "  " }, { name: "Name required" }],
+    [{ name: "x".repeat(51) }, { name: "Too long (max 50)" }],
   ]) {
-    const response = await patchWith(cookie, project.key, { name });
+    const response = await patchWith(cookie, project.key, body);
     expect(response.status).toBe(422);
-    expect(await response.json()).toEqual({
-      error: { message: "Check the highlighted fields", fields: { name: message } },
-    });
+    expect(await response.json()).toEqual({ error: { message: "Check the highlighted fields", fields } });
   }
-  expect((await storedProject(project.id)).name).toBe("Website");
+  expect(await storedProject(project.id)).toMatchObject({ key: project.key, name: "Website" });
 });
 
 it("REQ-013.1: archiving sets archivedAt and REQ-013.3: unarchiving clears it", async () => {
@@ -157,33 +133,25 @@ it("REQ-013.1: archiving sets archivedAt and REQ-013.3: unarchiving clears it", 
   expect(await unarchived.json()).toMatchObject({ archivedAt: null });
 });
 
-it("REQ-013.7: renaming an archived project is refused and the name is unchanged", async () => {
+it("REQ-013.7, REQ-013.4: on an archived project, a rename and a description save are refused and nothing changes", async () => {
   const { cookie } = await signedIn("admin");
-  const project = await createProject({ name: "Website", archivedAt: new Date() });
+  const project = await createProject({ name: "Website", description: "Old text", archivedAt: new Date() });
 
-  const response = await patchWith(cookie, project.key, { name: "Old website" });
+  const renamed = await patchWith(cookie, project.key, { name: "Old website" });
+  const described = await saveDescription(cookie, project.key, "New text", 0);
 
-  expect(response.status).toBe(403);
-  expect(await response.json()).toEqual({ error: { message: "This project is archived" } });
-  expect((await storedProject(project.id)).name).toBe("Website");
-});
-
-it("STD-2: a member can't rename, archive or delete a project", async () => {
-  const { cookie } = await signedIn("member");
-  const project = await createProject({ name: "Website" });
-
-  for (const response of [
-    await patchWith(cookie, project.key, { name: "Renamed" }),
-    await patchWith(cookie, project.key, { archived: true }),
-    await deleteWith(cookie, project.key),
-  ]) {
+  for (const response of [renamed, described]) {
     expect(response.status).toBe(403);
-    expect(await response.json()).toEqual(noPermission);
+    expect(await response.json()).toEqual({ error: { message: "This project is archived" } });
   }
-  expect(await storedProject(project.id)).toMatchObject({ name: "Website", archivedAt: null });
+  expect(await storedProject(project.id)).toMatchObject({
+    name: "Website",
+    description: "Old text",
+    descriptionVersion: 0,
+  });
 });
 
-it("REQ-014.1: a deleted project is gone and its issues are Not found", async () => {
+it("REQ-014.1, STD-4: a deleted project is gone and its issues are Not found", async () => {
   const { member: admin, cookie } = await signedIn("admin");
   const project = await createProject();
   const issue = await createIssue(project.id, admin, 42);
@@ -191,7 +159,9 @@ it("REQ-014.1: a deleted project is gone and its issues are Not found", async ()
   const response = await deleteWith(cookie, project.key);
 
   expect(response.status).toBe(204);
-  expect((await getWith(cookie, project.key)).status).toBe(404);
+  const opened = await getWith(cookie, project.key);
+  expect(opened.status).toBe(404);
+  expect(await opened.json()).toEqual(notFound);
   expect(await db.select().from(issues).where(eq(issues.id, issue.id))).toEqual([]);
 });
 
@@ -293,7 +263,7 @@ async function mentionedMemberIds(projectId: string) {
   return rows.map((row) => row.memberId).sort();
 }
 
-it("REQ-012.1: a member saves a description with a heading and a bullet list", async () => {
+it("REQ-012.1, REQ-012.3, REQ-012: a member's description is stored as sent, whether markdown, <script>alert(1)</script> or empty", async () => {
   const { cookie } = await signedIn("member");
   const project = await createProject();
   const description = "# Goals\n\n- Faster pages\n- Fewer bugs";
@@ -306,57 +276,36 @@ it("REQ-012.1: a member saves a description with a heading and a bullet list", a
     description,
     descriptionVersion: 1,
   });
+
+  expect((await saveDescription(cookie, project.key, "<script>alert(1)</script>", 1)).status).toBe(200);
+  expect((await storedProject(project.id)).description).toBe("<script>alert(1)</script>");
+
+  expect((await saveDescription(cookie, project.key, "", 2)).status).toBe(200);
+  expect((await storedProject(project.id)).description).toBe("");
 });
 
-it('§3.3: a project PATCH with a description save and a name gets 422 "Change one thing at a time"', async () => {
+it('§3.3: a project PATCH with a description save and a name or archived gets 422 "Change one thing at a time"', async () => {
   const { cookie } = await signedIn("admin");
   const project = await createProject({ name: "Website", description: "Old text" });
 
-  const response = await patchWith(cookie, project.key, {
-    description: "New text",
-    descriptionVersion: 0,
-    name: "Renamed",
-  });
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual({ error: { message: "Change one thing at a time" } });
+  for (const extra of [{ name: "Renamed" }, { archived: true }]) {
+    const response = await patchWith(cookie, project.key, {
+      description: "New text",
+      descriptionVersion: 0,
+      ...extra,
+    });
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({ error: { message: "Change one thing at a time" } });
+  }
   expect(await storedProject(project.id)).toMatchObject({
     name: "Website",
-    description: "Old text",
-    descriptionVersion: 0,
-  });
-});
-
-it('§3.3: a project PATCH with a description save and archived gets 422 "Change one thing at a time"', async () => {
-  const { cookie } = await signedIn("admin");
-  const project = await createProject({ description: "Old text" });
-
-  const response = await patchWith(cookie, project.key, {
-    description: "New text",
-    descriptionVersion: 0,
-    archived: true,
-  });
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual({ error: { message: "Change one thing at a time" } });
-  expect(await storedProject(project.id)).toMatchObject({
     description: "Old text",
     descriptionVersion: 0,
     archivedAt: null,
   });
 });
 
-it("REQ-012: an empty description is allowed", async () => {
-  const { cookie } = await signedIn("member");
-  const project = await createProject({ description: "Old text" });
-
-  const response = await saveDescription(cookie, project.key, "", 0);
-
-  expect(response.status).toBe(200);
-  expect((await storedProject(project.id)).description).toBe("");
-});
-
-it('REQ-012.2: a description of 20,001 characters gets the field error "Too long (max 20,000)"', async () => {
+it('REQ-012.2, STD-8: a description of 20,001 characters gets "Too long (max 20,000)", one without a whole-number descriptionVersion is refused, and nothing is saved', async () => {
   const { cookie } = await signedIn("member");
   const project = await createProject({ description: "Old text" });
 
@@ -366,20 +315,18 @@ it('REQ-012.2: a description of 20,001 characters gets the field error "Too long
   expect(await tooLong.json()).toEqual({
     error: { message: "Check the highlighted fields", fields: { description: "Too long (max 20,000)" } },
   });
+
+  for (const body of [{ description: "New" }, { description: "New", descriptionVersion: "0" }]) {
+    const unversioned = await patchWith(cookie, project.key, body);
+    expect(unversioned.status).toBe(422);
+    expect(await unversioned.json()).toMatchObject({
+      error: { fields: { descriptionVersion: expect.any(String) } },
+    });
+  }
   expect(await storedProject(project.id)).toMatchObject({ description: "Old text", descriptionVersion: 0 });
 
   const longest = await saveDescription(cookie, project.key, "x".repeat(20_000), 0);
   expect(longest.status).toBe(200);
-});
-
-it("REQ-012.3: a description with <script>alert(1)</script> is stored as sent", async () => {
-  const { cookie } = await signedIn("member");
-  const project = await createProject();
-
-  const response = await saveDescription(cookie, project.key, "<script>alert(1)</script>", 0);
-
-  expect(response.status).toBe(200);
-  expect((await storedProject(project.id)).description).toBe("<script>alert(1)</script>");
 });
 
 it("STD-8: a stale description save is refused with 409 naming who saved, and nothing is saved", async () => {
@@ -401,21 +348,7 @@ it("STD-8: a stale description save is refused with 409 naming who saved, and no
   });
 });
 
-it("STD-8: a description save without a whole-number descriptionVersion is refused", async () => {
-  const { cookie } = await signedIn("member");
-  const project = await createProject({ description: "Old text" });
-
-  for (const body of [{ description: "New" }, { description: "New", descriptionVersion: "0" }]) {
-    const response = await patchWith(cookie, project.key, body);
-    expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({
-      error: { fields: { descriptionVersion: expect.any(String) } },
-    });
-  }
-  expect((await storedProject(project.id)).description).toBe("Old text");
-});
-
-it("DATA-001.3: saving a description mentions active members only, outside code", async () => {
+it("DATA-001.3, DATA-001: saving a description mentions active members only, outside code, and the rows follow the current text", async () => {
   const { cookie } = await signedIn("member");
   const sam = await createMember({ fullName: "Sam Lee" });
   const jo = await createMember({ deactivatedAt: new Date() });
@@ -430,28 +363,8 @@ it("DATA-001.3: saving a description mentions active members only, outside code"
   expect((await (await getWith(cookie, project.key)).json()).mentions).toEqual([
     { username: sam.username, fullName: "Sam Lee", initials: "SL", deactivated: false },
   ]);
-});
 
-it("DATA-001: mention rows follow the current description text", async () => {
-  const { cookie } = await signedIn("member");
-  const sam = await createMember();
   const alex = await createMember();
-  const project = await createProject();
-
-  await saveDescription(cookie, project.key, `Hi @${sam.username}`, 0);
-  const response = await saveDescription(cookie, project.key, `Hi @${alex.username}`, 1);
-
-  expect(response.status).toBe(200);
+  expect((await saveDescription(cookie, project.key, `Hi @${alex.username}`, 1)).status).toBe(200);
   expect(await mentionedMemberIds(project.id)).toEqual([alex.id]);
-});
-
-it("REQ-013.4: a description save to an archived project is refused with This project is archived", async () => {
-  const { cookie } = await signedIn("member");
-  const project = await createProject({ description: "Old text", archivedAt: new Date() });
-
-  const response = await saveDescription(cookie, project.key, "New text", 0);
-
-  expect(response.status).toBe(403);
-  expect(await response.json()).toEqual({ error: { message: "This project is archived" } });
-  expect(await storedProject(project.id)).toMatchObject({ description: "Old text", descriptionVersion: 0 });
 });

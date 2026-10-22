@@ -5,16 +5,13 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-it("the app starts when every variable is set", () => {
+it("the app starts when every variable is set, and refuses to start with a variable missing or empty, naming them", () => {
   expect(() => register()).not.toThrow();
-});
 
-it("the app refuses to start with a variable missing", () => {
   vi.stubEnv("APP_URL", undefined);
   expect(() => register()).toThrow("Missing environment variables: APP_URL");
-});
 
-it("the app refuses to start with an empty variable", () => {
+  vi.unstubAllEnvs();
   vi.stubEnv("DATABASE_URL", "");
   vi.stubEnv("EMAIL_FROM", "");
   expect(() => register()).toThrow("Missing environment variables: DATABASE_URL, EMAIL_FROM");

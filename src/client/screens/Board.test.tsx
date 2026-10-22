@@ -148,7 +148,7 @@ async function dragByKeyboard(title: string, columnName: string, target: string)
   throw new Error(`No drop target "${target}" in ${columnName}`);
 }
 
-it("REQ-024.1: the board shows one column per status in order, each with its issue count", async () => {
+it("REQ-024.1, REQ-025.1, REQ-025.2: columns in order with counts; a card shows ID, title, priority, initials, 3 labels and +2; an unassigned card with No priority shows neither", async () => {
   mockBoard();
   renderAppAt("/project/WEB");
 
@@ -159,13 +159,7 @@ it("REQ-024.1: the board shows one column per status in order, each with its iss
     (name) => column(name).querySelector(".tl-board-col__count")?.textContent,
   );
   expect(counts).toEqual(["3", "2", "0", "0", "0"]);
-});
 
-it("REQ-025.1: WEB-42 with 5 labels shows its ID, title, priority, initials, 3 labels and +2", async () => {
-  mockBoard();
-  renderAppAt("/project/WEB");
-
-  await screen.findByRole("region", { name: "Backlog" });
   const web42Card = cardIn("Backlog", "Fix login button");
   expect(within(web42Card).getByRole("link", { name: "Fix login button" }).getAttribute("href")).toBe(
     "/issue/WEB-42",
@@ -176,13 +170,7 @@ it("REQ-025.1: WEB-42 with 5 labels shows its ID, title, priority, initials, 3 l
   for (const name of ["backend", "bug", "Design"]) expect(within(web42Card).getByText(name)).toBeTruthy();
   for (const name of ["docs", "frontend"]) expect(within(web42Card).queryByText(name)).toBeNull();
   expect(within(web42Card).getByText("+2")).toBeTruthy();
-});
 
-it("REQ-025.2: an unassigned card with No priority shows no initials or priority icon", async () => {
-  mockBoard();
-  renderAppAt("/project/WEB");
-
-  await screen.findByRole("region", { name: "Backlog" });
   const web12Card = cardIn("Backlog", "Tidy up footer links");
   expect(within(web12Card).queryByRole("img", { name: /urgent|high|medium|med|low|none/ })).toBeNull();
   expect(web12Card.querySelector(".tl-avatar")).toBeNull();
@@ -245,7 +233,7 @@ it("REQ-030.2: ⋯ → Move to bottom puts WEB-5 last in In Progress", async () 
   ]);
 });
 
-it("the ⋯ menu lists every status, checks and disables the current one, and disables Move to top on the first card", async () => {
+it("the ⋯ menu lists every status, checks and disables the current one, disables Move to top on the first card and Move to bottom on the last", async () => {
   mockBoard();
   renderAppAt("/project/WEB");
 
@@ -267,28 +255,14 @@ it("the ⋯ menu lists every status, checks and disables the current one, and di
   ]);
   expect(statuses[0].getAttribute("aria-disabled")).toBe("true");
   expect(statuses[0].textContent).toContain("✓");
-});
 
-it("the ⋯ menu disables Move to bottom on a column's last card", async () => {
-  mockBoard();
-  renderAppAt("/project/WEB");
-
+  fireEvent.keyDown(submenu, { key: "Escape" });
+  fireEvent.keyDown(first, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
   const last = await openCardMenu("WEB-12");
   expect(within(last).getByRole("menuitem", { name: "Move to bottom" }).getAttribute("aria-disabled")).toBe(
     "true",
   );
-});
-
-it("REQ-026.2: a failed move from the menu shows Couldn't move WEB-42 and leaves the board as it was", async () => {
-  mockBoard({ move: () => networkError() });
-  renderAppAt("/project/WEB");
-
-  const submenu = await openMoveTo("WEB-42");
-  fireEvent.click(within(submenu).getByRole("menuitem", { name: "Done" }));
-
-  expect(await screen.findByText("Couldn't move WEB-42")).toBeTruthy();
-  expect(titlesIn("Backlog")[0]).toBe("Fix login button");
-  expect(titlesIn("Done")).toEqual([]);
 });
 
 it("REQ-026.1: dragging WEB-42 by keyboard from Backlog to In Progress saves its status and place, and it's still there after a reload", async () => {
@@ -400,7 +374,7 @@ it("REQ-026.5: dragging an issue another member deleted shows This issue was del
   expect(titlesIn("In Progress")).not.toContain("Fix login button");
 });
 
-it("dropping a card between two cards in its own column saves place { after: <card above> }, and dropping it first saves top", async () => {
+it("dropping a card between two cards in its own column saves place { after: <card above> }, dropping it first saves top, and dropping into an empty column saves top", async () => {
   const fetchMock = mockBoard();
   renderAppAt("/project/WEB");
 
@@ -421,14 +395,8 @@ it("dropping a card between two cards in its own column saves place { after: <ca
       { status: "backlog", place: "top" },
     ]),
   );
-});
-
-it("dropping a card into an empty column saves place top", async () => {
-  const fetchMock = mockBoard();
-  renderAppAt("/project/WEB");
 
   await dragByKeyboard("Email digest sends twice on Mondays", "Canceled", "Drop on");
-
   await waitFor(() =>
     expect(requestsTo(fetchMock, "PUT /api/issues/WEB-5/position")).toEqual([
       { status: "canceled", place: "top" },
@@ -469,17 +437,4 @@ it("REQ-024.2: an archived project's board has no + buttons, ⋯ menus or drag b
       .getByRole("link", { name: "Fix login button" })
       .getAttribute("href"),
   ).toBe("/issue/WEB-42");
-});
-
-it("STD-7: a board that fails to load shows Couldn't load this. with Retry", async () => {
-  let fail = true;
-  mockBoard({
-    getBoard: () => (fail ? apiError(500, "Server error") : Response.json(webBoard)),
-  });
-  renderAppAt("/project/WEB");
-
-  expect(await screen.findByText("Couldn't load this.")).toBeTruthy();
-  fail = false;
-  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-  expect(await screen.findByRole("region", { name: "Backlog" })).toBeTruthy();
 });

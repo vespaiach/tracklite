@@ -21,7 +21,6 @@ afterEach(() => {
 type Answer = (body: unknown) => Response | Promise<Response>;
 
 const web = project("WEB", "Website");
-const old = project("OLD", "Old site", "2025-09-14T10:00:00.000Z");
 
 function mockSettings({ me = admin, shown = web, patch }: { me?: Me; shown?: Project; patch?: Answer } = {}) {
   let current: Project | undefined = shown;
@@ -99,7 +98,7 @@ it("STD-9: a failed rename shows the toast and keeps the typed name", async () =
   expect((await nameField()).value).toBe("Marketing site");
 });
 
-it("REQ-013.1: archiving moves the project out of the sidebar and offers Unarchive", async () => {
+it("REQ-013.1, REQ-013.3, REQ-013.7: archiving removes it from the sidebar and shows the name read-only with no Save; unarchiving restores it", async () => {
   const fetchMock = mockSettings();
   renderAppAt("/project/WEB/settings");
   await within(await sidebar()).findByRole("link", { name: "Website · WEB" });
@@ -113,51 +112,30 @@ it("REQ-013.1: archiving moves the project out of the sidebar and offers Unarchi
       within(screen.getByRole("complementary")).queryByRole("link", { name: "Website · WEB" }),
     ).toBeNull(),
   );
-});
 
-it("REQ-013.3: unarchiving puts the project back in the sidebar", async () => {
-  const fetchMock = mockSettings({ shown: old });
-  renderAppAt("/project/OLD/settings");
+  expect(screen.getByText("Website", { selector: ".tl-fact__value" })).toBeTruthy();
+  expect(screen.queryByLabelText("Name")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
 
-  fireEvent.click(await screen.findByRole("button", { name: "Unarchive project" }));
+  fireEvent.click(screen.getByRole("button", { name: "Unarchive project" }));
 
-  expect(await within(await sidebar()).findByRole("link", { name: "Old site · OLD" })).toBeTruthy();
-  expect(requestsTo(fetchMock, "PATCH /api/projects/OLD")).toEqual([{ archived: false }]);
+  expect(await within(await sidebar()).findByRole("link", { name: "Website · WEB" })).toBeTruthy();
+  expect(requestsTo(fetchMock, "PATCH /api/projects/WEB")).toEqual([{ archived: true }, { archived: false }]);
   expect(await screen.findByRole("button", { name: "Archive project" })).toBeTruthy();
 });
 
-it("REQ-013.7: an archived project's settings show the name with no Save", async () => {
-  mockSettings({ shown: old });
-  renderAppAt("/project/OLD/settings");
-
-  await screen.findByRole("button", { name: "Unarchive project" });
-  expect(screen.getByText("Old site", { selector: ".tl-fact__value" })).toBeTruthy();
-  expect(screen.queryByLabelText("Name")).toBeNull();
-  expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
-});
-
-it("REQ-014.2: a key that doesn't match exactly keeps Delete disabled, with Cancel focused first", async () => {
-  mockSettings();
-  renderAppAt("/project/WEB/settings");
-  const dialog = await openDelete();
-
-  await waitFor(() =>
-    expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Cancel" })),
-  );
-  const confirm = within(dialog).getByRole("button", { name: "Delete project" }) as HTMLButtonElement;
-  expect(confirm.disabled).toBe(true);
-
-  fireEvent.change(within(dialog).getByLabelText("Type WEB to confirm"), { target: { value: "WEBB" } });
-  expect(confirm.disabled).toBe(true);
-  fireEvent.change(within(dialog).getByLabelText("Type WEB to confirm"), { target: { value: "web" } });
-  expect(confirm.disabled).toBe(true);
-});
-
-it("REQ-014.1: typing the key exactly deletes the project and goes to My issues", async () => {
+it("REQ-014.1, REQ-014.2: Delete stays disabled until the key matches exactly, then deletes and goes to My issues", async () => {
   const fetchMock = mockSettings();
   renderAppAt("/project/WEB/settings");
   await within(await sidebar()).findByRole("link", { name: "Website · WEB" });
   const dialog = await openDelete();
+
+  const confirm = within(dialog).getByRole("button", { name: "Delete project" }) as HTMLButtonElement;
+  expect(confirm.disabled).toBe(true);
+  fireEvent.change(within(dialog).getByLabelText("Type WEB to confirm"), { target: { value: "WEBB" } });
+  expect(confirm.disabled).toBe(true);
+  fireEvent.change(within(dialog).getByLabelText("Type WEB to confirm"), { target: { value: "web" } });
+  expect(confirm.disabled).toBe(true);
 
   fireEvent.change(within(dialog).getByLabelText("Type WEB to confirm"), { target: { value: "WEB" } });
   fireEvent.click(within(dialog).getByRole("button", { name: "Delete project" }));

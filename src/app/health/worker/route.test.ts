@@ -38,18 +38,12 @@ async function pendingDelivery({ dueFor, retryIn }: { dueFor: string; retryIn?: 
   );
 }
 
-it("OPS-005.2: the worker's last pass was 3 minutes ago → /health/worker returns 503", async () => {
+it("OPS-005.3, OPS-005.2: the worker has never finished a pass, or its last pass was 3 minutes ago → /health/worker returns 503", async () => {
+  expect((await GET()).status).toBe(503);
+
   await lastPassWas("3 minutes");
 
-  const response = await GET();
-
-  expect(response.status).toBe(503);
-});
-
-it("OPS-005.3: the worker has never finished a pass → /health/worker returns 503", async () => {
-  const response = await GET();
-
-  expect(response.status).toBe(503);
+  expect((await GET()).status).toBe(503);
 });
 
 it("OPS-005.4: last pass 10 seconds ago, oldest due delivery waited 11 minutes → /health/worker returns 503", async () => {
@@ -61,23 +55,17 @@ it("OPS-005.4: last pass 10 seconds ago, oldest due delivery waited 11 minutes �
   expect(response.status).toBe(503);
 });
 
-it("OPS-005.5: last pass 10 seconds ago, oldest due delivery waited 1 minute → /health/worker returns 200", async () => {
+it("OPS-005.5: last pass 10 seconds ago, a delivery waiting for a retry isn't due, and the oldest due delivery waited 1 minute → /health/worker returns 200", async () => {
   await lastPassWas("10 seconds");
-  await pendingDelivery({ dueFor: "1 minute" });
+  await pendingDelivery({ dueFor: "11 minutes", retryIn: "3 minutes" });
 
+  expect((await GET()).status).toBe(200);
+
+  await pendingDelivery({ dueFor: "1 minute" });
   const response = await GET();
 
   expect(response.status).toBe(200);
   expect(await response.text()).toBe("ok");
-});
-
-it("OPS-005.5: last pass 10 seconds ago, nothing due → /health/worker returns 200; a delivery waiting for a retry isn't due", async () => {
-  await lastPassWas("10 seconds");
-  await pendingDelivery({ dueFor: "11 minutes", retryIn: "3 minutes" });
-
-  const response = await GET();
-
-  expect(response.status).toBe(200);
 });
 
 it("OPS-005: /health/worker returns 503 when the database doesn't respond", async () => {

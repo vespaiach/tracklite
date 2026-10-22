@@ -8,14 +8,12 @@ const trackedFiles = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" 
   .filter(Boolean);
 const resendApiKey = /\bre_[A-Za-z0-9_]{16,}/;
 
-it("OPS-006.1: no email API key in the repository", () => {
+it("OPS-006.1: no email API key or env file with secrets is tracked", () => {
   const filesWithKey = trackedFiles.filter((file) => resendApiKey.test(readFileSync(file, "utf8")));
-  expect(filesWithKey).toEqual([]);
-});
-
-it("OPS-006.1: no env file with secrets is tracked", () => {
   const envFiles = trackedFiles.filter(
     (file) => /^\.env/.test(basename(file)) && basename(file) !== ".env.example",
   );
+
+  expect(filesWithKey).toEqual([]);
   expect(envFiles).toEqual([]);
 });

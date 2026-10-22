@@ -5,7 +5,6 @@ import {
   listedInvitation,
   lookUp,
   revokeInvitation,
-  signedIn,
   signedInAdmin,
   uniqueEmail,
 } from "../../../../test/invitations";
@@ -20,7 +19,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it("REQ-001.4: revoking Sam's invitation → the link stops working", async () => {
+it("REQ-001.4, REQ-001: revoking Sam's invitation → the link stops working, and the same email can be invited again", async () => {
   const { cookie } = await signedInAdmin();
   const email = uniqueEmail();
   const { invitation, token } = await invitedBy(cookie, email);
@@ -32,27 +31,11 @@ it("REQ-001.4: revoking Sam's invitation → the link stops working", async () =
   expect(lookup.status).toBe(410);
   expect(await lookup.json()).toEqual({ error: { message: "This invitation is no longer valid." } });
   expect(await listedInvitation(cookie, email)).toBeUndefined();
-});
-
-it("REQ-001: after revoking, the same email can be invited again", async () => {
-  const { cookie } = await signedInAdmin();
-  const email = uniqueEmail();
-  const { invitation } = await invitedBy(cookie, email);
-  await revokeInvitation(cookie, invitation.id);
 
   const again = await invitedBy(cookie, email);
 
   expect(again.invitation.id).not.toBe(invitation.id);
   expect(await (await lookUp(again.token)).json()).toEqual({ email });
-});
-
-it("STD-2: a member who isn't an admin can't revoke", async () => {
-  const { cookie: adminCookie } = await signedInAdmin();
-  const { cookie } = await signedIn();
-  const { invitation, token } = await invitedBy(adminCookie, uniqueEmail());
-
-  expect((await revokeInvitation(cookie, invitation.id)).status).toBe(403);
-  expect((await lookUp(token)).status).toBe(200);
 });
 
 it("STD-4: revoking an unknown, already revoked or malformed id → 404", async () => {

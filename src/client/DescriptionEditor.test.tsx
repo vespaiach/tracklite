@@ -44,27 +44,26 @@ function suggestedUsernames() {
     .map((option) => option.getAttribute("data-key"));
 }
 
-it("DATA-001: typing @ suggests active members only", async () => {
+it("DATA-001, DATA-001.5: @ suggests active members, filtered by username or name, says No results, and ignores an @ inside a word", async () => {
   mockIssuePage();
   renderAppAt("/issue/WEB-42");
 
   const editor = await openEditor();
   type(editor, "Pairing with @");
-
   expect(await screen.findByRole("listbox", { name: "Mention a member" })).toBeTruthy();
   expect(suggestedUsernames()).toEqual(["alex", "jordan", "sam"]);
-});
 
-it("DATA-001: typing after @ filters the suggestions by username or name", async () => {
-  mockIssuePage();
-  renderAppAt("/issue/WEB-42");
-
-  const editor = await openEditor();
   type(editor, "Pairing with @al");
   expect(suggestedUsernames()).toEqual(["alex"]);
 
   type(editor, "Pairing with @lee");
   expect(suggestedUsernames()).toEqual(["sam"]);
+
+  type(editor, "Pairing with @zz");
+  expect(within(suggestions() as HTMLElement).getByRole("status").textContent).toBe("No results for “@zz”");
+
+  type(editor, "Write to foo@sa");
+  expect(suggestions()).toBeNull();
 });
 
 it("DATA-001: Enter or a click on a suggestion inserts @username and keeps focus in the editor", async () => {
@@ -107,16 +106,6 @@ it("DATA-001: the arrow keys move the highlighted suggestion", async () => {
   expect(editor.getAttribute("aria-activedescendant")).toBe(options[0].id);
 });
 
-it("DATA-001: a query that matches no one shows No results", async () => {
-  mockIssuePage();
-  renderAppAt("/issue/WEB-42");
-
-  const editor = await openEditor();
-  type(editor, "Pairing with @zz");
-
-  expect(within(suggestions() as HTMLElement).getByRole("status").textContent).toBe("No results for “@zz”");
-});
-
 it("DATA-001: Escape closes the suggestions before it cancels the edit", async () => {
   mockIssuePage();
   renderAppAt("/issue/WEB-42");
@@ -130,14 +119,4 @@ it("DATA-001: Escape closes the suggestions before it cancels the edit", async (
 
   fireEvent.keyDown(editor, { key: "Escape" });
   expect(screen.queryByRole("textbox", { name: "Description (Markdown)" })).toBeNull();
-});
-
-it("DATA-001.5: an @ inside a word doesn't open the suggestions", async () => {
-  mockIssuePage();
-  renderAppAt("/issue/WEB-42");
-
-  const editor = await openEditor();
-  type(editor, "Write to foo@sa");
-
-  expect(suggestions()).toBeNull();
 });

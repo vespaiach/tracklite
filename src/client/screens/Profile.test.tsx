@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { Me } from "../api";
 import { apiError, mockApi, never, noContent, renderAppAt, requestsTo, sam } from "../../test/client-app";
@@ -38,33 +38,21 @@ async function changePassword(currentPassword: string, newPassword: string) {
   fireEvent.click(screen.getByRole("button", { name: "Change password" }));
 }
 
-it("REQ-003.3: full name is editable; username and email are shown read-only", async () => {
-  mockProfile();
+it("REQ-003.3: full name is editable; username/email read-only; Save sends only the name, confirms, and the confirmation clears on the next edit", async () => {
+  const fetchMock = mockProfile();
   renderAppAt("/settings/profile");
 
   expect(((await screen.findByLabelText("Full name")) as HTMLInputElement).value).toBe("Sam Lee");
   expect(screen.getByText("sam")).toBeTruthy();
   expect(screen.getByText("sam@acme.com")).toBeTruthy();
   expect(screen.getAllByRole("textbox")).toHaveLength(1);
-});
-
-it('REQ-003.3: Save sends only the full name and confirms with "Name saved."', async () => {
-  const fetchMock = mockProfile();
-  renderAppAt("/settings/profile");
 
   await saveName("Samuel Lee");
 
   expect(await screen.findByText("Name saved.")).toBeTruthy();
   expect(await within(screen.getByRole("main")).findByText("Samuel Lee")).toBeTruthy();
   expect(requestsTo(fetchMock, "PATCH /api/me")).toEqual([{ fullName: "Samuel Lee" }]);
-});
 
-it('"Name saved." clears once the full name is edited again', async () => {
-  mockProfile();
-  renderAppAt("/settings/profile");
-
-  await saveName("Samuel Lee");
-  await screen.findByText("Name saved.");
   fireEvent.change(input("Full name"), { target: { value: "Samuel J Lee" } });
 
   expect(screen.queryByText("Name saved.")).toBeNull();
@@ -95,8 +83,11 @@ it("STD-5: Save and Change password are disabled while their own request is in f
   expect((screen.getByRole("button", { name: "Changing…" }) as HTMLButtonElement).disabled).toBe(true);
 });
 
-it('STD-9.3: a failed name save shows "Couldn\'t save. Try again." and keeps the text', async () => {
-  mockProfile({ save: () => new Response(null, { status: 500 }) });
+it("STD-9.3: a failed name save or password change shows the toast and keeps what was typed", async () => {
+  mockProfile({
+    save: () => new Response(null, { status: 500 }),
+    change: () => new Response(null, { status: 500 }),
+  });
   renderAppAt("/settings/profile");
 
   await saveName("Samuel Lee");
@@ -104,6 +95,14 @@ it('STD-9.3: a failed name save shows "Couldn\'t save. Try again." and keeps the
   expect(await screen.findByText("Couldn't save. Try again.")).toBeTruthy();
   expect(input("Full name").value).toBe("Samuel Lee");
   expect(screen.queryByText("Name saved.")).toBeNull();
+  const nameToast = screen.getByRole("status");
+
+  await changePassword("correct-horse-battery", "staple-lantern-orbit");
+
+  await waitFor(() => expect(screen.getByRole("status")).not.toBe(nameToast));
+  expect(within(screen.getByRole("status")).getByText("Couldn't save. Try again.")).toBeTruthy();
+  expect(input("Current password").value).toBe("correct-horse-battery");
+  expect(input("New password").value).toBe("staple-lantern-orbit");
 });
 
 it("REQ-049.1: Change password sends both passwords, clears the fields and shows the REQ-049 message", async () => {
@@ -120,32 +119,25 @@ it("REQ-049.1: Change password sends both passwords, clears the fields and shows
   expect(input("New password").value).toBe("");
 });
 
-it('REQ-049.2: "Incorrect password" shows beside Current password and keeps what was typed', async () => {
+it("REQ-049.2, REQ-048: server field errors show beside Current and New password and keep what was typed", async () => {
   mockProfile({
-    change: () => apiError(422, "Check the highlighted fields", { currentPassword: "Incorrect password" }),
+    change: () =>
+      apiError(422, "Check the highlighted fields", {
+        currentPassword: "Incorrect password",
+        newPassword: "At least 12 characters",
+      }),
   });
   renderAppAt("/settings/profile");
 
-  await changePassword("wrong-horse-battery", "staple-lantern-orbit");
+  await changePassword("wrong-horse-battery", "tracklite1");
 
   expect(await screen.findByText("Incorrect password")).toBeTruthy();
   expect(input("Current password").getAttribute("aria-invalid")).toBe("true");
   expect(input("Current password").value).toBe("wrong-horse-battery");
-  expect(input("New password").value).toBe("staple-lantern-orbit");
-  expect(screen.queryByText("Password changed. You've been signed out everywhere else.")).toBeNull();
-});
-
-it("REQ-048: a new-password field error from the server shows beside New password", async () => {
-  mockProfile({
-    change: () => apiError(422, "Check the highlighted fields", { newPassword: "At least 12 characters" }),
-  });
-  renderAppAt("/settings/profile");
-
-  await changePassword("correct-horse-battery", "tracklite1");
-
-  expect(await screen.findByText("At least 12 characters")).toBeTruthy();
+  expect(screen.getByText("At least 12 characters")).toBeTruthy();
   expect(input("New password").getAttribute("aria-invalid")).toBe("true");
   expect(input("New password").value).toBe("tracklite1");
+  expect(screen.queryByText("Password changed. You've been signed out everywhere else.")).toBeNull();
 });
 
 it('REQ-049.3: "Too many attempts. Try again later." shows in the form, not as a toast', async () => {
@@ -158,16 +150,4 @@ it('REQ-049.3: "Too many attempts. Try again later." shows in the form, not as a
   expect(alert.textContent).toContain("Too many attempts. Try again later.");
   expect(alert.closest("form")).toBe(screen.getByRole("button", { name: "Change password" }).closest("form"));
   expect(screen.queryByRole("status")).toBeNull();
-});
-
-it("STD-9.3: a failed password change shows the toast and keeps both fields", async () => {
-  mockProfile({ change: () => new Response(null, { status: 500 }) });
-  renderAppAt("/settings/profile");
-
-  await changePassword("correct-horse-battery", "staple-lantern-orbit");
-
-  const toast = await screen.findByRole("status");
-  expect(within(toast).getByText("Couldn't save. Try again.")).toBeTruthy();
-  expect(input("Current password").value).toBe("correct-horse-battery");
-  expect(input("New password").value).toBe("staple-lantern-orbit");
 });

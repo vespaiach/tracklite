@@ -46,14 +46,21 @@ it('STD-9.3: a network or server error reads "Couldn\'t save. Try again."', asyn
   expect(networkError.error).toEqual({ status: "network", message: "Couldn't save. Try again." });
 });
 
-it("STD-9.3: any other failure shows the server's message", async () => {
+it("STD-9.3, STD-6: any other failure (403, 503) shows the server's message", async () => {
   respondWith(403, { error: { message: "You don't have permission to do that." } });
   const { router, store } = storeAt("/my-issues");
 
-  const result = await store.dispatch(api.endpoints.me.initiate());
+  const forbidden = await store.dispatch(api.endpoints.me.initiate());
 
-  expect(result.error).toEqual({ status: 403, message: "You don't have permission to do that." });
+  expect(forbidden.error).toEqual({ status: 403, message: "You don't have permission to do that." });
   expect(router.state.location.pathname).toBe("/my-issues");
+
+  respondWith(503, { error: { message: "We couldn't send the email. Try again." } });
+  const unavailable = await storeAt("/forgot-password").store.dispatch(
+    api.endpoints.requestResetLink.initiate({ email: "sam@acme.com" }),
+  );
+
+  expect(unavailable.error).toEqual({ status: 503, message: "We couldn't send the email. Try again." });
 });
 
 it("STD-3: baseQuery passes a 422's field errors to the component without redirecting", async () => {
@@ -70,7 +77,18 @@ it("STD-3: baseQuery passes a 422's field errors to the component without redire
   expect(store.getState().toast).toBeNull();
 });
 
-it("baseQuery returns the parsed JSON body on success", async () => {
+it("STD-1: a 401 on a signed-out page doesn't redirect", async () => {
+  respondWith(401, { error: { message: "Sign in to continue." } });
+  for (const path of ["/sign-in?next=%2Fmy-issues", "/forgot-password", "/reset-password?token=abc"]) {
+    const { router, store } = storeAt(path);
+
+    await store.dispatch(api.endpoints.me.initiate());
+
+    expect(router.state.location.pathname + router.state.location.search).toBe(path);
+  }
+});
+
+it("baseQuery: GET returns parsed JSON; POST sends a JSON body and a 204 gives null", async () => {
   const me = {
     username: "sam",
     fullName: "Sam Lee",
@@ -85,37 +103,13 @@ it("baseQuery returns the parsed JSON body on success", async () => {
 
   expect(result.data).toEqual(me);
   expect(fetch).toHaveBeenCalledWith("/api/me", expect.anything());
-});
 
-it("STD-1: a 401 on a signed-out page doesn't redirect", async () => {
-  respondWith(401, { error: { message: "Sign in to continue." } });
-  for (const path of ["/sign-in?next=%2Fmy-issues", "/forgot-password", "/reset-password?token=abc"]) {
-    const { router, store } = storeAt(path);
-
-    await store.dispatch(api.endpoints.me.initiate());
-
-    expect(router.state.location.pathname + router.state.location.search).toBe(path);
-  }
-});
-
-it("STD-6: a 503 keeps the server's message", async () => {
-  respondWith(503, { error: { message: "We couldn't send the email. Try again." } });
-  const { store } = storeAt("/forgot-password");
-
-  const result = await store.dispatch(api.endpoints.requestResetLink.initiate({ email: "sam@acme.com" }));
-
-  expect(result.error).toEqual({ status: 503, message: "We couldn't send the email. Try again." });
-});
-
-it("baseQuery sends a JSON body with the method and returns null for a 204", async () => {
   respondWith(204);
-  const { store } = storeAt("/sign-in");
-
-  const result = await store.dispatch(
+  const signedIn = await storeAt("/sign-in").store.dispatch(
     api.endpoints.signIn.initiate({ email: "sam@acme.com", password: "correct-horse-battery" }),
   );
 
-  expect(result.data).toBeNull();
+  expect(signedIn.data).toBeNull();
   expect(fetch).toHaveBeenCalledWith(
     "/api/sessions",
     expect.objectContaining({

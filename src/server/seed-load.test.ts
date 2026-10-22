@@ -25,27 +25,19 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-it("NFR-001: seeds 50 projects, 10,000 issues and 50,000 comments", async () => {
+it("NFR-001: seeds 50 projects, 10,000 issues and 50,000 comments around keys reserved by deleted projects", async () => {
   expect(await counts()).toEqual({ projects: 50, issues: 10_000, comments: 50_000 });
-});
-
-it("NFR-001: seeds around keys reserved by deleted projects", async () => {
   expect(await db.$count(projects, eq(projects.key, "LAA"))).toBe(0);
   expect(await db.$count(projectKeys)).toBe(51);
 });
 
-it("NFR-002: one board column holds 300 cards", async () => {
+it("NFR-002: one board column holds 300 cards and one member has 300 open assigned issues", async () => {
   const [largest] = await db
     .select({ cards: sql<number>`count(*)::int` })
     .from(issues)
     .groupBy(issues.projectId, issues.status)
     .orderBy(sql`count(*) desc`)
     .limit(1);
-
-  expect(largest.cards).toBeGreaterThanOrEqual(300);
-});
-
-it("NFR-002: one member has 300 open assigned issues", async () => {
   const [busiest] = await db
     .select({ open: sql<number>`count(*)::int` })
     .from(issues)
@@ -55,6 +47,7 @@ it("NFR-002: one member has 300 open assigned issues", async () => {
     .orderBy(sql`count(*) desc`)
     .limit(1);
 
+  expect(largest.cards).toBeGreaterThanOrEqual(300);
   expect(busiest.open).toBeGreaterThanOrEqual(300);
 });
 

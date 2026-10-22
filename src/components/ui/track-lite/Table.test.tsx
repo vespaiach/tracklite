@@ -4,8 +4,8 @@ import { Table, TableSortHead, type TableSort } from "./Table";
 
 afterEach(cleanup);
 
-function renderHead(sort: TableSort, onSort = vi.fn()) {
-  render(
+function head(sort: TableSort, onSort: () => void) {
+  return (
     <Table>
       <thead>
         <tr>
@@ -16,30 +16,24 @@ function renderHead(sort: TableSort, onSort = vi.fn()) {
           </TableSortHead>
         </tr>
       </thead>
-    </Table>,
+    </Table>
   );
-  return onSort;
 }
 
-it("a sortable heading is a button in a column header that calls onSort", () => {
-  const onSort = renderHead("none");
-  const head = screen.getByRole("columnheader", { name: "Priority" });
-  expect(head.getAttribute("aria-sort")).toBe("none");
+it("a sortable heading is a button in a column header that calls onSort; only the sorted heading shows an arrow, with aria-sort giving the direction", () => {
+  const onSort = vi.fn();
+  const { rerender } = render(head("none", onSort));
+  const column = () => screen.getByRole("columnheader", { name: "Priority" });
+  expect(column().getAttribute("aria-sort")).toBe("none");
+  expect(column().querySelector("svg")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Priority" }));
   expect(onSort).toHaveBeenCalledOnce();
-});
 
-it("shows an arrow only on the sorted heading, with aria-sort giving the direction", () => {
-  renderHead("none");
-  expect(screen.getByRole("columnheader").querySelector("svg")).toBeNull();
-  cleanup();
+  rerender(head("ascending", onSort));
+  expect(column().getAttribute("aria-sort")).toBe("ascending");
+  expect(column().querySelector("svg")).not.toBeNull();
 
-  renderHead("ascending");
-  expect(screen.getByRole("columnheader").getAttribute("aria-sort")).toBe("ascending");
-  expect(screen.getByRole("columnheader").querySelector("svg")).not.toBeNull();
-  cleanup();
-
-  renderHead("descending");
-  expect(screen.getByRole("columnheader").getAttribute("aria-sort")).toBe("descending");
-  expect(screen.getByRole("columnheader").querySelector("svg")).not.toBeNull();
+  rerender(head("descending", onSort));
+  expect(column().getAttribute("aria-sort")).toBe("descending");
+  expect(column().querySelector("svg")).not.toBeNull();
 });

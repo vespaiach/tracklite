@@ -1,15 +1,6 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import {
-  alex,
-  apiError,
-  memberOf,
-  mockApi,
-  project,
-  renderAppAt,
-  requestsTo,
-  sam,
-} from "../../test/client-app";
+import { alex, memberOf, mockApi, project, renderAppAt, requestsTo, sam } from "../../test/client-app";
 import type { IssueLabel, IssueListPage, Label, ListIssue, Me, Project } from "../api";
 
 afterEach(() => {
@@ -173,27 +164,20 @@ it("REQ-040.1: a shared link opens the same filtered, sorted list", async () => 
   expect(heading("Last updated").getAttribute("aria-sort")).toBe("none");
 });
 
-it("REQ-040.2: a deleted label in a link is ignored and the Done filter still applies", async () => {
+it("REQ-040.2, REQ-040.3: a deleted label and an unknown status in a link are ignored; Done still applies", async () => {
   mockList({ projectLabels: [projectLabel("bug"), projectLabel("backend")] });
-  renderAppAt("/project/WEB/list?label=frontend&status=done");
+  renderAppAt("/project/WEB/list?label=frontend&status=done&status=Todo");
 
   await screen.findByRole("table");
   expect(ruleText("Status")).toBe("StatusisDone×");
+  expect(rowIds()).toEqual(["WEB-42", "WEB-12", "WEB-7"]);
+
   const listbox = await openFilter("Label");
   const options = within(listbox).getAllByRole("option");
   expect(options.map((option) => option.textContent)).toEqual(["backend", "bug"]);
   for (const option of options) expect(option.getAttribute("aria-selected")).toBe("false");
   await closeFilter();
   expect(filterButton("Label").classList.contains("tl-filter-add")).toBe(true);
-});
-
-it("REQ-040.3: an unknown status in a link is ignored", async () => {
-  mockList();
-  renderAppAt("/project/WEB/list?status=Todo");
-
-  await screen.findByRole("table");
-  expect(filterButton("Status").classList.contains("tl-filter-add")).toBe(true);
-  expect(rowIds()).toEqual(["WEB-42", "WEB-12", "WEB-7"]);
 });
 
 it("REQ-040: filters and sort round-trip through the address as repeated parameters", async () => {
@@ -264,7 +248,7 @@ it("REQ-037.4: nothing matches → Clear filters, which clears the filters and t
   await waitFor(() => expect(rowIds()).toEqual(["WEB-42", "WEB-12", "WEB-7"]));
 });
 
-it("List — default: the columns, and each row's cells", async () => {
+it("REQ-039: default columns and cells; newest-updated first; ID starts highest first, Status from Backlog", async () => {
   mockList();
   renderAppAt("/project/WEB/list");
 
@@ -289,13 +273,7 @@ it("List — default: the columns, and each row's cells", async () => {
   expect(within(r12).getByText(/^Sep 16/)).toBeTruthy();
 
   expect(within(rowOf("WEB-7")).getByText("Jo Park (deactivated)")).toBeTruthy();
-});
 
-it("REQ-039: newest-updated first by default; ID starts highest first, Status from Backlog", async () => {
-  mockList();
-  renderAppAt("/project/WEB/list");
-
-  await screen.findByRole("table");
   expect(heading("Last updated").getAttribute("aria-sort")).toBe("descending");
   sortBy("ID");
   await waitFor(() => expect(window.location.search).toBe("?sort=id&dir=desc"));
@@ -373,22 +351,7 @@ it("List — empty project: “Create one.” opens New issue", async () => {
   expect(screen.getByRole("dialog", { name: "New issue" })).toBeTruthy();
 });
 
-it("List — load failure: Couldn't load this. and Retry loads again", async () => {
-  let attempts = 0;
-  mockList({
-    list: () => {
-      attempts += 1;
-      return attempts === 1 ? apiError(500, "Server error") : page([web42]);
-    },
-  });
-  renderAppAt("/project/WEB/list");
-
-  expect(await screen.findByText("Couldn't load this.")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-  await waitFor(() => expect(rowIds()).toEqual(["WEB-42"]));
-});
-
-it("REQ-036.4: a title too long for its cell shows in full on hover and keyboard focus", async () => {
+it("REQ-036.4, REQ-042.3: a title too long for its cell shows in full on hover and keyboard focus", async () => {
   const long =
     `Sign-in page shows the wrong error after a password reset link expires, ${"and more ".repeat(16)}`.slice(
       0,

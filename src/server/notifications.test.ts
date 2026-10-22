@@ -64,7 +64,7 @@ async function comment(issueRef: string, by: Member, body: string) {
   return comment;
 }
 
-it("REQ-043.1: Alex assigns WEB-42 to Sam → Sam gets the email", async () => {
+it("REQ-043.1, §2.6: Alex assigns WEB-42 to Sam → Sam gets the email, in a new batch with one pending delivery per channel (email by default)", async () => {
   const alex = await createMember({ fullName: "Alex Kim" });
   const sam = await createMember({ fullName: "Sam Lee" });
   const { project, issue, issueRef } = await website();
@@ -89,18 +89,22 @@ it("REQ-043.1: Alex assigns WEB-42 to Sam → Sam gets the email", async () => {
       excerpt: "",
     },
   ]);
+  const [{ batchId }] = await notificationsFor(sam);
+  expect(sam.notificationChannels).toEqual(["email"]);
+  expect(await deliveriesFor(sam)).toEqual([{ batchId, channel: "email", state: "pending", attempts: 0 }]);
 });
 
-it("REQ-043.2: Sam assigns WEB-42 to themselves → no email", async () => {
+it("REQ-043.2, REQ-044.2: Sam assigning WEB-42 to themselves or writing @sam in their own comment → no email", async () => {
   const sam = await createMember();
   const { issueRef } = await website();
 
   await assign(issueRef, sam, sam);
+  await comment(issueRef, sam, `Note to self @${sam.username}`);
 
   expect(await notificationsFor(sam)).toEqual([]);
 });
 
-it("REQ-043.3: Alex reassigns WEB-42 from Sam to Jo → Jo gets the email; Sam gets nothing", async () => {
+it("REQ-043.3, REQ-043: Alex reassigns WEB-42 from Sam to Jo → Jo gets the email; Sam gets nothing; then unassigning emails nobody", async () => {
   const alex = await createMember();
   const sam = await createMember();
   const jo = await createMember();
@@ -111,17 +115,10 @@ it("REQ-043.3: Alex reassigns WEB-42 from Sam to Jo → Jo gets the email; Sam g
 
   expect(await notificationsFor(sam)).toEqual([]);
   expect(await notificationsFor(jo)).toMatchObject([{ kind: "assigned", actorId: alex.id }]);
-});
-
-it("REQ-043: unassigning emails nobody", async () => {
-  const alex = await createMember();
-  const sam = await createMember();
-  const { issue, issueRef } = await website();
-  await db.update(issues).set({ assigneeId: sam.id }).where(eq(issues.id, issue.id));
 
   await assign(issueRef, alex, null);
 
-  expect(await notificationsFor(sam)).toEqual([]);
+  expect(await notificationsFor(jo)).toHaveLength(1);
   expect(await notificationsFor(alex)).toEqual([]);
 });
 
@@ -148,15 +145,6 @@ it('REQ-044.1: Alex comments "@sam can you check?" on WEB-42 → Sam gets the em
       excerpt: `@${sam.username} can you check?`,
     }),
   ]);
-});
-
-it("REQ-044.2: Sam writes @sam in their own comment → no email", async () => {
-  const sam = await createMember();
-  const { issueRef } = await website();
-
-  await comment(issueRef, sam, `Note to self @${sam.username}`);
-
-  expect(await notificationsFor(sam)).toEqual([]);
 });
 
 it("REQ-044.3: Alex edits a comment that already mentions @sam and adds @jo → only Jo is emailed", async () => {
@@ -280,7 +268,7 @@ it("REQ-044: the excerpt is plain text with whitespace collapsed, cut at 500 cha
   expect(excerpt).toBe(`${plain.slice(0, 500)}…`);
 });
 
-it("REQ-045.1: Alex assigns WEB-42 to Sam and mentions @sam in a comment on it → one email covering both", async () => {
+it("REQ-045.1, §2.6: Alex assigns WEB-42 to Sam and mentions @sam in a comment on it → one email covering both, with no extra delivery", async () => {
   const alex = await createMember();
   const sam = await createMember();
   const { issueRef } = await website();
@@ -291,6 +279,7 @@ it("REQ-045.1: Alex assigns WEB-42 to Sam and mentions @sam in a comment on it �
   const rows = await notificationsFor(sam);
   expect(rows.map((row) => row.kind)).toEqual(["assigned", "mentioned"]);
   expect(new Set(rows.map((row) => row.batchId)).size).toBe(1);
+  expect(await deliveriesFor(sam)).toHaveLength(1);
 });
 
 it("REQ-045.8: a mention during the wait joins the email without moving send after; one after it starts a new email", async () => {
@@ -325,12 +314,6 @@ it("REQ-045.8: a mention during the wait joins the email without moving send aft
   expect(rows[2].waitSeconds).toBe(120);
 });
 
-it("§2.6: a new member's notification channels are email", async () => {
-  const sam = await createMember();
-
-  expect(sam.notificationChannels).toEqual(["email"]);
-});
-
 it("§2.6: a member must keep at least one notification channel", async () => {
   const sam = await createMember();
 
@@ -344,27 +327,4 @@ it("§2.6: a member must keep at least one notification channel", async () => {
   expect((error as DrizzleQueryError).cause).toMatchObject({
     constraint_name: "members_notification_channels_not_empty",
   });
-});
-
-it("§2.6: a new batch gets one pending delivery per channel of the recipient", async () => {
-  const alex = await createMember();
-  const sam = await createMember();
-  const { issueRef } = await website();
-
-  await assign(issueRef, alex, sam);
-
-  const [{ batchId }] = await notificationsFor(sam);
-  expect(await deliveriesFor(sam)).toEqual([{ batchId, channel: "email", state: "pending", attempts: 0 }]);
-});
-
-it("§2.6: a notification joining a batch adds no deliveries", async () => {
-  const alex = await createMember();
-  const sam = await createMember();
-  const { issueRef } = await website();
-
-  await assign(issueRef, alex, sam);
-  await comment(issueRef, alex, `@${sam.username} over to you`);
-
-  expect(await notificationsFor(sam)).toHaveLength(2);
-  expect(await deliveriesFor(sam)).toHaveLength(1);
 });

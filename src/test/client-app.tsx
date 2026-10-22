@@ -47,6 +47,14 @@ export function never(): Promise<Response> {
   return new Promise(() => {});
 }
 
+export function deferred() {
+  let resolve!: (response: Response) => void;
+  const answer = new Promise<Response>((settle) => {
+    resolve = settle;
+  });
+  return { answer: () => answer, resolve };
+}
+
 export function networkError(): never {
   throw new TypeError("Failed to fetch");
 }

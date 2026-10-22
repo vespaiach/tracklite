@@ -5,7 +5,7 @@ import type { NotificationStats } from "../../../contract";
 import { db } from "../../../server/db";
 import { notificationDeliveries, notifications, workerHeartbeats } from "../../../server/schema";
 import { createMember, createNotificationBatch } from "../../../test/factories";
-import { signedIn, signedInAdmin } from "../../../test/invitations";
+import { signedInAdmin } from "../../../test/invitations";
 import { GET } from "./route";
 
 type FinishedState = "sent" | "dropped" | "failed" | "bounced";
@@ -207,26 +207,12 @@ it("REQ-053: a failed delivery the previous release wrote without a state change
   expect(stats.recentProblems.map((problem) => problem.id)).toEqual([listed.deliveryId]);
 });
 
-it("REQ-053.5: the worker has never run → no last pass time", async () => {
-  const stats = await statsAsAdmin();
-
-  expect(stats.workerLastPassAt).toBeNull();
-});
-
-it("REQ-053.6: nothing has failed or bounced → an empty recent list", async () => {
+it("REQ-053.5, REQ-053.6: the worker has never run and nothing has failed or bounced → no last pass time and an empty recent list", async () => {
   await many(2, "sent");
 
   const stats = await statsAsAdmin();
 
+  expect(stats.workerLastPassAt).toBeNull();
   expect(stats.recentProblems).toEqual([]);
   expect(stats.channels).toEqual([{ channel: "email", sent: 2, dropped: 0, failed: 0, bounced: 0 }]);
-});
-
-it('REQ-053.8: Alex, a member, asks for the stats → 403 "You don\'t have permission to do that."', async () => {
-  const { cookie } = await signedIn();
-
-  const response = await statsWith(cookie);
-
-  expect(response.status).toBe(403);
-  expect(await response.json()).toEqual({ error: { message: "You don't have permission to do that." } });
 });

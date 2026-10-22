@@ -66,7 +66,7 @@ function fieldError(fields: Record<string, string>) {
   return { error: { message: "Check the highlighted fields", fields } };
 }
 
-it("REQ-026.1: Sam drags WEB-42 from Backlog to In Progress → In Progress, still there after a reload", async () => {
+it("REQ-026.1, REQ-030.1: Sam drags WEB-42 from Backlog to In Progress → at the top of In Progress, still there after a reload", async () => {
   const sam = await signedIn();
   const project = await createProject();
   const existing = await issueIn(project, "in_progress");
@@ -82,7 +82,7 @@ it("REQ-026.1: Sam drags WEB-42 from Backlog to In Progress → In Progress, sti
   expect(await column(sam, project.key, "backlog")).toEqual([]);
 });
 
-it("REQ-026.3: Sam moves WEB-5 and Alex moves WEB-9 within In Progress at the same time → both moves are kept", async () => {
+it("REQ-026.3, REQ-030.2: Sam moves WEB-5 to the bottom and Alex moves WEB-9 to the top of In Progress at the same time → both moves are kept", async () => {
   const sam = await signedIn();
   const alex = await signedIn();
   const project = await createProject();
@@ -103,47 +103,31 @@ it("REQ-026.3: Sam moves WEB-5 and Alex moves WEB-9 within In Progress at the sa
   ]);
 });
 
-it("REQ-026.4: Alex has moved WEB-42 to Done; Sam, on an older board, drags it to In Review → WEB-42 is In Review", async () => {
+it("REQ-026.4: a drag from an older board still lands: Done → In Review works, and an 'after' card that left the column or is the moved card itself means the top", async () => {
   const sam = await signedIn();
   const project = await createProject();
-  const issue = await issueIn(project, "done");
-
-  const response = await moveWith(sam, issue.displayId, { status: "in_review", place: "top" });
-
-  expect(response.status).toBe(200);
-  expect(await column(sam, project.key, "in_review")).toEqual([issue.displayId]);
-  expect(await column(sam, project.key, "done")).toEqual([]);
-});
-
-it("REQ-026.4: the card named in 'after' has left the column → the moved card goes to the top", async () => {
-  const sam = await signedIn();
-  const project = await createProject();
+  const done = await issueIn(project, "done");
   const first = await issueIn(project, "in_progress");
-  const elsewhere = await issueIn(project, "done");
   const issue = await issueIn(project);
 
-  const response = await moveWith(sam, issue.displayId, {
+  expect((await moveWith(sam, done.displayId, { status: "in_review", place: "top" })).status).toBe(200);
+  expect(await column(sam, project.key, "in_review")).toEqual([done.displayId]);
+  expect(await column(sam, project.key, "done")).toEqual([]);
+
+  const leftColumn = await moveWith(sam, issue.displayId, {
     status: "in_progress",
-    place: { after: elsewhere.displayId },
+    place: { after: done.displayId },
   });
-
-  expect(response.status).toBe(200);
+  expect(leftColumn.status).toBe(200);
   expect(await column(sam, project.key, "in_progress")).toEqual([issue.displayId, first.displayId]);
-});
 
-it("REQ-026.4: 'after' naming the moved card itself → the card goes to the top", async () => {
-  const sam = await signedIn();
-  const project = await createProject();
-  const first = await issueIn(project);
-  const issue = await issueIn(project);
-
-  const response = await moveWith(sam, issue.displayId, {
-    status: "backlog",
+  await moveWith(sam, issue.displayId, { status: "in_progress", place: "bottom" });
+  const afterItself = await moveWith(sam, issue.displayId, {
+    status: "in_progress",
     place: { after: issue.displayId },
   });
-
-  expect(response.status).toBe(200);
-  expect(await column(sam, project.key, "backlog")).toEqual([issue.displayId, first.displayId]);
+  expect(afterItself.status).toBe(200);
+  expect(await column(sam, project.key, "in_progress")).toEqual([issue.displayId, first.displayId]);
 });
 
 it("REQ-026.5: Sam drags WEB-42 after another member deleted it → This issue was deleted", async () => {
@@ -161,105 +145,61 @@ it("REQ-026.5: Sam drags WEB-42 after another member deleted it → This issue w
   expect(await response.json()).toEqual({ error: { message: "This issue was deleted" } });
 });
 
-it("REQ-027.1: Sam drags WEB-9 above WEB-5 in In Progress → after a reload, Alex also sees WEB-9 above WEB-5", async () => {
+it("REQ-027.1, REQ-027.2: 'after' places a card within its column, and from Backlog between two In Progress cards; Alex sees the same order after a reload", async () => {
   const sam = await signedIn();
   const alex = await signedIn();
   const project = await createProject();
   const before = await issueIn(project, "in_progress");
   const web5 = await issueIn(project, "in_progress");
   const web9 = await issueIn(project, "in_progress");
+  const issue = await issueIn(project);
 
-  const response = await moveWith(sam, web9.displayId, {
+  const within = await moveWith(sam, web9.displayId, {
     status: "in_progress",
     place: { after: before.displayId },
   });
 
-  expect(response.status).toBe(200);
+  expect(within.status).toBe(200);
   expect(await column(alex, project.key, "in_progress")).toEqual([
     before.displayId,
     web9.displayId,
     web5.displayId,
   ]);
-});
 
-it("REQ-027.2: Sam drags WEB-42 from Backlog between WEB-5 and WEB-9 in In Progress → In Progress, between those two", async () => {
-  const sam = await signedIn();
-  const project = await createProject();
-  const web5 = await issueIn(project, "in_progress");
-  const web9 = await issueIn(project, "in_progress");
-  const issue = await issueIn(project);
-
-  const response = await moveWith(sam, issue.displayId, {
+  const across = await moveWith(sam, issue.displayId, {
     status: "in_progress",
-    place: { after: web5.displayId.toLowerCase() },
+    place: { after: web9.displayId.toLowerCase() },
   });
 
-  expect(response.status).toBe(200);
-  expect((await response.json()).status).toBe("in_progress");
-  expect(await column(sam, project.key, "in_progress")).toEqual([
-    web5.displayId,
-    issue.displayId,
+  expect(across.status).toBe(200);
+  expect((await across.json()).status).toBe("in_progress");
+  expect(await column(alex, project.key, "in_progress")).toEqual([
+    before.displayId,
     web9.displayId,
-  ]);
-});
-
-it("REQ-030.1: Move to → In Review puts WEB-42 at the top of In Review", async () => {
-  const sam = await signedIn();
-  const project = await createProject();
-  const existing = await issueIn(project, "in_review");
-  const issue = await issueIn(project);
-
-  const response = await moveWith(sam, issue.displayId, { status: "in_review", place: "top" });
-
-  expect(response.status).toBe(200);
-  expect(await column(sam, project.key, "in_review")).toEqual([issue.displayId, existing.displayId]);
-});
-
-it("REQ-030.2: Move to bottom puts WEB-5 last in In Progress", async () => {
-  const sam = await signedIn();
-  const project = await createProject();
-  const web5 = await issueIn(project, "in_progress");
-  const second = await issueIn(project, "in_progress");
-  const third = await issueIn(project, "in_progress");
-
-  const response = await moveWith(sam, web5.displayId, { status: "in_progress", place: "bottom" });
-
-  expect(response.status).toBe(200);
-  expect(await column(sam, project.key, "in_progress")).toEqual([
-    second.displayId,
-    third.displayId,
+    issue.displayId,
     web5.displayId,
   ]);
 });
 
-it("REQ-036.5: reordering a card within its column changes neither updatedAt nor statusChangedAt", async () => {
+it("REQ-036.5: reordering a card within its column changes neither updatedAt nor statusChangedAt; a status change by dragging sets both", async () => {
   const sam = await signedIn();
   const project = await createProject();
   await issueIn(project);
   const issue = await issueIn(project);
   const before = await ageTimestamps(issue.id);
 
-  const response = await moveWith(sam, issue.displayId, { status: "backlog", place: "top" });
+  expect((await moveWith(sam, issue.displayId, { status: "backlog", place: "top" })).status).toBe(200);
 
-  expect(response.status).toBe(200);
-  const after = await stored(issue.id);
-  expect(after.position).not.toBe(before.position);
-  expect(after.updatedAt).toEqual(before.updatedAt);
-  expect(after.statusChangedAt).toEqual(before.statusChangedAt);
-});
+  const reordered = await stored(issue.id);
+  expect(reordered.position).not.toBe(before.position);
+  expect(reordered.updatedAt).toEqual(before.updatedAt);
+  expect(reordered.statusChangedAt).toEqual(before.statusChangedAt);
 
-it("REQ-036.5: a status change made by dragging sets updatedAt and statusChangedAt", async () => {
-  const sam = await signedIn();
-  const project = await createProject();
-  const issue = await issueIn(project);
-  const before = await ageTimestamps(issue.id);
+  expect((await moveWith(sam, issue.displayId, { status: "done", place: "top" })).status).toBe(200);
 
-  const response = await moveWith(sam, issue.displayId, { status: "done", place: "top" });
-
-  expect(response.status).toBe(200);
-  const after = await stored(issue.id);
-  expect(after.updatedAt.getTime()).toBeGreaterThan(before.updatedAt.getTime());
-  expect(after.statusChangedAt.getTime()).toBeGreaterThan(before.statusChangedAt.getTime());
+  const moved = await stored(issue.id);
+  expect(moved.updatedAt.getTime()).toBeGreaterThan(before.updatedAt.getTime());
+  expect(moved.statusChangedAt.getTime()).toBeGreaterThan(before.statusChangedAt.getTime());
 });
 
 it("REQ-024.2: moving a card in an archived project → This project is archived", async () => {

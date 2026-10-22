@@ -37,19 +37,12 @@ it("REQ-050.1: an active member's email gets a reset link", async () => {
   expect(sent).toEqual({ to: sam.email, ...passwordResetEmail({ email: sam.email, token }) });
 });
 
-it("REQ-050.2: an unknown email gets the same 204 and no email", async () => {
-  const response = await requestResetLink("stranger-050-2@x.com");
+it("REQ-050.2, REQ-050: an unknown email or a deactivated member gets the same 204 and no email", async () => {
+  const jo = await createMember({ deactivatedAt: new Date() });
 
-  expect(response.status).toBe(204);
-  expect(outbox.sent).toEqual([]);
-});
-
-it("REQ-050: a deactivated member gets the same 204 and no email", async () => {
-  const sam = await createMember({ deactivatedAt: new Date() });
-
-  const response = await requestResetLink(sam.email);
-
-  expect(response.status).toBe(204);
+  for (const email of ["stranger-050-2@x.com", jo.email]) {
+    expect((await requestResetLink(email)).status).toBe(204);
+  }
   expect(outbox.sent).toEqual([]);
 });
 

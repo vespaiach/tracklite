@@ -140,22 +140,6 @@ async function rowsPerDeleteFrom(table: string, run: () => Promise<unknown>) {
   }
 }
 
-it("DATA-004.1: a password reset link expired 31 days ago is no longer in the database", async () => {
-  const id = await resetLink({ expiresAt: ago("31 days") });
-
-  await deleteExpiredRows();
-
-  expect(await resetLinkExists(id)).toBe(false);
-});
-
-it("DATA-004.2: a notification sent 10 days ago is still stored", async () => {
-  const id = await notificationEmail("sent", { sendAfter: ago("10 days"), sentAt: ago("10 days") });
-
-  await deleteExpiredRows();
-
-  expect(await notificationEmailExists(id)).toBe(true);
-});
-
 it("DATA-004: invitations are deleted 30 days after being accepted, revoked or expiring", async () => {
   const accepted = await invitation({ acceptedAt: ago("31 days") });
   const revoked = await invitation({ revokedAt: ago("31 days") });
@@ -177,12 +161,14 @@ it("DATA-004: invitations are deleted 30 days after being accepted, revoked or e
   expect(remaining.sort()).toEqual([recentlyAccepted, recentlyExpired, pending].sort());
 });
 
-it("DATA-004: password reset links are deleted 30 days after being used", async () => {
+it("DATA-004.1, DATA-004: password reset links are deleted 30 days after expiring or being used", async () => {
+  const expiredLongAgo = await resetLink({ expiresAt: ago("31 days") });
   const usedLongAgo = await resetLink({ usedAt: ago("31 days") });
   const usedRecently = await resetLink({ usedAt: ago("29 days"), expiresAt: ago("29 days") });
 
   await deleteExpiredRows();
 
+  expect(await resetLinkExists(expiredLongAgo)).toBe(false);
   expect(await resetLinkExists(usedLongAgo)).toBe(false);
   expect(await resetLinkExists(usedRecently)).toBe(true);
 });
@@ -197,7 +183,7 @@ it("DATA-004: sessions are deleted 30 days after they end through inactivity", a
   expect(await sessionExists(endedRecently)).toBe(true);
 });
 
-it("DATA-004: finished notifications are deleted 30 days after they finish, pending ones never", async () => {
+it("DATA-004.2, DATA-004: finished notifications are deleted 30 days after they finish; one sent 10 days ago and pending ones stay", async () => {
   const sent = await notificationEmail("sent", { sendAfter: ago("31 days"), sentAt: ago("31 days") });
   const dropped = await notificationEmail("dropped", { sendAfter: ago("31 days") });
   const failed = await notificationEmail("failed", {
@@ -210,34 +196,23 @@ it("DATA-004: finished notifications are deleted 30 days after they finish, pend
     nextAttemptAt: ago("29 days"),
   });
   const pending = await notificationEmail("pending", { sendAfter: ago("40 days") });
+  const sentRecently = await notificationEmail("sent", { sendAfter: ago("10 days"), sentAt: ago("10 days") });
 
   await deleteExpiredRows();
 
   for (const id of [sent, dropped, failed, bounced]) expect(await notificationEmailExists(id)).toBe(false);
   expect(await notificationEmailExists(recentlyFailed)).toBe(true);
   expect(await notificationEmailExists(pending)).toBe(true);
+  expect(await notificationEmailExists(sentRecently)).toBe(true);
 });
 
-it("DATA-004: sign-in attempts are deleted 30 days after they're an hour old", async () => {
+it("DATA-004: sign-in attempts are deleted 30 days after they're an hour old, and password reset requests 30 days after they're a day old", async () => {
   const old = uniqueEmail();
   const recent = uniqueEmail();
   await db.insert(signInAttempts).values([
     { email: old, ip: "127.0.0.1", createdAt: ago("30 days 2 hours") },
     { email: recent, ip: "127.0.0.1", createdAt: ago("30 days 30 minutes") },
   ]);
-
-  await deleteExpiredRows();
-
-  const rows = await db
-    .select({ email: signInAttempts.email })
-    .from(signInAttempts)
-    .where(inArray(signInAttempts.email, [old, recent]));
-  expect(rows.map((row) => row.email)).toEqual([recent]);
-});
-
-it("DATA-004: password reset requests are deleted 30 days after they're a day old", async () => {
-  const old = uniqueEmail();
-  const recent = uniqueEmail();
   await db.insert(passwordResetRequests).values([
     { email: old, ip: "127.0.0.1", createdAt: ago("31 days 1 hour") },
     { email: recent, ip: "127.0.0.1", createdAt: ago("30 days 23 hours") },
@@ -245,11 +220,16 @@ it("DATA-004: password reset requests are deleted 30 days after they're a day ol
 
   await deleteExpiredRows();
 
-  const rows = await db
+  const attempts = await db
+    .select({ email: signInAttempts.email })
+    .from(signInAttempts)
+    .where(inArray(signInAttempts.email, [old, recent]));
+  const requests = await db
     .select({ email: passwordResetRequests.email })
     .from(passwordResetRequests)
     .where(inArray(passwordResetRequests.email, [old, recent]));
-  expect(rows.map((row) => row.email)).toEqual([recent]);
+  expect(attempts.map((row) => row.email)).toEqual([recent]);
+  expect(requests.map((row) => row.email)).toEqual([recent]);
 });
 
 it("DATA-004: cleanup deletes more than one chunk's worth of rows, at most 1,000 per statement", async () => {

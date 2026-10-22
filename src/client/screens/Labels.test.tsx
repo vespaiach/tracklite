@@ -4,7 +4,7 @@ import {
   admin,
   apiError,
   mockApi,
-  never,
+  deferred,
   noContent,
   project,
   renderAppAt,
@@ -135,8 +135,10 @@ it("STD-7: a load failure offers Retry", async () => {
   expect(requestsTo(fetchMock, "GET /api/projects/WEB/labels")).toHaveLength(2);
 });
 
-it("REQ-021: creating a label sends its name and colour and lists it", async () => {
-  const fetchMock = mockLabels();
+it("REQ-021, STD-5: creating a label is disabled while saving, then sends its name and colour and lists it", async () => {
+  const save = deferred();
+  const shown = [...typical];
+  const fetchMock = mockLabels({ labels: shown, post: save.answer });
   renderAppAt("/project/WEB/labels");
   const form = await openCreate();
 
@@ -147,6 +149,13 @@ it("REQ-021: creating a label sends its name and colour and lists it", async () 
   fireEvent.click(within(await screen.findByRole("menu")).getByRole("menuitemradio", { name: /Blue/ }));
   fireEvent.click(within(form).getByRole("button", { name: "Create label" }));
 
+  const saving = (await within(form).findByRole("button", { name: "Creating…" })) as HTMLButtonElement;
+  expect(saving.disabled).toBe(true);
+
+  const created: Label = { id: "id-new", name: "performance", color: "blue", issueCount: 0 };
+  shown.push(created);
+  save.resolve(Response.json(created, { status: 201 }));
+
   expect(await row("performance")).toBeTruthy();
   expect(requestsTo(fetchMock, "POST /api/projects/WEB/labels")).toEqual([
     { name: "performance", color: "blue" },
@@ -155,20 +164,14 @@ it("REQ-021: creating a label sends its name and colour and lists it", async () 
   expect((await row("performance")).textContent).toContain("Blue");
 });
 
-it("STD-5: Create label is disabled while saving", async () => {
-  mockLabels({ post: never });
-  renderAppAt("/project/WEB/labels");
-  const form = await openCreate();
-
-  fireEvent.change(within(form).getByLabelText("Name"), { target: { value: "performance" } });
-  fireEvent.click(within(form).getByRole("button", { name: "Create label" }));
-
-  const saving = (await within(form).findByRole("button", { name: "Creating…" })) as HTMLButtonElement;
-  expect(saving.disabled).toBe(true);
-});
-
-it("REQ-021.2: a duplicate name shows the field error and keeps what was typed", async () => {
-  mockLabels({ post: () => apiError(422, "Check the highlighted fields", { name: "Label already exists" }) });
+it("REQ-021, REQ-021.2: create field errors show under Name and Color and keep what was typed", async () => {
+  mockLabels({
+    post: () =>
+      apiError(422, "Check the highlighted fields", {
+        name: "Label already exists",
+        color: "Choose a color",
+      }),
+  });
   renderAppAt("/project/WEB/labels");
   const form = await openCreate();
 
@@ -179,17 +182,8 @@ it("REQ-021.2: a duplicate name shows the field error and keeps what was typed",
   const name = within(form).getByLabelText("Name") as HTMLInputElement;
   expect(name.value).toBe("BUG");
   expect(name.getAttribute("aria-invalid")).toBe("true");
-});
 
-it('REQ-021: an unknown colour shows "Choose a color" under Color', async () => {
-  mockLabels({ post: () => apiError(422, "Check the highlighted fields", { color: "Choose a color" }) });
-  renderAppAt("/project/WEB/labels");
-  const form = await openCreate();
-
-  fireEvent.change(within(form).getByLabelText("Name"), { target: { value: "performance" } });
-  fireEvent.click(within(form).getByRole("button", { name: "Create label" }));
-
-  const error = await within(form).findByText("Choose a color");
+  const error = within(form).getByText("Choose a color");
   const color = within(form).getByRole("button", { name: "Color: Gray" });
   expect(color.getAttribute("aria-describedby")).toBe(error.closest("[id]")?.id);
 });
@@ -236,16 +230,21 @@ it("REQ-021: recolouring saves the chosen colour", async () => {
   expect(requestsTo(fetchMock, "PATCH /api/labels/id-frontend")).toEqual([{ color: "blue" }]);
 });
 
-it("REQ-021.5: deleting asks with the issue count, then deletes", async () => {
+it("REQ-021.5: deleting asks with the issue count; cancelling keeps the label, confirming deletes it", async () => {
   const fetchMock = mockLabels();
   renderAppAt("/project/WEB/labels");
 
   fireEvent.click(await screen.findByRole("button", { name: "Delete frontend" }));
+  const cancelled = screen.getByRole("dialog", { name: "Delete frontend?" });
+  expect(cancelled.textContent).toContain("It will be removed from 12 issues.");
+  fireEvent.click(within(cancelled).getByRole("button", { name: "Cancel" }));
+
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(requestsTo(fetchMock, "DELETE /api/labels/id-frontend")).toHaveLength(0);
+  expect(await row("frontend")).toBeTruthy();
+
+  fireEvent.click(screen.getByRole("button", { name: "Delete frontend" }));
   const dialog = screen.getByRole("dialog", { name: "Delete frontend?" });
-  expect(dialog.textContent).toContain("It will be removed from 12 issues.");
-  await waitFor(() =>
-    expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Cancel" })),
-  );
   fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -253,18 +252,6 @@ it("REQ-021.5: deleting asks with the issue count, then deletes", async () => {
   await waitFor(async () =>
     expect(within(await labelList()).queryByText("frontend", { selector: ".tl-pill" })).toBeNull(),
   );
-});
-
-it("REQ-021.5: cancelling the confirmation keeps the label", async () => {
-  const fetchMock = mockLabels();
-  renderAppAt("/project/WEB/labels");
-
-  fireEvent.click(await screen.findByRole("button", { name: "Delete frontend" }));
-  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
-
-  expect(screen.queryByRole("dialog")).toBeNull();
-  expect(requestsTo(fetchMock, "DELETE /api/labels/id-frontend")).toHaveLength(0);
-  expect(await row("frontend")).toBeTruthy();
 });
 
 it("REQ-013.5: an archived project lists labels with no edit controls", async () => {
@@ -278,8 +265,9 @@ it("REQ-013.5: an archived project lists labels with no edit controls", async ()
   expect(screen.queryByRole("button", { name: /^Delete / })).toBeNull();
 });
 
-it("REQ-013.6: a rename refused because the project was archived shows the toast and keeps the label", async () => {
-  mockLabels({ patch: () => apiError(403, "This project is archived") });
+it("REQ-013.6, STD-9: a refused rename shows the server's message as a toast and keeps the typed name; a 404 reloads the list", async () => {
+  const refusals = [apiError(403, "This project is archived"), apiError(404, "That label no longer exists")];
+  const fetchMock = mockLabels({ patch: () => refusals.shift() ?? noContent() });
   renderAppAt("/project/WEB/labels");
   const form = await openRename("bug");
 
@@ -289,14 +277,7 @@ it("REQ-013.6: a rename refused because the project was archived shows the toast
   expect(await screen.findByText("This project is archived")).toBeTruthy();
   expect((within(form).getByLabelText("Name") as HTMLInputElement).value).toBe("defect");
   expect(within(await labelList()).queryByText("defect", { selector: ".tl-pill" })).toBeNull();
-});
 
-it('STD-9: a label deleted meanwhile shows "That label no longer exists" and reloads the list', async () => {
-  const fetchMock = mockLabels({ patch: () => apiError(404, "That label no longer exists") });
-  renderAppAt("/project/WEB/labels");
-  const form = await openRename("docs");
-
-  fireEvent.change(within(form).getByLabelText("Name"), { target: { value: "documentation" } });
   fireEvent.click(within(form).getByRole("button", { name: "Save" }));
 
   expect(await screen.findByText("That label no longer exists")).toBeTruthy();

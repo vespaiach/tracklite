@@ -5,14 +5,12 @@ import { db } from "./db";
 import { initials, updateMember } from "./members";
 import { members } from "./schema";
 
-it.each([
-  ["Alexandria Catherine Montgomery-Fitzwilliam van der Bergholt", "AB"],
-  ["Sam", "S"],
-  ["(Contractor) Lee", "(L"],
-  ["3M Team", "3T"],
-  ["李 小龙", "李小"],
-])('REQ-003.4: the initials of "%s" are "%s"', (fullName, expected) => {
-  expect(initials(fullName)).toBe(expected);
+it("REQ-003.4: initials of long, single, bracketed, numeric and CJK names", () => {
+  expect(initials("Alexandria Catherine Montgomery-Fitzwilliam van der Bergholt")).toBe("AB");
+  expect(initials("Sam")).toBe("S");
+  expect(initials("(Contractor) Lee")).toBe("(L");
+  expect(initials("3M Team")).toBe("3T");
+  expect(initials("李 小龙")).toBe("李小");
 });
 
 it("STD-2: a member can't change a role or deactivate", async () => {
