@@ -152,12 +152,13 @@ M0–M9, M12–M16, M11.1 and M11.2a are done. Their entries were removed from t
 
 **Run order:** M11.2b, with **M11.3 ∥ M11.4 ∥ M11.5** at any time. M11.3–M11.5 are hand checks, not agent tasks.
 
-- [ ] **M11.2b Performance: board virtualization.** Each board column renders only the cards in view (react-aria `Virtualizer` with `ListLayout`), so a move re-renders a few cards instead of every card on the board. The column's list becomes its scroll container; the scrolling styles go in `styles/components.css`. A trial cut a move to 32–48 ms.
+- [x] **M11.2b Performance: board virtualization.** Each board column renders only the cards in view (react-aria `Virtualizer` with `ListLayout`), so a move re-renders a few cards instead of every card on the board. The column's list becomes its scroll container; the scrolling styles go in `styles/components.css`. A trial cut a move to 32–48 ms.
 
   Why: M11.2a (2026-10-08) measured NFR-002…005 on the NFR-001 seed data (`npm run db:seed:load`), with a production build (`next start`) on localhost driven by headless Chrome emulating 30 ms latency and 50 Mbps. NFR-002, NFR-003 and NFR-004 passed. NFR-005 failed: 290–480 ms from click to next paint with the save held back, because one move re-renders all ~690 board cards (about 460 ms of React work); memoizing columns and cards only got to about 290 ms.
   - Reads: spec NFR-005, REQ-026 · `src/client/screens/Board.tsx`
   - Needs: none
   - Done: `NFR-005: a 300-card column renders only the cards in view` (with element sizes mocked, far fewer than 300 cards are in the page); `NFR-005: moving a card in a 300-card column shows it in its new place before the save finishes`; the existing REQ-026 and NFR-005 Board tests pass unchanged; re-measured as above, a move shows within 100 ms
+  - Result (2026-10-22): same setup, 10 "Move to" clicks on the LAA board with the save held back: 61–71 ms (median 66 ms) from click to next paint, 75 cards in the page instead of 690. The unvirtualized build measured with the same script: 503–725 ms (median 538 ms).
 - [ ] **M11.3 Manual checks.** REQ-015.2, REQ-024.3, REQ-030.3, REQ-031.5, REQ-035.4, REQ-036.4, REQ-041.6, REQ-042.3, SEC-010.2.
 - [ ] **M11.4 Browsers and accessibility.** Browsers (NFR-006); keyboard pass and axe contrast scan (NFR-007).
 - [ ] **M11.5 Production checks.** SEC-005.1, SEC-007.2 and the `Verify: ops` examples of OPS-001 run against production; confirm the team's headcount against spec §3's assumptions, and check NFR-008 in Resend's delivery logs and the first month's bills against NFR-009.

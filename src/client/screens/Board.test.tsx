@@ -18,6 +18,7 @@ import type { Board, BoardIssue, IssueLabel, IssueStatus, Project } from "../api
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  clearElementSizes();
 });
 
 type Answer = (body: unknown) => Response | Promise<Response>;
@@ -52,6 +53,27 @@ function board(columns: Partial<Record<IssueStatus, BoardIssue[]>>): Board {
 }
 
 const webBoard = board({ backlog: [web42, web7, web12], in_progress: [web5, web9] });
+
+function longBacklog(size: number) {
+  const fillers = Array.from({ length: size - 3 }, (_, index) =>
+    card(`WEB-${100 + index}`, `Filler ${index}`),
+  );
+  return board({ backlog: [web42, web7, web12, ...fillers] });
+}
+
+const elementSizes = { clientWidth: 268, clientHeight: 600, scrollWidth: 254, scrollHeight: 80 };
+
+function mockElementSizes() {
+  for (const [name, size] of Object.entries(elementSizes)) {
+    Object.defineProperty(HTMLElement.prototype, name, { configurable: true, get: () => size });
+  }
+}
+
+function clearElementSizes() {
+  for (const name of Object.keys(elementSizes)) {
+    Reflect.deleteProperty(HTMLElement.prototype, name);
+  }
+}
 
 function mockBoard({
   shown = web,
@@ -126,6 +148,14 @@ async function press(key: string) {
   });
 }
 
+const dropFocusWindowMs = 50;
+
+async function settleDrop() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, dropFocusWindowMs));
+  });
+}
+
 async function dragByKeyboard(title: string, columnName: string, target: string) {
   const handle = await screen.findByRole("button", { name: `Drag ${title}` });
   const destination = column(columnName);
@@ -141,6 +171,7 @@ async function dragByKeyboard(title: string, columnName: string, target: string)
     const inDestination = focused !== null && destination.contains(focused);
     if (inDestination && focused.getAttribute("aria-label") === target) {
       await press("Enter");
+      await settleDrop();
       return;
     }
     await press(inDestination ? "ArrowDown" : "Tab");
@@ -314,6 +345,44 @@ it("NFR-005: a dropped card shows in its new place before the save finishes", as
   expect(titlesIn("Backlog")).toEqual(["Add password rules to the reset form", "Tidy up footer links"]);
   expect(column("In Progress").querySelector(".tl-board-col__count")?.textContent).toBe("3");
   expect(column("Backlog").querySelector(".tl-board-col__count")?.textContent).toBe("2");
+});
+
+it("NFR-005: a 300-card column renders only the cards in view", async () => {
+  mockElementSizes();
+  mockBoard({ columns: longBacklog(300) });
+  renderAppAt("/project/WEB");
+
+  await screen.findByRole("region", { name: "Backlog" });
+  await waitFor(() =>
+    expect(titlesIn("Backlog").slice(0, 3)).toEqual([
+      "Fix login button",
+      "Add password rules to the reset form",
+      "Tidy up footer links",
+    ]),
+  );
+  expect(titlesIn("Backlog").length).toBeLessThan(30);
+  expect(column("Backlog").querySelector(".tl-board-col__count")?.textContent).toBe("300");
+});
+
+it("NFR-005: moving a card in a 300-card column shows it in its new place before the save finishes", async () => {
+  mockElementSizes();
+  const fetchMock = mockBoard({ columns: longBacklog(300), move: () => never() });
+  renderAppAt("/project/WEB");
+
+  await dragByKeyboard("Fix login button", "Backlog", "Insert between Tidy up footer links and Filler 0");
+
+  await waitFor(() =>
+    expect(titlesIn("Backlog").slice(0, 4)).toEqual([
+      "Add password rules to the reset form",
+      "Tidy up footer links",
+      "Fix login button",
+      "Filler 0",
+    ]),
+  );
+  expect(requestsTo(fetchMock, "PUT /api/issues/WEB-42/position")).toEqual([
+    { status: "backlog", place: { after: "WEB-12" } },
+  ]);
+  expect(titlesIn("Backlog").length).toBeLessThan(30);
 });
 
 it("REQ-026.2: a drag whose save fails puts WEB-42 back in Backlog with the toast Couldn't move WEB-42", async () => {

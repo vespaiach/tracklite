@@ -10,8 +10,11 @@ import {
   GridList,
   GridListItem,
   type Key,
+  ListLayout,
+  type ListLayoutOptions,
   type TextDropItem,
   useDragAndDrop,
+  Virtualizer,
 } from "react-aria-components";
 import {
   Avatar,
@@ -47,6 +50,7 @@ import { useShowLoading } from "../useShowLoading";
 const labelsShown = 3;
 const closedStatuses: IssueStatus[] = ["done", "canceled"];
 const issueType = "application/x-tracklite-issue";
+const cardLayout: ListLayoutOptions = { estimatedRowSize: 80, gap: 7, padding: 7, dropIndicatorThickness: 7 };
 
 export function BoardView({ project }: { project: ProjectSummary }) {
   const query = useBoardQuery(project.key);
@@ -137,40 +141,44 @@ function StatusColumn({ column, archived, onCreate }: StatusColumnProps) {
           </Button>
         )
       }>
-      <GridList
-        aria-label={name}
-        items={column.cards}
-        keyboardNavigationBehavior="tab"
-        dragAndDropHooks={archived ? undefined : dragAndDropHooks}
-        renderEmptyState={({ isDropTarget }) =>
-          isDropTarget ? (
-            <BoardDrop />
-          ) : (
-            <EmptyColumn
-              status={column.status}
-              archived={archived}
-              onCreate={onCreate}
-            />
-          )
-        }
-        className="tl-board-col__list">
-        {(card) => (
-          <GridListItem
-            id={card.id}
-            textValue={card.title}>
-            {({ isDragging }) => (
-              <IssueCard
-                card={card}
+      <Virtualizer
+        layout={ListLayout}
+        layoutOptions={cardLayout}>
+        <GridList
+          aria-label={name}
+          items={column.cards}
+          keyboardNavigationBehavior="tab"
+          dragAndDropHooks={archived ? undefined : dragAndDropHooks}
+          renderEmptyState={({ isDropTarget }) =>
+            isDropTarget ? (
+              <BoardDrop />
+            ) : (
+              <EmptyColumn
                 status={column.status}
-                first={card.id === column.cards[0].id}
-                last={card.id === column.cards[column.cards.length - 1].id}
                 archived={archived}
-                dragging={isDragging}
+                onCreate={onCreate}
               />
-            )}
-          </GridListItem>
-        )}
-      </GridList>
+            )
+          }
+          className="tl-board-col__list">
+          {(card) => (
+            <GridListItem
+              id={card.id}
+              textValue={card.title}>
+              {({ isDragging }) => (
+                <IssueCard
+                  card={card}
+                  status={column.status}
+                  first={card.id === column.cards[0].id}
+                  last={card.id === column.cards[column.cards.length - 1].id}
+                  archived={archived}
+                  dragging={isDragging}
+                />
+              )}
+            </GridListItem>
+          )}
+        </GridList>
+      </Virtualizer>
     </BoardColumn>
   );
 }
