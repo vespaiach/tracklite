@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import type { Me, MemberSummary } from "../../contract";
-import type { MemberChanges } from "./schemas";
+import type { MemberChanges, Username } from "./schemas";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import type { Transaction } from "../shared/transaction";
@@ -68,10 +68,14 @@ async function keepLastAdmin(tx: Transaction, target: Member) {
   }
 }
 
-export async function updateMember(actor: Member, username: string, { role, deactivated }: MemberChanges) {
+export async function updateMember(
+  actor: Member,
+  username: Username | undefined,
+  { role, deactivated }: MemberChanges,
+) {
   assertAdmin(actor);
   return db.transaction(async (tx) => {
-    const [target] = await tx.select().from(members).where(eq(members.username, username.toLowerCase()));
+    const [target] = username ? await tx.select().from(members).where(eq(members.username, username)) : [];
     if (!target) throw new ApiError(404, "Not found");
 
     if (role === "member" || deactivated === true) await keepLastAdmin(tx, target);

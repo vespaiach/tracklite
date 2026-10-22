@@ -21,12 +21,23 @@ const fullName = v.pipe(
   maxCharacters(maxFullNameLength, `Too long (max ${maxFullNameLength})`),
 );
 
-const username = v.pipe(
-  v.string(usernameRule),
-  v.trim(),
-  v.toLowerCase(),
-  v.regex(/^[a-z0-9-]{2,20}$/, usernameRule),
-);
+export function usernameFormat(message: string) {
+  return v.pipe(
+    v.string(message),
+    v.toLowerCase(),
+    v.regex(/^[a-z0-9-]{2,20}$/, message),
+    v.brand("Username"),
+  );
+}
+
+export type Username = v.InferOutput<ReturnType<typeof usernameFormat>>;
+
+export function parseUsername(text: string): Username | undefined {
+  const result = v.safeParse(usernameFormat(usernameRule), text);
+  return result.success ? result.output : undefined;
+}
+
+const username = v.pipe(v.string(usernameRule), v.trim(), usernameFormat(usernameRule));
 
 export const SignIn = v.object({ email: emailAddress, password: v.string("Incorrect password") });
 export type SignIn = v.InferOutput<typeof SignIn>;

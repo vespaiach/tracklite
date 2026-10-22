@@ -2,12 +2,12 @@ import "server-only";
 import { asc, eq, inArray, type SQL, sql } from "drizzle-orm";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
-import { isUuid } from "../shared/ids";
+import type { Uuid } from "../shared/ids";
 import type { Executor, Transaction } from "../shared/transaction";
 import { conflict, notify, replaceMentions, mentions } from "../notifications";
-import { issueGoneError, issueIdCondition, issues } from "../issues";
+import { type IssueId, issueGoneError, issueIdCondition, issues } from "../issues";
 import { type Member, memberSummary, members } from "../identity";
-import { writableProject, projects } from "../projects";
+import { byProjectKey, type ProjectKey, writableProject, projects } from "../projects";
 import { comments } from "./tables";
 import type { CommentEdit, NewComment } from "./schemas";
 import type { ThreadComment } from "../../contract";
@@ -84,7 +84,7 @@ async function oneComment(executor: Executor, id: string) {
   return comment;
 }
 
-async function issueOf(executor: Executor, id: string) {
+async function issueOf(executor: Executor, id: IssueId | undefined) {
   const where = issueIdCondition(id);
   if (!where) return undefined;
   const [issue] = await executor
@@ -95,17 +95,14 @@ async function issueOf(executor: Executor, id: string) {
   return issue;
 }
 
-export async function listIssueComments(_actor: Member, id: string) {
+export async function listIssueComments(_actor: Member, id: IssueId | undefined) {
   const issue = await issueOf(db, id);
   if (!issue) throw new ApiError(404, "Not found");
   return findComments(db, eq(comments.issueId, issue.id));
 }
 
-export async function listProjectComments(_actor: Member, key: string) {
-  const [project] = await db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(eq(projects.key, key.toUpperCase()));
+export async function listProjectComments(_actor: Member, key: ProjectKey | undefined) {
+  const [project] = await db.select({ id: projects.id }).from(projects).where(byProjectKey(key));
   if (!project) throw new ApiError(404, "Not found");
   return findComments(db, eq(comments.projectId, project.id));
 }
@@ -140,7 +137,7 @@ async function postComment(
   });
 }
 
-export function postIssueComment(actor: Member, id: string, body: NewComment) {
+export function postIssueComment(actor: Member, id: IssueId | undefined, body: NewComment) {
   return postComment(actor, body, async (tx) => {
     const issue = await issueOf(tx, id);
     if (!issue) throw issueGoneError();
@@ -151,12 +148,12 @@ export function postIssueComment(actor: Member, id: string, body: NewComment) {
   });
 }
 
-export function postProjectComment(actor: Member, key: string, body: NewComment) {
+export function postProjectComment(actor: Member, key: ProjectKey | undefined, body: NewComment) {
   return postComment(actor, body, async (tx) => ({ projectId: (await writableProject(tx, key)).id }));
 }
 
-async function lockedComment(tx: Transaction, id: string) {
-  if (!isUuid(id)) throw commentGone();
+async function lockedComment(tx: Transaction, id: Uuid | undefined) {
+  if (id === undefined) throw commentGone();
 
   const [target] = await tx
     .select({ id: comments.id, projectKey: projects.key })
@@ -173,7 +170,7 @@ async function lockedComment(tx: Transaction, id: string) {
   return comment;
 }
 
-export async function editComment(actor: Member, id: string, { body, version }: CommentEdit) {
+export async function editComment(actor: Member, id: Uuid | undefined, { body, version }: CommentEdit) {
   return db.transaction(async (tx) => {
     const comment = await lockedComment(tx, id);
 
@@ -203,7 +200,7 @@ function parentOf(comment: typeof comments.$inferSelect): CommentParent {
   return comment.issueId ? { issueId: comment.issueId } : { projectId: comment.projectId as string };
 }
 
-export async function deleteComment(actor: Member, id: string) {
+export async function deleteComment(actor: Member, id: Uuid | undefined) {
   await db.transaction(async (tx) => {
     const comment = await lockedComment(tx, id);
 

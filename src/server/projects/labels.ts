@@ -3,10 +3,10 @@ import { asc, eq, sql } from "drizzle-orm";
 import { DrizzleQueryError } from "drizzle-orm/errors";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
-import { isUuid } from "../shared/ids";
+import type { Uuid } from "../shared/ids";
 import type { Transaction } from "../shared/transaction";
-import { writableProject } from "./projects";
-import type { LabelChanges, NewLabel } from "./schemas";
+import { byProjectKey, writableProject } from "./projects";
+import type { LabelChanges, NewLabel, ProjectKey } from "./schemas";
 import type { Label } from "../../contract";
 import { issueLabels } from "../issues/tables";
 import { labels, projects } from "./tables";
@@ -41,8 +41,8 @@ function isDuplicateName(error: unknown) {
   );
 }
 
-async function lockLabelProject(tx: Transaction, id: string) {
-  if (!isUuid(id)) throw labelGone();
+async function lockLabelProject(tx: Transaction, id: Uuid | undefined) {
+  if (id === undefined) throw labelGone();
 
   const [label] = await tx
     .select({ projectKey: projects.key })
@@ -52,13 +52,11 @@ async function lockLabelProject(tx: Transaction, id: string) {
   if (!label) throw labelGone();
 
   await writableProject(tx, label.projectKey);
+  return id;
 }
 
-export async function listLabels(_actor: Member, projectKey: string): Promise<Label[]> {
-  const [project] = await db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(eq(projects.key, projectKey.toUpperCase()));
+export async function listLabels(_actor: Member, projectKey: ProjectKey | undefined): Promise<Label[]> {
+  const [project] = await db.select({ id: projects.id }).from(projects).where(byProjectKey(projectKey));
   if (!project) throw new ApiError(404, "Not found");
   return db
     .select(labelResponse)
@@ -69,7 +67,7 @@ export async function listLabels(_actor: Member, projectKey: string): Promise<La
 
 export async function createLabel(
   _actor: Member,
-  projectKey: string,
+  projectKey: ProjectKey | undefined,
   { name, color }: NewLabel,
 ): Promise<Label> {
   return db.transaction(async (tx): Promise<Label> => {
@@ -84,24 +82,28 @@ export async function createLabel(
   });
 }
 
-export async function updateLabel(_actor: Member, id: string, changes: LabelChanges): Promise<Label> {
+export async function updateLabel(
+  _actor: Member,
+  id: Uuid | undefined,
+  changes: LabelChanges,
+): Promise<Label> {
   return db.transaction(async (tx): Promise<Label> => {
-    await lockLabelProject(tx, id);
+    const labelId = await lockLabelProject(tx, id);
 
     if (changes.name !== undefined || changes.color !== undefined) {
-      await refusingDuplicateNames(tx.update(labels).set(changes).where(eq(labels.id, id)));
+      await refusingDuplicateNames(tx.update(labels).set(changes).where(eq(labels.id, labelId)));
     }
 
-    const [label] = await tx.select(labelResponse).from(labels).where(eq(labels.id, id));
+    const [label] = await tx.select(labelResponse).from(labels).where(eq(labels.id, labelId));
     if (!label) throw labelGone();
     return label;
   });
 }
 
-export async function deleteLabel(_actor: Member, id: string) {
+export async function deleteLabel(_actor: Member, id: Uuid | undefined) {
   await db.transaction(async (tx) => {
-    await lockLabelProject(tx, id);
-    const deleted = await tx.delete(labels).where(eq(labels.id, id)).returning({ id: labels.id });
+    const labelId = await lockLabelProject(tx, id);
+    const deleted = await tx.delete(labels).where(eq(labels.id, labelId)).returning({ id: labels.id });
     if (deleted.length === 0) throw labelGone();
   });
 }

@@ -6,7 +6,7 @@ import { issuePriorities, issueStatuses } from "../contract";
 import { comments } from "../server/comments";
 import { members, seedMembers } from "../server/identity";
 import { issues } from "../server/issues";
-import { projectKeys, projects } from "../server/projects";
+import { type ProjectKey, projectKeys, projects } from "../server/projects";
 import { db } from "../server/shared/db";
 import type { Transaction } from "../server/shared/transaction";
 
@@ -31,7 +31,7 @@ const subjects = [
 
 const loadProjectName = "Load test";
 const letters = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"];
-const candidateKeys = letters.flatMap((second) => letters.map((third) => `L${second}${third}`));
+const candidateKeys = letters.flatMap((second) => letters.map((third) => `L${second}${third}` as ProjectKey));
 
 function chunks<T>(rows: T[]) {
   return Array.from({ length: Math.ceil(rows.length / chunkSize) }, (_, index) =>
@@ -88,7 +88,7 @@ function activePeople() {
 
 async function seedProject(
   tx: Transaction,
-  key: string,
+  key: ProjectKey,
   planned: ReturnType<typeof plannedIssues>,
   people: Person[],
 ) {

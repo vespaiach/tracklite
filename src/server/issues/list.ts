@@ -4,7 +4,8 @@ import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import { type Member, memberSummary, members } from "../identity";
 import { issueLabels, issues } from "./tables";
-import { labels, projects } from "../projects";
+import type { IssueId } from "./schemas";
+import { labels, type ProjectKey, projects } from "../projects";
 import {
   type IssueListPage,
   issuePriorities,
@@ -34,7 +35,7 @@ const sortColumns = {
   updated: { column: issues.updatedAt, ascending: false },
 };
 
-export async function getIssue(_actor: Member, id: string) {
+export async function getIssue(_actor: Member, id: IssueId | undefined) {
   const where = byIssueId(id);
   const issue = where ? await findIssue(db, where) : undefined;
   if (!issue) throw new ApiError(404, "Not found");
@@ -124,7 +125,7 @@ function listOffset(params: URLSearchParams) {
 
 export async function listIssues(
   _actor: Member,
-  projectKey: string,
+  projectKey: ProjectKey | undefined,
   params: URLSearchParams,
 ): Promise<IssueListPage> {
   const project = await readableProject(projectKey);

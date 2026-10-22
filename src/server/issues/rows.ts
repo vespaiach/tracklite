@@ -6,16 +6,15 @@ import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import type { Executor, Transaction } from "../shared/transaction";
 import { memberSummary, members } from "../identity";
-import { writableProject, labels, projects } from "../projects";
+import { byProjectKey, type ProjectKey, writableProject, labels, projects } from "../projects";
 import { issueLabels, issues } from "./tables";
 import { mentions } from "../notifications";
 import type { Issue, IssueStatus } from "../../contract";
+import type { IssueId } from "./schemas";
 
 export type IssueUpdate = PgUpdateSetSource<typeof issues>;
 
 const closedStatuses: IssueStatus[] = ["done", "canceled"];
-
-const issueIdPattern = /^([A-Za-z]{2,5})-([1-9]\d{0,8})$/;
 
 const creators = alias(members, "creators");
 export const assignees = alias(members, "assignees");
@@ -100,11 +99,10 @@ export function issueGone() {
   return new ApiError(404, "This issue was deleted");
 }
 
-export function byIssueId(id: string) {
-  const match = issueIdPattern.exec(id);
-  return match
-    ? and(eq(projects.key, match[1].toUpperCase()), eq(issues.number, Number(match[2])))
-    : undefined;
+export function byIssueId(id: IssueId | undefined) {
+  if (id === undefined) return undefined;
+  const [key, number] = id.split("-");
+  return and(eq(projects.key, key as ProjectKey), eq(issues.number, Number(number)));
 }
 
 export async function topOfColumn(tx: Transaction, projectId: string, status: IssueStatus) {
@@ -138,11 +136,11 @@ export async function updatedIssue(tx: Transaction, issueId: string) {
   return updated;
 }
 
-export async function readableProject(projectKey: string) {
+export async function readableProject(projectKey: ProjectKey | undefined) {
   const [project] = await db
     .select({ id: projects.id, key: projects.key })
     .from(projects)
-    .where(eq(projects.key, projectKey.toUpperCase()));
+    .where(byProjectKey(projectKey));
   if (!project) throw new ApiError(404, "Not found");
   return project;
 }

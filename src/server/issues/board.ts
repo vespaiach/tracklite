@@ -5,9 +5,9 @@ import { db } from "../shared/db";
 import type { Transaction } from "../shared/transaction";
 import { type Member, memberSummary } from "../identity";
 import { issues } from "./tables";
-import { projects } from "../projects";
+import { type ProjectKey, projects } from "../projects";
 import { type Board, type BoardIssue, type IssueStatus, issueStatuses } from "../../contract";
-import type { IssueMove } from "./schemas";
+import type { IssueId, IssueMove } from "./schemas";
 import {
   assignees,
   byIssueId,
@@ -52,7 +52,7 @@ async function bottomOf(tx: Transaction, cards: SQL | undefined) {
   return generateKeyBetween(last?.position ?? null, null);
 }
 
-async function positionOf(tx: Transaction, cards: SQL | undefined, id: string) {
+async function positionOf(tx: Transaction, cards: SQL | undefined, id: IssueId | undefined) {
   const where = byIssueId(id);
   if (!where) return null;
   const [card] = await tx
@@ -73,7 +73,7 @@ async function firstPositionAfter(tx: Transaction, cards: SQL | undefined, posit
   return next?.position ?? null;
 }
 
-export async function moveIssue(_actor: Member, id: string, { status, place }: IssueMove) {
+export async function moveIssue(_actor: Member, id: IssueId | undefined, { status, place }: IssueMove) {
   const where = byIssueId(id);
   if (!where) throw issueGone();
 
@@ -94,7 +94,7 @@ export async function moveIssue(_actor: Member, id: string, { status, place }: I
   });
 }
 
-export async function getBoard(_actor: Member, projectKey: string): Promise<Board> {
+export async function getBoard(_actor: Member, projectKey: ProjectKey | undefined): Promise<Board> {
   const project = await readableProject(projectKey);
 
   const rows = await boardRows(project.id);

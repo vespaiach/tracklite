@@ -242,7 +242,7 @@ Only the owning context inserts, updates or deletes a table. Another context may
   - Reads: design §1.8, §2 · `src/server/shared/schema.ts`, `drizzle.config.ts`, `src/server/architecture.test.ts`
   - Needs: M16.1
   - Done: `npm run db:generate` reports no changes; `M16: a context writes only its own tables` (an `insert`, `update` or `delete` on another context's table fails it; check once by hand); the existing tests pass
-- [ ] **M16.3 Typed identifiers.** Branded types with one parse function each, made at the edge (the context's `schemas.ts`) and passed inward: `IssueId` (`WEB-42`) in `issues`, `ProjectKey` in `projects`, `Username` in `identity`, `RequestId` and `Uuid` in `shared/` (replacing `isUuid`). Domain functions take the branded types, so an unchecked string doesn't compile.
+- [x] **M16.3 Typed identifiers.** Branded types with one parse function each, made at the edge (the context's `schemas.ts`) and passed inward: `IssueId` (`WEB-42`) in `issues`, `ProjectKey` in `projects`, `Username` in `identity`, `RequestId` and `Uuid` in `shared/` (replacing `isUuid`). Domain functions take the branded types, so an unchecked string doesn't compile.
   - Reads: design §3.1, D-42 · `src/server/shared/ids.ts`, each context's `schemas.ts`
   - Needs: M16.2
   - Done: one test per parse function covering its valid and invalid forms (named after the spec examples it closes, if any); no domain function under `src/server/` takes a plain `string` for these identifiers; the existing tests pass

@@ -1,7 +1,11 @@
 import "server-only";
+import * as v from "valibot";
 
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const uuid = v.pipe(v.string(), v.uuid(), v.brand("Uuid"));
 
-export function isUuid(id: string) {
-  return uuidPattern.test(id);
+export type Uuid = v.InferOutput<typeof uuid>;
+
+export function parseUuid(text: string): Uuid | undefined {
+  const result = v.safeParse(uuid, text);
+  return result.success ? result.output : undefined;
 }

@@ -1,13 +1,13 @@
-import { randomUUID } from "node:crypto";
 import { asc, DrizzleQueryError, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { createIssue, createMember, createProject } from "../../test/factories";
+import { createIssue, createMember, createProject, newRequestId } from "../../test/factories";
 import { moveIntoPast } from "../../test/time";
 import { editComment, postIssueComment, postProjectComment } from "../comments";
 import { db } from "../shared/db";
-import { updateIssue, issues } from "../issues";
+import { parseUuid } from "../shared/ids";
+import { parseIssueId, updateIssue, issues } from "../issues";
 import { updateProject } from "../projects";
-import { members, type Member } from "../identity";
+import { members, type Member, parseUsername } from "../identity";
 import { notificationBatches, notificationDeliveries, notifications } from "./tables";
 
 async function website() {
@@ -56,11 +56,13 @@ function deliveriesFor(member: { id: string }) {
 }
 
 function assign(issueRef: string, by: Member, assignee: Member | null) {
-  return updateIssue(by, issueRef, { assignee: assignee?.username ?? null });
+  return updateIssue(by, parseIssueId(issueRef), {
+    assignee: assignee ? parseUsername(assignee.username) : null,
+  });
 }
 
 async function comment(issueRef: string, by: Member, body: string) {
-  const { comment } = await postIssueComment(by, issueRef, { requestId: randomUUID(), body });
+  const { comment } = await postIssueComment(by, parseIssueId(issueRef), { requestId: newRequestId(), body });
   return comment;
 }
 
@@ -154,7 +156,10 @@ it("REQ-044.3: Alex edits a comment that already mentions @sam and adds @jo → 
   const { issueRef } = await website();
   const posted = await comment(issueRef, alex, `@${sam.username} look`);
 
-  await editComment(alex, posted.id, { body: `@${sam.username} @${jo.username} look`, version: 0 });
+  await editComment(alex, parseUuid(posted.id), {
+    body: `@${sam.username} @${jo.username} look`,
+    version: 0,
+  });
 
   expect(await notificationsFor(sam)).toHaveLength(1);
   expect(await notificationsFor(jo)).toMatchObject([{ kind: "mentioned", commentId: posted.id }]);
@@ -176,7 +181,7 @@ it("REQ-044.5: Alex mentions @sam in a comment on project WEB → the email link
   const project = await createProject({ name: "Website" });
 
   const { comment: posted } = await postProjectComment(alex, project.key, {
-    requestId: randomUUID(),
+    requestId: newRequestId(),
     body: `@${sam.username} thoughts?`,
   });
 
@@ -225,7 +230,10 @@ it("REQ-044: a mention in an issue description emails the member, linking to the
   const sam = await createMember();
   const { issue, issueRef } = await website();
 
-  await updateIssue(alex, issueRef, { description: `Ask @${sam.username}`, descriptionVersion: 0 });
+  await updateIssue(alex, parseIssueId(issueRef), {
+    description: `Ask @${sam.username}`,
+    descriptionVersion: 0,
+  });
 
   expect(await notificationsFor(sam)).toEqual([
     expect.objectContaining({
@@ -246,8 +254,8 @@ it("REQ-044.7: Alex mentions @sam in a comment, edits the mention out, then adds
   const { issueRef } = await website();
   const posted = await comment(issueRef, alex, `@${sam.username} look`);
 
-  await editComment(alex, posted.id, { body: "look", version: 0 });
-  await editComment(alex, posted.id, { body: `@${sam.username} look again`, version: 1 });
+  await editComment(alex, parseUuid(posted.id), { body: "look", version: 0 });
+  await editComment(alex, parseUuid(posted.id), { body: `@${sam.username} look again`, version: 1 });
 
   expect((await notificationsFor(sam)).map((row) => row.excerpt)).toEqual([
     `@${sam.username} look`,

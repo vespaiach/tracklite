@@ -2,12 +2,16 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "../shared/db";
 import type { Member } from "../identity";
-import { takeIssueNumber, writableProject } from "../projects";
+import { type ProjectKey, takeIssueNumber, writableProject } from "../projects";
 import { issues } from "./tables";
 import type { NewIssue } from "./schemas";
 import { findIssue, topOfColumn } from "./rows";
 
-export async function createIssue(actor: Member, projectKey: string, { requestId, title, status }: NewIssue) {
+export async function createIssue(
+  actor: Member,
+  projectKey: ProjectKey | undefined,
+  { requestId, title, status }: NewIssue,
+) {
   return db.transaction(async (tx) => {
     const project = await writableProject(tx, projectKey, "update");
 
