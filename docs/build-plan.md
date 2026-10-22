@@ -202,7 +202,7 @@ Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `project
   - Reads: `src/server/projects.ts`, `src/server/labels.ts`
   - Needs: M15.4
   - Done: the same import check for `projects/`; the existing tests pass
-- [ ] **M15.6 issues.** Move `issues.ts` and its schema into `src/server/issues/`, splitting it into `create.ts`, `update.ts`, `board.ts`, `list.ts` and `rows.ts` (lookups and mappers). `index.ts` exports the domain functions and, under public names, the lookups `comments` needs (`byIssueId`, `issueGone`). Merge the duplicate UUID check with the one in `identity/invitations.ts` into `shared/`.
+- [x] **M15.6 issues.** Move `issues.ts` and its schema into `src/server/issues/`, splitting it into `create.ts`, `update.ts`, `board.ts`, `list.ts` and `rows.ts` (lookups and mappers). `index.ts` exports the domain functions and, under public names, the lookups `comments` needs (`byIssueId`, `issueGone`). Merge the duplicate UUID check with the one in `identity/invitations.ts` into `shared/`.
   - Reads: `src/server/issues.ts`, `src/server/comments.ts`
   - Needs: M15.5
   - Done: the same import check for `issues/`; no file in `issues/` is over 300 lines; the existing tests pass

@@ -3,14 +3,13 @@ import { asc, eq, sql } from "drizzle-orm";
 import { DrizzleQueryError } from "drizzle-orm/errors";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
+import { isUuid } from "../shared/ids";
 import type { Transaction } from "../shared/transaction";
 import { writableProject } from "./projects";
 import type { LabelChanges, NewLabel } from "./schemas";
 import type { Label } from "../../contract";
 import { issueLabels, labels, projects } from "../shared/schema";
 import type { Member } from "../identity";
-
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const labelResponse = {
   id: labels.id,
@@ -42,7 +41,7 @@ function isDuplicateName(error: unknown) {
 }
 
 async function lockLabelProject(tx: Transaction, id: string) {
-  if (!uuidPattern.test(id)) throw labelGone();
+  if (!isUuid(id)) throw labelGone();
 
   const [label] = await tx
     .select({ projectKey: projects.key })
