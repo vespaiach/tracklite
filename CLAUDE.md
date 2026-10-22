@@ -42,10 +42,10 @@ npm run dev            # next dev
 npm test               # vitest run (all projects)
 npm run lint           # biome check  (auto-fix: npx biome check --write)
 npm run typecheck      # next typegen && tsc --noEmit
-npm run db:generate    # drizzle-kit: write a migration from src/server/schema.ts
+npm run db:generate    # drizzle-kit: write a migration from src/server/shared/schema.ts
 npm run db:migrate     # apply migrations to DATABASE_URL
 npm run db:studio
-npm run db:seed        # dev members and admins (password in src/server/seed.ts)
+npm run db:seed        # dev members and admins (password in src/server/shared/seed.ts)
 npm run db:seed:load   # NFR-001 load data: 50 projects, 10,000 issues, 50,000 comments
 npm run db:reset       # drop the local dev database's schemas, re-run migrations, then db:seed
 npm run setup          # create the first admin (OPS-001)
@@ -56,7 +56,7 @@ npm run email:dev      # send one sample email to Mailpit
 Run one test file, one named test, or one project:
 
 ```bash
-npx vitest run src/server/schema.test.ts
+npx vitest run src/server/shared/schema.test.ts
 npx vitest run -t "REQ-016.4"
 npx vitest run --project unit
 ```
@@ -90,11 +90,16 @@ There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks
 1. rejects cross-site writes with `403`;
 2. runs `requireMember`, which only authenticates (`401`). Routes never check roles. A route declared `"public"` (sign-in, password resets, invitation lookups and acceptance, sign-out) skips this step;
 3. parses the JSON body against the route's Valibot schema, if it declares one, and fails fast with `422` (D-42). Schemas check shape and format only;
-4. calls one domain function in `src/server/`, with the member as its first argument, `actor`. `apiRoute` opens no transaction; the domain function opens its own. The domain is the only permission layer (D-43): admin-only functions call `assertAdmin(actor)` before any lookup, and ownership checks run once the row is loaded. It then checks the rules that need the database and writes, so the action and its notification rows commit together;
+4. calls one domain function through its context's `index.ts` (see Bounded contexts below), with the member as its first argument, `actor`. `apiRoute` opens no transaction; the domain function opens its own. The domain is the only permission layer (D-43): admin-only functions call `assertAdmin(actor)` before any lookup, and ownership checks run once the row is loaded. It then checks the rules that need the database and writes, so the action and its notification rows commit together;
 5. maps a thrown `ApiError` to `{ error: { message, fields? } }` with 401/403/404/409/410/422/429/503, and anything else to 500;
 6. writes one JSON log line, with no bodies, tokens or query strings. A signed-in request names its `actor` by username.
 
 The browser shows `message` as-is, so all user-facing copy for server outcomes lives on the server.
+
+**Bounded contexts (§1.8).** `src/server/` is split into context folders: `identity`, `notifications`, `projects`, `issues`, `comments`, plus `shared/` for infrastructure (db, schema, config, log, api-error, api-route, email, tokens, passwords, limits, cleanup, seeds).
+- Each context has a public `index.ts`. Other contexts, routes and `scripts/` import a context only through it; `shared/` files are imported directly.
+- Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `projects`; every context → `identity`, `notifications`, `shared/`. No cycles.
+- A context's request schemas are in its `schemas.ts`; tests sit next to their source.
 
 **API conventions (§3.1).**
 - Issues are addressed by ID (`WEB-42`), projects by key, members by username, all matched ignoring case.
@@ -103,16 +108,16 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 - Tokens never go in paths.
 - A member in a response is `{ username, fullName, initials, deactivated }`.
 
-**Page and API task pairs.** A page task writes its response types into `src/contract/` (§3.5) and its own RTK Query endpoints, typed from the shapes §3.3 holds for endpoints not wired yet, and tests against mocks. Whichever task merges second wires them up: the domain function returns the contract type (a route's `satisfies` is optional), and those shapes are removed from §3.3. Wired-up shapes live only in the code: request bodies in `src/schemas/`, responses in `src/contract/`.
+**Page and API task pairs.** A page task writes its response types into `src/contract/` (§3.5) and its own RTK Query endpoints, typed from the shapes §3.3 holds for endpoints not wired yet, and tests against mocks. Whichever task merges second wires them up: the domain function returns the contract type (a route's `satisfies` is optional), and those shapes are removed from §3.3. Wired-up shapes live only in the code: request bodies in each context's `schemas.ts`, responses in `src/contract/`.
 
 **Time (§1.3).** Every expiry and time-window check uses the database's `now()` inside SQL, never the app clock. Tests move stored timestamps into the past (`expires_at = now() - interval '1 minute'`). They never fake the clock.
 
 **Email (§1.5, §1.4).**
 - Invitations and password resets are sent synchronously inside the request transaction. If the send fails, the transaction rolls back and the API answers `503`.
-- Notifications are grouped in `notification_batches`, with one `notification_deliveries` row per channel the recipient chose (only `email` in R1). The worker polls deliveries every 5 s with `for update skip locked`, hands them to the channel's sender in `src/server/notification-channels/`, and uses the delivery id as Resend's `Idempotency-Key`.
+- Notifications are grouped in `notification_batches`, with one `notification_deliveries` row per channel the recipient chose (only `email` in R1). The worker polls deliveries every 5 s with `for update skip locked`, hands them to the channel's sender in `src/server/notifications/notification-channels/`, and uses the delivery id as Resend's `Idempotency-Key`.
 - All mail goes through one `sendEmail()` with three backends: Resend in production, Mailpit (`:8025`) in development, and an in-memory outbox in tests.
 
-**Schema (§2, `src/server/schema.ts`).**
+**Schema (§2, `src/server/shared/schema.ts`).**
 - Drizzle ORM over postgres.js.
 - Enum declaration order is the sort order (status and priority), so changing the order changes the UI ordering.
 - Every timestamp is `timestamptz`.
