@@ -1,4 +1,5 @@
-import { type MouseEvent, type ReactNode, useId } from "react";
+import { CaretDown } from "@phosphor-icons/react/dist/csr/CaretDown";
+import { type MouseEvent, type ReactNode, useId, useState } from "react";
 import { cx } from "./cx";
 
 export type ListGroupProps = { label: string; count?: number; icon?: ReactNode; action?: ReactNode };
@@ -11,6 +12,98 @@ export function ListGroup({ label, count, icon, action }: ListGroupProps) {
       {count != null && <span className="tl-list-group__count">{count}</span>}
       {action && <span className="tl-list-group__action">{action}</span>}
     </div>
+  );
+}
+
+export type CollapsibleListGroupProps = {
+  id: string;
+  label: string;
+  count: number;
+  icon?: ReactNode;
+  defaultExpanded?: boolean;
+  skipTo?: { id: string; label: string };
+  children: ReactNode;
+};
+
+export function CollapsibleListGroup({
+  id,
+  label,
+  count,
+  icon,
+  defaultExpanded = true,
+  skipTo,
+  children,
+}: CollapsibleListGroupProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  return (
+    <>
+      <h2 className="tl-list-group tl-list-group--toggle">
+        <button
+          type="button"
+          id={id}
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
+          className="tl-list-group__head">
+          <CaretDown
+            aria-hidden="true"
+            size={12}
+            className="tl-list-group__caret"
+          />
+          {icon}
+          {label} <span className="tl-list-group__count">{count}</span>
+        </button>
+      </h2>
+      {expanded && skipTo && <SkipLink target={skipTo} />}
+      {expanded && children}
+    </>
+  );
+}
+
+function SkipLink({ target }: { target: { id: string; label: string } }) {
+  const focusTarget = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    document.getElementById(target.id)?.focus();
+  };
+
+  return (
+    <a
+      href={`#${target.id}`}
+      onClick={focusTarget}
+      className="tl-list-group__skip">
+      Skip to {target.label}
+    </a>
+  );
+}
+
+export function ListRowHead({ columns, children }: { columns: string; children: ReactNode }) {
+  return (
+    <div
+      aria-hidden="true"
+      className="tl-list-head"
+      style={{ gridTemplateColumns: columns }}>
+      {children}
+    </div>
+  );
+}
+
+export type ListRowLinkProps = {
+  columns: string;
+  href: string;
+  label?: string;
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+  children: ReactNode;
+};
+
+export function ListRowLink({ columns, href, label, onClick, children }: ListRowLinkProps) {
+  return (
+    <a
+      href={href}
+      aria-label={label}
+      onClick={onClick}
+      className="tl-list-row tl-list-row--link"
+      style={{ gridTemplateColumns: columns }}>
+      {children}
+    </a>
   );
 }
 
