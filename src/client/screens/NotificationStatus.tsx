@@ -6,9 +6,11 @@ import {
   FactList,
   FormStatus,
   SettingsEmpty,
+  SettingsGrid,
   SettingsLayout,
   SettingsSection,
   Table,
+  WarningNote,
 } from "../../components/ui/track-lite";
 import {
   type ChannelStats,
@@ -23,6 +25,22 @@ import { LoadFailed, Loading } from "../LoadStates";
 import { useShowLoading } from "../useShowLoading";
 
 const channelNames: Record<NotificationChannel, string> = { email: "Email" };
+
+const channelColumns = {
+  channel: "auto",
+  sent: "110px",
+  dropped: "110px",
+  failed: "110px",
+  bounced: "110px",
+};
+
+const problemColumns = {
+  recipient: "auto",
+  channel: "auto",
+  target: "auto",
+  attempts: "110px",
+  when: "140px",
+};
 
 export function NotificationStatus() {
   const { data: me } = useMeQuery();
@@ -70,18 +88,14 @@ function NotificationStatusAdmin() {
 function StatsReport({ stats }: { stats: NotificationStats }) {
   return (
     <SettingsLayout wide>
-      <SettingsSection title="Worker">
-        <FactList>
-          <Fact
-            label="Last seen"
-            mono>
-            {stats.workerLastPassAt ? <RelativeTime at={stats.workerLastPassAt} /> : "Never"}
-          </Fact>
-        </FactList>
-      </SettingsSection>
-      <SettingsSection title="Queue">
-        <QueueFacts queue={stats.queue} />
-      </SettingsSection>
+      <SettingsGrid>
+        <SettingsSection title="Worker">
+          <WorkerFacts stats={stats} />
+        </SettingsSection>
+        <SettingsSection title="Queue">
+          <QueueFacts queue={stats.queue} />
+        </SettingsSection>
+      </SettingsGrid>
       <SettingsSection title="Last 24 hours">
         <ChannelTable channels={stats.channels} />
       </SettingsSection>
@@ -96,9 +110,37 @@ function StatsReport({ stats }: { stats: NotificationStats }) {
   );
 }
 
+function WorkerFacts({ stats }: { stats: NotificationStats }) {
+  const lastPassAt = stats.workerLastPassAt;
+  const warning = workerWarning(stats);
+
+  return (
+    <>
+      <FactList split>
+        <Fact
+          label="Last seen"
+          mono>
+          <span className={warning ? "tl-warning" : undefined}>
+            {lastPassAt ? <RelativeTime at={lastPassAt} /> : "Never"}
+          </span>
+        </Fact>
+      </FactList>
+      {warning && <WarningNote>{warning}</WarningNote>}
+    </>
+  );
+}
+
+function workerWarning({ workerLastPassAt, workerStaleMinutes }: NotificationStats) {
+  if (!workerLastPassAt) return "The worker has never run. No notifications are sent until it does.";
+  if (workerStaleMinutes != null) {
+    return `No pass for ${workerStaleMinutes} min. Notifications wait in the queue until the worker runs.`;
+  }
+  return undefined;
+}
+
 function QueueFacts({ queue }: { queue: NotificationStats["queue"] }) {
   return (
-    <FactList>
+    <FactList split>
       <Fact
         label="Pending"
         mono>
@@ -120,24 +162,26 @@ function QueueFacts({ queue }: { queue: NotificationStats["queue"] }) {
 
 function ChannelTable({ channels }: { channels: ChannelStats[] }) {
   return (
-    <Table aria-label="Last 24 hours">
+    <Table
+      aria-label="Last 24 hours"
+      columns={channelColumns}>
       <thead>
         <tr>
           <th scope="col">Channel</th>
-          <th scope="col">Sent</th>
-          <th scope="col">Dropped</th>
-          <th scope="col">Failed</th>
-          <th scope="col">Bounced</th>
+          <NumberHead>Sent</NumberHead>
+          <NumberHead>Dropped</NumberHead>
+          <NumberHead>Failed</NumberHead>
+          <NumberHead>Bounced</NumberHead>
         </tr>
       </thead>
       <tbody>
         {channels.map((row) => (
           <tr key={row.channel}>
-            <td>{channelNames[row.channel]}</td>
-            <td className="tl-table__mono">{row.sent}</td>
-            <td className="tl-table__mono">{row.dropped}</td>
-            <td className="tl-table__mono">{row.failed}</td>
-            <td className="tl-table__mono">{row.bounced}</td>
+            <th scope="row">{channelNames[row.channel]}</th>
+            <td className="tl-table__num">{row.sent}</td>
+            <td className="tl-table__num">{row.dropped}</td>
+            <td className="tl-table__num">{row.failed}</td>
+            <td className="tl-table__num">{row.bounced}</td>
           </tr>
         ))}
       </tbody>
@@ -147,14 +191,16 @@ function ChannelTable({ channels }: { channels: ChannelStats[] }) {
 
 function ProblemTable({ problems }: { problems: ProblemDelivery[] }) {
   return (
-    <Table aria-label="Recent problems">
+    <Table
+      aria-label="Recent problems"
+      columns={problemColumns}>
       <thead>
         <tr>
           <th scope="col">Recipient</th>
           <th scope="col">Channel</th>
           <th scope="col">Issue or project</th>
-          <th scope="col">Attempts</th>
-          <th scope="col">When</th>
+          <NumberHead>Attempts</NumberHead>
+          <NumberHead>When</NumberHead>
         </tr>
       </thead>
       <tbody>
@@ -163,14 +209,24 @@ function ProblemTable({ problems }: { problems: ProblemDelivery[] }) {
             <td className="tl-table__mono">{problem.username}</td>
             <td>{channelNames[problem.channel]}</td>
             <td className="tl-table__mono">{problem.target}</td>
-            <td className="tl-table__mono">{problem.attempts}</td>
-            <td className="tl-table__mono">
+            <td className="tl-table__num">{problem.attempts}</td>
+            <td className="tl-table__num">
               <RelativeTime at={problem.at} />
             </td>
           </tr>
         ))}
       </tbody>
     </Table>
+  );
+}
+
+function NumberHead({ children }: { children: string }) {
+  return (
+    <th
+      scope="col"
+      className="tl-table__num">
+      {children}
+    </th>
   );
 }
 

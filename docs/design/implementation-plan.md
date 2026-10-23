@@ -107,7 +107,7 @@ Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` 
   - Reads: + spec REQ-001–007, REQ-051 · `src/client/screens/Members.tsx`
   - Needs: M17.2, M17.4
 
-- [ ] **M17.14 Profile and Notification status.** Profile: an "Account" heading, the name field and Save on one row (Save disabled when unchanged), a Role fact, password feedback beside the button, loading and load-error states. Notification status: Worker and Queue side by side, right-aligned numbers, a row-header Email cell, and the two warnings after 2 min without a pass (C16), with Last seen in accent-2-700.
+- [x] **M17.14 Profile and Notification status.** Profile: an "Account" heading, the name field and Save on one row (Save disabled when unchanged), a Role fact, password feedback beside the button, loading and load-error states. Notification status: Worker and Queue side by side, right-aligned numbers, a row-header Email cell, and the two warnings after 2 min without a pass (C16), with Last seen in accent-2-700.
   - Reads: + spec REQ-052, REQ-053, OPS-005 · `src/client/screens/{Profile,NotificationStatus}.tsx`
   - Needs: M17.0, M17.4
 

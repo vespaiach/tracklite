@@ -112,10 +112,18 @@ export function SettingsActions({ children }: { children: ReactNode }) {
   return <div className="tl-settings__actions">{children}</div>;
 }
 
-export function FactList({ children, note }: { children: ReactNode; note?: ReactNode }) {
+export function FactList({
+  children,
+  note,
+  split,
+}: {
+  children: ReactNode;
+  note?: ReactNode;
+  split?: boolean;
+}) {
   return (
     <div>
-      <dl className="tl-facts">{children}</dl>
+      <dl className={cx("tl-facts", split && "tl-facts--split")}>{children}</dl>
       {note && <p className="tl-facts__note">{note}</p>}
     </div>
   );

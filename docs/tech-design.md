@@ -388,7 +388,7 @@ The domain functions declare the contract types (3.5) as their return types. The
 
 | Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/notification-stats` | The status page's data. Counts and the recent list go by `state_changed_at`, and all windows use `now()`. A delivery's issue ID or project key comes from its batch's newest notification. A bounced delivery's attempts include the send that bounced. No emails and no excerpts | Admin | REQ-053, SEC-007 |
+| `GET /api/notification-stats` | The status page's data. Counts and the recent list go by `state_changed_at`, and all windows use `now()`. A delivery's issue ID or project key comes from its batch's newest notification. A bounced delivery's attempts include the send that bounced. `workerStaleMinutes` is the whole minutes since the worker's last pass once that is 2 minutes or more (OPS-005), worked out with `now()`, else null. No emails and no excerpts | Admin | REQ-053, SEC-007 |
 
 **Outside `/api`**
 

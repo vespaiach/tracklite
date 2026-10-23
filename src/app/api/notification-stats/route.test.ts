@@ -103,6 +103,7 @@ it("REQ-053.1: last pass 4 seconds ago, 3 pending, 1 due for 40 seconds → last
   const stats = await statsAsAdmin();
 
   expect(stats.workerLastPassAt).toBe(lastPassAt.toISOString());
+  expect(stats.workerStaleMinutes).toBeNull();
   expect(stats.queue).toEqual({ pending: 3, due: 1, oldestDueSeconds: 40 });
 });
 
@@ -213,6 +214,18 @@ it("REQ-053.5, REQ-053.6: the worker has never run and nothing has failed or bou
   const stats = await statsAsAdmin();
 
   expect(stats.workerLastPassAt).toBeNull();
+  expect(stats.workerStaleMinutes).toBeNull();
   expect(stats.recentProblems).toEqual([]);
   expect(stats.channels).toEqual([{ channel: "email", sent: 2, dropped: 0, failed: 0, bounced: 0 }]);
+});
+
+it("REQ-053.10: the last pass was 3 min 50 s ago → 3 whole minutes without a pass; 1 min 59 s ago → not stale", async () => {
+  await lastPassWas("3 minutes 50 seconds");
+
+  expect((await statsAsAdmin()).workerStaleMinutes).toBe(3);
+
+  await db.delete(workerHeartbeats);
+  await lastPassWas("1 minute 59 seconds");
+
+  expect((await statsAsAdmin()).workerStaleMinutes).toBeNull();
 });
