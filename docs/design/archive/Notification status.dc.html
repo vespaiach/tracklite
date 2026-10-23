@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/icons.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/base.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/components/components.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/styles.css">
+  <script src="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/_ds_bundle.js"></script>
+  <style>
+    body{margin:0;background:var(--color-surface);font-family:var(--font-ui);color:var(--color-ink)}
+    a{color:var(--color-accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .tl-rail-item{color:inherit}
+  </style>
+</helmet>
+
+<section data-screen-label="Notification status" style="padding:60px;display:flex;flex-direction:column;gap:20px">
+  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Notification status · /settings/notifications</h2>
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+    <sc-for list="{{ frames }}" as="f" hint-placeholder-count="3">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:500">{{ f.label }} <span style="color:var(--color-ink-3);font-weight:400">{{ f.note }}</span></div>
+        <div data-screen-label="{{ f.label }}" class="tl-shell" style="position:relative;width:1280px;height:{{ f.frameH }}px;border:1px solid var(--color-divider);overflow:hidden">
+          <aside class="tl-rail" aria-label="Sidebar">
+            <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+            <nav class="tl-rail__main">
+              <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+              <div class="tl-rail-group">
+                <div style="display:flex;align-items:center;justify-content:space-between;min-height:22px"><div class="tl-rail-label">Projects</div><sc-if value="{{ f.isAdmin }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></sc-if></div>
+                <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a>
+                <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+              </div>
+              <div class="tl-rail-group">
+                <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a>
+                <sc-if value="{{ f.isAdmin }}" hint-placeholder-val="{{ true }}">
+                  <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a>
+                  <a href="#" class="tl-rail-item" aria-current="page" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="bell" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Notifications</span></a>
+                </sc-if>
+              </div>
+            </nav>
+            <div class="tl-rail__foot" style="position:relative">
+              <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="{{ f.me.initials }}" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">{{ f.me.name }}</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+            </div>
+          </aside>
+
+          <div class="tl-shell__body" style="position:relative;overflow:hidden">
+            <header class="tl-appbar" style="display:flex;align-items:center;gap:15px">
+              <h1 class="tl-appbar__title">Notification status</h1>
+              <sc-if value="{{ f.showRefresh }}" hint-placeholder-val="{{ true }}">
+                <sc-if value="{{ f.refreshing }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" disabled="{{ true }}" aria-busy="true" hint-size="auto,26px">Refreshing…</x-import></sc-if>
+                <sc-if value="{{ f.notRefreshing }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" disabled="{{ f.loading }}" hint-size="auto,26px">Refresh</x-import></sc-if>
+              </sc-if>
+            </header>
+
+            <sc-if value="{{ f.isLoading }}" hint-placeholder-val="{{ false }}">
+              <main aria-busy="true" style="padding:40px 40px 0"><p role="status" style="margin:0;font-size:13px;color:var(--color-ink-2)">Loading…</p></main>
+            </sc-if>
+            <sc-if value="{{ f.isError }}" hint-placeholder-val="{{ false }}">
+              <main style="padding:40px 40px 0"><div role="alert" style="display:flex;align-items:center;gap:15px"><p style="margin:0;font-size:13px">Couldn’t load this.</p><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" hint-size="auto,26px">Retry</x-import></div></main>
+            </sc-if>
+            <sc-if value="{{ f.isDenied }}" hint-placeholder-val="{{ false }}">
+              <main style="padding:40px 40px 0"><p role="alert" style="margin:0;font-size:13px">You don’t have permission to do that.</p></main>
+            </sc-if>
+
+            <sc-if value="{{ f.isOk }}" hint-placeholder-val="{{ true }}">
+              <main aria-busy="{{ f.refreshing }}" style="max-width:900px;padding:40px 40px 60px;display:flex;flex-direction:column;gap:40px">
+
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px">
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <h2 id="{{ f.id }}-w" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Worker</h2>
+                    <dl aria-labelledby="{{ f.id }}-w" style="margin:0;border-top:1px solid var(--color-divider)">
+                      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px">
+                        <dt style="color:var(--color-ink-2)">Last seen</dt>
+                        <dd style="margin:0;font-family:var(--font-mono);font-size:12.5px"><time datetime="{{ f.worker.iso }}" title="{{ f.worker.full }}">{{ f.worker.rel }}</time></dd>
+                      </div>
+                    </dl>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <h2 id="{{ f.id }}-q" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Queue</h2>
+                    <dl aria-labelledby="{{ f.id }}-q" style="margin:0;border-top:1px solid var(--color-divider)">
+                      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px"><dt style="color:var(--color-ink-2)">Pending</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">{{ f.q.pending }}</dd></div>
+                      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px"><dt style="color:var(--color-ink-2)">Due</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">{{ f.q.due }}</dd></div>
+                      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px"><dt style="color:var(--color-ink-2)">Oldest due has waited</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">{{ f.q.wait }}</dd></div>
+                    </dl>
+                  </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <h2 id="{{ f.id }}-d" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Last 24 hours</h2>
+                  <table class="tl-table" aria-labelledby="{{ f.id }}-d">
+                    <thead><tr><th scope="col">Channel</th><th scope="col" style="text-align:right;width:110px">Sent</th><th scope="col" style="text-align:right;width:110px">Dropped</th><th scope="col" style="text-align:right;width:110px">Failed</th><th scope="col" style="text-align:right;width:110px">Bounced</th></tr></thead>
+                    <tbody>
+                      <tr>
+                        <th scope="row" style="font-weight:400;text-align:left;text-transform:none;font-size:13px;letter-spacing:normal;color:var(--color-ink)">Email</th>
+                        <td style="text-align:right;font-family:var(--font-mono);font-size:12.5px">{{ f.day.sent }}</td>
+                        <td style="text-align:right;font-family:var(--font-mono);font-size:12.5px">{{ f.day.dropped }}</td>
+                        <td style="text-align:right;font-family:var(--font-mono);font-size:12.5px">{{ f.day.failed }}</td>
+                        <td style="text-align:right;font-family:var(--font-mono);font-size:12.5px">{{ f.day.bounced }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <h2 id="{{ f.id }}-r" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Recent problems</h2>
+                  <sc-if value="{{ f.noProblems }}" hint-placeholder-val="{{ false }}">
+                    <p style="margin:0;padding:10px 0;border-top:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);font-size:13px;color:var(--color-ink-2)">No failed or bounced notifications.</p>
+                  </sc-if>
+                  <sc-if value="{{ f.hasProblems }}" hint-placeholder-val="{{ true }}">
+                    <table class="tl-table" aria-labelledby="{{ f.id }}-r">
+                      <thead><tr><th scope="col">Recipient</th><th scope="col">Channel</th><th scope="col">Issue or project</th><th scope="col" style="text-align:right;width:110px">Attempts</th><th scope="col" style="text-align:right;width:140px">When</th></tr></thead>
+                      <tbody>
+                        <sc-for list="{{ f.problems }}" as="p" hint-placeholder-count="3">
+                          <tr>
+                            <td style="font-family:var(--font-mono);font-size:12.5px">{{ p.user }}</td>
+                            <td>Email</td>
+                            <td style="font-family:var(--font-mono);font-size:12.5px">{{ p.target }}</td>
+                            <td style="text-align:right;font-family:var(--font-mono);font-size:12.5px">{{ p.attempts }}</td>
+                            <td style="text-align:right;font-family:var(--font-mono);font-size:12.5px"><time datetime="{{ p.iso }}" title="{{ p.full }}">{{ p.rel }}</time></td>
+                          </tr>
+                        </sc-for>
+                      </tbody>
+                    </table>
+                  </sc-if>
+                </div>
+              </main>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section data-screen-label="Notes" style="padding:0 60px 80px;display:flex;flex-direction:column;gap:10px;max-width:760px">
+  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Notes and gaps</h2>
+  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--color-ink-2)">
+    <li>Hover shows the full date and time through the native title on each time. The kit has no tooltip component; a keyboard-reachable tooltip is needed so focus users get the same detail.</li>
+    <li>Worker down: the spec gives no threshold for “down”, so “12 min ago” is shown plainly. If a threshold is defined, a terracotta Tag (accent-2) beside the time is the kit’s exception treatment.</li>
+    <li>Recent problems has no state column (failed or bounced), per the listed columns. Add one if admins need to tell them apart.</li>
+    <li>With more than <span style="font-family:var(--font-mono)">20</span> problems the table shows no “showing 20 of 25” line; the spec gives no copy for it.</li>
+    <li>Oldest due wait shows “None” when nothing is due; the spec gives no copy for that case.</li>
+    <li>Refresh reloads the whole page’s data once; numbers stay visible and the button reads “Refreshing…” while disabled. Nothing polls. A failed refresh is not specified; suggest the STD-9 toast “Couldn’t load this.” with the old numbers kept.</li>
+    <li>Missing from the kit: loading indicator, Button busy state, stat/definition-list row (drawn with table-style 1px rules).</li>
+    <li>No email addresses or notification text anywhere (SEC-007): recipients are usernames only.</li>
+  </ul>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const SAM = { name: 'Sam Lee', initials: 'SL' }, ALEX = { name: 'Alex Kim', initials: 'AK' };
+    const P = (user, target, attempts, rel, iso, full) => ({ user, target, attempts, rel, iso, full });
+    const few = [
+      P('sam', 'WEB-42', 4, '3 hours ago', '2026-10-11T08:12', 'Oct 11, 2026, 08:12'),
+      P('alex', 'WEB', 1, '5 hours ago', '2026-10-11T06:40', 'Oct 11, 2026, 06:40'),
+      P('priya', 'WEB-7', 4, '2 days ago', '2026-10-09T14:05', 'Oct 9, 2026, 14:05'),
+    ];
+    const users = ['sam', 'alex', 'priya', 'dev', 'nina'];
+    const targets = ['WEB-42', 'WEB', 'WEB-43', 'APP-3', 'WEB-5', 'APP', 'WEB-9', 'WEB-7'];
+    const rels = [
+      ['just now', '2026-10-11T11:41', 'Oct 11, 2026, 11:41'], ['18 min ago', '2026-10-11T11:24', 'Oct 11, 2026, 11:24'],
+      ['1 hour ago', '2026-10-11T10:38', 'Oct 11, 2026, 10:38'], ['3 hours ago', '2026-10-11T08:12', 'Oct 11, 2026, 08:12'],
+      ['5 hours ago', '2026-10-11T06:40', 'Oct 11, 2026, 06:40'], ['9 hours ago', '2026-10-11T02:55', 'Oct 11, 2026, 02:55'],
+      ['1 day ago', '2026-10-10T09:20', 'Oct 10, 2026, 09:20'], ['1 day ago', '2026-10-10T07:02', 'Oct 10, 2026, 07:02'],
+      ['2 days ago', '2026-10-09T14:05', 'Oct 9, 2026, 14:05'], ['2 days ago', '2026-10-09T10:47', 'Oct 9, 2026, 10:47'],
+      ['3 days ago', '2026-10-08T16:30', 'Oct 8, 2026, 16:30'], ['4 days ago', '2026-10-07T12:11', 'Oct 7, 2026, 12:11'],
+      ['5 days ago', '2026-10-06T09:58', 'Oct 6, 2026, 09:58'], ['6 days ago', '2026-10-05T17:23', 'Oct 5, 2026, 17:23'],
+      ['Oct 3', '2026-10-03T11:00', 'Oct 3, 2026, 11:00'], ['Sep 29', '2026-09-29T15:42', 'Sep 29, 2026, 15:42'],
+      ['Sep 20', '2026-09-20T08:16', 'Sep 20, 2026, 08:16'], ['Sep 2', '2026-09-02T13:37', 'Sep 2, 2026, 13:37'],
+      ['Aug 14', '2026-08-14T10:05', 'Aug 14, 2026, 10:05'], ['Dec 18, 2025', '2025-12-18T09:30', 'Dec 18, 2025, 09:30'],
+    ];
+    const full = rels.map((r, i) => P(users[i % 5], targets[(i * 3) % 8], i % 3 === 1 ? 1 : 4, r[0], r[1], r[2]));
+    const W = (rel, iso, full) => ({ rel, iso, full });
+    const now = W('just now', '2026-10-11T11:42:06', 'Oct 11, 2026, 11:42:06');
+    const Q0 = { pending: 3, due: 1, wait: '40 seconds' };
+    const D0 = { sent: 12, dropped: 2, failed: 1, bounced: 1 };
+    const F = (id, label, note, o = {}) => {
+      const view = o.view || 'ok';
+      const problems = o.problems || few;
+      return {
+        id, frameH: problems.length > 10 ? 1340 : 820, label, note: note ? '(' + note + ')' : '',
+        isAdmin: view !== 'denied', me: view === 'denied' ? ALEX : SAM,
+        isOk: view === 'ok', isLoading: view === 'loading', isError: view === 'error', isDenied: view === 'denied',
+        showRefresh: view !== 'denied', loading: view === 'loading',
+        refreshing: !!o.refreshing, notRefreshing: !o.refreshing,
+        worker: o.worker || now, q: o.q || Q0, day: o.day || D0,
+        problems, hasProblems: problems.length > 0, noProblems: problems.length === 0,
+      };
+    };
+    const frames = [
+      F('n1', 'Notification status — default', 'REQ-053.1–3'),
+      F('n2', 'Notification status — worker never seen', 'REQ-053.5', { worker: W('Never', '', 'The worker has never run'), q: { pending: 0, due: 0, wait: 'None' }, day: { sent: 0, dropped: 0, failed: 0, bounced: 0 }, problems: [] }),
+      F('n3', 'Notification status — worker down', 'last pass 12 min ago; queue backing up', { worker: W('12 min ago', '2026-10-11T11:30:02', 'Oct 11, 2026, 11:30:02'), q: { pending: 9, due: 9, wait: '14 min' } }),
+      F('n4', 'Notification status — no recent problems', 'REQ-053.6', { day: { sent: 12, dropped: 2, failed: 0, bounced: 0 }, problems: [] }),
+      F('n5', 'Notification status — full recent list', 'REQ-053.4: 25 failed or bounced, 20 most recent shown, newest first', { day: { sent: 31, dropped: 2, failed: 4, bounced: 2 }, problems: full }),
+      F('n6', 'Notification status — refreshing', 'Refresh disabled; previous numbers stay until the reload finishes', { refreshing: true }),
+      F('n7', 'Notification status — loading', 'first open; text appears after 300 ms', { view: 'loading' }),
+      F('n8', 'Notification status — load failed', '', { view: 'error' }),
+      F('n9', 'Notification status — not allowed', 'Alex, a member; no Members or Notifications in the sidebar', { view: 'denied' }),
+    ];
+    return { frames };
+  }
+}
+</script>
+</body>
+</html>
