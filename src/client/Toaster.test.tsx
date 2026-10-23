@@ -25,7 +25,7 @@ function renderToaster() {
   return store;
 }
 
-it("STD-9.1, STD-9.2: one toast at a time; a new one replaces it and each disappears after 5 seconds", () => {
+it("STD-9.1, STD-9.2: one error toast at a time with no dismiss button; a new one replaces it and each disappears after 5 seconds", () => {
   const store = renderToaster();
 
   act(() => {
@@ -34,6 +34,7 @@ it("STD-9.1, STD-9.2: one toast at a time; a new one replaces it and each disapp
   expect(screen.getAllByRole("status").map((toast) => toast.textContent)).toEqual([
     "Couldn’t save. Try again.",
   ]);
+  expect(screen.getByRole("status").querySelector(".tl-toast__stripe--err")).not.toBeNull();
   expect(screen.queryByRole("button")).toBeNull();
 
   act(() => {
