@@ -3,6 +3,8 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "../shared/db";
 import { notificationBatches, notificationDeliveries, workerHeartbeats } from "./tables";
 
+export const workerPassWindow = sql`interval '2 minutes'`;
+
 export const dueAt = sql`coalesce(${notificationDeliveries.nextAttemptAt}, ${notificationBatches.sendAfter})`;
 
 export async function queueCounts() {
@@ -23,7 +25,7 @@ export async function workerIsHealthy() {
     select exists (
       select 1 from ${workerHeartbeats}
       where ${workerHeartbeats.name} = 'worker'
-        and ${workerHeartbeats.lastPassAt} > now() - interval '2 minutes'
+        and ${workerHeartbeats.lastPassAt} > now() - ${workerPassWindow}
     ) and not exists (
       select 1 from ${notificationDeliveries}
       join ${notificationBatches} on ${notificationBatches.id} = ${notificationDeliveries.batchId}

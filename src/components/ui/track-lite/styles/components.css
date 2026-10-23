@@ -3028,6 +3028,10 @@ a.tl-rail-item {
   height: 36px;
   border-bottom: 1px solid var(--color-hair);
 }
+.tl-facts--split .tl-fact {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 15px;
+}
 .tl-fact__label {
   font-size: 12px;
   color: var(--color-ink-2);
@@ -3067,6 +3071,14 @@ a.tl-rail-item {
   top: 0;
   z-index: 2;
   background: color-mix(in srgb, var(--color-paper) 96%, var(--color-ink));
+}
+.tl-table tbody th {
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--color-ink);
+  border-bottom-color: color-mix(in srgb, var(--color-ink) 8%, transparent);
 }
 .tl-table__sort {
   display: inline-flex;

@@ -12,38 +12,51 @@ import {
   Input,
   SettingsActions,
   SettingsForm,
-  SettingsIdentity,
+  SettingsInline,
   SettingsLayout,
+  SettingsSection,
 } from "../../components/ui/track-lite";
-import { type ApiFailure, useChangePasswordMutation, useMeQuery, useUpdateProfileMutation } from "../api";
+import {
+  type ApiFailure,
+  type Me,
+  useChangePasswordMutation,
+  useMeQuery,
+  useUpdateProfileMutation,
+} from "../api";
+import { LoadFailed } from "../LoadStates";
 import { showToast } from "../toast";
 
+const roleNames: Record<Me["role"], string> = { admin: "Admin", member: "Member" };
+
 export function Profile() {
-  const { data: me } = useMeQuery();
+  const { data: me, isError, refetch } = useMeQuery();
   return (
     <>
       <AppBar>
         <AppBarTitle>Profile</AppBarTitle>
       </AppBar>
-      {me && (
-        <SettingsLayout>
-          <SettingsIdentity
-            initials={me.initials}
-            name={me.fullName}
-          />
-          <FullNameForm savedName={me.fullName} />
-          <FactList note="Username and email can't be changed.">
-            <Fact
-              label="Username"
-              mono>
-              {me.username}
-            </Fact>
-            <Fact label="Email">{me.email}</Fact>
-          </FactList>
-          <ChangePasswordForm />
-        </SettingsLayout>
-      )}
+      {isError ? <LoadFailed onRetry={refetch} /> : me && <ProfileForms me={me} />}
     </>
+  );
+}
+
+function ProfileForms({ me }: { me: Me }) {
+  return (
+    <SettingsLayout>
+      <SettingsSection title="Account">
+        <FullNameForm savedName={me.fullName} />
+        <FactList note="Username and email can't be changed.">
+          <Fact
+            label="Username"
+            mono>
+            {me.username}
+          </Fact>
+          <Fact label="Email">{me.email}</Fact>
+          <Fact label="Role">{roleNames[me.role]}</Fact>
+        </FactList>
+      </SettingsSection>
+      <ChangePasswordForm />
+    </SettingsLayout>
   );
 }
 
@@ -72,31 +85,33 @@ function FullNameForm({ savedName }: { savedName: string }) {
 
   return (
     <SettingsForm onSubmit={submit}>
-      <Field
-        label="Full name"
-        error={error}>
-        {(props) => (
-          <Input
-            {...props}
-            autoComplete="name"
-            value={fullName}
-            onChange={(event) => {
-              setFullName(event.target.value);
-              setSaved(false);
-            }}
-          />
-        )}
-      </Field>
-      <SettingsActions>
-        <Button
-          variant="primary"
-          type="submit"
-          disabled={saving}
-          aria-busy={saving || undefined}>
-          {saving ? "Saving…" : "Save"}
-        </Button>
-        {saved && <FormStatus>Name saved.</FormStatus>}
-      </SettingsActions>
+      <SettingsInline>
+        <Field
+          label="Full name"
+          error={error}>
+          {(props) => (
+            <Input
+              {...props}
+              autoComplete="name"
+              value={fullName}
+              onChange={(event) => {
+                setFullName(event.target.value);
+                setSaved(false);
+              }}
+            />
+          )}
+        </Field>
+        <SettingsActions>
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={saving || fullName.trim() === savedName}
+            aria-busy={saving || undefined}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+          {saved && <FormStatus>Name saved.</FormStatus>}
+        </SettingsActions>
+      </SettingsInline>
     </SettingsForm>
   );
 }
@@ -172,8 +187,8 @@ function ChangePasswordForm() {
           aria-busy={changing || undefined}>
           {changing ? "Changing…" : "Change password"}
         </Button>
+        {changed && <FormStatus>Password changed. You've been signed out everywhere else.</FormStatus>}
       </SettingsActions>
-      {changed && <FormStatus>Password changed. You've been signed out everywhere else.</FormStatus>}
     </SettingsForm>
   );
 }

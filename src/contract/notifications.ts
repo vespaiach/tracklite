@@ -22,6 +22,7 @@ export type ProblemDelivery = {
 
 export type NotificationStats = {
   workerLastPassAt: string | null;
+  workerStaleMinutes: number | null;
   queue: { pending: number; due: number; oldestDueSeconds: number };
   channels: ChannelStats[];
   recentProblems: ProblemDelivery[];

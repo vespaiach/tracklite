@@ -32,6 +32,7 @@ function problem(overrides: Partial<ProblemDelivery> = {}): ProblemDelivery {
 function stats(overrides: Partial<NotificationStats> = {}): NotificationStats {
   return {
     workerLastPassAt: secondsAgo(4),
+    workerStaleMinutes: null,
     queue: { pending: 3, due: 1, oldestDueSeconds: 40 },
     channels: [{ channel: "email", sent: 12, dropped: 2, failed: 1, bounced: 1 }],
     recentProblems: [problem()],
@@ -65,7 +66,11 @@ function cellTexts(row: HTMLElement) {
     .map((cell) => cell.textContent);
 }
 
-it("REQ-053.1, REQ-053.2, REQ-053.3, REQ-053.4, STD-2: worker, queue, Email counts, problem rows newest first, Members link current", async () => {
+function workerWarning(worker: HTMLElement) {
+  return within(worker).queryByText(/never run|No pass/)?.textContent;
+}
+
+it("REQ-053.1, REQ-053.2, REQ-053.3, REQ-053.4, REQ-053.10, STD-2: worker without a warning, queue, Email counts, problem rows newest first, Members link current", async () => {
   const older = Array.from({ length: 19 }, (_, index) =>
     problem({ id: `d-${index + 2}`, target: `WEB-${index + 1}`, at: secondsAgo((index + 4) * 3600) }),
   );
@@ -73,14 +78,17 @@ it("REQ-053.1, REQ-053.2, REQ-053.3, REQ-053.4, STD-2: worker, queue, Email coun
   mockStatusPage(() => Response.json(stats({ recentProblems })));
   renderAppAt("/settings/notifications");
 
-  expect(fact(await section("Worker"), "Last seen")).toBe("just now");
+  const worker = await section("Worker");
+  expect(fact(worker, "Last seen")).toBe("just now");
+  expect(workerWarning(worker)).toBeUndefined();
   const queue = await section("Queue");
   expect(fact(queue, "Pending")).toBe("3");
   expect(fact(queue, "Due")).toBe("1");
   expect(fact(queue, "Oldest due has waited")).toBe("40 seconds");
 
   const [email] = await bodyRows("Last 24 hours");
-  expect(cellTexts(email)).toEqual(["Email", "12", "2", "1", "1"]);
+  expect(within(email).getByRole("rowheader").textContent).toBe("Email");
+  expect(cellTexts(email)).toEqual(["12", "2", "1", "1"]);
 
   const rows = await bodyRows("Recent problems");
   expect(rows).toHaveLength(20);
@@ -93,7 +101,7 @@ it("REQ-053.1, REQ-053.2, REQ-053.3, REQ-053.4, STD-2: worker, queue, Email coun
   expect(members.getAttribute("aria-current")).toBe("page");
 });
 
-it("REQ-053.5, REQ-053.6, REQ-053.9: a worker that never ran shows Never, nothing due shows None, no problems shows the empty message", async () => {
+it("REQ-053.5, REQ-053.6, REQ-053.9: a worker that never ran shows Never with its warning, nothing due shows None, no problems shows the empty message", async () => {
   mockStatusPage(() =>
     Response.json(
       stats({
@@ -105,7 +113,9 @@ it("REQ-053.5, REQ-053.6, REQ-053.9: a worker that never ran shows Never, nothin
   );
   renderAppAt("/settings/notifications");
 
-  expect(fact(await section("Worker"), "Last seen")).toBe("Never");
+  const worker = await section("Worker");
+  expect(fact(worker, "Last seen")).toBe("Never");
+  expect(workerWarning(worker)).toBe("The worker has never run. No notifications are sent until it does.");
 
   const queue = await section("Queue");
   expect(fact(queue, "Pending")).toBe("2");
@@ -115,6 +125,15 @@ it("REQ-053.5, REQ-053.6, REQ-053.9: a worker that never ran shows Never, nothin
   const recent = await section("Recent problems");
   expect(within(recent).getByText("No failed or bounced notifications.")).toBeTruthy();
   expect(within(recent).queryByRole("table")).toBeNull();
+});
+
+it("REQ-053.10: no pass for 3 minutes warns with the whole minutes", async () => {
+  mockStatusPage(() => Response.json(stats({ workerLastPassAt: secondsAgo(200), workerStaleMinutes: 3 })));
+  renderAppAt("/settings/notifications");
+
+  expect(workerWarning(await section("Worker"))).toBe(
+    "No pass for 3 min. Notifications wait in the queue until the worker runs.",
+  );
 });
 
 it("REQ-053.7: numbers change only on Refresh", async () => {
@@ -135,16 +154,16 @@ it("REQ-053.7: numbers change only on Refresh", async () => {
   window.dispatchEvent(new Event("online"));
   document.dispatchEvent(new Event("visibilitychange"));
   expect(requestsTo(fetchMock, statsRequest)).toHaveLength(1);
-  expect(cellTexts((await bodyRows("Last 24 hours"))[0])[1]).toBe("12");
+  expect(cellTexts((await bodyRows("Last 24 hours"))[0])[0]).toBe("12");
 
   hold = true;
   fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
   const refreshing = await screen.findByRole("button", { name: "Refreshing…" });
   expect((refreshing as HTMLButtonElement).disabled).toBe(true);
-  expect(cellTexts((await bodyRows("Last 24 hours"))[0])[1]).toBe("12");
+  expect(cellTexts((await bodyRows("Last 24 hours"))[0])[0]).toBe("12");
 
   release();
-  await waitFor(async () => expect(cellTexts((await bodyRows("Last 24 hours"))[0])[1]).toBe("13"));
+  await waitFor(async () => expect(cellTexts((await bodyRows("Last 24 hours"))[0])[0]).toBe("13"));
   expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
 });
 

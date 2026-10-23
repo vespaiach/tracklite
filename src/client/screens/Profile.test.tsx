@@ -23,6 +23,10 @@ function mockProfile({ save, change = noContent }: { save?: Answer; change?: Ans
   });
 }
 
+function saveButton() {
+  return screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
+}
+
 function input(label: string) {
   return screen.getByLabelText(label) as HTMLInputElement;
 }
@@ -38,24 +42,43 @@ async function changePassword(currentPassword: string, newPassword: string) {
   fireEvent.click(screen.getByRole("button", { name: "Change password" }));
 }
 
-it("REQ-003.3: full name is editable; username/email read-only; Save sends only the name, confirms, and the confirmation clears on the next edit", async () => {
+it("REQ-003.3: under Account the full name is editable and username, email and role are read-only; Save is off until the name changes, sends only the name and confirms until the next edit", async () => {
   const fetchMock = mockProfile();
   renderAppAt("/settings/profile");
 
-  expect(((await screen.findByLabelText("Full name")) as HTMLInputElement).value).toBe("Sam Lee");
-  expect(screen.getByText("sam")).toBeTruthy();
-  expect(screen.getByText("sam@acme.com")).toBeTruthy();
+  const account = await screen.findByRole("region", { name: "Account" });
+  expect((within(account).getByLabelText("Full name") as HTMLInputElement).value).toBe("Sam Lee");
+  expect(within(account).getByText("sam")).toBeTruthy();
+  expect(within(account).getByText("sam@acme.com")).toBeTruthy();
+  expect(within(account).getByText("Role").nextElementSibling?.textContent).toBe("Member");
   expect(screen.getAllByRole("textbox")).toHaveLength(1);
+  expect(saveButton().disabled).toBe(true);
 
   await saveName("Samuel Lee");
 
   expect(await screen.findByText("Name saved.")).toBeTruthy();
-  expect(await within(screen.getByRole("main")).findByText("Samuel Lee")).toBeTruthy();
   expect(requestsTo(fetchMock, "PATCH /api/me")).toEqual([{ fullName: "Samuel Lee" }]);
+  await waitFor(() => expect(saveButton().disabled).toBe(true));
 
   fireEvent.change(input("Full name"), { target: { value: "Samuel J Lee" } });
 
   expect(screen.queryByText("Name saved.")).toBeNull();
+  expect(saveButton().disabled).toBe(false);
+});
+
+it("STD-7: when reloading the profile fails it shows “Couldn’t load this.”, and Retry loads it", async () => {
+  let meRequests = 0;
+  mockApi({
+    "GET /api/me": () => (++meRequests === 2 ? new Response(null, { status: 500 }) : Response.json(sam)),
+  });
+  renderAppAt("/settings/profile");
+
+  expect(await screen.findByText("Couldn’t load this.")).toBeTruthy();
+  expect(screen.queryByLabelText("Full name")).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+  expect(((await screen.findByLabelText("Full name")) as HTMLInputElement).value).toBe("Sam Lee");
 });
 
 it("REQ-003: a full-name field error from the server shows beside the field and keeps the text", async () => {
@@ -105,13 +128,14 @@ it("STD-9.3: a failed name save or password change shows the toast and keeps wha
   expect(input("New password").value).toBe("staple-lantern-orbit");
 });
 
-it("REQ-049.1: Change password sends both passwords, clears the fields and shows the REQ-049 message", async () => {
+it("REQ-049.1: Change password sends both passwords, clears the fields and shows the REQ-049 message beside the button", async () => {
   const fetchMock = mockProfile();
   renderAppAt("/settings/profile");
 
   await changePassword("correct-horse-battery", "staple-lantern-orbit");
 
-  expect(await screen.findByText("Password changed. You've been signed out everywhere else.")).toBeTruthy();
+  const changed = await screen.findByText("Password changed. You've been signed out everywhere else.");
+  expect(changed.parentElement).toBe(screen.getByRole("button", { name: "Change password" }).parentElement);
   expect(requestsTo(fetchMock, "PUT /api/me/password")).toEqual([
     { currentPassword: "correct-horse-battery", newPassword: "staple-lantern-orbit" },
   ]);

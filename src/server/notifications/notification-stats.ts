@@ -7,7 +7,7 @@ import {
   type ProblemDelivery,
 } from "../../contract";
 import { db } from "../shared/db";
-import { queueCounts } from "./notification-queue";
+import { queueCounts, workerPassWindow } from "./notification-queue";
 import { members, assertAdmin, type Member } from "../identity";
 import { notificationBatches, notificationDeliveries, notifications, workerHeartbeats } from "./tables";
 
@@ -20,19 +20,26 @@ export async function notificationStats(actor: Member): Promise<NotificationStat
   assertAdmin(actor);
 
   return {
-    workerLastPassAt: await workerLastPassAt(),
+    ...(await workerLastPass()),
     queue: await queueCounts(),
     channels: await channelStats(),
     recentProblems: (await problemRows()).map(problemDelivery),
   };
 }
 
-async function workerLastPassAt() {
+async function workerLastPass() {
   const [heartbeat] = await db
-    .select({ lastPassAt: workerHeartbeats.lastPassAt })
+    .select({
+      lastPassAt: workerHeartbeats.lastPassAt,
+      staleMinutes: sql<number | null>`case when ${workerHeartbeats.lastPassAt} <= now() - ${workerPassWindow}
+        then floor(extract(epoch from now() - ${workerHeartbeats.lastPassAt}) / 60)::int end`,
+    })
     .from(workerHeartbeats)
     .where(eq(workerHeartbeats.name, "worker"));
-  return heartbeat?.lastPassAt.toISOString() ?? null;
+  return {
+    workerLastPassAt: heartbeat?.lastPassAt.toISOString() ?? null,
+    workerStaleMinutes: heartbeat?.staleMinutes ?? null,
+  };
 }
 
 async function channelStats() {

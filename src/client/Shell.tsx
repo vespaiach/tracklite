@@ -15,7 +15,7 @@ import { type NewProject, NewProjectDialog } from "./NewProjectDialog";
 import { Sidebar } from "./Sidebar";
 
 export function Shell() {
-  const { data: me, isSuccess } = useMeQuery();
+  const { data: me } = useMeQuery();
   const { data: projects } = useProjectsQuery({ archived: false });
   const { pathname } = useLocation();
   const [creating, setCreating] = useState(false);
@@ -37,7 +37,7 @@ export function Shell() {
           onSignOut={signOut}
         />
       }>
-      {isSuccess && <Outlet />}
+      {me && <Outlet />}
       {creating && <CreateProject onDone={() => setCreating(false)} />}
     </AppShell>
   );
