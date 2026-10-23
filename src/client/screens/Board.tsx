@@ -38,6 +38,7 @@ import {
   type IssueStatus,
   type ProjectSummary,
   useBoardQuery,
+  useMeQuery,
   useMoveIssueMutation,
 } from "../api";
 import { issueStatuses } from "../../contract";
@@ -97,6 +98,7 @@ function placeAt(cards: BoardIssue[], id: string, target: DropTarget): BoardPlac
 
 function StatusColumn({ column, archived, onCreate }: StatusColumnProps) {
   const { name, kind } = statuses[column.status];
+  const closed = closedStatuses.includes(column.status);
   const [moveIssue] = useMoveIssueMutation();
   const move = (id: string, place: BoardPlace) => void moveIssue({ id, status: column.status, place });
   const { dragAndDropHooks } = useDragAndDrop({
@@ -130,7 +132,8 @@ function StatusColumn({ column, archived, onCreate }: StatusColumnProps) {
         </span>
       }
       action={
-        !archived && (
+        !archived &&
+        !closed && (
           <Button
             variant="quiet"
             size="sm"
@@ -186,9 +189,9 @@ function StatusColumn({ column, archived, onCreate }: StatusColumnProps) {
 type EmptyColumnProps = { status: IssueStatus; archived: boolean; onCreate: () => void };
 
 function EmptyColumn({ status, archived, onCreate }: EmptyColumnProps) {
+  if (archived) return <BoardEmpty>No issues.</BoardEmpty>;
   if (closedStatuses.includes(status))
     return <BoardEmpty>Nothing moved here in the last 14 days.</BoardEmpty>;
-  if (archived) return <BoardEmpty>No issues.</BoardEmpty>;
   return (
     <BoardEmpty
       action="Create one."
@@ -210,14 +213,16 @@ type IssueCardProps = {
 function IssueCard({ card, status, first, last, archived, dragging }: IssueCardProps) {
   const href = `/issue/${card.id}`;
   const open = useRouterClick(href);
+  const { data: me } = useMeQuery();
   const priorityKind = priorities[card.priority].kind;
-  const hidden = card.labels.length - labelsShown;
+  const hiddenLabels = card.labels.slice(labelsShown);
   return (
     <BoardCard
       id={card.id}
       title={card.title}
       href={href}
       onOpen={open}
+      closed={closedStatuses.includes(status)}
       dragging={dragging}
       handle={
         !archived && (
@@ -232,7 +237,8 @@ function IssueCard({ card, status, first, last, archived, dragging }: IssueCardP
       assignee={
         card.assignee && (
           <Avatar
-            size="sm"
+            size="md"
+            tone={card.assignee.username === me?.username ? "accent" : "neutral"}
             initials={card.assignee.initials}
             title={card.assignee.fullName}
           />
@@ -248,7 +254,13 @@ function IssueCard({ card, status, first, last, archived, dragging }: IssueCardP
                 {label.name}
               </Pill>
             ))}
-            {hidden > 0 && <Pill kind="est">{`+${hidden}`}</Pill>}
+            {hiddenLabels.length > 0 && (
+              <Pill
+                kind="est"
+                title={hiddenLabels.map((label) => label.name).join(", ")}>
+                {`+${hiddenLabels.length}`}
+              </Pill>
+            )}
           </>
         )
       }
@@ -279,7 +291,7 @@ function MoveMenu({ id, status, first, last }: MoveMenuProps) {
 
   return (
     <Menu
-      label={`${id} actions`}
+      label={`Actions for ${id}`}
       icon={
         <DotsThree
           size={15}

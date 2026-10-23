@@ -125,7 +125,7 @@ function titlesIn(columnName: string) {
 }
 
 async function openCardMenu(id: string) {
-  fireEvent.click(await screen.findByRole("button", { name: `${id} actions` }));
+  fireEvent.click(await screen.findByRole("button", { name: `Actions for ${id}` }));
   return screen.findByRole("menu");
 }
 
@@ -179,7 +179,7 @@ async function dragByKeyboard(title: string, columnName: string, target: string)
   throw new Error(`No drop target "${target}" in ${columnName}`);
 }
 
-it("REQ-024.1, REQ-025.1, REQ-025.2: columns in order with counts; a card shows ID, title, priority, initials, 3 labels and +2; an unassigned card with No priority shows neither", async () => {
+it("REQ-024.1, REQ-025.1, REQ-025.2: columns in order with counts; a card shows ID, title, priority, initials (accent for yourself), 3 labels and +2 titled with the rest; an unassigned card with No priority shows neither", async () => {
   mockBoard();
   renderAppAt("/project/WEB");
 
@@ -197,10 +197,13 @@ it("REQ-024.1, REQ-025.1, REQ-025.2: columns in order with counts; a card shows 
   );
   expect(within(web42Card).getByText("WEB-42")).toBeTruthy();
   expect(within(web42Card).getByRole("img", { name: "high" })).toBeTruthy();
-  expect(within(web42Card).getByText("SL")).toBeTruthy();
+  expect(within(web42Card).getByText("SL").className).toBe("tl-avatar tl-avatar--md tl-avatar--accent");
+  expect(within(cardIn("Backlog", "Add password rules to the reset form")).getByText("AK").className).toBe(
+    "tl-avatar tl-avatar--md tl-avatar--neutral",
+  );
   for (const name of ["backend", "bug", "Design"]) expect(within(web42Card).getByText(name)).toBeTruthy();
   for (const name of ["docs", "frontend"]) expect(within(web42Card).queryByText(name)).toBeNull();
-  expect(within(web42Card).getByText("+2")).toBeTruthy();
+  expect(within(web42Card).getByText("+2").getAttribute("title")).toBe("docs, frontend");
 
   const web12Card = cardIn("Backlog", "Tidy up footer links");
   expect(within(web12Card).queryByRole("img", { name: /urgent|high|medium|med|low|none/ })).toBeNull();
@@ -491,16 +494,37 @@ it("STD-7: empty columns name the next action, and Create one opens New issue in
   );
 });
 
-it("REQ-024.2: an archived project's board has no + buttons, ⋯ menus or drag buttons, and cards still open", async () => {
+it("Done and Canceled have no + button, and their cards are drawn closed", async () => {
+  mockBoard({ columns: board({ backlog: [web7], done: [web42], canceled: [web5] }) });
+  renderAppAt("/project/WEB");
+
+  await screen.findByRole("region", { name: "Backlog" });
+  const addButtons = screen.getAllByRole("button", { name: /^New issue in/ });
+  expect(addButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
+    "New issue in Backlog",
+    "New issue in In Progress",
+    "New issue in In Review",
+  ]);
+  expect(cardIn("Done", "Fix login button").className).toContain("tl-board-card--closed");
+  expect(cardIn("Canceled", "Email digest sends twice on Mondays").className).toContain(
+    "tl-board-card--closed",
+  );
+  expect(cardIn("Backlog", "Add password rules to the reset form").className).not.toContain(
+    "tl-board-card--closed",
+  );
+});
+
+it("REQ-024.2: an archived project's board has no + buttons, ⋯ menus or drag buttons, every empty column says No issues., and cards still open", async () => {
   mockBoard({ shown: archivedWeb });
   renderAppAt("/project/WEB");
 
   await screen.findByRole("region", { name: "Backlog" });
   expect(screen.queryByRole("button", { name: /^New issue in/ })).toBeNull();
-  expect(screen.queryByRole("button", { name: /actions$/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Actions for/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /^Drag / })).toBeNull();
-  expect(column("In Review").textContent).toContain("No issues.");
-  expect(column("In Review").textContent).not.toContain("Create one.");
+  for (const name of ["In Review", "Done", "Canceled"]) {
+    expect(column(name).querySelector(".tl-board-empty")?.textContent).toBe("No issues.");
+  }
   expect(
     within(cardIn("Backlog", "Fix login button"))
       .getByRole("link", { name: "Fix login button" })
