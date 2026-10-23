@@ -80,6 +80,44 @@ it("REQ-016: a project is found by its key ignoring capitals", async () => {
     descriptionVersion: 0,
     mentions: [],
     archivedAt: null,
+    issueCounts: { backlog: 0, in_progress: 0, in_review: 0, done: 0, canceled: 0 },
+    createdAt: project.createdAt.toISOString(),
+    createdBy: null,
+  });
+});
+
+it("REQ-046.3: the details response counts the project's issues in every status and leaves out other projects' issues", async () => {
+  const { member, cookie } = await signedIn("member");
+  const web = await createProject();
+  const api = await createProject();
+  const statuses = ["backlog", "backlog", "backlog", "in_progress", "done", "done"] as const;
+  for (const [index, status] of statuses.entries()) {
+    const issue = await createIssue(web.id, member, index + 1);
+    await db.update(issues).set({ status }).where(eq(issues.id, issue.id));
+  }
+  await createIssue(api.id, member, 1);
+
+  const response = await getWith(cookie, web.key);
+
+  expect((await response.json()).issueCounts).toEqual({
+    backlog: 3,
+    in_progress: 1,
+    in_review: 0,
+    done: 2,
+    canceled: 0,
+  });
+});
+
+it("REQ-046.4: the details response names when and by whom the project was created", async () => {
+  const { cookie } = await signedIn("member");
+  const alex = await createMember({ fullName: "Alex Kim", role: "admin" });
+  const project = await createProject({ createdBy: alex.id });
+
+  const response = await getWith(cookie, project.key);
+
+  expect(await response.json()).toMatchObject({
+    createdAt: project.createdAt.toISOString(),
+    createdBy: { username: alex.username, fullName: "Alex Kim", initials: "AK", deactivated: false },
   });
 });
 

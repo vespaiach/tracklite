@@ -53,8 +53,9 @@ function nameError(message: string) {
   return { error: { message: "Check the highlighted fields", fields: { name: message } } };
 }
 
-it("REQ-009.1, REQ-009.2, REQ-009.5, REQ-046.2: an admin creates a project with a lowercase key, saved in uppercase; a second may reuse the name; every member sees them in a list without descriptions", async () => {
-  const adminCookie = await signedIn("admin");
+it("REQ-009.1, REQ-009.2, REQ-009.5, REQ-046.2, REQ-046.4: an admin creates a project with a lowercase key, saved in uppercase and recorded as created by them; a second may reuse the name; every member sees them in a list without descriptions", async () => {
+  const alex = await createMember({ role: "admin", fullName: "Alex Kim" });
+  const adminCookie = `session=${await createSession(alex.id)}`;
   const memberCookie = await signedIn("member");
   const key = uniqueProjectKey();
   const described = await createProject({ name: "Website", description: "Only on the details page" });
@@ -69,6 +70,9 @@ it("REQ-009.1, REQ-009.2, REQ-009.5, REQ-046.2: an admin creates a project with 
     descriptionVersion: 0,
     mentions: [],
     archivedAt: null,
+    issueCounts: { backlog: 0, in_progress: 0, in_review: 0, done: 0, canceled: 0 },
+    createdAt: expect.any(String),
+    createdBy: { username: alex.username, fullName: "Alex Kim", initials: "AK", deactivated: false },
   });
   const listed = await listWith(memberCookie, false);
   expect(listed).toContainEqual({ key, name: "Website", archivedAt: null });

@@ -24,6 +24,7 @@ export const projects = pgTable(
     nextIssueNumber: integer("next_issue_number").notNull().default(1),
     archivedAt: timestamptz("archived_at"),
     createdAt: createdAt(),
+    createdBy: uuid("created_by").references(() => members.id),
   },
   (t) => [check("projects_key_format", sql`${t.key} ~ '^[A-Z]{2,5}$'`)],
 );

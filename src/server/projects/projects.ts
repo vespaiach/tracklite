@@ -6,10 +6,11 @@ import type { Executor, Transaction } from "../shared/transaction";
 import { mentions } from "../notifications/tables";
 import { publish } from "../shared/events";
 import { assertAdmin, editConflict, type Member, memberSummary, members } from "../identity";
+import { issues } from "../issues/tables";
 import { projectKeys, projects } from "./tables";
 import { needsAdmin, renamesArchived } from "./rules";
 import type { NewProject, ProjectChanges, ProjectKey } from "./schemas";
-import type { Project, ProjectSummary } from "../../contract";
+import type { IssueStatus, Project, ProjectSummary } from "../../contract";
 
 type ProjectRow = typeof projects.$inferSelect;
 
@@ -21,13 +22,20 @@ export function byProjectKey(key: ProjectKey | undefined) {
   return key === undefined ? sql`false` : eq(projects.key, key);
 }
 
+const summaryColumns = {
+  username: members.username,
+  fullName: members.fullName,
+  deactivatedAt: members.deactivatedAt,
+};
+
 async function projectResponse(executor: Executor, project: ProjectRow): Promise<Project> {
   const mentioned = await executor
-    .select({ username: members.username, fullName: members.fullName, deactivatedAt: members.deactivatedAt })
+    .select(summaryColumns)
     .from(mentions)
     .innerJoin(members, eq(members.id, mentions.memberId))
     .where(eq(mentions.projectId, project.id))
     .orderBy(asc(members.username));
+
   return {
     key: project.key,
     name: project.name,
@@ -35,7 +43,35 @@ async function projectResponse(executor: Executor, project: ProjectRow): Promise
     descriptionVersion: project.descriptionVersion,
     mentions: mentioned.map(memberSummary),
     archivedAt: project.archivedAt?.toISOString() ?? null,
+    issueCounts: await issueCounts(executor, project.id),
+    createdAt: project.createdAt.toISOString(),
+    createdBy: await creator(executor, project.createdBy),
   };
+}
+
+async function issueCounts(executor: Executor, projectId: string) {
+  const rows = await executor
+    .select({ status: issues.status, count: sql<number>`count(*)::int` })
+    .from(issues)
+    .where(eq(issues.projectId, projectId))
+    .groupBy(issues.status);
+
+  const counts: Record<IssueStatus, number> = {
+    backlog: 0,
+    in_progress: 0,
+    in_review: 0,
+    done: 0,
+    canceled: 0,
+  };
+  for (const row of rows) counts[row.status] = row.count;
+  return counts;
+}
+
+async function creator(executor: Executor, memberId: string | null) {
+  if (memberId === null) return null;
+
+  const [member] = await executor.select(summaryColumns).from(members).where(eq(members.id, memberId));
+  return memberSummary(member);
 }
 
 export async function listProjects(_actor: Member, archived: boolean): Promise<ProjectSummary[]> {
@@ -65,7 +101,7 @@ export async function createProject(actor: Member, { name, key }: NewProject) {
     const reserved = await tx.insert(projectKeys).values({ key }).onConflictDoNothing().returning();
     if (reserved.length === 0) refuseFields({ key: "Key already used" });
 
-    const [project] = await tx.insert(projects).values({ key, name }).returning();
+    const [project] = await tx.insert(projects).values({ key, name, createdBy: actor.id }).returning();
     return projectResponse(tx, project);
   });
 }

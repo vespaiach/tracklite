@@ -45,7 +45,7 @@ The tasks below follow these decisions. Pages never invent styles (design-system
 
 ## Milestone M17 Design refresh
 
-**Run order:** M17.0 → (M17.1 ∥ M17.2 ∥ M17.3 ∥ M17.4 ∥ M17.5) → (M17.6 ∥ M17.7 ∥ M17.8 ∥ M17.12 ∥ M17.13 ∥ M17.14 ∥ M17.15) → (M17.9 ∥ M17.10 ∥ M17.11 ∥ M17.16). The kit tasks share `styles/components.css` and `index.ts`; merge them in the order listed. M17.9–M17.11 and M17.16 wait for M17.8 because they render the project header.
+**Run order:** M17.0 → (M17.1 ∥ M17.2 ∥ M17.3 ∥ M17.4 ∥ M17.5) → (M17.6 ∥ M17.7 ∥ M17.8 ∥ M17.12 ∥ M17.13 ∥ M17.14 ∥ M17.15) → (M17.9 ∥ M17.10 ∥ M17.11a → M17.11b ∥ M17.16). The kit tasks share `styles/components.css` and `index.ts`; merge them in the order listed. M17.9–M17.11 and M17.16 wait for M17.8 because they render the project header.
 
 Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` (the screen's `pg.*` block), the matching frames in `docs/design/Tracklite states.dc.html`, and `docs/design-system.md`. Build from kit components and tokens, never from the design's inline styles. Existing tests keep passing; where copy changes by decision, update the spec, then the test name and assertion.
 
@@ -90,9 +90,14 @@ Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` 
   - Needs: M17.3, M17.5, M17.8
   - Split if too big: M17.10a layout, title and fields · M17.10b description and comments.
 
-- [ ] **M17.11 Project details.** 640 px column; the description heading as a meta label with a quiet "Edit project description" button; "No description yet. Add one." (no link when archived); per C2, comments stay. If accepted: an Issues section ("N open", one row per status with a count, linking to the list filtered by that status) and "Created {date} by {name}". The per-status counts need a §3.3 endpoint change, so split off M17.11a (API) first.
+- [x] **M17.11a Project details API.** Per C2 (accepted), `GET /api/projects/{KEY}` (and every `Project` response) gains `issueCounts` (every status, zeros included, all of the project's issues), `createdAt` and `createdBy` (a member, or `null` for projects created before the creator was recorded). A migration adds `projects.created_by`, nullable, left empty on existing rows; `createProject` records the actor. Spec REQ-046 first (0.32): new REQ-046.3 and REQ-046.4.
+  - Reads: + spec REQ-046 · design §3.3, §3.5 · `src/server/projects/projects.ts`, `src/contract/projects.ts`
+  - Needs: none
+  - Done: route tests REQ-046.3 (counts per status, other projects' issues left out) and REQ-046.4 (created date and creator; `null` creator on an older project); the create test returns the creator.
+
+- [ ] **M17.11b Project details screen.** 640 px column; the description heading as a meta label with a quiet "Edit project description" button; "No description yet. Add one." (no link when archived); per C2, comments stay. An Issues section ("N open", one row per status with a count, linking to the list filtered by that status) and "Created {date} by {name}" (only "Created {date}" when `createdBy` is `null`), from M17.11a's fields.
   - Reads: + spec REQ-046 · `src/client/screens/ProjectDetail.tsx`
-  - Needs: M17.8
+  - Needs: M17.8, M17.11a
 
 - [ ] **M17.12 My issues.** A mono total count after the title; collapsible status groups with Done and Canceled collapsed; grid rows (keeping the Project column per C6) with no sideways scroll at 1024 px (labels shrink first, the title keeps 240 px); "Updated {exact}" date titles; the footer "Sorted by priority, then most recently updated."; the empty copy per C17.
   - Reads: + spec REQ-041–042 · `src/client/screens/MyIssues.tsx`, `IssueCells.tsx`
