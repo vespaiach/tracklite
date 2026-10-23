@@ -126,6 +126,25 @@ it("REQ-016.5: a lower-case address opens the issue at its canonical address", a
   expect(screen.getByRole("link", { name: "Website · WEB" }).getAttribute("href")).toBe("/project/WEB");
 });
 
+it("REQ-046: the issue page header shows the breadcrumb to the project and no view selected", async () => {
+  mockIssue();
+  renderAppAt("/issue/WEB-42");
+
+  await titleField();
+  const crumbs = within(screen.getByRole("banner")).getByRole("navigation", { name: "Breadcrumb" });
+  expect(within(crumbs).getByRole("link", { name: "Project details" }).getAttribute("href")).toBe(
+    "/project/WEB/detail",
+  );
+  expect(within(crumbs).getByRole("link", { name: "Website · WEB" }).getAttribute("href")).toBe(
+    "/project/WEB",
+  );
+  const current = within(crumbs).getByText("WEB-42");
+  expect(current.getAttribute("aria-current")).toBe("page");
+  expect(current.getAttribute("title")).toBe("Fix login button");
+  const views = screen.getByRole("navigation", { name: "Project views" });
+  expect(within(views).queryAllByRole("link", { current: "page" })).toEqual([]);
+});
+
 it("REQ-016: Enter or leaving the title saves it; Escape restores the saved title", async () => {
   const fetchMock = mockIssue();
   renderAppAt("/issue/WEB-42");

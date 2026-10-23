@@ -68,7 +68,7 @@ it("REQ-046.1: the details page shows the project's description formatted", asyn
 
   expect(await screen.findByRole("heading", { level: 3, name: "This quarter" })).toBeTruthy();
   expect(screen.getByText("Ship the new pricing page").tagName).toBe("LI");
-  expect(screen.getByRole("link", { name: "Details" }).getAttribute("aria-current")).toBe("page");
+  expect(screen.getByRole("link", { name: "Project details" }).getAttribute("aria-current")).toBe("page");
 });
 
 it("REQ-012.1, STD-5: saving a description disables Save, sends it with its version and shows it formatted", async () => {

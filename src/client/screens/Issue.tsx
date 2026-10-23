@@ -1,10 +1,8 @@
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router";
 import {
-  AppBar,
   Avatar,
   Button,
-  Crumbs,
   Dialog,
   FieldError,
   FormStatus,
@@ -20,7 +18,6 @@ import {
   Pill,
   Priority,
   Status,
-  Tag,
 } from "../../components/ui/track-lite";
 import { Markdown } from "../../lib/markdown/Markdown";
 import {
@@ -46,8 +43,8 @@ import { useFailureToast } from "../failure";
 import { issuePriorities, issueStatuses } from "../../contract";
 import { priorities, statuses } from "../issue-fields";
 import { LoadFailed, Loading } from "../LoadStates";
-import { useRouterClick } from "../links";
 import { ProjectGate } from "../ProjectGate";
+import { ProjectHeader } from "../ProjectHeader";
 import { useShowLoading } from "../useShowLoading";
 import { NotFound } from "./NotFound";
 
@@ -104,21 +101,15 @@ function useIssueSave(id: string) {
 
 function IssueView({ issue, project }: { issue: Issue; project: Project }) {
   const { data: me } = useMeQuery();
-  const projectHref = `/project/${project.key}`;
-  const projectClick = useRouterClick(projectHref);
   const editable = !issue.archived;
   const canDelete = editable && (me?.role === "admin" || me?.username === issue.createdBy.username);
   return (
     <>
-      <AppBar>
-        <Crumbs
-          items={[
-            { label: `${project.name} · ${project.key}`, href: projectHref, onClick: projectClick },
-            { label: issue.id },
-          ]}
-        />
-        {issue.archived && <Tag variant="neutral">Archived</Tag>}
-      </AppBar>
+      <ProjectHeader
+        project={project}
+        issue={issue}
+        admin={me?.role === "admin"}
+      />
       <IssueLayout
         main={
           <>
@@ -165,7 +156,7 @@ function IssueView({ issue, project }: { issue: Issue; project: Project }) {
             {canDelete && (
               <DeleteIssue
                 issue={issue}
-                projectHref={projectHref}
+                projectHref={`/project/${project.key}`}
               />
             )}
           </>

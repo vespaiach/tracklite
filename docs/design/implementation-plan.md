@@ -77,7 +77,7 @@ Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` 
   - Reads: + spec REQ-047–050, STD-6, STD-9 · `src/client/screens/{SignIn,ForgotPassword,ResetPassword,AcceptInvitation}.tsx`, `SignedOut.tsx`
   - Needs: M17.1, M17.3
 
-- [ ] **M17.8 Project header.** The book icon button left of the name ("Project details", current on the details page); tabs with icons; the order [details][name][Archived][tabs] … [gear][New issue]; an issue-page variant with the breadcrumb "Name · KEY / WEB-42" and no tab selected. Keep a Labels entry if C3 is rejected (in the header or project details; ask the owner where).
+- [x] **M17.8 Project header.** The book icon button left of the name ("Project details", current on the details page); tabs with icons; the order [details][name][Archived][tabs] … [gear][New issue]; an issue-page variant with the breadcrumb "Name · KEY / WEB-42" and no tab selected. Keep a Labels entry if C3 is rejected (in the header or project details; ask the owner where).
   - Reads: + spec REQ-046 · `src/client/ProjectHeader.tsx`
   - Needs: M17.3
 
