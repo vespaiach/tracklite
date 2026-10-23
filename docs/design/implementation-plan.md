@@ -99,7 +99,7 @@ Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` 
   - Reads: + spec REQ-046 · `src/client/screens/ProjectDetail.tsx`
   - Needs: M17.8, M17.11a
 
-- [ ] **M17.12 My issues.** A mono total count after the title; collapsible status groups with Done and Canceled collapsed; grid rows (keeping the Project column per C6) with no sideways scroll at 1024 px (labels shrink first, the title keeps 240 px); "Updated {exact}" date titles; the footer "Sorted by priority, then most recently updated."; the empty copy per C17.
+- [x] **M17.12 My issues.** A mono total count after the title; collapsible status groups with Done and Canceled collapsed; grid rows (keeping the Project column per C6) with no sideways scroll at 1024 px (labels shrink first, the title keeps 240 px); "Updated {exact}" date titles; the footer "Sorted by priority, then most recently updated."; the empty copy per C17.
   - Reads: + spec REQ-041–042 · `src/client/screens/MyIssues.tsx`, `IssueCells.tsx`
   - Needs: M17.0, M17.4
 

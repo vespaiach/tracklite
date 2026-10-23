@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { afterEach, expect, it, vi } from "vitest";
 import { apiError, mockApi, renderAppAt, requestsTo, sam } from "../../test/client-app";
 import type { IssueLabel, MyIssue, MyIssueGroup } from "../api";
+import { formatExact } from "../dates";
 
 afterEach(() => {
   cleanup();
@@ -49,9 +50,7 @@ function groups() {
 }
 
 function rowIds(region: HTMLElement) {
-  return within(region)
-    .getAllByRole("row")
-    .map((row) => row.querySelector(".tl-list-row__id")?.textContent);
+  return Array.from(region.querySelectorAll(".tl-list-row__id")).map((id) => id.textContent);
 }
 
 const updatedAt = minutesAgo(5);
@@ -68,45 +67,69 @@ const defaultGroups = [
   ]),
 ];
 
-it("REQ-041.1, REQ-042, REQ-042.2: groups in status order with no empty groups; a row shows its cells; clicking opens the issue", async () => {
+it("REQ-041.1, REQ-042, REQ-042.2: groups in status order with no empty groups and a total; a row shows its cells; clicking opens the issue", async () => {
   mockMyIssues(() => defaultGroups);
   renderAppAt("/my-issues");
 
   await waitFor(() => expect(groups()).toEqual(["Backlog, 1 issue", "In Progress, 2 issues"]));
+  const total = screen.getByText("3 issues").parentElement as HTMLElement;
+  expect(within(total).getByText("3").getAttribute("aria-hidden")).toBe("true");
   const [backlog, inProgress] = screen.getAllByRole("region");
-  expect(within(backlog).getByText("Backlog")).toBeTruthy();
-  expect(within(backlog).getByText("1")).toBeTruthy();
+  expect(within(backlog).getByRole("button", { name: "Backlog 1" })).toBeTruthy();
   expect(rowIds(backlog)).toEqual(["API-7"]);
-  expect(within(inProgress).getByText("2")).toBeTruthy();
+  expect(within(inProgress).getByRole("button", { name: "In Progress 2" })).toBeTruthy();
   expect(rowIds(inProgress)).toEqual(["WEB-42", "WEB-3"]);
   expect(screen.queryByText("In Review")).toBeNull();
-  expect(screen.queryByText("Done")).toBeNull();
-  expect(screen.queryByText("Canceled")).toBeNull();
+  expect(screen.getByText("Sorted by priority, then most recently updated.")).toBeTruthy();
 
-  const link = screen.getByRole("link", { name: "Fix login button" });
+  const link = screen.getByRole("link", {
+    name: `WEB-42, Fix login button, High, Website, updated ${formatExact(updatedAt)}`,
+  });
   expect(link.getAttribute("href")).toBe("/issue/WEB-42");
-  const [first, second] = within(inProgress).getAllByRole("row");
-  const row = within(first);
-  expect(row.getByText("WEB-42")).toBeTruthy();
-  expect(row.getByText("Website")).toBeTruthy();
+  const row = within(link);
+  expect(row.getByText("Fix login button").getAttribute("title")).toBe("Fix login button");
+  expect(row.getByText("Website").getAttribute("title")).toBe("Website");
   expect(row.getByTitle("High")).toBeTruthy();
   expect(row.getByText("bug")).toBeTruthy();
   expect(row.getByText("frontend")).toBeTruthy();
   expect(row.queryByText("Safari")).toBeNull();
   expect(row.getByText("+1").getAttribute("title")).toBe("Safari");
-  const updated = row.getByText("5 min ago");
-  expect(updated.getAttribute("title")).toBe(new Date(updatedAt).toLocaleString());
-  expect(within(second).queryByRole("img")).toBeNull();
+  expect(row.getByText("5 min ago").getAttribute("title")).toBe(`Updated ${formatExact(updatedAt)}`);
+  const unprioritized = screen.getByRole("link", { name: /^WEB-3, / });
+  expect(within(unprioritized).queryByRole("img")).toBeNull();
 
   fireEvent.click(link);
   await waitFor(() => expect(window.location.pathname).toBe("/issue/WEB-42"));
 });
 
-it('REQ-041.4: nothing assigned → "Nothing assigned to you"', async () => {
+it("My issues: Done and Canceled start collapsed and expand from their group head", async () => {
+  mockMyIssues(() => [
+    group("in_progress", [mine("WEB-42", "Fix login button")]),
+    group("done", [mine("WEB-7", "Ship the footer")]),
+    group("canceled", [mine("WEB-8", "Drop the blog")]),
+  ]);
+  renderAppAt("/my-issues");
+
+  const done = await screen.findByRole("button", { name: "Done 1" });
+  const canceled = screen.getByRole("button", { name: "Canceled 1" });
+  expect(screen.getByRole("button", { name: "In Progress 1" }).getAttribute("aria-expanded")).toBe("true");
+  expect(done.getAttribute("aria-expanded")).toBe("false");
+  expect(canceled.getAttribute("aria-expanded")).toBe("false");
+  expect(screen.getByText("3 issues")).toBeTruthy();
+  expect(screen.queryByRole("link", { name: /^WEB-7, / })).toBeNull();
+
+  fireEvent.click(done);
+  expect(screen.getByRole("link", { name: /^WEB-7, / })).toBeTruthy();
+  expect(screen.queryByRole("link", { name: /^WEB-8, / })).toBeNull();
+});
+
+it('REQ-041.4: nothing assigned → "Nothing assigned to you. Open a project to find or create issues."', async () => {
   mockMyIssues(() => []);
   renderAppAt("/my-issues");
 
-  expect(await screen.findByText("Nothing assigned to you")).toBeTruthy();
+  expect(
+    await screen.findByText("Nothing assigned to you. Open a project to find or create issues."),
+  ).toBeTruthy();
   expect(groups()).toEqual([]);
 });
 

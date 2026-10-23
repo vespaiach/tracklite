@@ -137,6 +137,10 @@ export function ListRow({ selected, checked, priority, id, status, title, end, o
   );
 }
 
+export function ListNote({ children }: { children: ReactNode }) {
+  return <p className="tl-list-note">{children}</p>;
+}
+
 export function ListDate({ children }: { children: ReactNode }) {
   return <span className="tl-list-date">{children}</span>;
 }

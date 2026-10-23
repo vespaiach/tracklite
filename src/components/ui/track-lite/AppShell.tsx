@@ -190,6 +190,15 @@ export function AppBarTitle({ children }: { children: ReactNode }) {
   return <h1 className="tl-appbar__title">{children}</h1>;
 }
 
+export function AppBarCount({ count, label }: { count: number; label: string }) {
+  return (
+    <span className="tl-appbar__count">
+      <span aria-hidden="true">{count}</span>
+      <span className="sr-only">{label}</span>
+    </span>
+  );
+}
+
 export type Crumb = {
   label: string;
   href?: string;

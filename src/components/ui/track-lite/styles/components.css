@@ -1325,6 +1325,11 @@ a.tl-rail-item {
   letter-spacing: -0.015em;
   line-height: 1.25;
 }
+.tl-appbar__count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-ink-2);
+}
 .tl-crumbs {
   display: flex;
   align-items: center;
@@ -1499,6 +1504,32 @@ a.tl-rail-item {
 }
 .tl-list-row--link > :last-child {
   justify-self: end;
+}
+.tl-list-row__prio {
+  display: flex;
+  justify-content: center;
+  color: var(--color-ink-2);
+}
+.tl-list-row__muted {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--color-ink-2);
+}
+.tl-list-row__labels {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+}
+.tl-list-note {
+  margin: 0;
+  padding: 15px;
+  font-size: 12px;
+  color: var(--color-ink-2);
 }
 .tl-list-row__check {
   width: 13px;
@@ -3052,6 +3083,7 @@ a.tl-rail-item {
   color: var(--color-ink);
 }
 .tl-table-scroll {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow: auto;
