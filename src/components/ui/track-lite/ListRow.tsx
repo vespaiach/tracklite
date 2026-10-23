@@ -1,5 +1,5 @@
 import { CaretDown } from "@phosphor-icons/react/dist/csr/CaretDown";
-import { type MouseEvent, type ReactNode, useId, useState } from "react";
+import { type MouseEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { cx } from "./cx";
 
 export type ListGroupProps = { label: string; count?: number; icon?: ReactNode; action?: ReactNode };
@@ -153,18 +153,43 @@ export type BoardColumnProps = {
   children: ReactNode;
 };
 
+function useScrolledDown() {
+  const [scrolled, setScrolled] = useState(false);
+  const container = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = container.current;
+    if (!element) return;
+    const onScroll = (event: Event) => setScrolled((event.target as HTMLElement).scrollTop > 0);
+    element.addEventListener("scroll", onScroll, true);
+    return () => element.removeEventListener("scroll", onScroll, true);
+  }, []);
+
+  return [container, scrolled] as const;
+}
+
 export function BoardColumn({ label, count, icon, action, children }: BoardColumnProps) {
+  const [body, scrolled] = useScrolledDown();
   return (
     <section
       aria-label={label}
+      data-scrolled={scrolled || undefined}
       className="tl-board-col">
       <div className="tl-board-col__head">
         {icon}
-        {label}
+        <h2
+          title={label}
+          className="tl-board-col__label">
+          {label}
+        </h2>
         {count != null && <span className="tl-board-col__count">{count}</span>}
         {action}
       </div>
-      <div className="tl-board-col__body">{children}</div>
+      <div
+        ref={body}
+        className="tl-board-col__body">
+        {children}
+      </div>
     </section>
   );
 }
@@ -200,6 +225,7 @@ export type BoardCardProps = {
   assignee?: ReactNode;
   menu?: ReactNode;
   foot?: ReactNode;
+  closed?: boolean;
   dragging?: boolean;
 };
 
@@ -213,19 +239,26 @@ export function BoardCard({
   assignee,
   menu,
   foot,
+  closed,
   dragging,
 }: BoardCardProps) {
   const titleId = useId();
   return (
     <article
       aria-labelledby={titleId}
-      className={cx("tl-board-card", menu && "tl-board-card--menu", dragging && "tl-board-card--dragging")}>
+      className={cx(
+        "tl-board-card",
+        menu && "tl-board-card--menu",
+        assignee && "tl-board-card--assignee",
+        closed && "tl-board-card--closed",
+        dragging && "tl-board-card--dragging",
+      )}>
       <span className="tl-board-card__top">
-        {handle}
-        {priority}
+        {priority && <span className="tl-board-card__prio">{priority}</span>}
         {id}
         {assignee && <span className="tl-board-card__assignee">{assignee}</span>}
       </span>
+      {handle && <span className="tl-board-card__act tl-board-card__handle">{handle}</span>}
       <a
         id={titleId}
         href={href}
@@ -234,7 +267,7 @@ export function BoardCard({
         {title}
       </a>
       {foot && <span className="tl-board-card__foot">{foot}</span>}
-      {menu && <span className="tl-board-card__menu">{menu}</span>}
+      {menu && <span className="tl-board-card__act tl-board-card__menu">{menu}</span>}
     </article>
   );
 }

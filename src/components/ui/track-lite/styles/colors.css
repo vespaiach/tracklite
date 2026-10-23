@@ -59,7 +59,7 @@
   --border-focus: var(--color-accent);
   --status-backlog: var(--color-neutral-600);
   --status-todo: var(--color-neutral-700);
-  --status-progress: var(--color-accent-2-600);
+  --status-progress: var(--color-accent-2-700);
   --status-review: var(--color-accent-600);
   --status-done: var(--color-accent-600);
   --status-canceled: var(--color-neutral-500);
