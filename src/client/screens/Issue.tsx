@@ -6,8 +6,10 @@ import {
   Dialog,
   FieldError,
   FormStatus,
+  IssueEmpty,
   IssueLayout,
   IssueSection,
+  IssueSideFoot,
   IssueTitle,
   IssueTitleInput,
   Meta,
@@ -32,6 +34,7 @@ import {
   useDeleteIssueMutation,
   useIssueQuery,
   useLabelsQuery,
+  useLazyIssueQuery,
   useMeQuery,
   useMembersQuery,
   useUpdateIssueMutation,
@@ -67,20 +70,36 @@ export function IssuePage() {
 
 function IssueGate({ id }: { id: string }) {
   const query = useIssueQuery(id);
-  const showLoading = useShowLoading(query.isLoading);
+  const { data: me } = useMeQuery();
   if ((query.error as ApiFailure | undefined)?.status === 404) return <NotFound />;
-  if (query.isError) return <LoadFailed onRetry={query.refetch} />;
-  if (!query.data) return <Loading show={showLoading} />;
-  const issue = query.data;
   return (
     <ProjectGate projectKey={id.split("-")[0]}>
       {(project) => (
-        <IssueView
-          issue={issue}
-          project={project}
-        />
+        <>
+          <ProjectHeader
+            project={project}
+            issue={query.data ?? { id }}
+            admin={me?.role === "admin"}
+          />
+          <IssueLoad
+            query={query}
+            project={project}
+          />
+        </>
       )}
     </ProjectGate>
+  );
+}
+
+function IssueLoad({ query, project }: { query: ReturnType<typeof useIssueQuery>; project: Project }) {
+  const showLoading = useShowLoading(query.isLoading);
+  if (query.isError) return <LoadFailed onRetry={query.refetch} />;
+  if (!query.data) return <Loading show={showLoading} />;
+  return (
+    <IssueView
+      issue={query.data}
+      project={project}
+    />
   );
 }
 
@@ -104,47 +123,43 @@ function IssueView({ issue, project }: { issue: Issue; project: Project }) {
   const editable = !issue.archived;
   const canDelete = editable && (me?.role === "admin" || me?.username === issue.createdBy.username);
   return (
-    <>
-      <ProjectHeader
-        project={project}
-        issue={issue}
-        admin={me?.role === "admin"}
-      />
-      <IssueLayout
-        main={
-          <>
-            {editable ? <TitleEditor issue={issue} /> : <IssueTitle>{issue.title}</IssueTitle>}
-            <Description
-              issue={issue}
+    <IssueLayout
+      title={editable ? <TitleEditor issue={issue} /> : <IssueTitle>{issue.title}</IssueTitle>}
+      main={
+        <>
+          <Description
+            issue={issue}
+            editable={editable}
+          />
+          <IssueSection title="Comments">
+            <CommentThread
+              threadPath={`issues/${issue.id}/comments`}
               editable={editable}
             />
-            <IssueSection title="Comments">
-              <CommentThread
-                threadPath={`issues/${issue.id}/comments`}
-                editable={editable}
-              />
-            </IssueSection>
-          </>
-        }
-        side={
-          <>
-            <StatusField
-              issue={issue}
-              editable={editable}
-            />
-            <PriorityField
-              issue={issue}
-              editable={editable}
-            />
-            <AssigneeField
-              issue={issue}
-              editable={editable}
-            />
-            <LabelsField
-              issue={issue}
-              projectKey={project.key}
-              editable={editable}
-            />
+          </IssueSection>
+        </>
+      }
+      side={
+        <>
+          <StatusField
+            issue={issue}
+            editable={editable}
+          />
+          <PriorityField
+            issue={issue}
+            editable={editable}
+          />
+          <AssigneeField
+            issue={issue}
+            me={me?.username}
+            editable={editable}
+          />
+          <LabelsField
+            issue={issue}
+            projectKey={project.key}
+            editable={editable}
+          />
+          <IssueSideFoot>
             <FormStatus>
               {`Created by ${issue.createdBy.fullName}, `}
               <time
@@ -159,10 +174,10 @@ function IssueView({ issue, project }: { issue: Issue; project: Project }) {
                 projectHref={`/project/${project.key}`}
               />
             )}
-          </>
-        }
-      />
-    </>
+          </IssueSideFoot>
+        </>
+      }
+    />
   );
 }
 
@@ -297,7 +312,17 @@ function keepsUnassigned(text: string, input: string) {
   return text === "Unassigned" || text.toLowerCase().includes(input.trim().toLowerCase());
 }
 
-function AssigneeField({ issue, editable }: { issue: Issue; editable: boolean }) {
+function MemberAvatar({ member, me }: { member: MemberSummary; me?: string }) {
+  return (
+    <Avatar
+      size="md"
+      tone={member.username === me ? "accent" : "neutral"}
+      initials={member.initials}
+    />
+  );
+}
+
+function AssigneeField({ issue, me, editable }: { issue: Issue; me?: string; editable: boolean }) {
   const save = useIssueSave(issue.id);
   const { data: members } = useMembersQuery(undefined, { skip: !editable });
   const errorId = useId();
@@ -307,14 +332,13 @@ function AssigneeField({ issue, editable }: { issue: Issue; editable: boolean })
     <>
       <Glyph>
         {assignee ? (
-          <Avatar
-            size="sm"
-            tone="neutral"
-            initials={assignee.initials}
+          <MemberAvatar
+            member={assignee}
+            me={me}
           />
         ) : (
           <Avatar
-            size="sm"
+            size="md"
             empty
           />
         )}
@@ -344,7 +368,7 @@ function AssigneeField({ issue, editable }: { issue: Issue; editable: boolean })
             textValue="Unassigned">
             <Glyph>
               <Avatar
-                size="sm"
+                size="md"
                 empty
               />
             </Glyph>
@@ -358,10 +382,9 @@ function AssigneeField({ issue, editable }: { issue: Issue; editable: boolean })
                 id={member.username}
                 textValue={`${member.fullName} ${member.username}`}>
                 <Glyph>
-                  <Avatar
-                    size="sm"
-                    tone="neutral"
-                    initials={member.initials}
+                  <MemberAvatar
+                    member={member}
+                    me={me}
                   />
                 </Glyph>
                 {member.fullName}
@@ -376,9 +399,19 @@ function AssigneeField({ issue, editable }: { issue: Issue; editable: boolean })
   );
 }
 
+function startDraft({ description, descriptionVersion }: Issue): DescriptionDraft {
+  return { text: description, startedFrom: description, version: descriptionVersion };
+}
+
 function Description({ issue, editable }: { issue: Issue; editable: boolean }) {
   const [draft, setDraft] = useState<DescriptionDraft>();
   const [updateIssue] = useUpdateIssueMutation();
+  const [loadIssue] = useLazyIssueQuery();
+
+  async function reload() {
+    setDraft(startDraft(await loadIssue(issue.id).unwrap()));
+  }
+
   return (
     <IssueSection
       title="Description"
@@ -389,13 +422,7 @@ function Description({ issue, editable }: { issue: Issue; editable: boolean }) {
             variant="quiet"
             size="sm"
             aria-label="Edit description"
-            onClick={() =>
-              setDraft({
-                text: issue.description,
-                startedFrom: issue.description,
-                version: issue.descriptionVersion,
-              })
-            }>
+            onClick={() => setDraft(startDraft(issue))}>
             Edit
           </Button>
         )
@@ -405,6 +432,7 @@ function Description({ issue, editable }: { issue: Issue; editable: boolean }) {
           draft={draft}
           onChange={(text) => setDraft({ ...draft, text })}
           onDone={() => setDraft(undefined)}
+          onReload={() => void reload()}
           save={(description, descriptionVersion) =>
             updateIssue({ id: issue.id, change: { description, descriptionVersion } }).unwrap()
           }
@@ -415,7 +443,11 @@ function Description({ issue, editable }: { issue: Issue; editable: boolean }) {
           mentions={issue.mentions}
         />
       ) : (
-        <FormStatus>No description yet.</FormStatus>
+        <IssueEmpty
+          action={editable ? "Add one." : undefined}
+          onAction={() => setDraft(startDraft(issue))}>
+          No description yet.
+        </IssueEmpty>
       )}
     </IssueSection>
   );
@@ -492,7 +524,8 @@ function LabelsField({
           }
           search={{ label: "Filter or create labels", placeholder: "Filter or create…" }}
           createText={createText}
-          onCreate={(input) => void create(input)}>
+          onCreate={(input) => void create(input)}
+          emptyNote={labels.length === 0 ? "No labels in this project yet." : undefined}>
           {labels.map((label) => (
             <PickerItem
               key={label.id}
@@ -519,7 +552,7 @@ function DeleteIssue({ issue, projectHref }: { issue: Issue; projectHref: string
         size="sm"
         aria-haspopup="dialog"
         onClick={() => setConfirming(true)}>
-        Delete issue
+        Delete issue…
       </Button>
       {confirming && (
         <DeleteDialog
@@ -574,7 +607,7 @@ function DeleteDialog({
           </Button>
           <Button
             variant="danger"
-            disabled={isLoading}
+            busy={isLoading ? "Deleting…" : undefined}
             aria-busy={isLoading || undefined}
             onClick={confirm}>
             Delete issue

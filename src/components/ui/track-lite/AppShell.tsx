@@ -28,7 +28,9 @@ export function Lbl({ children, className }: { children: ReactNode; className?: 
 
 export function Rail({ head, foot, children }: { head?: ReactNode; foot?: ReactNode; children: ReactNode }) {
   return (
-    <aside className="tl-rail">
+    <aside
+      aria-label="Sidebar"
+      className="tl-rail">
       {head && <div className="tl-rail__head">{head}</div>}
       <div className="tl-rail__main">{children}</div>
       {foot && <div className="tl-rail__foot">{foot}</div>}

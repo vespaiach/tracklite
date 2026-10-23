@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams } from "react-router";
 import { Button, FormStatus, SettingsLayout, SettingsSection } from "../../components/ui/track-lite";
 import { Markdown } from "../../lib/markdown/Markdown";
-import { type Project, useMeQuery, useUpdateProjectMutation } from "../api";
+import { type Project, useLazyProjectQuery, useMeQuery, useUpdateProjectMutation } from "../api";
 import { CommentThread } from "../CommentThread";
 import { type DescriptionDraft, DescriptionEditor } from "../DescriptionEditor";
 import { ProjectGate } from "../ProjectGate";
@@ -35,10 +35,20 @@ export function ProjectDetail() {
   );
 }
 
+function startDraft({ description, descriptionVersion }: Project): DescriptionDraft {
+  return { text: description, startedFrom: description, version: descriptionVersion };
+}
+
 function Description({ project }: { project: Project }) {
   const [draft, setDraft] = useState<DescriptionDraft>();
   const [updateProject] = useUpdateProjectMutation();
+  const [loadProject] = useLazyProjectQuery();
   const editable = project.archivedAt === null;
+
+  async function reload() {
+    setDraft(startDraft(await loadProject(project.key).unwrap()));
+  }
+
   return (
     <SettingsSection
       title="Description"
@@ -47,13 +57,7 @@ function Description({ project }: { project: Project }) {
         !draft && (
           <Button
             size="sm"
-            onClick={() =>
-              setDraft({
-                text: project.description,
-                startedFrom: project.description,
-                version: project.descriptionVersion,
-              })
-            }>
+            onClick={() => setDraft(startDraft(project))}>
             Edit
           </Button>
         )
@@ -63,6 +67,7 @@ function Description({ project }: { project: Project }) {
           draft={draft}
           onChange={(text) => setDraft({ ...draft, text })}
           onDone={() => setDraft(undefined)}
+          onReload={() => void reload()}
           save={(description, descriptionVersion) =>
             updateProject({ key: project.key, description, descriptionVersion }).unwrap()
           }

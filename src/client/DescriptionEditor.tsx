@@ -1,5 +1,5 @@
 import { type FormEvent, type KeyboardEvent, useId, useState } from "react";
-import { Button, Editor, FieldError, SettingsActions } from "../components/ui/track-lite";
+import { Button, Editor, EditorNotice, FieldError, SettingsActions } from "../components/ui/track-lite";
 import type { ApiFailure } from "./api";
 import { useFailureToast } from "./failure";
 import { LeaveGuard } from "./LeaveGuard";
@@ -11,11 +11,13 @@ export function DescriptionEditor({
   draft,
   onChange,
   onDone,
+  onReload,
   save,
 }: {
   draft: DescriptionDraft;
   onChange: (text: string) => void;
   onDone: () => void;
+  onReload: () => void;
   save: (description: string, descriptionVersion: number) => Promise<unknown>;
 }) {
   const toastFailure = useFailureToast();
@@ -42,6 +44,11 @@ export function DescriptionEditor({
     } finally {
       setSaving(false);
     }
+  }
+
+  function reload() {
+    setConflict(undefined);
+    onReload();
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -76,9 +83,14 @@ export function DescriptionEditor({
         }}
         tools={
           conflict && (
-            <div role="alert">
+            <EditorNotice>
               <FieldError>{conflict}</FieldError>
-            </div>
+              <Button
+                size="sm"
+                onClick={reload}>
+                Reload
+              </Button>
+            </EditorNotice>
           )
         }
         submit={
@@ -92,9 +104,10 @@ export function DescriptionEditor({
               size="sm"
               variant="primary"
               type="submit"
-              disabled={saving}
+              disabled={conflict !== undefined}
+              busy={saving ? "Saving…" : undefined}
               aria-busy={saving || undefined}>
-              {saving ? "Saving…" : "Save"}
+              Save
             </Button>
           </SettingsActions>
         }

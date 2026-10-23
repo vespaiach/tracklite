@@ -128,8 +128,8 @@ function CommentItem({
       highlighted={highlighted}
       avatar={
         <Avatar
-          size="sm"
-          tone="neutral"
+          size="md"
+          tone={own ? "accent" : "neutral"}
           initials={comment.author.initials}
         />
       }

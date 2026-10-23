@@ -1,12 +1,50 @@
 import { type ComponentProps, type ReactNode, useId } from "react";
 import { cx } from "./cx";
 
-export function IssueLayout({ main, side }: { main: ReactNode; side: ReactNode }) {
+export function IssueLayout({ title, main, side }: { title: ReactNode; main: ReactNode; side: ReactNode }) {
   return (
     <div className="tl-issue-layout">
-      <div className="tl-issue-layout__main">{main}</div>
-      <aside className="tl-issue-layout__side">{side}</aside>
+      <div className="tl-issue-layout__grid">
+        <div className="tl-issue-layout__title">{title}</div>
+        <aside
+          aria-label="Issue fields"
+          className="tl-issue-layout__side">
+          {side}
+        </aside>
+        <div className="tl-issue-layout__main">{main}</div>
+      </div>
     </div>
+  );
+}
+
+export function IssueSideFoot({ children }: { children: ReactNode }) {
+  return <div className="tl-issue-layout__foot">{children}</div>;
+}
+
+export function IssueEmpty({
+  children,
+  action,
+  onAction,
+}: {
+  children: ReactNode;
+  action?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <p className="tl-issue-empty">
+      {children}
+      {action && (
+        <>
+          {" "}
+          <button
+            type="button"
+            onClick={onAction}
+            className="tl-issue-empty__action">
+            {action}
+          </button>
+        </>
+      )}
+    </p>
   );
 }
 
@@ -142,6 +180,16 @@ export function Editor({
         <div className="tl-editor__tools">{tools}</div>
         <div className="tl-editor__submit">{submit}</div>
       </div>
+    </div>
+  );
+}
+
+export function EditorNotice({ children }: { children: ReactNode }) {
+  return (
+    <div
+      role="alert"
+      className="tl-editor__notice">
+      {children}
     </div>
   );
 }

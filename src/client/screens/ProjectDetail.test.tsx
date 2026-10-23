@@ -93,11 +93,11 @@ it("REQ-012.1, STD-5: saving a description disables Save, sends it with its vers
   ]);
 });
 
-it("REQ-012.2, REQ-022.2, STD-8, STD-9: a refused save shows the field error, the conflict in the editor, or a toast, and always keeps the text", async () => {
+it("REQ-012.2, REQ-022.2, STD-8, STD-9: a refused save shows the field error, a toast, or the conflict in the editor with Save disabled, and always keeps the text", async () => {
   const answers = [
     apiError(422, "Check the highlighted fields", { description: "Too long (max 20,000)" }),
-    apiError(409, "This was changed by Alex Kim. Copy your text and reload."),
     apiError(500, "Internal error"),
+    apiError(409, "This was changed by Alex Kim. Copy your text and reload."),
   ];
   mockDetail({ patch: () => answers.shift() as Response });
   renderAppAt("/project/WEB/detail");
@@ -113,17 +113,20 @@ it("REQ-012.2, REQ-022.2, STD-8, STD-9: a refused save shows the field error, th
   fireEvent.change(editor(), { target: { value: "My version" } });
   save();
 
+  expect(await screen.findByText("Couldn’t save. Try again.")).toBeTruthy();
+  expect(editor().value).toBe("My version");
+
+  save();
+
   const alert = await screen.findByRole("alert");
   expect(alert.textContent).toContain("This was changed by Alex Kim. Copy your text and reload.");
   expect(alert.closest(".tl-editor")).toBeTruthy();
   expect(editor().value).toBe("My version");
-  expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(false);
-  expect(screen.queryByText("Couldn’t save. Try again.")).toBeNull();
+  expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
 
-  save();
+  fireEvent.click(within(alert).getByRole("button", { name: "Reload" }));
 
-  expect(await screen.findByText("Couldn’t save. Try again.")).toBeTruthy();
-  expect(editor().value).toBe("My version");
+  await waitFor(() => expect(editor().value).toBe(saved));
 });
 
 it("REQ-022: Cancel or Escape discards the description draft", async () => {
