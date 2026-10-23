@@ -1350,6 +1350,22 @@ a.tl-rail-item {
 .tl-crumbs a:hover {
   color: var(--color-accent);
 }
+.tl-crumbs__id {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--color-ink);
+}
+.tl-appbar__lead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.tl-appbar__views {
+  margin-left: 10px;
+}
 .tl-list-group {
   position: sticky;
   top: 0;

@@ -23,23 +23,28 @@ function header() {
   return screen.getByRole("banner");
 }
 
-it("shows the project header with its views and, for admins, the settings gear", async () => {
+it("REQ-046.1: the header shows the details button, the name, the view tabs and, for admins, the settings gear", async () => {
   mockProject(web);
   renderAppAt("/project/WEB");
 
   expect(await screen.findByRole("heading", { name: "Website · WEB" })).toBeTruthy();
-  expect(within(header()).getByRole("link", { name: "Details" }).getAttribute("href")).toBe(
-    "/project/WEB/detail",
-  );
+  const details = within(header()).getByRole("link", { name: "Project details" });
+  expect(details.getAttribute("href")).toBe("/project/WEB/detail");
+  expect(details.hasAttribute("aria-current")).toBe(false);
   const views = within(header()).getByRole("navigation", { name: "Project views" });
   expect(within(views).getByRole("link", { name: "Board" }).getAttribute("aria-current")).toBe("page");
   expect(within(views).getByRole("link", { name: "List" }).getAttribute("href")).toBe("/project/WEB/list");
-  expect(within(header()).getByRole("link", { name: "Labels" }).getAttribute("href")).toBe(
+  expect(within(views).getByRole("link", { name: "Labels" }).getAttribute("href")).toBe(
     "/project/WEB/labels",
   );
   expect(within(header()).getByRole("link", { name: "Project settings" }).getAttribute("href")).toBe(
     "/project/WEB/settings",
   );
+  expect(
+    within(header())
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("aria-label") ?? link.textContent),
+  ).toEqual(["Project details", "Board", "List", "Labels", "Project settings"]);
 });
 
 it("STD-2, REQ-013.1: a member sees no settings gear; an archived project's header shows the Archived badge", async () => {
