@@ -6,6 +6,7 @@ export * from "./Dialog";
 export * from "./Field";
 export * from "./IssueLayout";
 export * from "./ListRow";
+export * from "./Logo";
 export * from "./Nav";
 export * from "./Pill";
 export * from "./Pop";
