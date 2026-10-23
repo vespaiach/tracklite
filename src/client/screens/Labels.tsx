@@ -1,6 +1,8 @@
+import { DotsThree } from "@phosphor-icons/react/dist/csr/DotsThree";
 import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
+import type { Key } from "react-aria-components";
 import {
   Button,
   Dialog,
@@ -10,6 +12,7 @@ import {
   Input,
   Menu,
   MenuItem,
+  MenuSubmenu,
   Pill,
   SettingsActions,
   SettingsCell,
@@ -59,26 +62,20 @@ function fieldErrors(failure: ApiFailure): FieldErrors | undefined {
 }
 
 function ColorMenu({
-  label,
-  text,
-  variant,
   color,
   onChoose,
   controlProps,
 }: {
-  label: string;
-  text: string;
-  variant?: "quiet" | "secondary";
   color: LabelColor;
   onChoose: (color: LabelColor) => void;
-  controlProps?: { id: string; "aria-describedby"?: string };
+  controlProps: { id: string; "aria-describedby"?: string };
 }) {
   return (
     <Menu
       {...controlProps}
-      label={label}
-      text={text}
-      variant={variant}
+      label={`Color: ${colorName(color)}`}
+      text={colorName(color)}
+      variant="secondary"
       selectedKey={color}
       onAction={(key) => onChoose(key as LabelColor)}>
       {labelColors.map((each) => (
@@ -166,7 +163,13 @@ function LabelsPage({ project }: { project: Project }) {
               />
             )}
             {labels.data.length === 0 ? (
-              !creating && <SettingsEmpty>No labels yet. Create one.</SettingsEmpty>
+              !creating && (
+                <SettingsEmpty
+                  action={canEdit ? "Create one." : undefined}
+                  onAction={() => setCreating(true)}>
+                  No labels yet.
+                </SettingsEmpty>
+              )
             ) : (
               <SettingsList label="Labels">
                 {labels.data.map((label) => (
@@ -236,9 +239,6 @@ function CreateForm({ projectKey, onClose }: { projectKey: string; onClose: () =
           {(props) => (
             <ColorMenu
               controlProps={{ id: props.id, "aria-describedby": props["aria-describedby"] }}
-              label={`Color: ${colorName(color)}`}
-              text={colorName(color)}
-              variant="secondary"
               color={color}
               onChoose={setColor}
             />
@@ -298,27 +298,12 @@ function LabelRow({ label, canEdit }: { label: Label; canEdit: boolean }) {
       <SettingsCell>{issueCount(label.issueCount)}</SettingsCell>
       {canEdit && (
         <SettingsRowActions>
-          <Button
-            variant="quiet"
-            size="sm"
-            aria-label={`Rename ${label.name}`}
-            onClick={() => setRenaming(true)}>
-            Rename
-          </Button>
-          <ColorMenu
-            label={`Change color of ${label.name}`}
-            text="Change color"
-            color={label.color}
-            onChoose={recolor}
+          <LabelActions
+            label={label}
+            onRename={() => setRenaming(true)}
+            onRecolor={recolor}
+            onDelete={() => setDeleting(true)}
           />
-          <Button
-            variant="quiet"
-            size="sm"
-            aria-label={`Delete ${label.name}`}
-            aria-haspopup="dialog"
-            onClick={() => setDeleting(true)}>
-            Delete
-          </Button>
         </SettingsRowActions>
       )}
       {deleting && (
@@ -328,6 +313,53 @@ function LabelRow({ label, canEdit }: { label: Label; canEdit: boolean }) {
         />
       )}
     </SettingsRow>
+  );
+}
+
+function LabelActions({
+  label,
+  onRename,
+  onRecolor,
+  onDelete,
+}: {
+  label: Label;
+  onRename: () => void;
+  onRecolor: (color: LabelColor) => void;
+  onDelete: () => void;
+}) {
+  function act(key: Key) {
+    if (key === "rename") onRename();
+    else if (key === "delete") onDelete();
+    else onRecolor(key as LabelColor);
+  }
+
+  return (
+    <Menu
+      label={`Actions for ${label.name}`}
+      icon={
+        <DotsThree
+          size={15}
+          weight="duotone"
+        />
+      }
+      onAction={act}>
+      <MenuItem id="rename">Rename</MenuItem>
+      <MenuSubmenu label="Change color…">
+        {labelColors.map((each) => (
+          <MenuItem
+            key={each}
+            id={each}
+            checked={each === label.color}>
+            {colorName(each)}
+          </MenuItem>
+        ))}
+      </MenuSubmenu>
+      <MenuItem
+        id="delete"
+        danger>
+        Delete…
+      </MenuItem>
+    </Menu>
   );
 }
 
@@ -367,6 +399,7 @@ function RenameForm({ label, onClose }: { label: Label; onClose: () => void }) {
           <Input
             ref={nameInput}
             aria-label="Name"
+            readOnly={saving}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? errorId : undefined}
             value={name}
@@ -426,7 +459,7 @@ function DeleteDialog({ label, onClose }: { label: Label; onClose: () => void })
           </Button>
           <Button
             variant="danger"
-            disabled={isLoading}
+            busy={isLoading ? "Deleting…" : undefined}
             aria-busy={isLoading || undefined}
             onClick={confirm}>
             Delete
