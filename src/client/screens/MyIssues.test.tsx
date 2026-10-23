@@ -110,7 +110,7 @@ it('REQ-041.4: nothing assigned → "Nothing assigned to you"', async () => {
   expect(groups()).toEqual([]);
 });
 
-it('STD-7: a load failure shows "Couldn\'t load this." and Retry loads again', async () => {
+it('STD-7: a load failure shows "Couldn’t load this." and Retry loads again', async () => {
   const answers: (() => MyIssueGroup[] | Response)[] = [
     () => apiError(500, "Server error"),
     () => defaultGroups,
@@ -118,7 +118,7 @@ it('STD-7: a load failure shows "Couldn\'t load this." and Retry loads again', a
   const fetchMock = mockMyIssues(() => (answers.shift() ?? (() => defaultGroups))());
   renderAppAt("/my-issues");
 
-  expect(await screen.findByText("Couldn't load this.")).toBeTruthy();
+  expect(await screen.findByText("Couldn’t load this.")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
   await waitFor(() => expect(groups()).toEqual(["Backlog, 1 issue", "In Progress, 2 issues"]));
   expect(requestsTo(fetchMock, myIssuesPath)).toHaveLength(2);

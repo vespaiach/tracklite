@@ -4,7 +4,7 @@ export function LoadFailed({ onRetry }: { onRetry: () => void }) {
   return (
     <SettingsLayout>
       <SettingsActions>
-        <FormStatus>Couldn't load this.</FormStatus>
+        <FormStatus>Couldn’t load this.</FormStatus>
         <Button
           size="sm"
           onClick={onRetry}>

@@ -31,10 +31,10 @@ it("STD-1: a 401 from any request redirects to /sign-in?next={current address}",
   expect(router.state.location.search).toBe(`?next=${encodeURIComponent("/project/WEB/list?status=todo")}`);
 });
 
-it('STD-9.3: a network or server error reads "Couldn\'t save. Try again."', async () => {
+it('STD-9.3: a network or server error reads "Couldn’t save. Try again."', async () => {
   respondWith(500, { error: { message: "Internal details" } });
   const serverError = await storeAt("/my-issues").store.dispatch(api.endpoints.me.initiate());
-  expect(serverError.error).toEqual({ status: 500, message: "Couldn't save. Try again." });
+  expect(serverError.error).toEqual({ status: 500, message: "Couldn’t save. Try again." });
 
   vi.stubGlobal(
     "fetch",
@@ -43,7 +43,7 @@ it('STD-9.3: a network or server error reads "Couldn\'t save. Try again."', asyn
     }),
   );
   const networkError = await storeAt("/my-issues").store.dispatch(api.endpoints.me.initiate());
-  expect(networkError.error).toEqual({ status: "network", message: "Couldn't save. Try again." });
+  expect(networkError.error).toEqual({ status: "network", message: "Couldn’t save. Try again." });
 });
 
 it("STD-9.3, STD-6: any other failure (403, 503) shows the server's message", async () => {
@@ -55,12 +55,12 @@ it("STD-9.3, STD-6: any other failure (403, 503) shows the server's message", as
   expect(forbidden.error).toEqual({ status: 403, message: "You don't have permission to do that." });
   expect(router.state.location.pathname).toBe("/my-issues");
 
-  respondWith(503, { error: { message: "We couldn't send the email. Try again." } });
+  respondWith(503, { error: { message: "We couldn’t send the email. Try again." } });
   const unavailable = await storeAt("/forgot-password").store.dispatch(
     api.endpoints.requestResetLink.initiate({ email: "sam@acme.com" }),
   );
 
-  expect(unavailable.error).toEqual({ status: 503, message: "We couldn't send the email. Try again." });
+  expect(unavailable.error).toEqual({ status: 503, message: "We couldn’t send the email. Try again." });
 });
 
 it("STD-3: baseQuery passes a 422's field errors to the component without redirecting", async () => {

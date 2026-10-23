@@ -79,7 +79,7 @@ it('REQ-001.2, REQ-001.5, REQ-001.6: inviting a member\'s email, in any capitals
   expect(await storedInvitations(jo.email)).toEqual([]);
 });
 
-it('REQ-001.7: email service down → 503 "We couldn\'t send the email. Try again."; no invitation is listed', async () => {
+it('REQ-001.7: email service down → 503 "We couldn’t send the email. Try again."; no invitation is listed', async () => {
   const { cookie } = await signedInAdmin();
   const email = uniqueEmail();
   outbox.failing = true;
@@ -87,7 +87,7 @@ it('REQ-001.7: email service down → 503 "We couldn\'t send the email. Try agai
   const response = await invite(cookie, email);
 
   expect(response.status).toBe(503);
-  expect(await response.json()).toEqual({ error: { message: "We couldn't send the email. Try again." } });
+  expect(await response.json()).toEqual({ error: { message: "We couldn’t send the email. Try again." } });
   expect(await listedInvitation(cookie, email)).toBeUndefined();
   expect(await storedInvitations(email)).toEqual([]);
 });

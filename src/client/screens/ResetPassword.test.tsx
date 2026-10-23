@@ -125,6 +125,6 @@ it("STD-9.3: a network error on submit shows the toast and keeps the password", 
 
   await setPassword("a much longer password");
 
-  expect((await screen.findByRole("status")).textContent).toBe("Couldn't save. Try again.");
+  expect((await screen.findByRole("status")).textContent).toBe("Couldn’t save. Try again.");
   expect((screen.getByLabelText("New password") as HTMLInputElement).value).toBe("a much longer password");
 });

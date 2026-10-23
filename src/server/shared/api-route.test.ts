@@ -220,12 +220,12 @@ function postWith(body: string) {
   return new Request(`${appOrigin}/api/things`, { method: "POST", headers: { Origin: appOrigin }, body });
 }
 
-it("a body that isn't valid JSON, or JSON that isn't an object, gets 422 \"Couldn't read the request.\" with no fields", async () => {
+it("a body that isn't valid JSON, or JSON that isn't an object, gets 422 \"Couldn’t read the request.\" with no fields", async () => {
   const handler = vi.fn(ok);
   for (const body of ["{ name: ", "[]", "null", '"text"']) {
     const response = await apiRoute("public", NewThing, handler)(postWith(body));
     expect(response.status).toBe(422);
-    expect(await response.json()).toEqual({ error: { message: "Couldn't read the request." } });
+    expect(await response.json()).toEqual({ error: { message: "Couldn’t read the request." } });
   }
   expect(handler).not.toHaveBeenCalled();
 });

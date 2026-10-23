@@ -39,7 +39,7 @@ const dev = invitation("inv-dev", "dev@acme.com", "bounced", "2026-10-10T09:00:0
 const lee = invitation("inv-lee", "lee@acme.com", "expired", "2026-09-30T09:00:00.000Z");
 
 const lastAdmin = "There must be at least one admin.";
-const sendFailed = "We couldn't send the email. Try again.";
+const sendFailed = "We couldn’t send the email. Try again.";
 
 type Overrides = {
   me?: Me;

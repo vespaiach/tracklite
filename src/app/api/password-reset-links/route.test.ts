@@ -82,7 +82,7 @@ it("STD-6: a failed reset email answers 503 and saves no link", async () => {
   const response = await requestResetLink(sam.email);
 
   expect(response.status).toBe(503);
-  expect(await response.json()).toEqual({ error: { message: "We couldn't send the email. Try again." } });
+  expect(await response.json()).toEqual({ error: { message: "We couldn’t send the email. Try again." } });
   expect(await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.memberId, sam.id))).toEqual(
     [],
   );

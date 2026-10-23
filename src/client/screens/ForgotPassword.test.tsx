@@ -53,13 +53,13 @@ it('SEC-001.2: a 429 shows "Too many attempts. Try again later." beside the form
   expect(screen.queryByRole("heading", { name: "Check your email" })).toBeNull();
 });
 
-it('STD-6: a failed email shows the toast "We couldn\'t send the email. Try again." and keeps the email', async () => {
-  mockResetLink(() => apiError(503, "We couldn't send the email. Try again."));
+it('STD-6: a failed email shows the toast "We couldn’t send the email. Try again." and keeps the email', async () => {
+  mockResetLink(() => apiError(503, "We couldn’t send the email. Try again."));
   renderAppAt("/forgot-password");
 
   await sendLinkTo("sam@acme.com");
 
-  expect((await screen.findByRole("status")).textContent).toBe("We couldn't send the email. Try again.");
+  expect((await screen.findByRole("status")).textContent).toBe("We couldn’t send the email. Try again.");
   expect(screen.queryByRole("alert")).toBeNull();
   expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("sam@acme.com");
 });

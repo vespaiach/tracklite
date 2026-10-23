@@ -148,7 +148,7 @@ function LabelsPage({ project }: { project: Project }) {
         </p>
         {labels.isError ? (
           <SettingsActions>
-            <FormStatus>Couldn't load this.</FormStatus>
+            <FormStatus>Couldn’t load this.</FormStatus>
             <Button
               size="sm"
               onClick={labels.refetch}>

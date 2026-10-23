@@ -128,7 +128,7 @@ it("STD-7: a load failure offers Retry", async () => {
   });
   renderAppAt("/project/WEB/labels");
 
-  expect(await screen.findByText("Couldn't load this.")).toBeTruthy();
+  expect(await screen.findByText("Couldn’t load this.")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
 
   expect(await labelList()).toBeTruthy();

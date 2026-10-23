@@ -385,7 +385,7 @@ it("NFR-005: moving a card in a 300-card column shows it in its new place before
   expect(titlesIn("Backlog").length).toBeLessThan(30);
 });
 
-it("REQ-026.2: a drag whose save fails puts WEB-42 back in Backlog with the toast Couldn't move WEB-42", async () => {
+it("REQ-026.2: a drag whose save fails puts WEB-42 back in Backlog with the toast Couldn’t move WEB-42", async () => {
   mockBoard({ move: () => networkError() });
   renderAppAt("/project/WEB");
 
@@ -395,7 +395,7 @@ it("REQ-026.2: a drag whose save fails puts WEB-42 back in Backlog with the toas
     "Insert before Email digest sends twice on Mondays",
   );
 
-  expect(await screen.findByText("Couldn't move WEB-42")).toBeTruthy();
+  expect(await screen.findByText("Couldn’t move WEB-42")).toBeTruthy();
   expect(titlesIn("Backlog")).toEqual([
     "Fix login button",
     "Add password rules to the reset form",
