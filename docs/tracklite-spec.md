@@ -1,9 +1,9 @@
 ---
 product: "Tracklite"
-version: "0.31"
+version: "0.32"
 release: "R1"
 status: Ready to build
-updated: "2026-10-22"
+updated: "2026-10-23"
 ---
 
 # Tracklite: Spec
@@ -225,9 +225,11 @@ No question is open. These were left to the agent, within the limits in section 
   - REQ-015.1: Projects "Website", "API" and "Mobile" → shown as API, Mobile, Website. (Verify: auto)
   - REQ-015.2: A 50-character name → cut off with "…"; hovering shows the full name. (Verify: manual)
   - REQ-015.3: Two projects named "Website", with keys `WEB` and `SITE` → shown as "Website · SITE", then "Website · WEB". (Verify: auto)
-- **REQ-046** The system shall show a project's description and comments on its project details page, `/project/{KEY}/detail`. A link or icon next to the project name, at the top of the board and the list view, opens it. The board and list view don't show the description or the project's comments.
+- **REQ-046** The system shall show a project's description and comments on its project details page, `/project/{KEY}/detail`. A link or icon next to the project name, at the top of the board and the list view, opens it. The board and list view don't show the description or the project's comments. The details page also shows how many of the project's issues are open (not Done or Canceled), the number in each status, and "Created {date} by {name}" for the admin who created the project. A project created before 0.32, whose creator wasn't recorded, shows only "Created {date}".
   - REQ-046.1: Sam clicks the details link next to "Website" on the `WEB` board → `/project/WEB/detail` opens, with the description and the project's comments. (Verify: auto)
   - REQ-046.2: Sam opens the `WEB` board → no description or project comments on it. (Verify: auto)
+  - REQ-046.3: `WEB` has 3 Backlog issues, 1 In Progress and 2 Done; `API` has 5 Backlog → the `WEB` details page shows 4 open, with Backlog 3, In Progress 1, In Review 0, Done 2 and Canceled 0. (Verify: auto)
+  - REQ-046.4: Alex (admin) created `WEB` → its details page shows "Created {date} by Alex Kim" with the day it was created. (Verify: auto)
 
 **Exceptions to standard behaviors:** None.
 **Uses:** Project, Issue, Comment · DEC-001 (Markdown) · DATA-001 (mentions), DATA-002 (deletion) · SEC-002 (safe Markdown)
@@ -556,7 +558,7 @@ There are no private projects. Nobody, including admins, can see or set another 
 | Invitation | Email, invited by, secret token, expires at, state (Pending, Accepted, Revoked, Expired, Bounced) | Expires 7 days after sending (REQ-001). At most one pending invitation per email. |
 | Password reset link | Member, secret token, expires at, used at | Expires 30 minutes after sending (REQ-050). |
 | Session | Member, secret token, last active at | Ends 30 days after last activity (REQ-006). |
-| Project | Name, key, Markdown description, archived at, next issue number, created at | The key is unique forever, including deleted projects (REQ-009). |
+| Project | Name, key, Markdown description, archived at, next issue number, created at, created by | The key is unique forever, including deleted projects (REQ-009). |
 | Label | Project, name, color | Name unique within its project, ignoring capitals. One of 8 preset colors (REQ-021). |
 | Issue | Project, number, title, Markdown description, status, priority, assignee, labels (0 to 10), board position, created by, created at, last updated, status changed at | Number unique within its project and never reused (REQ-016). Board position is per status column (REQ-027). "Status changed at" drives the 14-day window (REQ-028). |
 | Comment | Either an issue or a project, author, Markdown body, created at, edited at | Belongs to exactly one issue or one project. |
@@ -746,6 +748,7 @@ Deploys, rollbacks, backups, log retention and uptime monitoring are part of the
 
 **Changelog**
 
+- **0.32 (2026-10-23):** From the design refresh (C2). Project details shows the open-issue count, the count per status and "Created {date} by {name}" (REQ-046, new REQ-046.3 and REQ-046.4). A project now records the admin who created it (section 8); projects created earlier show only the date.
 - **0.31 (2026-10-22):** From the design refresh. REQ-053 warns when the worker hasn't finished a pass in the last 2 minutes or has never run, using OPS-005's threshold (REQ-053.5 extended, new REQ-053.10). REQ-041.4's empty My issues copy names the next action: "Nothing assigned to you. Open a project to find or create issues." (STD-7). The "Couldn’t …" messages use a curly apostrophe: "Couldn’t load this.", "Couldn’t save. Try again.", "Couldn’t move WEB-42" and "We couldn’t send the email. Try again." (REQ-001, REQ-026.2, STD-6, STD-7, STD-9, API-002, DEC-006).
 - **0.30 (2026-10-22):** Deployment leaves the repository. OPS-002 (deploy), OPS-003 (backups) and OPS-004 (rollback) are removed. OPS-005 keeps the two health endpoints but no longer sets up the uptime checker or its emails (OPS-005.6 removed). OPS-006 drops log rotation. Section 3 drops the single-VPS limitation and backups as the data export.
 - **0.29 (2026-10-12):** Docs synced with the code; no behaviour changes. Section 4 says no question is open. API-001 lists `409` and `410`. DEC-002's endpoints without a session add invitation lookups and the health checks. The `X-Forwarded-For` limitation leaves section 10, since the reverse proxy now overwrites that header. The 0.9 entry cites REQ-001.7 and API-003.2, the examples that exist.

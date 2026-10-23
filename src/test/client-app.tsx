@@ -73,7 +73,17 @@ export function requestsTo(fetchMock: ReturnType<typeof mockApi>, key: string) {
 export const admin: Me = { ...sam, role: "admin" };
 
 export function project(key: string, name: string, archivedAt: string | null = null): Project {
-  return { key, name, description: "", descriptionVersion: 0, mentions: [], archivedAt };
+  return {
+    key,
+    name,
+    description: "",
+    descriptionVersion: 0,
+    mentions: [],
+    archivedAt,
+    issueCounts: { backlog: 0, in_progress: 0, in_review: 0, done: 0, canceled: 0 },
+    createdAt: "2026-09-20T10:42:00.000Z",
+    createdBy: null,
+  };
 }
 
 export function summary({ key, name, archivedAt }: Project): ProjectSummary {

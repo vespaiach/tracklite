@@ -21,6 +21,7 @@ const tableReadsAgainstMap = [
   "src/server/comments/comments.ts -> notifications",
   "src/server/issues/rows.ts -> notifications",
   "src/server/projects/labels.ts -> issues",
+  "src/server/projects/projects.ts -> issues",
   "src/server/projects/projects.ts -> notifications",
 ];
 const tableWrite = /\.(?:insert|update|delete)\((\w+)\)/g;
