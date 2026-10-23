@@ -1050,9 +1050,6 @@ a.tl-seg__opt[data-on]:focus-visible {
   padding: 0 10px;
   border-bottom: 1px solid var(--color-hair);
 }
-.tl-rail__head > .tl-logo {
-  padding: 0 7px;
-}
 .tl-rail__main {
   flex: 1;
   overflow: auto;
@@ -3111,4 +3108,7 @@ a.tl-rail-item {
   font-weight: 600;
   letter-spacing: -0.015em;
   color: var(--color-ink);
+}
+.tl-rail__head > .tl-logo {
+  padding: 0 7px;
 }
