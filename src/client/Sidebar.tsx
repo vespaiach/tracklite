@@ -1,19 +1,19 @@
 import { Archive } from "@phosphor-icons/react/dist/csr/Archive";
-import { Bell } from "@phosphor-icons/react/dist/csr/Bell";
-import { Stack } from "@phosphor-icons/react/dist/csr/Stack";
 import { Tray } from "@phosphor-icons/react/dist/csr/Tray";
 import { Users } from "@phosphor-icons/react/dist/csr/Users";
 import {
   Avatar,
   Button,
+  Glyph,
   Lbl,
+  Logo,
   Menu,
   MenuItem,
   Rail,
   RailGroup,
   RailLabel,
   RailLabelAction,
-  SettingsEmpty,
+  RailNote,
   TipTrigger,
 } from "../components/ui/track-lite";
 import type { MemberSummary, ProjectSummary } from "./api";
@@ -23,6 +23,7 @@ export type SidebarProps = {
   admin: boolean;
   projects?: ProjectSummary[];
   pathname: string;
+  archivedProjectOpen: boolean;
   onNewProject: () => void;
   member?: MemberSummary;
   onProfile: () => void;
@@ -35,6 +36,7 @@ export function Sidebar({
   admin,
   projects,
   pathname,
+  archivedProjectOpen,
   onNewProject,
   member,
   onProfile,
@@ -43,7 +45,7 @@ export function Sidebar({
   const current = pathname.toLowerCase();
   return (
     <Rail
-      head={<span className="tl-nav__brand">Tracklite</span>}
+      head={<Logo size="rail" />}
       foot={
         member && (
           <MemberMenu
@@ -85,7 +87,7 @@ export function Sidebar({
               tip={`${project.name} · ${project.key}`}>
               <RouterRailItem
                 href={href}
-                icon={<Stack {...iconProps} />}
+                icon={<Glyph kind="sq" />}
                 label={project.name}
                 suffix={` · ${project.key}`}
                 title=""
@@ -96,7 +98,7 @@ export function Sidebar({
           );
         })}
         {projects?.length === 0 && (
-          <SettingsEmpty>
+          <RailNote>
             No projects yet.{" "}
             {admin && (
               <Button
@@ -107,33 +109,25 @@ export function Sidebar({
                 Create one.
               </Button>
             )}
-          </SettingsEmpty>
+          </RailNote>
         )}
-      </RailGroup>
-      <RailGroup>
         <RouterRailItem
           href="/projects/archived"
           icon={<Archive {...iconProps} />}
           label="Archived projects"
-          current={current === "/projects/archived"}
+          current={current === "/projects/archived" || archivedProjectOpen}
         />
-        {admin && (
-          <>
-            <RouterRailItem
-              href="/settings/members"
-              icon={<Users {...iconProps} />}
-              label="Members"
-              current={current === "/settings/members"}
-            />
-            <RouterRailItem
-              href="/settings/notifications"
-              icon={<Bell {...iconProps} />}
-              label="Notifications"
-              current={current === "/settings/notifications"}
-            />
-          </>
-        )}
       </RailGroup>
+      {admin && (
+        <RailGroup>
+          <RouterRailItem
+            href="/settings/members"
+            icon={<Users {...iconProps} />}
+            label="Members"
+            current={current === "/settings/members" || current === "/settings/notifications"}
+          />
+        </RailGroup>
+      )}
     </Rail>
   );
 }
@@ -144,10 +138,11 @@ function MemberMenu({ member, onProfile, onSignOut }: MemberMenuProps) {
   return (
     <Menu
       label={member.fullName}
+      variant="rail"
       text={
         <>
           <Avatar
-            size="sm"
+            size="md"
             initials={member.initials}
           />
           <Lbl>{member.fullName}</Lbl>

@@ -1,15 +1,12 @@
 import { Link } from "react-router";
-import { AppBar, AppBarTitle } from "../../components/ui/track-lite";
 
 export function NotFound() {
   return (
-    <>
-      <AppBar>
-        <AppBarTitle>Not found</AppBarTitle>
-      </AppBar>
+    <main className="tl-page-message">
+      <h1 className="tl-page-message__title">Not found</h1>
       <p>
-        <Link to="/my-issues">My issues</Link>
+        <Link to="/my-issues">Go to My issues</Link>
       </p>
-    </>
+    </main>
   );
 }

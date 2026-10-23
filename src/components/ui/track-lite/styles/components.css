@@ -1044,8 +1044,14 @@ a.tl-seg__opt[data-on]:focus-visible {
   background: var(--color-tint);
 }
 .tl-rail__head {
-  padding: 10px;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 10px;
   border-bottom: 1px solid var(--color-hair);
+}
+.tl-rail__head > .tl-logo {
+  padding: 0 7px;
 }
 .tl-rail__main {
   flex: 1;
@@ -1158,6 +1164,7 @@ a.tl-rail-item {
 }
 .tl-rail-item__split {
   display: flex;
+  align-items: baseline;
   min-width: 0;
 }
 .tl-rail-item__name {
@@ -1168,7 +1175,30 @@ a.tl-rail-item {
 .tl-rail-item__suffix {
   flex-shrink: 0;
   white-space: pre;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
   color: var(--color-ink-2);
+}
+.tl-rail-item > .tl-glyph {
+  margin: 0 1.5px;
+}
+.tl-rail-note {
+  margin: 0;
+  padding: 5px 7px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-ink-2);
+}
+.tl-rail-note > .tl-btn {
+  display: inline;
+  height: auto;
+  padding: 0;
+  font: inherit;
+  color: var(--color-accent);
+}
+.tl-rail-note > .tl-btn:not(:disabled):hover {
+  background: none;
+  text-decoration: underline;
 }
 .tl-rail-item[aria-current="page"] .tl-rail-item__suffix {
   color: inherit;
@@ -1252,6 +1282,24 @@ a.tl-rail-item {
 .tl-shell[data-collapsed] .tl-rail-item__count,
 .tl-shell[data-collapsed] .tl-rail-item__end {
   display: none;
+}
+.tl-page-message {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 40px;
+}
+.tl-page-message__title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: var(--text-issue-title);
+  line-height: var(--leading-heading);
+  letter-spacing: -0.02em;
+}
+.tl-page-message > p {
+  margin: 0;
+  font-size: 13px;
 }
 .tl-appbar {
   display: flex;

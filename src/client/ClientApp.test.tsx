@@ -23,21 +23,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function notFoundLink() {
-  const links = await screen.findAllByRole("link", { name: "My issues" });
-  const sidebar = screen.getByRole("complementary");
-  return links.find((link) => !sidebar.contains(link)) as HTMLElement;
-}
-
 function renderAt(path: string) {
   window.history.replaceState(null, "", path);
   return render(<ClientApp />);
 }
 
-it("M0.4, STD-4: an unknown address shows Not found; its My issues link navigates without a reload", async () => {
+it("M0.4, STD-4: an unknown address shows Not found; its “Go to My issues” link navigates without a reload", async () => {
   renderAt("/nope");
   expect(await screen.findByRole("heading", { name: "Not found" })).toBeTruthy();
-  const link = await notFoundLink();
+  const link = await screen.findByRole("link", { name: "Go to My issues" });
   expect(link.getAttribute("href")).toBe("/my-issues");
   const sidebar = screen.getByRole("complementary");
 

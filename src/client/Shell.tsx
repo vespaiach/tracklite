@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router";
+import { skipToken } from "@reduxjs/toolkit/query";
+import { matchPath, Outlet, useLocation, useNavigate } from "react-router";
 import { AppShell } from "../components/ui/track-lite";
 import {
   type ApiFailure,
+  api,
   useCreateProjectMutation,
   useMeQuery,
   useProjectsQuery,
@@ -19,6 +21,7 @@ export function Shell() {
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
   const signOut = useSignOutAndLeave();
+  const archivedProjectOpen = useArchivedProjectOpen(pathname);
 
   return (
     <AppShell
@@ -27,6 +30,7 @@ export function Shell() {
           admin={me?.role === "admin"}
           projects={projects}
           pathname={pathname}
+          archivedProjectOpen={archivedProjectOpen}
           onNewProject={() => setCreating(true)}
           member={me}
           onProfile={() => navigate("/settings/profile")}
@@ -37,6 +41,16 @@ export function Shell() {
       {creating && <CreateProject onDone={() => setCreating(false)} />}
     </AppShell>
   );
+}
+
+function useArchivedProjectOpen(pathname: string) {
+  const projectKey = matchPath("/project/:key/*", pathname)?.params.key;
+  const issueId = matchPath("/issue/:id", pathname)?.params.id;
+
+  const project = api.endpoints.project.useQueryState(projectKey ?? skipToken).data;
+  const issue = api.endpoints.issue.useQueryState(issueId ?? skipToken).data;
+
+  return Boolean(project?.archivedAt || issue?.archived);
 }
 
 function useSignOutAndLeave() {
