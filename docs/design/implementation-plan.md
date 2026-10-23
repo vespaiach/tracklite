@@ -81,7 +81,7 @@ Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` 
   - Reads: + spec REQ-046 · `src/client/ProjectHeader.tsx`
   - Needs: M17.3
 
-- [ ] **M17.9 Board.** Apply the M17.5 card; no + on Done and Canceled; "No issues." in every empty column of an archived project; the ⋯ label "Actions for WEB-42" with ✓ on the current status; 2 labels plus "+N" sorted A–Z with the hidden names as its title; an md avatar with the accent tone for yourself.
+- [x] **M17.9 Board.** Apply the M17.5 card; no + on Done and Canceled; "No issues." in every empty column of an archived project; the ⋯ label "Actions for WEB-42" with ✓ on the current status; 2 labels plus "+N" sorted A–Z with the hidden names as its title; an md avatar with the accent tone for yourself.
   - Reads: + spec REQ-024–028 · `src/client/screens/Board.tsx`
   - Needs: M17.5, M17.8
 
