@@ -53,7 +53,7 @@ Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` 
   - Needs: none
   - Done: spec version bumped; `npm test` green with the apostrophe change.
 
-- [ ] **M17.1 Kit: Logo.** A `Logo` component: the 1e mark SVG copied from `Tracklite logo.dc.html` plus the serif wordmark, in sizes `rail` (22 px mark, 17 px word, 7 px gap) and `signed-out` (26 px, 20 px, 8 px gap). The mark is `aria-hidden`; the wordmark is the accessible name.
+- [x] **M17.1 Kit: Logo.** A `Logo` component: the 1e mark SVG copied from `Tracklite logo.dc.html` plus the serif wordmark, in sizes `rail` (22 px mark, 17 px word, 7 px gap) and `signed-out` (26 px, 20 px, 8 px gap). The mark is `aria-hidden`; the wordmark is the accessible name.
   - Done: component test for both sizes rendering the "Tracklite" name once.
 
 - [ ] **M17.2 Kit: Toast position.** Centre the toast 30 px from the bottom, with the err stripe and no ×. No success tone and no failure notes (C11, C12).

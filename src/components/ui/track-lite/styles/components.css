@@ -2811,3 +2811,47 @@ a.tl-rail-item {
 .tl-input.tl-input--icon {
   padding-left: 27px;
 }
+.tl-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--logo-gap);
+}
+.tl-logo--rail {
+  --logo-mark: 22px;
+  --logo-word: 17px;
+  --logo-gap: 7px;
+}
+.tl-logo--signed-out {
+  --logo-mark: 26px;
+  --logo-word: 20px;
+  --logo-gap: 8px;
+}
+.tl-logo__mark {
+  flex: none;
+  width: var(--logo-mark);
+  height: var(--logo-mark);
+}
+.tl-logo__shadow {
+  fill: none;
+  stroke: var(--color-ink);
+  stroke-width: 2.5;
+  opacity: 0.35;
+}
+.tl-logo__card {
+  fill: var(--color-paper);
+  stroke: var(--color-accent);
+  stroke-width: 3;
+}
+.tl-logo__line {
+  fill: var(--color-ink);
+}
+.tl-logo__line--faint {
+  opacity: 0.35;
+}
+.tl-logo__word {
+  font-family: var(--font-serif);
+  font-size: var(--logo-word);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--color-ink);
+}
