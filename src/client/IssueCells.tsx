@@ -2,7 +2,7 @@ import { type FocusEvent, type MouseEvent, useState } from "react";
 import { Link } from "react-router";
 import { Pill, TipTrigger } from "../components/ui/track-lite";
 import type { IssueLabel } from "./api";
-import { formatUpdated } from "./dates";
+import { formatExact, formatUpdated } from "./dates";
 
 const labelsShown = 2;
 
@@ -27,10 +27,16 @@ export function TitleLink({ issue }: { issue: { id: string; title: string } }) {
   );
 }
 
-export function LabelPills({ labels }: { labels: IssueLabel[] }) {
+export function LabelPills({
+  labels,
+  className = "tl-table__cell",
+}: {
+  labels: IssueLabel[];
+  className?: string;
+}) {
   const hidden = labels.slice(labelsShown);
   return (
-    <span className="tl-table__cell">
+    <span className={className}>
       {labels.slice(0, labelsShown).map((label) => (
         <Pill
           key={label.id}
@@ -51,10 +57,11 @@ export function LabelPills({ labels }: { labels: IssueLabel[] }) {
 
 export function UpdatedAt({ at }: { at: string }) {
   return (
-    <span
+    <time
+      dateTime={at}
       className="tl-list-date"
-      title={new Date(at).toLocaleString()}>
+      title={`Updated ${formatExact(at)}`}>
       {formatUpdated(at)}
-    </span>
+    </time>
   );
 }
