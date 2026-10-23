@@ -11,11 +11,13 @@ export function SettingsSection({
   title,
   count,
   status,
+  action,
   children,
 }: {
   title: string;
   count?: number;
   status?: ReactNode;
+  action?: ReactNode;
   children: ReactNode;
 }) {
   const titleId = useId();
@@ -31,6 +33,7 @@ export function SettingsSection({
           {count != null && <span className="tl-settings__count">{count}</span>}
         </h2>
         {status}
+        {action && <div className="tl-settings__section-action">{action}</div>}
       </div>
       {children}
     </section>
