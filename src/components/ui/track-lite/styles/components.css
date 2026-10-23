@@ -1651,7 +1651,8 @@ a.tl-rail-item {
   color: var(--color-ink-2);
 }
 .tl-board-empty__action,
-.tl-issue-empty__action {
+.tl-issue-empty__action,
+.tl-settings__empty-action {
   padding: 0;
   border: 0;
   background: none;
@@ -1660,7 +1661,8 @@ a.tl-rail-item {
   cursor: pointer;
 }
 .tl-board-empty__action:hover,
-.tl-issue-empty__action:hover {
+.tl-issue-empty__action:hover,
+.tl-settings__empty-action:hover {
   color: var(--color-accent-700);
   text-decoration: underline;
 }

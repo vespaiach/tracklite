@@ -69,7 +69,7 @@ it("REQ-011.1: renaming a project keeps its key and updates the sidebar", async 
   fireEvent.change(await nameField(), { target: { value: "Marketing site" } });
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-  expect(await screen.findByText("Renamed to “Marketing site”.")).toBeTruthy();
+  expect(await screen.findByText("Saved.")).toBeTruthy();
   expect(requestsTo(fetchMock, "PATCH /api/projects/WEB")).toEqual([{ name: "Marketing site" }]);
   expect(await within(await sidebar()).findByRole("link", { name: "Marketing site · WEB" })).toBeTruthy();
   expect(screen.getByText("WEB", { selector: ".tl-fact__value--mono" })).toBeTruthy();

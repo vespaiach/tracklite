@@ -87,16 +87,16 @@ function RenameForm({ project }: { project: Project }) {
   const toastFailure = useFailureToast();
   const [name, setName] = useState(project.name);
   const [error, setError] = useState<string>();
-  const [renamedTo, setRenamedTo] = useState<string>();
+  const [saved, setSaved] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(undefined);
-    setRenamedTo(undefined);
+    setSaved(false);
     try {
       const renamed = await updateProject({ key: project.key, name }).unwrap();
       setName(renamed.name);
-      setRenamedTo(renamed.name);
+      setSaved(true);
     } catch (caught) {
       const failure = caught as ApiFailure;
       if (failure.status === 422) {
@@ -127,11 +127,11 @@ function RenameForm({ project }: { project: Project }) {
           <Button
             variant="primary"
             type="submit"
-            disabled={saving}
+            busy={saving ? "Saving…" : undefined}
             aria-busy={saving || undefined}>
-            {saving ? "Saving…" : "Save"}
+            Save
           </Button>
-          {renamedTo && <FormStatus>{`Renamed to “${renamedTo}”.`}</FormStatus>}
+          {saved && <FormStatus>Saved.</FormStatus>}
         </SettingsActions>
       </SettingsInline>
     </SettingsForm>

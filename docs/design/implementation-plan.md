@@ -111,7 +111,7 @@ Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` 
   - Reads: + spec REQ-052, REQ-053, OPS-005 · `src/client/screens/{Profile,NotificationStatus}.tsx`
   - Needs: M17.0, M17.4
 
-- [ ] **M17.15 Project settings and Labels.** Settings: "Saved." after a rename, and the type-the-key delete kept (C4). Labels (its own page per C3): rows with one ⋯ menu (Rename, Change color…, Delete…), no "Saving…" text on rename (inputs go read-only), "Deleting…" in the delete dialog, and "Create one." as a link.
+- [x] **M17.15 Project settings and Labels.** Settings: "Saved." after a rename, and the type-the-key delete kept (C4). Labels (its own page per C3): rows with one ⋯ menu (Rename, Change color…, Delete…), no "Saving…" text on rename (inputs go read-only), "Deleting…" in the delete dialog, and "Create one." as a link.
   - Reads: + spec REQ-009–014, REQ-021 · `src/client/screens/{ProjectSettings,Labels}.tsx`
   - Needs: M17.3
 

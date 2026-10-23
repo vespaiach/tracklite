@@ -37,12 +37,14 @@ function mockLabels({
   list,
   post,
   patch,
+  remove,
 }: {
   shown?: Project;
   labels?: Label[];
   list?: Answer;
   post?: Answer;
   patch?: Answer;
+  remove?: Answer;
 } = {}) {
   let current = labels;
   const byName = (a: Label, b: Label) => a.name.toLowerCase().localeCompare(b.name.toLowerCase());
@@ -67,9 +69,10 @@ function mockLabels({
         current = current.map((each) => (each.id === label.id ? changed : each)).sort(byName);
         return Response.json(changed);
       });
-    routes[`DELETE /api/labels/${label.id}`] = () => {
+    routes[`DELETE /api/labels/${label.id}`] = async (body) => {
+      const answer = await (remove ?? noContent)(body);
       current = current.filter((each) => each.id !== label.id);
-      return noContent();
+      return answer;
     };
   }
   return mockApi(routes);
@@ -94,9 +97,25 @@ async function openCreate() {
   return screen.getByRole("form", { name: "New label" });
 }
 
+async function openActions(name: string) {
+  fireEvent.click(await screen.findByRole("button", { name: `Actions for ${name}` }));
+  return screen.findByRole("menu");
+}
+
+async function chooseAction(name: string, action: string) {
+  fireEvent.click(within(await openActions(name)).getByRole("menuitem", { name: action }));
+}
+
 async function openRename(name: string) {
-  fireEvent.click(await screen.findByRole("button", { name: `Rename ${name}` }));
-  return screen.getByRole("form", { name: `Rename ${name}` });
+  await chooseAction(name, "Rename");
+  return screen.findByRole("form", { name: `Rename ${name}` });
+}
+
+async function openColors(name: string) {
+  const changeColor = within(await openActions(name)).getByRole("menuitem", { name: "Change color…" });
+  changeColor.focus();
+  fireEvent.keyDown(changeColor, { key: "ArrowRight" });
+  return (await screen.findAllByRole("menu"))[1];
 }
 
 it("REQ-021: lists each label with its colour name and issue count", async () => {
@@ -113,12 +132,15 @@ it("REQ-021: lists each label with its colour name and issue count", async () =>
   expect((await row("Safari")).textContent).not.toContain("1 issues");
 });
 
-it("STD-7: an empty project names the next action", async () => {
+it("STD-7: an empty project names the next action, and Create one. opens the new label form", async () => {
   mockLabels({ labels: [] });
   renderAppAt("/project/WEB/labels");
 
-  expect(await screen.findByText("No labels yet. Create one.")).toBeTruthy();
+  expect(await screen.findByText("No labels yet.")).toBeTruthy();
   expect(screen.queryByRole("list", { name: "Labels" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Create one." }));
+
+  expect(screen.getByRole("form", { name: "New label" })).toBeTruthy();
 });
 
 it("STD-7: a load failure offers Retry", async () => {
@@ -188,8 +210,10 @@ it("REQ-021, REQ-021.2: create field errors show under Name and Color and keep w
   expect(color.getAttribute("aria-describedby")).toBe(error.closest("[id]")?.id);
 });
 
-it("REQ-021.1: renaming bug to defect saves and shows the new name", async () => {
-  const fetchMock = mockLabels();
+it("REQ-021.1: renaming bug to defect is read-only while saving, then shows the new name", async () => {
+  const save = deferred();
+  const shown = [...typical];
+  const fetchMock = mockLabels({ labels: shown, patch: save.answer });
   renderAppAt("/project/WEB/labels");
   const form = await openRename("bug");
 
@@ -197,6 +221,11 @@ it("REQ-021.1: renaming bug to defect saves and shows the new name", async () =>
   expect(name.value).toBe("bug");
   fireEvent.change(name, { target: { value: "defect" } });
   fireEvent.click(within(form).getByRole("button", { name: "Save" }));
+
+  await waitFor(() => expect(name.readOnly).toBe(true));
+  expect((within(form).getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
+  shown[1] = { ...typical[1], name: "defect" };
+  save.resolve(Response.json(shown[1]));
 
   expect(await row("defect")).toBeTruthy();
   expect(requestsTo(fetchMock, "PATCH /api/labels/id-bug")).toEqual([{ name: "defect" }]);
@@ -219,22 +248,21 @@ it("REQ-021: recolouring saves the chosen colour", async () => {
   const fetchMock = mockLabels();
   renderAppAt("/project/WEB/labels");
 
-  fireEvent.click(await screen.findByRole("button", { name: "Change color of frontend" }));
-  const menu = await screen.findByRole("menu");
-  expect(within(menu).getByRole("menuitemradio", { name: /Green/ }).getAttribute("aria-checked")).toBe(
-    "true",
-  );
-  fireEvent.click(within(menu).getByRole("menuitemradio", { name: /Blue/ }));
+  const colors = await openColors("frontend");
+  expect(within(colors).getByRole("menuitem", { name: /Green/ }).textContent).toContain("✓");
+  expect(within(colors).getByRole("menuitem", { name: /Blue/ }).textContent).not.toContain("✓");
+  fireEvent.click(within(colors).getByRole("menuitem", { name: /Blue/ }));
 
   await waitFor(async () => expect((await row("frontend")).textContent).toContain("Blue"));
   expect(requestsTo(fetchMock, "PATCH /api/labels/id-frontend")).toEqual([{ color: "blue" }]);
 });
 
-it("REQ-021.5: deleting asks with the issue count; cancelling keeps the label, confirming deletes it", async () => {
-  const fetchMock = mockLabels();
+it("REQ-021.5: deleting asks with the issue count; cancelling keeps the label, confirming shows Deleting… then deletes it", async () => {
+  const removal = deferred();
+  const fetchMock = mockLabels({ remove: removal.answer });
   renderAppAt("/project/WEB/labels");
 
-  fireEvent.click(await screen.findByRole("button", { name: "Delete frontend" }));
+  await chooseAction("frontend", "Delete…");
   const cancelled = screen.getByRole("dialog", { name: "Delete frontend?" });
   expect(cancelled.textContent).toContain("It will be removed from 12 issues.");
   fireEvent.click(within(cancelled).getByRole("button", { name: "Cancel" }));
@@ -243,10 +271,13 @@ it("REQ-021.5: deleting asks with the issue count; cancelling keeps the label, c
   expect(requestsTo(fetchMock, "DELETE /api/labels/id-frontend")).toHaveLength(0);
   expect(await row("frontend")).toBeTruthy();
 
-  fireEvent.click(screen.getByRole("button", { name: "Delete frontend" }));
+  await chooseAction("frontend", "Delete…");
   const dialog = screen.getByRole("dialog", { name: "Delete frontend?" });
   fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
+  const deleting = (await within(dialog).findByRole("button", { name: "Deleting…" })) as HTMLButtonElement;
+  expect(deleting.disabled).toBe(true);
+  removal.resolve(noContent());
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(requestsTo(fetchMock, "DELETE /api/labels/id-frontend")).toHaveLength(1);
   await waitFor(async () =>
@@ -260,9 +291,7 @@ it("REQ-013.5: an archived project lists labels with no edit controls", async ()
 
   expect(await row("bug")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "New label" })).toBeNull();
-  expect(screen.queryByRole("button", { name: /^Rename / })).toBeNull();
-  expect(screen.queryByRole("button", { name: /^Change color of / })).toBeNull();
-  expect(screen.queryByRole("button", { name: /^Delete / })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Actions for / })).toBeNull();
 });
 
 it("REQ-013.6, STD-9: a refused rename shows the server's message as a toast and keeps the typed name; a 404 reloads the list", async () => {

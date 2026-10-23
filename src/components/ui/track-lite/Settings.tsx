@@ -48,8 +48,31 @@ export function SettingsInline({ children }: { children: ReactNode }) {
   return <div className="tl-settings__inline">{children}</div>;
 }
 
-export function SettingsEmpty({ children }: { children: ReactNode }) {
-  return <p className="tl-settings__empty">{children}</p>;
+export function SettingsEmpty({
+  children,
+  action,
+  onAction,
+}: {
+  children: ReactNode;
+  action?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <p className="tl-settings__empty">
+      {children}
+      {action && (
+        <>
+          {" "}
+          <button
+            type="button"
+            onClick={onAction}
+            className="tl-settings__empty-action">
+            {action}
+          </button>
+        </>
+      )}
+    </p>
+  );
 }
 
 export function SettingsList({ label, children }: { label: string; children: ReactNode }) {
