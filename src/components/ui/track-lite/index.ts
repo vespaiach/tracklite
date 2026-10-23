@@ -2,6 +2,7 @@ export * from "./AppShell";
 export * from "./Button";
 export * from "./Card";
 export * from "./CommandMenu";
+export * from "./Details";
 export * from "./Dialog";
 export * from "./Field";
 export * from "./IssueLayout";

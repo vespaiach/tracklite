@@ -1,8 +1,10 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import {
+  alex,
   apiError,
   deferred,
+  memberOf,
   mockApi,
   project,
   renderAppAt,
@@ -44,7 +46,7 @@ function described(current: Project, body: unknown): Project {
 }
 
 async function startEditing() {
-  fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Edit project description" }));
   return screen.getByLabelText("Description (Markdown)") as HTMLTextAreaElement;
 }
 
@@ -191,12 +193,65 @@ it("REQ-013: an archived project's description has no Edit button", async () => 
   renderAppAt("/project/WEB/detail");
 
   expect(await screen.findByRole("heading", { level: 3, name: "This quarter" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Edit project description" })).toBeNull();
 });
 
-it("STD-7: an empty description names the next action", async () => {
+it("STD-7: an empty description says No description yet. and Add one. opens the editor", async () => {
   mockDetail({ shown: { ...web, description: "" } });
   renderAppAt("/project/WEB/detail");
 
-  expect(await screen.findByText("No description yet. Select Edit to add one.")).toBeTruthy();
+  const empty = await screen.findByText(/^No description yet\./);
+  expect(empty.textContent).toBe("No description yet. Add one.");
+
+  fireEvent.click(within(empty).getByRole("button", { name: "Add one." }));
+
+  expect(editor().value).toBe("");
+});
+
+it("REQ-013: an archived project's empty description has no Add one.", async () => {
+  mockDetail({ shown: { ...web, description: "", archivedAt: "2025-09-14T10:00:00.000Z" } });
+  renderAppAt("/project/WEB/detail");
+
+  expect((await screen.findByText(/^No description yet\./)).textContent).toBe("No description yet.");
+  expect(screen.queryByRole("button", { name: "Add one." })).toBeNull();
+});
+
+it("REQ-046.3: the Issues section shows the open count and each status's count, linking to the list filtered by it", async () => {
+  mockDetail({
+    shown: { ...web, issueCounts: { backlog: 3, in_progress: 1, in_review: 0, done: 2, canceled: 0 } },
+  });
+  renderAppAt("/project/WEB/detail");
+
+  const issues = await screen.findByRole("region", { name: "Issues" });
+  expect(within(issues).getByText(/open$/).textContent).toBe("4 open");
+  expect(
+    within(issues)
+      .getAllByRole("link")
+      .map((row) => [row.getAttribute("aria-label"), row.getAttribute("href")]),
+  ).toEqual([
+    ["Backlog, 3 issues. Open list view", "/project/WEB/list?status=backlog"],
+    ["In Progress, 1 issue. Open list view", "/project/WEB/list?status=in_progress"],
+    ["In Review, 0 issues. Open list view", "/project/WEB/list?status=in_review"],
+    ["Done, 2 issues. Open list view", "/project/WEB/list?status=done"],
+    ["Canceled, 0 issues. Open list view", "/project/WEB/list?status=canceled"],
+  ]);
+
+  fireEvent.click(within(issues).getByRole("link", { name: "Done, 2 issues. Open list view" }));
+
+  await waitFor(() =>
+    expect(`${window.location.pathname}${window.location.search}`).toBe("/project/WEB/list?status=done"),
+  );
+});
+
+it("REQ-046.4: the details page shows Created {date} by its creator, or only the date when none was recorded", async () => {
+  mockDetail({ shown: { ...web, createdAt: "2026-09-20T10:42:00.000Z", createdBy: memberOf(alex) } });
+  renderAppAt("/project/WEB/detail");
+
+  expect((await screen.findByText(/^Created\b/)).textContent).toBe("Created Sep 20, 2026 by Alex Kim");
+
+  cleanup();
+  mockDetail({ shown: { ...web, createdAt: "2026-09-20T10:42:00.000Z", createdBy: null } });
+  renderAppAt("/project/WEB/detail");
+
+  expect((await screen.findByText(/^Created\b/)).textContent).toBe("Created Sep 20, 2026");
 });

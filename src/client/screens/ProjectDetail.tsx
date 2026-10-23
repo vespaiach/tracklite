@@ -1,10 +1,22 @@
 import { useState } from "react";
 import { useParams } from "react-router";
-import { Button, FormStatus, SettingsLayout, SettingsSection } from "../../components/ui/track-lite";
+import {
+  Button,
+  CountRow,
+  DetailsLayout,
+  DetailsNote,
+  DetailsSection,
+  IssueEmpty,
+  Status,
+} from "../../components/ui/track-lite";
 import { Markdown } from "../../lib/markdown/Markdown";
+import { type IssueStatus, issueStatuses } from "../../contract";
 import { type Project, useLazyProjectQuery, useMeQuery, useUpdateProjectMutation } from "../api";
 import { CommentThread } from "../CommentThread";
+import { formatDay } from "../dates";
 import { type DescriptionDraft, DescriptionEditor } from "../DescriptionEditor";
+import { statuses } from "../issue-fields";
+import { useRouterClick } from "../links";
 import { ProjectGate } from "../ProjectGate";
 import { ProjectHeader } from "../ProjectHeader";
 
@@ -20,15 +32,17 @@ export function ProjectDetail() {
             view="detail"
             admin={me?.role === "admin"}
           />
-          <SettingsLayout wide>
+          <DetailsLayout>
             <Description project={project} />
-            <SettingsSection title="Comments">
+            <IssueCounts project={project} />
+            <Created project={project} />
+            <DetailsSection title="Comments">
               <CommentThread
                 threadPath={`projects/${project.key}/comments`}
                 editable={project.archivedAt === null}
               />
-            </SettingsSection>
-          </SettingsLayout>
+            </DetailsSection>
+          </DetailsLayout>
         </>
       )}
     </ProjectGate>
@@ -50,13 +64,15 @@ function Description({ project }: { project: Project }) {
   }
 
   return (
-    <SettingsSection
+    <DetailsSection
       title="Description"
-      status={
+      aside={
         editable &&
         !draft && (
           <Button
+            variant="quiet"
             size="sm"
+            aria-label="Edit project description"
             onClick={() => setDraft(startDraft(project))}>
             Edit
           </Button>
@@ -78,8 +94,78 @@ function Description({ project }: { project: Project }) {
           mentions={project.mentions}
         />
       ) : (
-        <FormStatus>No description yet. Select Edit to add one.</FormStatus>
+        <IssueEmpty
+          action={editable ? "Add one." : undefined}
+          onAction={() => setDraft(startDraft(project))}>
+          No description yet.
+        </IssueEmpty>
       )}
-    </SettingsSection>
+    </DetailsSection>
+  );
+}
+
+const openStatuses = issueStatuses.filter((status) => status !== "done" && status !== "canceled");
+
+function openCount(counts: Project["issueCounts"]) {
+  return openStatuses.reduce((sum, status) => sum + counts[status], 0);
+}
+
+function IssueCounts({ project }: { project: Project }) {
+  const open = openCount(project.issueCounts);
+  return (
+    <DetailsSection
+      title="Issues"
+      aside={
+        <>
+          <data value={open}>{open}</data> open
+        </>
+      }>
+      {issueStatuses.map((status) => (
+        <StatusCountRow
+          key={status}
+          projectKey={project.key}
+          status={status}
+          count={project.issueCounts[status]}
+        />
+      ))}
+    </DetailsSection>
+  );
+}
+
+function StatusCountRow({
+  projectKey,
+  status,
+  count,
+}: {
+  projectKey: string;
+  status: IssueStatus;
+  count: number;
+}) {
+  const href = `/project/${projectKey}/list?status=${status}`;
+  const onClick = useRouterClick(href);
+  const { name, kind } = statuses[status];
+  return (
+    <CountRow
+      href={href}
+      label={`${name}, ${count} ${count === 1 ? "issue" : "issues"}. Open list view`}
+      icon={<Status status={kind} />}
+      name={name}
+      count={count}
+      onClick={onClick}
+    />
+  );
+}
+
+function Created({ project: { createdAt, createdBy } }: { project: Project }) {
+  return (
+    <DetailsNote>
+      Created{" "}
+      <time
+        dateTime={createdAt}
+        title={new Date(createdAt).toLocaleString()}>
+        {formatDay(createdAt)}
+      </time>
+      {createdBy && ` by ${createdBy.fullName}`}
+    </DetailsNote>
   );
 }

@@ -95,7 +95,7 @@ Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` 
   - Needs: none
   - Done: route tests REQ-046.3 (counts per status, other projects' issues left out) and REQ-046.4 (created date and creator; `null` creator on an older project); the create test returns the creator.
 
-- [ ] **M17.11b Project details screen.** 640 px column; the description heading as a meta label with a quiet "Edit project description" button; "No description yet. Add one." (no link when archived); per C2, comments stay. An Issues section ("N open", one row per status with a count, linking to the list filtered by that status) and "Created {date} by {name}" (only "Created {date}" when `createdBy` is `null`), from M17.11a's fields.
+- [x] **M17.11b Project details screen.** 640 px column; the description heading as a meta label with a quiet "Edit project description" button; "No description yet. Add one." (no link when archived); per C2, comments stay. An Issues section ("N open", one row per status with a count, linking to the list filtered by that status) and "Created {date} by {name}" (only "Created {date}" when `createdBy` is `null`), from M17.11a's fields.
   - Reads: + spec REQ-046 · `src/client/screens/ProjectDetail.tsx`
   - Needs: M17.8, M17.11a
 

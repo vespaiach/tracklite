@@ -8,6 +8,10 @@ export function formatDate(iso: string, now = new Date()) {
   });
 }
 
+export function formatDay(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 const minute = 60_000;
 const hour = 60 * minute;
 const day = 24 * hour;
