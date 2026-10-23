@@ -73,7 +73,7 @@ Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` 
   - Needs: M17.1, M17.3
   - Done: existing Sidebar tests updated; a test that Members is current on `/settings/notifications`.
 
-- [ ] **M17.7 Signed-out screens.** The logo in the header; main bottom padding; the Reset password busy label "Saving…"; "signed in as someone else" and load failure as the compact layout (13 px paragraph, secondary Sign out / sm Retry, `role="alert"`); Accept invitation's expired state as a title plus body. Keep the spec's flows (C13).
+- [x] **M17.7 Signed-out screens.** The logo in the header; main bottom padding; the Reset password busy label "Saving…"; "signed in as someone else" and load failure as the compact layout (13 px paragraph, secondary Sign out / sm Retry, `role="alert"`); Accept invitation's expired state as a title plus body. Keep the spec's flows (C13).
   - Reads: + spec REQ-047–050, STD-6, STD-9 · `src/client/screens/{SignIn,ForgotPassword,ResetPassword,AcceptInvitation}.tsx`, `SignedOut.tsx`
   - Needs: M17.1, M17.3
 

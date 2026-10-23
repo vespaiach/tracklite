@@ -7,8 +7,9 @@ import {
   Input,
   SignedOutForm,
   SignedOutHeading,
+  SignedOutAlert,
   SignedOutLayout,
-  SignedOutNote,
+  SignedOutMessage,
   SignedOutStatus,
 } from "../../components/ui/track-lite";
 import {
@@ -55,14 +56,13 @@ export function ResetPassword() {
   if (me.isSuccess) {
     return (
       <SignedOutLayout>
-        <SignedOutNote>You're signed in as {me.data.fullName}. Sign out to reset a password.</SignedOutNote>
-        <Button
-          variant="primary"
-          block
-          disabled={signingOut}
-          onClick={() => signOut()}>
-          Sign out
-        </Button>
+        <SignedOutMessage text={`You're signed in as ${me.data.fullName}. Sign out to reset a password.`}>
+          <Button
+            disabled={signingOut}
+            onClick={() => signOut()}>
+            Sign out
+          </Button>
+        </SignedOutMessage>
       </SignedOutLayout>
     );
   }
@@ -88,8 +88,13 @@ export function ResetPassword() {
   if (lookupFailure) {
     return (
       <SignedOutLayout>
-        <SignedOutNote>Couldn’t load this.</SignedOutNote>
-        <Button onClick={() => lookup.refetch()}>Retry</Button>
+        <SignedOutAlert text="Couldn’t load this.">
+          <Button
+            size="sm"
+            onClick={() => lookup.refetch()}>
+            Retry
+          </Button>
+        </SignedOutAlert>
       </SignedOutLayout>
     );
   }
@@ -124,7 +129,7 @@ export function ResetPassword() {
           variant="primary"
           type="submit"
           block
-          disabled={saving}
+          busy={saving ? "Saving…" : undefined}
           aria-busy={saving || undefined}>
           Set password
         </Button>
