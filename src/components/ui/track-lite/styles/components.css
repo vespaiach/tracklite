@@ -2402,13 +2402,16 @@ a.tl-rail-item {
 }
 .tl-toasts {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
+  right: 0;
+  bottom: 30px;
+  left: 0;
   z-index: 100;
   display: grid;
   gap: 10px;
-  justify-items: end;
+  justify-items: center;
+  width: max-content;
   max-width: min(480px, calc(100vw - 40px));
+  margin-inline: auto;
   font-family: var(--font-ui);
   line-height: 1.35;
 }
