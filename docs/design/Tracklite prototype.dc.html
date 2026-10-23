@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/icons.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/base.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/components/components.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/styles.css">
+  <script src="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/_ds_bundle.js"></script>
+  <style>
+    html,body{margin:0;height:100%}
+    body{background:var(--color-paper);font-family:var(--font-ui);color:var(--color-ink)}
+    a{color:var(--color-accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .tl-rail-item,.tl-list-row{color:inherit}
+    .tl-rail-item:hover,.tl-list-row:hover{text-decoration:none}
+    .tl-field-error{align-items:center}
+    .tl-list-row:focus-visible{outline:2px solid var(--color-accent);outline-offset:-2px}
+    .tl-title-input::placeholder{color:var(--color-ink-2)}
+    .tl-prio-urgent{background:var(--color-accent-2-700)}
+    .tl-status--progress{color:var(--color-accent-2-700)}
+    .tl-navlink[aria-current="page"]{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
+    .tl-board-card .tl-card-act{opacity:0}
+    .tl-board-card:hover .tl-card-act,.tl-board-card:focus-within .tl-card-act,.tl-card-act[aria-expanded="true"]{opacity:1}
+    @media (hover:none){.tl-board-card .tl-card-act{opacity:1}}
+    .tl-appbar .tl-seg__opt[data-on]{background:var(--color-accent-100);color:var(--color-accent-800);font-weight:500}
+    a.tl-seg__opt[data-on]:focus-visible{outline-color:var(--color-accent);outline-offset:-2px}
+  </style>
+</helmet>
+<div style="position:relative;height:{{ rootH }};overflow:hidden;background:var(--color-paper)">
+<sc-if value="{{ isOut }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Signed out" style="height:100%;overflow-y:auto;background:var(--color-paper)">
+    <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true" style="flex:none"><rect x="6" y="15" width="28" height="24" rx="1.5" style="fill:none;stroke:#2b1c15;stroke-width:2.5;opacity:.35"></rect><g transform="rotate(-9 28 23)"><rect x="14" y="10" width="28" height="24" rx="1.5" style="fill:#f8f2ed;stroke:#8d4936;stroke-width:3"></rect><rect x="19" y="16" width="15" height="4" style="fill:#2b1c15"></rect><rect x="19" y="23" width="9" height="4" style="fill:#2b1c15;opacity:.35"></rect></g></svg><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></span></header>
+    <main style="width:360px;max-width:calc(100% - 40px);margin:100px auto 0;padding-bottom:60px">
+
+      <sc-if value="{{ pg.signin }}" hint-placeholder-val="{{ true }}">
+        <form novalidate="{{ true }}" onSubmit="{{ onSignIn }}" style="display:flex;flex-direction:column;gap:20px">
+          <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Sign in</h1>
+          <sc-if value="{{ note.signin }}" hint-placeholder-val="{{ false }}"><p role="status" style="margin:-5px 0 0;font-size:13px;line-height:1.45;color:var(--color-ink-2)">{{ note.signin }}</p></sc-if>
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <div>
+              <label class="tl-field__label" for="si-email">Email</label>
+              <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="si-email" type="email" autocomplete="email" value="{{ f.email.value }}" onChange="{{ f.email.on }}" aria-invalid="{{ inv.email }}" hint-size="100%,36px"></x-import>
+              <sc-if value="{{ err.email }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.email }}</x-import></sc-if>
+            </div>
+            <div>
+              <label class="tl-field__label" for="si-pw">Password</label>
+              <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="si-pw" type="password" autocomplete="current-password" value="{{ f.password.value }}" onChange="{{ f.password.on }}" aria-invalid="{{ inv.password }}" hint-size="100%,36px"></x-import>
+              <sc-if value="{{ err.password }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.password }}</x-import></sc-if>
+            </div>
+          </div>
+          <sc-if value="{{ err.form }}" hint-placeholder-val="{{ false }}"><div role="alert" style="margin-top:-5px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.form }}</x-import></div></sc-if>
+          <sc-if value="{{ tr.signin }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.signin }}</x-import></sc-if>
+          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" disabled="{{ btn.signin.dis }}" hint-size="100%,38px">{{ btn.signin.txt }}</x-import>
+          <a href="#" onClick="{{ nav.forgot }}" style="font-size:12px;align-self:flex-start">Forgot password?</a>
+        </form>
+      </sc-if>
+
+      <sc-if value="{{ pg.forgot }}" hint-placeholder-val="{{ false }}">
+        <form novalidate="{{ true }}" onSubmit="{{ onForgot }}" style="display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Reset your password</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">Enter the email you sign in with. You’ll get a link to set a new password.</p>
+          </div>
+          <div>
+            <label class="tl-field__label" for="fp-email">Email</label>
+            <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="fp-email" type="email" autocomplete="email" value="{{ f.fpEmail.value }}" onChange="{{ f.fpEmail.on }}" aria-invalid="{{ inv.fpEmail }}" hint-size="100%,36px"></x-import>
+            <sc-if value="{{ err.fpEmail }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.fpEmail }}</x-import></sc-if>
+          </div>
+          <sc-if value="{{ err.fpForm }}" hint-placeholder-val="{{ false }}"><div role="alert" style="margin-top:-5px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.fpForm }}</x-import></div></sc-if>
+          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" disabled="{{ btn.forgot.dis }}" hint-size="100%,38px">{{ btn.forgot.txt }}</x-import>
+          <a href="#" onClick="{{ nav.signin }}" style="font-size:12px;align-self:flex-start">Back to sign in</a>
+        </form>
+      </sc-if>
+
+      <sc-if value="{{ pg.sent }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <h1 role="status" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Check your email</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">If {{ sentTo }} belongs to a Tracklite member, a reset link is on its way. The link works once and expires after <span style="font-family:var(--font-mono)">30</span> minutes.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px">
+            <a href="#" onClick="{{ nav.reset }}" style="font-size:12px">Open the reset link</a>
+            <a href="#" onClick="{{ nav.signin }}" style="font-size:12px">Back to sign in</a>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pg.reset }}" hint-placeholder-val="{{ false }}">
+        <form novalidate="{{ true }}" onSubmit="{{ onReset }}" style="display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Set a new password</h1>
+          </div>
+          <div>
+            <label class="tl-field__label" for="rp-pw">New password</label>
+            <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="rp-pw" type="password" autocomplete="new-password" value="{{ f.rpPw.value }}" onChange="{{ f.rpPw.on }}" aria-invalid="{{ inv.rpPw }}" hint-size="100%,36px"></x-import>
+            <sc-if value="{{ err.rpPw }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.rpPw }}</x-import></sc-if>
+            <sc-if value="{{ help.rpPw }}" hint-placeholder-val="{{ true }}"><p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></sc-if>
+          </div>
+          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" disabled="{{ btn.reset.dis }}" hint-size="100%,38px">{{ btn.reset.txt }}</x-import>
+        </form>
+      </sc-if>
+
+      <sc-if value="{{ pg.accept }}" hint-placeholder-val="{{ false }}">
+        <form novalidate="{{ true }}" onSubmit="{{ onAccept }}" style="display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Join Tracklite</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">You’re invited as priya@acme.com. Your username and email can’t be changed later.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <div><span class="tl-field__label">Email</span><p style="margin:0;font-size:13px">priya@acme.com</p></div>
+            <div>
+              <label class="tl-field__label" for="ac-name">Full name</label>
+              <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ac-name" autocomplete="name" value="{{ f.acName.value }}" onChange="{{ f.acName.on }}" aria-invalid="{{ inv.acName }}" hint-size="100%,36px"></x-import>
+              <sc-if value="{{ err.acName }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.acName }}</x-import></sc-if>
+            </div>
+            <div>
+              <label class="tl-field__label" for="ac-user">Username</label>
+              <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ac-user" autocomplete="username" value="{{ f.acUser.value }}" onChange="{{ f.acUser.on }}" aria-invalid="{{ inv.acUser }}" hint-size="100%,36px"></x-import>
+              <sc-if value="{{ err.acUser }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.acUser }}</x-import></sc-if>
+              <sc-if value="{{ help.acUser }}" hint-placeholder-val="{{ true }}"><p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">2</span> to <span style="font-family:var(--font-mono)">20</span> lowercase letters, digits or hyphens. Used for @mentions.</p></sc-if>
+            </div>
+            <div>
+              <label class="tl-field__label" for="ac-pw">Password</label>
+              <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ac-pw" type="password" autocomplete="new-password" value="{{ f.acPw.value }}" onChange="{{ f.acPw.on }}" aria-invalid="{{ inv.acPw }}" hint-size="100%,36px"></x-import>
+              <sc-if value="{{ err.acPw }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.acPw }}</x-import></sc-if>
+              <sc-if value="{{ help.acPw }}" hint-placeholder-val="{{ true }}"><p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></sc-if>
+            </div>
+          </div>
+          <sc-if value="{{ tr.accept }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.accept }}</x-import></sc-if>
+          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" disabled="{{ btn.accept.dis }}" hint-size="100%,38px">{{ btn.accept.txt }}</x-import>
+        </form>
+      </sc-if>
+
+      <sc-if value="{{ pg.msg }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:15px">
+          <sc-if value="{{ msg.title }}" hint-placeholder-val="{{ true }}"><h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em;text-wrap:pretty">{{ msg.title }}</h1></sc-if>
+          <sc-if value="{{ msg.body }}" hint-placeholder-val="{{ true }}"><p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">{{ msg.body }}</p></sc-if>
+          <sc-if value="{{ msg.link }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ msg.go }}" style="font-size:12px">{{ msg.link }}</a></sc-if>
+          <sc-if value="{{ msg.signOut }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" onClick="{{ signOut }}" hint-size="auto,38px">Sign out</x-import></sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><p role="status" aria-busy="true" style="margin:0;font-size:13px;color:var(--color-ink-2)">{{ outLoadText }}</p></sc-if>
+      <sc-if value="{{ failed }}" hint-placeholder-val="{{ false }}"><div role="alert" style="display:flex;align-items:center;gap:15px"><p style="margin:0;font-size:13px">Couldn’t load this.</p><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" onClick="{{ retry }}" hint-size="auto,26px">Retry</x-import></div></sc-if>
+    </main>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isIn }}" hint-placeholder-val="{{ false }}">
+  <div class="tl-shell" data-screen-label="{{ screenLabel }}" style="height:100%">
+    <aside class="tl-rail" aria-label="Sidebar">
+      <div class="tl-rail__head" style="height:44px;padding:0 10px;display:flex;align-items:center"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="display:flex;align-items:center;gap:7px"><svg viewBox="0 0 48 48" width="22" height="22" aria-hidden="true" style="flex:none"><rect x="6" y="15" width="28" height="24" rx="1.5" style="fill:none;stroke:#2b1c15;stroke-width:2.5;opacity:.35"></rect><g transform="rotate(-9 28 23)"><rect x="14" y="10" width="28" height="24" rx="1.5" style="fill:#f8f2ed;stroke:#8d4936;stroke-width:3"></rect><rect x="19" y="16" width="15" height="4" style="fill:#2b1c15"></rect><rect x="19" y="23" width="9" height="4" style="fill:#2b1c15;opacity:.35"></rect></g></svg><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></span></div></div>
+      <nav class="tl-rail__main" aria-label="Main" style="grid-template-columns:minmax(0,1fr);min-width:0">
+        <div class="tl-rail-group" style="grid-template-columns:minmax(0,1fr);min-width:0">
+          <a href="#" class="tl-rail-item" aria-current="{{ rail.my }}" onClick="{{ nav.my }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a>
+        </div>
+        <div class="tl-rail-group" style="grid-template-columns:minmax(0,1fr);min-width:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;min-height:22px">
+            <div class="tl-rail-label">Projects</div>
+            <sc-if value="{{ me.isAdmin }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;margin-right:3px">{{ newProjBtn }}</span></sc-if>
+          </div>
+          <sc-for list="{{ rail.projects }}" as="p" hint-placeholder-count="3">
+            <a href="#" class="tl-rail-item" style="min-width:0" aria-current="{{ p.cur }}" title="{{ p.full }}" onClick="{{ p.go }}"><span style="width:15px;flex:none;display:inline-flex;justify-content:center"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Glyph" kind="sq" hint-size="12px,12px"></x-import></span><span class="tl-lbl tl-rail-item__split" style="flex:1;align-items:baseline"><span class="tl-rail-item__name" style="flex:0 1 auto;white-space:nowrap">{{ p.name }}</span><span class="tl-rail-item__suffix" style="white-space:nowrap;padding-left:0.3em;font-family:var(--font-mono);font-size:11.5px">· {{ p.key }}</span></span></a>
+          </sc-for>
+          <sc-if value="{{ rail.emptyAdmin }}" hint-placeholder-val="{{ false }}"><p style="margin:0;padding:5px 7px;font-size:12px;line-height:1.45;color:var(--color-ink-2)">No projects yet. <button type="button" onClick="{{ openNewProject }}" aria-haspopup="dialog" style="padding:0;border:0;background:none;font:inherit;color:var(--color-accent);cursor:pointer" style-hover="text-decoration:underline">Create one.</button></p></sc-if>
+          <sc-if value="{{ rail.emptyMember }}" hint-placeholder-val="{{ false }}"><p style="margin:0;padding:5px 7px;font-size:12px;line-height:1.45;color:var(--color-ink-2)">No projects yet.</p></sc-if>
+          <a href="#" class="tl-rail-item" aria-current="{{ rail.arc }}" onClick="{{ nav.archived }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a>
+        </div>
+        <div class="tl-rail-group" style="grid-template-columns:minmax(0,1fr);min-width:0">
+          <sc-if value="{{ me.isAdmin }}" hint-placeholder-val="{{ true }}"><a href="#" class="tl-rail-item" aria-current="{{ rail.mem }}" onClick="{{ nav.members }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></sc-if>
+        </div>
+      </nav>
+      <div class="tl-rail__foot" data-pop="" style="position:relative">
+        <sc-if value="{{ rail.menu }}" hint-placeholder-val="{{ false }}">
+          <div role="menu" style="position:absolute;left:5px;right:5px;bottom:calc(100% + 4px);z-index:20">
+            <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" aria-label="Account" style="min-width:0" hint-size="100%,66px">
+              <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" role="menuitem" autoFocus="{{ af }}" onClick="{{ nav.profile }}" hint-size="100%,29px">Profile</x-import>
+              <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" role="menuitem" onClick="{{ signOut }}" hint-size="100%,29px">Sign out</x-import>
+            </x-import>
+          </div>
+        </sc-if>
+        <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="{{ rail.menu }}" aria-current="{{ rail.prof }}" onClick="{{ toggleMenu }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="{{ me.ini }}" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">{{ me.name }}</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+      </div>
+    </aside>
+
+    <div class="tl-shell__body" style="position:relative;overflow:hidden;min-height:0">
+
+      <sc-if value="{{ ph.show }}" hint-placeholder-val="{{ false }}">
+        <header class="tl-appbar">
+          <div style="display:flex;align-items:center;gap:4px">
+            <sc-if value="{{ ph.isProj }}" hint-placeholder-val="{{ true }}"><a href="#" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="Project details" title="Project details" aria-current="{{ ph.detCur }}" onClick="{{ ph.goDetails }}" style="{{ ph.detStyle }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="book-open" size="{{ 16 }}" hint-size="16px,16px"></x-import></a><h1 class="tl-appbar__title">{{ ph.title }}</h1></sc-if>
+            <sc-if value="{{ ph.isIssue }}" hint-placeholder-val="{{ false }}">
+              <nav aria-label="Breadcrumb" class="tl-crumbs" style="min-width:0;display:flex;align-items:center">
+                <span class="tl-crumbs__item" style="display:flex;align-items:center;gap:4px"><a href="#" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="Project details" title="Project details" aria-current="{{ ph.detCur }}" onClick="{{ ph.goDetails }}" style="{{ ph.detStyle }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="book-open" size="{{ 16 }}" hint-size="16px,16px"></x-import></a><a href="#" class="tl-appbar__title" onClick="{{ ph.goBoard }}" style="color:var(--color-ink-2);text-decoration:none">{{ ph.title }}</a></span>
+                <span class="tl-crumbs__item" style="display:flex;align-items:center"><span class="tl-crumbs__sep" aria-hidden="true">/</span><span aria-current="page" title="{{ ph.issueTitle }}" style="font-family: var(--font-mono); font-weight: 500; font-size: 13px; line-height: 100%; color: var(--color-ink)">{{ ph.issueId }}</span></span>
+              </nav>
+            </sc-if>
+          </div>
+          <sc-if value="{{ ph.archived }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Tag" variant="neutral" hint-size="auto,20px">Archived</x-import></sc-if>
+          <nav aria-label="Project views" class="tl-seg tl-seg--compact" style="margin-left:10px">
+            <a href="#" class="tl-seg__opt" data-on="{{ ph.boardOn }}" aria-current="{{ ph.boardCur }}" onClick="{{ ph.goBoard }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="kanban" size="{{ 14 }}" hint-size="14px,14px"></x-import>Board</a>
+            <a href="#" class="tl-seg__opt" data-on="{{ ph.listOn }}" aria-current="{{ ph.listCur }}" onClick="{{ ph.goList }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="list-bullets" size="{{ 14 }}" hint-size="14px,14px"></x-import>List</a>
+          </nav>
+          <div class="tl-appbar__end">
+            <sc-if value="{{ me.isAdmin }}" hint-placeholder-val="{{ true }}"><a href="#" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="Project settings" onClick="{{ ph.goSettings }}" style="color:inherit"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="gear" size="{{ 15 }}" hint-size="15px,15px"></x-import></a></sc-if>
+            <sc-if value="{{ ph.canCreate }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" size="sm" aria-haspopup="dialog" onClick="{{ ph.newIssue }}" hint-size="auto,26px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" weight="bold" size="{{ 12 }}" hint-size="12px,12px"></x-import>New issue</x-import></sc-if>
+          </div>
+        </header>
+      </sc-if>
+
+      <sc-if value="{{ lh.plain }}" hint-placeholder-val="{{ false }}">
+        <header class="tl-appbar"><h1 class="tl-appbar__title">{{ lh.title }}</h1><sc-if value="{{ lh.refresh }}" hint-placeholder-val="{{ false }}"><div class="tl-appbar__end"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" disabled="{{ true }}" hint-size="auto,26px">Refresh</x-import></div></sc-if></header>
+      </sc-if>
+      <sc-if value="{{ lh.crumb }}" hint-placeholder-val="{{ false }}">
+        <header class="tl-appbar"><nav aria-label="Breadcrumb" class="tl-crumbs"><span class="tl-crumbs__item"><a href="#" onClick="{{ lh.goProject }}">{{ lh.proj }}</a></span></nav></header>
+      </sc-if>
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><main aria-busy="true" style="padding:40px 40px 0"><p role="status" style="margin:0;font-size:13px;color:var(--color-ink-2)">Loading…</p></main></sc-if>
+      <sc-if value="{{ failed }}" hint-placeholder-val="{{ false }}"><main style="padding:40px 40px 0"><div role="alert" style="display:flex;align-items:center;gap:15px"><p style="margin:0;font-size:13px">Couldn’t load this.</p><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" onClick="{{ retry }}" hint-size="auto,26px">Retry</x-import></div></main></sc-if>
+
+      <sc-if value="{{ pg.my }}" hint-placeholder-val="{{ false }}">
+        <header class="tl-appbar"><h1 class="tl-appbar__title">My issues</h1><sc-if value="{{ my.has }}" hint-placeholder-val="{{ true }}"><span aria-label="{{ my.totalLabel }}" style="font-family:var(--font-mono);font-size:11px;color:var(--color-ink-2)">{{ my.total }}</span></sc-if></header>
+        <sc-if value="{{ my.empty }}" hint-placeholder-val="{{ false }}"><main style="padding:40px 40px 0"><p style="margin:0;font-size:13px">Nothing assigned to you. <sc-if value="{{ my.hasProj }}" hint-placeholder-val="{{ true }}"><a href="#" onClick="{{ my.goFirst }}">Open a project</a></sc-if><sc-if value="{{ my.noProj }}" hint-placeholder-val="{{ false }}">Open a project</sc-if> to find or create issues.</p></main></sc-if>
+        <sc-if value="{{ my.has }}" hint-placeholder-val="{{ true }}">
+          <div aria-hidden="true" class="eyebrow" style="display:grid;grid-template-columns:14px 64px minmax(240px,1fr) minmax(0,180px) 100px;gap:15px;align-items:center;flex-shrink:0;height:30px;padding:0 15px;border-bottom:1px solid var(--color-divider);color:var(--color-ink-2)"><span></span><span>ID</span><span>Title</span><span>Labels</span><span style="justify-self:end">Updated</span></div>
+          <main aria-label="Issues assigned to you" style="flex:1;min-height:0;overflow-y:auto">
+            <sc-for list="{{ my.groups }}" as="g" hint-placeholder-count="3">
+              <section aria-label="{{ g.aria }}">
+                <h2 class="tl-list-group" style="margin:0;padding:0"><button type="button" aria-expanded="{{ g.open }}" aria-label="{{ g.toggleLabel }}" onClick="{{ g.toggle }}" style="display:flex;align-items:center;gap:inherit;width:100%;height:100%;padding:0 15px;border:0;background:transparent;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;text-align:left;cursor:pointer" style-hover="background:var(--color-tint-2)" data-grp="{{ g.st }}"><span aria-hidden="true" style="{{ g.caretStyle }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="{{ g.st }}" hint-size="14px,14px"></x-import><span>{{ g.name }}</span><span class="tl-list-group__count">{{ g.count }}</span></button></h2>
+                <sc-if value="{{ g.hasSkip }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ g.skip }}" onFocus="{{ g.skipOn }}" onBlur="{{ g.skipOff }}" style="{{ g.skipStyle }}">Skip to {{ g.nextName }}</a></sc-if>
+                <sc-for list="{{ g.shown }}" as="r" hint-placeholder-count="3">
+                  <a href="#" class="tl-list-row" aria-label="{{ r.aria }}" onClick="{{ r.open }}" style="grid-template-columns:14px 64px minmax(240px,1fr) minmax(0,180px) 100px;gap:15px;text-decoration:none;outline-offset:-2px;outline:{{ r.ol }}">
+                    <span style="display:flex;justify-content:center;color:var(--color-ink-2)" title="{{ r.prName }}"><sc-if value="{{ r.hasPrio }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Priority" priority="{{ r.pr }}" hint-size="13px,11px"></x-import></sc-if></span>
+                    <span class="tl-list-row__id">{{ r.id }}</span>
+                    <span class="tl-list-row__title" title="{{ r.title }}">{{ r.title }}</span>
+                    <span style="display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden">
+                      <sc-for list="{{ r.labels }}" as="l" hint-placeholder-count="1"><span class="tl-pill tl-pill--label" style="color:var(--color-neutral-800)">{{ l.name }}</span></sc-for>
+                      <sc-if value="{{ r.more }}" hint-placeholder-val="{{ false }}"><span class="tl-pill tl-pill--est" title="{{ r.moreTitle }}">{{ r.more }}</span></sc-if>
+                    </span>
+                    <time class="tl-list-date" title="{{ r.exact }}" style="justify-self:end">{{ r.rel }}</time>
+                  </a>
+                </sc-for>
+                <sc-if value="{{ g.showNote }}" hint-placeholder-val="{{ false }}"><p style="margin:0;padding:9px 15px 9px 59px;border-bottom:1px solid var(--color-hair);font-size:12px;color:var(--color-ink-2)">{{ g.note }}</p></sc-if>
+              </section>
+            </sc-for>
+            <p style="margin:0;padding:15px;font-size:12px;color:var(--color-ink-2)">Sorted by priority, then most recently updated.</p>
+          </main>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ pg.board }}" hint-placeholder-val="{{ false }}">
+        <main class="tl-board" aria-label="Board" style="flex:1;min-height:0">
+          <sc-for list="{{ cols }}" as="col" hint-placeholder-count="5">
+            <section class="tl-board-col" aria-label="{{ col.name }}" style="min-height:0;flex:1 0 248px" onDragOver="{{ col.over }}" onDragLeave="{{ col.leave }}" onDrop="{{ col.drop }}">
+              <div class="tl-board-col__head" style="border-bottom-color:{{ col.headRule }}">
+                <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="{{ col.st }}" hint-size="14px,14px"></x-import>
+                <h2 title="{{ col.name }}" style="margin:0;font:inherit;font-size:12px;text-transform:none;letter-spacing:normal;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ col.name }}</h2>
+                <span class="tl-board-col__count">{{ col.count }}</span>
+                <sc-if value="{{ col.canCreate }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="{{ col.addLabel }}" aria-haspopup="dialog" onClick="{{ col.add }}" style="width:32px;height:32px;margin:-4px -7px -4px -2px;flex-shrink:0"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></sc-if>
+              </div>
+              <div class="tl-board-col__body" onScroll="{{ col.onScroll }}" style="flex:1;min-height:0;overflow-y:auto">
+                <sc-if value="{{ col.isOver }}" hint-placeholder-val="{{ false }}"><div class="tl-board-drop" aria-hidden="true"></div></sc-if>
+                <sc-if value="{{ col.empty }}" hint-placeholder-val="{{ false }}"><p style="margin:0;padding:8px 3px;font-size:12px;line-height:1.45;color:var(--color-ink-2)">{{ col.emptyText }} <sc-if value="{{ col.canCreate }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ col.add }}">Create one.</a></sc-if></p></sc-if>
+                <sc-for list="{{ col.cards }}" as="c" hint-placeholder-count="2">
+                  <div class="tl-board-card {{ c.dragCls }}" draggable="{{ c.canDrag }}" onDragStart="{{ c.dragStart }}" onDragEnd="{{ c.dragEnd }}" style="position:relative;cursor:default">
+                    <span class="tl-board-card__top">
+                      <sc-if value="{{ c.hasPrio }}" hint-placeholder-val="{{ true }}"><span title="{{ c.prName }}" style="display:flex;opacity:{{ c.prOp }};filter:{{ c.prFilter }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Priority" priority="{{ c.pr }}" hint-size="13px,11px"></x-import></span></sc-if>
+                      <span>{{ c.id }}</span>
+                      <span class="tl-board-card__assignee" style="display:flex;align-items:center">
+                        <sc-if value="{{ c.hasAsg }}" hint-placeholder-val="{{ true }}"><span class="tl-avatar tl-avatar--md {{ c.tone }}" title="{{ c.who }}">{{ c.ini }}</span></sc-if>
+                      </span>
+                    </span>
+                    <sc-if value="{{ c.canDrag }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon tl-card-act" aria-label="{{ c.dragLabel }}" onKeyDown="{{ c.handleKey }}" style="{{ c.handleStyle }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="dots-six-vertical" size="{{ 13 }}" hint-size="13px,13px"></x-import></button></sc-if>
+                    <a href="#" class="tl-board-card__title" title="{{ c.title }}" onClick="{{ c.open }}" style="color:var(--color-ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden" style-hover="text-decoration:none" style-after="content:'';position:absolute;inset:0">{{ c.title }}</a>
+                    <sc-if value="{{ c.canMenu }}" hint-placeholder-val="{{ true }}"><button type="button" data-pop="" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon tl-card-act" aria-label="{{ c.menuLabel }}" aria-haspopup="menu" aria-expanded="{{ c.menuOpen }}" onClick="{{ c.openMenu }}" style="{{ c.moreStyle }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="dots-three" weight="bold" size="{{ 13 }}" hint-size="13px,13px"></x-import></button></sc-if>
+                    <sc-if value="{{ c.trace }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ c.trace }}</x-import></sc-if>
+                    <sc-if value="{{ c.hasFoot }}" hint-placeholder-val="{{ true }}">
+                      <span class="tl-board-card__foot">
+                        <sc-for list="{{ c.labels }}" as="l" hint-placeholder-count="1"><span class="tl-pill tl-pill--label" style="color:var(--color-neutral-800)">{{ l.name }}</span></sc-for>
+                        <sc-if value="{{ c.more }}" hint-placeholder-val="{{ false }}"><span class="tl-pill tl-pill--est" title="{{ c.moreTitle }}">{{ c.more }}</span></sc-if>
+                      </span>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+          </sc-for>
+        </main>
+        <p aria-live="assertive" class="sr-only">{{ kbdMsg }}</p>
+        <sc-if value="{{ cm.open }}" hint-placeholder-val="{{ false }}">
+          <div data-pop="" style="position:fixed;left:{{ cm.x }}px;top:{{ cm.y }}px;z-index:30;display:flex;align-items:flex-start;gap:4px">
+            <div role="menu" aria-label="Card actions" class="tl-pop" style="width:220px">
+              <button type="button" role="menuitem" class="tl-pop__item" aria-haspopup="menu" aria-expanded="{{ cm.sub }}" autoFocus="{{ af }}" onClick="{{ cm.toggleSub }}" onKeyDown="{{ cm.subKey }}" style="{{ cm.subStyle }}">Move to<span class="tl-pop__end" style="display:flex;color:var(--color-ink-2)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-right" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+              <button type="button" role="menuitem" class="tl-pop__item" aria-disabled="{{ cm.first }}" disabled="{{ cm.first }}" onClick="{{ cm.top }}">Move to top</button>
+              <button type="button" role="menuitem" class="tl-pop__item" aria-disabled="{{ cm.last }}" disabled="{{ cm.last }}" onClick="{{ cm.bottom }}">Move to bottom</button>
+            </div>
+            <sc-if value="{{ cm.sub }}" hint-placeholder-val="{{ false }}">
+              <div role="menu" aria-label="Move to" class="tl-pop" style="width:200px">
+                <sc-for list="{{ cm.opts }}" as="o" hint-placeholder-count="5">
+                  <button type="button" role="menuitemradio" aria-checked="{{ o.cur }}" aria-disabled="{{ o.cur }}" disabled="{{ o.cur }}" class="tl-pop__item" onClick="{{ o.pick }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="{{ o.key }}" hint-size="14px,14px"></x-import>{{ o.name }}<sc-if value="{{ o.cur }}" hint-placeholder-val="{{ false }}"><span class="tl-pop__check">✓</span></sc-if></button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ pg.list }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ lst.empty }}" hint-placeholder-val="{{ false }}"><main style="padding:40px 40px 0"><p style="margin:0;font-size:13px">{{ lst.emptyText }} <sc-if value="{{ ph.canCreate }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ ph.newIssue }}">Create one.</a></sc-if></p></main></sc-if>
+        <sc-if value="{{ lst.has }}" hint-placeholder-val="{{ true }}">
+          <main aria-label="Issues" style="flex:1;min-height:0;overflow-y:auto">
+            <sc-for list="{{ lst.groups }}" as="g" hint-placeholder-count="3">
+              <section aria-label="{{ g.aria }}">
+                <h2 class="tl-list-group" style="margin:0;padding:0"><button type="button" aria-expanded="{{ g.open }}" aria-label="{{ g.toggleLabel }}" onClick="{{ g.toggle }}" style="display:flex;align-items:center;gap:inherit;width:100%;height:100%;padding:0 15px;border:0;background:transparent;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;text-align:left;cursor:pointer" style-hover="background:var(--color-tint-2)" data-grp="{{ g.st }}"><span aria-hidden="true" style="{{ g.caretStyle }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="{{ g.st }}" hint-size="14px,14px"></x-import><span>{{ g.name }}</span><span class="tl-list-group__count">{{ g.count }}</span></button></h2>
+                <sc-if value="{{ g.hasSkip }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ g.skip }}" onFocus="{{ g.skipOn }}" onBlur="{{ g.skipOff }}" style="{{ g.skipStyle }}">Skip to {{ g.nextName }}</a></sc-if>
+                <sc-for list="{{ g.shown }}" as="r" hint-placeholder-count="3">
+                  <a href="#" class="tl-list-row" aria-label="{{ r.aria }}" onClick="{{ r.open }}" onFocus="{{ r.focus }}" onBlur="{{ r.blur }}" style="grid-template-columns:14px 52px minmax(0,1fr) auto;gap:15px;height:auto;min-height:36px;text-decoration:none">
+                    <span style="display:flex;justify-content:center;color:var(--color-ink-2);opacity:{{ r.prOp }}" title="{{ r.prName }}"><sc-if value="{{ r.hasPrio }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Priority" priority="{{ r.pr }}" hint-size="13px,11px"></x-import></sc-if></span>
+                    <span class="tl-list-row__id">{{ r.id }}</span>
+                    <span class="tl-list-row__title" title="{{ r.title }}" style="{{ r.titleStyle }}">{{ r.title }}</span>
+                    <span class="tl-list-row__end">
+                      <sc-for list="{{ r.labels1 }}" as="l" hint-placeholder-count="1"><span class="tl-pill tl-pill--label" style="color:var(--color-neutral-800)">{{ l.name }}</span></sc-for>
+                      <sc-if value="{{ r.more1 }}" hint-placeholder-val="{{ false }}"><span class="tl-pill tl-pill--est" title="{{ r.moreTitle1 }}">{{ r.more1 }}</span></sc-if>
+                      <sc-if value="{{ r.hasAsg }}" hint-placeholder-val="{{ true }}"><span class="tl-avatar tl-avatar--md {{ r.tone }}" title="{{ r.who }}">{{ r.ini }}</span></sc-if>
+                      <sc-if value="{{ r.noAsg }}" hint-placeholder-val="{{ false }}"><span class="tl-avatar tl-avatar--md" title="Unassigned" style="border:1px dashed var(--color-ink-3)"></span></sc-if>
+                      <time class="tl-list-date" title="{{ r.exact }}" style="min-width:64px;text-align:right">{{ r.rel }}</time>
+                    </span>
+                  </a>
+                </sc-for>
+                <sc-if value="{{ g.showNote }}" hint-placeholder-val="{{ false }}"><p style="margin:0;padding:9px 15px 9px 59px;border-bottom:1px solid var(--color-hair);font-size:12px;color:var(--color-ink-2)">{{ g.note }}</p></sc-if>
+              </section>
+            </sc-for>
+            <p style="margin:0;padding:15px;font-size:12px;color:var(--color-ink-2)">Sorted by priority, then most recently updated.</p>
+          </main>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ pg.issue }}" hint-placeholder-val="{{ false }}">
+        <div class="tl-issue-layout" ref="{{ ilay.ref }}" style="flex:1;min-height:0;grid-template-columns:{{ ilay.cols }};overflow-y:{{ ilay.ov }};padding:{{ ilay.pad }};gap:{{ ilay.gap }};align-content:{{ ilay.ac }};scrollbar-width:thin;scrollbar-color:var(--color-divider) transparent">
+          <main class="tl-issue-layout__main" style="display:{{ ilay.mainD }};flex-direction:column;gap:30px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--color-divider) transparent">
+            <div style="order:0">
+              <sc-if value="{{ is.archived }}" hint-placeholder-val="{{ false }}"><h1 class="tl-issue-title" style="margin:0;max-width:none;font-size:42px;line-height:1.12;letter-spacing:-0.015em">{{ is.title }}</h1></sc-if>
+              <sc-if value="{{ is.canEdit }}" hint-placeholder-val="{{ true }}">
+                <h1 class="sr-only">{{ is.title }}</h1><label for="is-title" class="sr-only">Title</label><textarea id="is-title" rows="1" value="{{ f.title.value }}" onChange="{{ f.title.on }}" onBlur="{{ is.saveTitle }}" onKeyDown="{{ is.titleKey }}" aria-invalid="{{ inv.title }}" style="display:block;width:calc(100% + 12px);margin:0 -6px;padding:2px 6px;border:0;border-radius:2px;background:transparent;font-family:var(--font-serif);font-weight:600;font-size:42px;line-height:1.12;letter-spacing:-0.015em;color:inherit;resize:none;overflow:hidden;field-sizing:content;box-sizing:border-box" style-hover="background:var(--color-tint-2)" style-focus="background:var(--color-paper);outline:2px solid var(--color-accent);outline-offset:0"></textarea>
+              </sc-if>
+              <sc-if value="{{ err.title }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.title }}</x-import></sc-if><sc-if value="{{ tr.title }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.title }}</x-import></sc-if>
+            </div>
+
+            <section aria-labelledby="is-dh" style="order:2;display:flex;flex-direction:column;gap:15px;border-top:1px solid var(--color-divider);padding-top:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;min-height:26px">
+                <h2 id="is-dh" class="tl-meta__label" style="margin:0">Description</h2>
+                <sc-if value="{{ is.showEditDesc }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="quiet" size="sm" aria-label="Edit description" onClick="{{ is.editDesc }}" hint-size="auto,26px">Edit</x-import></sc-if>
+              </div>
+              <sc-if value="{{ is.editing }}" hint-placeholder-val="{{ false }}">
+                <div style="position:relative">
+                <form class="tl-editor" novalidate="{{ true }}" onSubmit="{{ is.saveDesc }}">
+                  <label for="is-desc" class="sr-only">Description (Markdown)</label>
+                  <textarea id="is-desc" rows="16" autoFocus="{{ af }}" value="{{ f.desc.value }}" onChange="{{ is.descChange }}" onKeyDown="{{ is.descKey }}" readOnly="{{ btn.desc.dis }}" aria-invalid="{{ inv.desc }}" aria-autocomplete="list" aria-expanded="{{ is.descMn.open }}" style="font-family:var(--font-mono);font-size:12.5px;line-height:1.7"></textarea>
+                  <div class="tl-editor__bar">
+                    <sc-if value="{{ is.conflict }}" hint-placeholder-val="{{ false }}"><div role="alert" style="display:flex;align-items:center;gap:10px;margin-top:-5px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="auto,16px">This was changed by Alex Kim. Copy your text and reload.</x-import><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" onClick="{{ is.reloadDesc }}" hint-size="auto,26px">Reload</x-import></div></sc-if>
+                    <div class="tl-editor__submit" style="display:flex;gap:6px">
+                    <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" onClick="{{ is.cancelDesc }}" hint-size="auto,26px">Cancel</x-import>
+                    <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" size="sm" type="submit" disabled="{{ is.saveDescDis }}" hint-size="auto,26px">{{ btn.desc.txt }}</x-import>
+                  </div></div>
+                </form>
+                <sc-if value="{{ err.desc }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.desc }}</x-import></sc-if><sc-if value="{{ tr.desc }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.desc }}</x-import></sc-if>
+                <sc-if value="{{ is.descMn.open }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;left:10px;top:calc(100% - 40px);width:260px;z-index:6">
+                      <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" aria-label="Mention a member" hint-size="260px,90px">
+                        <sc-for list="{{ is.descMn.opts }}" as="o" hint-placeholder-count="2"><div style="{{ o.ring }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" aria-selected="{{ o.hl }}" onMouseDown="{{ o.pick }}" hint-size="100%,29px"><span class="tl-avatar tl-avatar--md {{ o.tone }}">{{ o.ini }}</span><span style="white-space:nowrap">{{ o.name }}</span><span style="margin-left:auto;white-space:nowrap;font-family:var(--font-mono);font-size:11px;opacity:.8">{{ o.u }}</span></x-import></div></sc-for>
+                        <sc-if value="{{ is.descMn.none }}" hint-placeholder-val="{{ false }}"><div role="status" class="tl-pop__item" style="color:var(--color-ink-2);cursor:default;white-space:nowrap">{{ is.descMn.none }}</div></sc-if>
+                      </x-import>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <sc-if value="{{ is.showDesc }}" hint-placeholder-val="{{ true }}">
+                <div class="tl-prose" style="max-width:none"><sc-for list="{{ is.blocks }}" as="b" hint-placeholder-count="2">
+                  <sc-if value="{{ b.p }}" hint-placeholder-val="{{ true }}"><p><sc-for list="{{ b.segs }}" as="g" hint-placeholder-count="1"><sc-if value="{{ g.plain }}" hint-placeholder-val="{{ true }}">{{ g.text }}</sc-if><sc-if value="{{ g.code }}" hint-placeholder-val="{{ false }}"><code>{{ g.text }}</code></sc-if><sc-if value="{{ g.strong }}" hint-placeholder-val="{{ false }}"><strong>{{ g.text }}</strong></sc-if><sc-if value="{{ g.mention }}" hint-placeholder-val="{{ false }}"><span class="tl-mention" title="{{ g.title }}" style="padding:0 2px;margin:0 -2px">{{ g.text }}</span></sc-if></sc-for></p></sc-if>
+                  <sc-if value="{{ b.check }}" hint-placeholder-val="{{ false }}"><ul aria-label="Checklist" style="list-style:none;padding-left:0"><sc-for list="{{ b.items }}" as="c" hint-placeholder-count="2"><li><label class="tl-check" style="font-family:var(--font-serif);font-size:15px;gap:10px;cursor:{{ c.cursor }};align-items:flex-start"><input type="checkbox" class="sr-only" checked="{{ c.done }}" disabled="{{ c.ro }}" onChange="{{ c.toggle }}"><span class="tl-check__box" style="margin-top:4px;display:grid;place-items:center;color:var(--color-paper);font-family:var(--font-ui);font-size:10px;line-height:1">{{ c.tick }}</span><span><sc-for list="{{ c.segs }}" as="g" hint-placeholder-count="1"><sc-if value="{{ g.plain }}" hint-placeholder-val="{{ true }}">{{ g.text }}</sc-if><sc-if value="{{ g.code }}" hint-placeholder-val="{{ false }}"><code>{{ g.text }}</code></sc-if><sc-if value="{{ g.strong }}" hint-placeholder-val="{{ false }}"><strong>{{ g.text }}</strong></sc-if><sc-if value="{{ g.mention }}" hint-placeholder-val="{{ false }}"><span class="tl-mention" title="{{ g.title }}" style="padding:0 2px;margin:0 -2px">{{ g.text }}</span></sc-if></sc-for></span></label></li></sc-for></ul></sc-if>
+                  <sc-if value="{{ b.ul }}" hint-placeholder-val="{{ false }}"><ul><sc-for list="{{ b.items }}" as="c" hint-placeholder-count="2"><li><sc-for list="{{ c.segs }}" as="g" hint-placeholder-count="1"><sc-if value="{{ g.plain }}" hint-placeholder-val="{{ true }}">{{ g.text }}</sc-if><sc-if value="{{ g.code }}" hint-placeholder-val="{{ false }}"><code>{{ g.text }}</code></sc-if><sc-if value="{{ g.strong }}" hint-placeholder-val="{{ false }}"><strong>{{ g.text }}</strong></sc-if><sc-if value="{{ g.mention }}" hint-placeholder-val="{{ false }}"><span class="tl-mention" title="{{ g.title }}" style="padding:0 2px;margin:0 -2px">{{ g.text }}</span></sc-if></sc-for></li></sc-for></ul></sc-if>
+                  <sc-if value="{{ b.code }}" hint-placeholder-val="{{ false }}"><pre style="border-left:0;border-radius:2px"><code>{{ b.text }}</code></pre></sc-if>
+                </sc-for></div>
+              </sc-if>
+              <sc-if value="{{ is.noDesc }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font-size:13px;color:var(--color-ink-2)">No description yet. <sc-if value="{{ is.canEdit }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ is.editDesc }}">Add one.</a></sc-if></p></sc-if>
+            </section>
+
+            <section aria-labelledby="is-ch" style="order:3;display:flex;flex-direction:column;gap:15px;padding:10px 0 30px;border-top:1px solid var(--color-divider)">
+              <div style="display:flex;align-items:center;min-height:26px"><h2 id="is-ch" class="tl-meta__label" style="margin:0">Comments</h2></div>
+              <sc-for list="{{ is.comments }}" as="c" hint-placeholder-count="2">
+                <article class="tl-comment" style="padding:15px 0 0;background:transparent;border:0;border-top:1px solid var(--color-hair);border-radius:0">
+                  <div class="tl-comment__head"><span class="tl-avatar tl-avatar--md {{ c.tone }}">{{ c.ini }}</span><b>{{ c.name }}</b><time class="tl-feed-time" dateTime="{{ c.iso }}" title="{{ c.exact }}"><span aria-hidden="true">{{ c.date }}</span><span class="sr-only">{{ c.exact }}</span></time></div>
+                  <div class="tl-prose" style="max-width:none"><sc-for list="{{ c.blocks }}" as="b" hint-placeholder-count="2">
+                  <sc-if value="{{ b.p }}" hint-placeholder-val="{{ true }}"><p><sc-for list="{{ b.segs }}" as="g" hint-placeholder-count="1"><sc-if value="{{ g.plain }}" hint-placeholder-val="{{ true }}">{{ g.text }}</sc-if><sc-if value="{{ g.code }}" hint-placeholder-val="{{ false }}"><code>{{ g.text }}</code></sc-if><sc-if value="{{ g.strong }}" hint-placeholder-val="{{ false }}"><strong>{{ g.text }}</strong></sc-if><sc-if value="{{ g.mention }}" hint-placeholder-val="{{ false }}"><span class="tl-mention" title="{{ g.title }}" style="padding:0 2px;margin:0 -2px">{{ g.text }}</span></sc-if></sc-for></p></sc-if>
+                  <sc-if value="{{ b.check }}" hint-placeholder-val="{{ false }}"><ul aria-label="Checklist" style="list-style:none;padding-left:0"><sc-for list="{{ b.items }}" as="ci" hint-placeholder-count="2"><li style="display:flex;gap:10px;align-items:flex-start"><span aria-hidden="true" style="flex:none;width:14px;font-family:var(--font-ui);font-size:12px;line-height:inherit;color:var(--color-ink-2)">{{ ci.mark }}</span><span><span class="sr-only">{{ ci.srState }}</span><sc-for list="{{ ci.segs }}" as="g" hint-placeholder-count="1"><sc-if value="{{ g.plain }}" hint-placeholder-val="{{ true }}">{{ g.text }}</sc-if><sc-if value="{{ g.code }}" hint-placeholder-val="{{ false }}"><code>{{ g.text }}</code></sc-if><sc-if value="{{ g.strong }}" hint-placeholder-val="{{ false }}"><strong>{{ g.text }}</strong></sc-if><sc-if value="{{ g.mention }}" hint-placeholder-val="{{ false }}"><span class="tl-mention" title="{{ g.title }}" style="padding:0 2px;margin:0 -2px">{{ g.text }}</span></sc-if></sc-for></span></li></sc-for></ul></sc-if>
+                  <sc-if value="{{ b.ul }}" hint-placeholder-val="{{ false }}"><ul><sc-for list="{{ b.items }}" as="ci" hint-placeholder-count="2"><li><sc-for list="{{ ci.segs }}" as="g" hint-placeholder-count="1"><sc-if value="{{ g.plain }}" hint-placeholder-val="{{ true }}">{{ g.text }}</sc-if><sc-if value="{{ g.code }}" hint-placeholder-val="{{ false }}"><code>{{ g.text }}</code></sc-if><sc-if value="{{ g.strong }}" hint-placeholder-val="{{ false }}"><strong>{{ g.text }}</strong></sc-if><sc-if value="{{ g.mention }}" hint-placeholder-val="{{ false }}"><span class="tl-mention" title="{{ g.title }}" style="padding:0 2px;margin:0 -2px">{{ g.text }}</span></sc-if></sc-for></li></sc-for></ul></sc-if>
+                  <sc-if value="{{ b.code }}" hint-placeholder-val="{{ false }}"><pre style="border-left:0;border-radius:2px"><code>{{ b.text }}</code></pre></sc-if>
+                </sc-for></div>
+                </article>
+              </sc-for>
+              <sc-if value="{{ is.noComments }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font-size:13px;color:var(--color-ink-2)">No comments yet.</p></sc-if>
+              <sc-if value="{{ is.canEdit }}" hint-placeholder-val="{{ true }}">
+                <div style="position:relative">
+                <form aria-label="New comment" class="tl-editor" onSubmit="{{ is.postComment }}">
+                  <label for="is-cm" class="sr-only">Comment</label>
+                  <textarea id="is-cm" rows="3" placeholder="Leave a comment…" value="{{ f.comment.value }}" onChange="{{ is.cmChange }}" onKeyDown="{{ is.cmKey }}" aria-invalid="{{ inv.comment }}" aria-autocomplete="list" aria-expanded="{{ is.cmMn.open }}"></textarea>
+                  <div class="tl-editor__bar"><div class="tl-editor__submit"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" size="sm" type="submit" disabled="{{ is.cmDis }}" hint-size="auto,26px">{{ btn.comment.txt }}</x-import></div></div>
+                </form>
+                <sc-if value="{{ err.comment }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.comment }}</x-import></sc-if><sc-if value="{{ tr.comment }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.comment }}</x-import></sc-if>
+                <sc-if value="{{ is.cmMn.open }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;left:10px;top:calc(100% - 40px);width:260px;z-index:6">
+                      <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" aria-label="Mention a member" hint-size="260px,90px">
+                        <sc-for list="{{ is.cmMn.opts }}" as="o" hint-placeholder-count="2"><div style="{{ o.ring }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" aria-selected="{{ o.hl }}" onMouseDown="{{ o.pick }}" hint-size="100%,29px"><span class="tl-avatar tl-avatar--md {{ o.tone }}">{{ o.ini }}</span><span style="white-space:nowrap">{{ o.name }}</span><span style="margin-left:auto;white-space:nowrap;font-family:var(--font-mono);font-size:11px;opacity:.8">{{ o.u }}</span></x-import></div></sc-for>
+                        <sc-if value="{{ is.cmMn.none }}" hint-placeholder-val="{{ false }}"><div role="status" class="tl-pop__item" style="color:var(--color-ink-2);cursor:default;white-space:nowrap">{{ is.cmMn.none }}</div></sc-if>
+                      </x-import>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </section>
+          </main>
+
+          <aside class="tl-issue-layout__side" aria-label="Issue fields" style="order:1;border-left:{{ ilay.sideBL }};border-top:{{ ilay.sideBT }};grid-template-columns:{{ ilay.sideCols }};padding:{{ ilay.sidePad }}">
+            
+            <div class="tl-meta" data-pop="" style="position:relative">
+              <div id="is-sl" class="tl-meta__label">Status</div>
+              <div class="tl-meta__value">
+                <sc-if value="{{ is.canEdit }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-pick" aria-haspopup="listbox" aria-expanded="{{ is.popStatus }}" aria-labelledby="is-sl is-sv" onClick="{{ is.togStatus }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="{{ is.st }}" hint-size="14px,14px"></x-import><span id="is-sv">{{ is.stName }}</span><span aria-hidden="true" style="margin-left:auto;display:flex;color:var(--color-ink-2)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button></sc-if>
+                <sc-if value="{{ is.archived }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:7px;height:28px;padding:0 6px;font-size:12.5px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="{{ is.st }}" hint-size="14px,14px"></x-import>{{ is.stName }}</div></sc-if>
+              </div>
+              <sc-if value="{{ tr.st }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.st }}</x-import></sc-if>
+              <sc-if value="{{ is.popStatus }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5">
+                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" role="listbox" aria-label="Status" hint-size="222px,160px">
+                    <sc-for list="{{ is.stOpts }}" as="o" hint-placeholder-count="5"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" selected="{{ o.sel }}" autoFocus="{{ o.af }}" onClick="{{ o.pick }}" hint-size="100%,29px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="{{ o.key }}" hint-size="14px,14px"></x-import>{{ o.name }}</x-import></sc-for>
+                  </x-import>
+                </div>
+              </sc-if>
+            </div>
+
+            <div class="tl-meta" data-pop="" style="position:relative">
+              <div id="is-pl" class="tl-meta__label">Priority</div>
+              <div class="tl-meta__value">
+                <sc-if value="{{ is.canEdit }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-pick" aria-haspopup="listbox" aria-expanded="{{ is.popPrio }}" aria-labelledby="is-pl is-pv" onClick="{{ is.togPrio }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Priority" priority="{{ is.pr }}" hint-size="13px,11px"></x-import><span id="is-pv">{{ is.prName }}</span><span aria-hidden="true" style="margin-left:auto;display:flex;color:var(--color-ink-2)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button></sc-if>
+                <sc-if value="{{ is.archived }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:7px;height:28px;padding:0 6px;font-size:12.5px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Priority" priority="{{ is.pr }}" hint-size="13px,11px"></x-import>{{ is.prName }}</div></sc-if>
+              </div>
+              <sc-if value="{{ tr.pr }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.pr }}</x-import></sc-if>
+              <sc-if value="{{ is.popPrio }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5">
+                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" role="listbox" aria-label="Priority" hint-size="222px,160px">
+                    <sc-for list="{{ is.prOpts }}" as="o" hint-placeholder-count="5"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" selected="{{ o.sel }}" autoFocus="{{ o.af }}" onClick="{{ o.pick }}" hint-size="100%,29px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Priority" priority="{{ o.key }}" hint-size="13px,11px"></x-import>{{ o.name }}</x-import></sc-for>
+                  </x-import>
+                </div>
+              </sc-if>
+            </div>
+
+            <div class="tl-meta" data-pop="" style="position:relative">
+              <div id="is-al" class="tl-meta__label">Assignee</div>
+              <div class="tl-meta__value">
+                <sc-if value="{{ is.canEdit }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-pick {{ is.asgCls }}" aria-haspopup="listbox" aria-expanded="{{ is.popAsg }}" aria-labelledby="is-al is-av" onClick="{{ is.togAsg }}"><span class="tl-avatar tl-avatar--md {{ is.asgTone }}">{{ is.asgIni }}</span><span id="is-av">{{ is.asgName }}</span><span aria-hidden="true" style="margin-left:auto;display:flex;color:var(--color-ink-2)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button></sc-if>
+                <sc-if value="{{ is.archived }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:7px;height:28px;padding:0 6px;font-size:12.5px"><span class="tl-avatar tl-avatar--md {{ is.asgTone }}">{{ is.asgIni }}</span>{{ is.asgName }}</div></sc-if>
+              </div>
+              <sc-if value="{{ is.asgErr }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">Choose an active member</x-import></sc-if>
+              <sc-if value="{{ tr.asg }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.asg }}</x-import></sc-if>
+              <sc-if value="{{ is.popAsg }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5">
+                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" role="listbox" aria-label="Assignee" hint-size="222px,160px">
+                    <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopSearch" aria-label="Filter members" placeholder="Assign to…" autoFocus="{{ af }}" value="{{ f.q.value }}" onChange="{{ f.q.on }}" onKeyDown="{{ is.asgKey }}" hint-size="100%,30px"></x-import>
+                    <sc-for list="{{ is.asgOpts }}" as="o" hint-placeholder-count="4"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" selected="{{ o.sel }}" onClick="{{ o.pick }}" hint-size="100%,29px"><span class="tl-avatar tl-avatar--md {{ o.tone }}">{{ o.ini }}</span>{{ o.name }}</x-import></sc-for>
+                  </x-import>
+                </div>
+              </sc-if>
+            </div>
+
+            <div class="tl-meta" data-pop="" style="position:relative">
+              <div id="is-ll" class="tl-meta__label">Labels</div>
+              <div class="tl-meta__value">
+                <sc-if value="{{ is.canEdit }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-pick {{ is.lblCls }}" aria-haspopup="listbox" aria-expanded="{{ is.popLbl }}" aria-labelledby="is-ll is-lv" onClick="{{ is.togLbl }}" style="height:auto;min-height:28px;flex-wrap:nowrap;align-items:flex-start;padding-top:5px;padding-bottom:5px;gap:4px"><span id="is-lv" style="display:flex;flex-wrap:wrap;gap:4px;flex:1;min-width:0;min-height:18px;align-items:center"><sc-for list="{{ is.labels }}" as="l" hint-placeholder-count="2"><span class="tl-pill tl-pill--label" style="color:var(--color-neutral-800)">{{ l.name }}</span></sc-for>{{ is.noLabels }}</span><span aria-hidden="true" style="margin-left:auto;display:flex;align-self:flex-start;margin-top:3px;color:var(--color-ink-2)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button></sc-if>
+                <sc-if value="{{ is.archived }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px;align-items:center;padding:0 6px;font-size:12.5px;color:var(--color-ink-2)"><sc-for list="{{ is.labels }}" as="l" hint-placeholder-count="2"><span class="tl-pill tl-pill--label" style="color:var(--color-neutral-800)">{{ l.name }}</span></sc-for>{{ is.noLabels }}</div></sc-if>
+              </div>
+              <sc-if value="{{ is.lerr }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">Maximum 10 labels</x-import></sc-if>
+              <sc-if value="{{ tr.lbl }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.lbl }}</x-import></sc-if>
+              <sc-if value="{{ is.popLbl }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5">
+                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" role="listbox" aria-multiselectable="true" aria-label="Labels" hint-size="222px,120px">
+                    <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopSearch" aria-label="Filter or create labels" placeholder="Filter or create…" autoFocus="{{ af }}" value="{{ f.lq.value }}" onChange="{{ f.lq.on }}" onKeyDown="{{ is.lblKey }}" hint-size="100%,30px"></x-import>
+                    <sc-for list="{{ is.lblOpts }}" as="o" hint-placeholder-count="4"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" selected="{{ o.sel }}" onClick="{{ o.pick }}" hint-size="100%,29px">{{ o.name }}</x-import></sc-for>
+                    <sc-if value="{{ is.lblCreate }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" onClick="{{ is.createLbl }}" hint-size="100%,29px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ is.lblCreate }}</span></x-import></sc-if>
+                    <sc-if value="{{ is.noLblOpts }}" hint-placeholder-val="{{ false }}"><p style="margin:0;padding:6px 7px;font-size:12px;color:var(--color-ink-2)">No labels in this project yet.</p></sc-if>
+                  </x-import>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="grid-column:1/-1;display:flex;flex-direction:column;gap:30px;padding-top:15px;border-top:1px solid var(--color-hair)">
+              <p style="margin:0;font-size:12px;color:var(--color-ink-2)">Created by {{ is.creator }}, <time dateTime="{{ is.createdIso }}" title="{{ is.createdFull }}" style="font-family:var(--font-mono);font-size:12px">{{ is.created }}</time></p>
+              <sc-if value="{{ is.canDelete }}" hint-placeholder-val="{{ true }}"><div><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="quiet" size="sm" aria-haspopup="dialog" onClick="{{ is.del }}" style="margin-left:-6px" hint-size="auto,26px">Delete issue…</x-import></div></sc-if>
+            </div>
+          </aside>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ pg.details }}" hint-placeholder-val="{{ false }}">
+        <main style="flex:1;min-height:0;overflow-y:auto">
+          <div style="max-width:640px;padding:40px;display:flex;flex-direction:column;gap:30px">
+            <section aria-labelledby="pd-desc-h" style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;min-height:26px;border-bottom:1px solid var(--color-hair);padding-bottom:5px">
+                <h2 id="pd-desc-h" class="tl-meta__label" style="margin:0">Description</h2>
+                <sc-if value="{{ det.showEdit }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="quiet" size="sm" aria-label="Edit project description" onClick="{{ det.edit }}" hint-size="auto,26px">Edit</x-import></sc-if>
+              </div>
+              <sc-if value="{{ det.editing }}" hint-placeholder-val="{{ false }}">
+                <form class="tl-editor" onSubmit="{{ det.save }}">
+                  <label for="pd-desc" class="sr-only">Description</label>
+                  <textarea id="pd-desc" rows="6" autoFocus="{{ af }}" value="{{ f.projDesc.value }}" onChange="{{ f.projDesc.on }}"></textarea>
+                  <div class="tl-editor__bar"><div class="tl-editor__submit" style="display:flex;gap:6px">
+                    <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" onClick="{{ det.cancel }}" hint-size="auto,26px">Cancel</x-import>
+                    <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" size="sm" type="submit" disabled="{{ btn.projDesc.dis }}" hint-size="auto,26px">{{ btn.projDesc.txt }}</x-import>
+                  </div></div>
+                </form>
+                <sc-if value="{{ tr.projDesc }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.projDesc }}</x-import></sc-if>
+              </sc-if>
+              <sc-if value="{{ det.showDesc }}" hint-placeholder-val="{{ true }}"><div class="tl-prose"><sc-for list="{{ det.desc }}" as="p" hint-placeholder-count="1"><p>{{ p.t }}</p></sc-for></div></sc-if>
+              <sc-if value="{{ det.noDesc }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font-size:13px;color:var(--color-ink-2)">No description yet. <sc-if value="{{ det.canEdit }}" hint-placeholder-val="{{ false }}"><a href="#" onClick="{{ det.edit }}">Add one.</a></sc-if></p></sc-if>
+            </section>
+            <section aria-labelledby="pd-iss-h" style="display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;justify-content:space-between;min-height:26px;border-bottom:1px solid var(--color-hair);padding-bottom:5px">
+                <h2 id="pd-iss-h" class="tl-meta__label" style="margin:0">Issues</h2>
+                <span style="font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">{{ det.open }}</span> open</span>
+              </div>
+              <sc-for list="{{ det.rows }}" as="r" hint-placeholder-count="5">
+                <a href="#" onClick="{{ r.go }}" aria-label="{{ r.aria }}" style="display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:10px;align-items:center;height:36px;margin:0 -10px;padding:0 10px;border-bottom:1px solid var(--color-hair);font-size:13px;color:var(--color-ink);text-decoration:none" style-hover="background:var(--color-tint-2);text-decoration:none">
+                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="{{ r.st }}" hint-size="14px,14px"></x-import>
+                  <span>{{ r.name }}</span>
+                  <span style="font-family:var(--font-mono);font-size:12px;color:var(--color-ink-2)">{{ r.n }}</span>
+                </a>
+              </sc-for>
+            </section>
+            <p style="margin:0;font-size:12px;color:var(--color-ink-2)">Created <span style="font-family:var(--font-mono)">{{ det.created }}</span> by {{ det.createdBy }}</p>
+          </div>
+        </main>
+      </sc-if>
+
+      <sc-if value="{{ pg.settings }}" hint-placeholder-val="{{ false }}">
+        <header class="tl-appbar">
+          <nav aria-label="Breadcrumb" class="tl-crumbs"><span class="tl-crumbs__item"><a href="#" onClick="{{ st.goProject }}">{{ st.full }}</a></span><span class="tl-crumbs__sep" aria-hidden="true">/</span><span class="tl-crumbs__item"><h1 class="tl-appbar__title">Settings</h1></span></nav>
+          <sc-if value="{{ st.archived }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Tag" variant="neutral" hint-size="auto,20px">Archived</x-import></sc-if>
+        </header>
+        <sc-if value="{{ st.denied }}" hint-placeholder-val="{{ false }}"><main style="padding:40px 40px 0"><p role="alert" style="margin:0;font-size:13px">You don’t have permission to do that.</p></main></sc-if>
+        <sc-if value="{{ st.allowed }}" hint-placeholder-val="{{ true }}">
+          <main style="flex:1;min-height:0;overflow-y:auto">
+            <div style="max-width:640px;padding:40px 40px 60px;display:flex;flex-direction:column">
+              <div style="display:flex;flex-direction:column;gap:20px;padding-bottom:30px">
+                <sc-if value="{{ st.active }}" hint-placeholder-val="{{ true }}">
+                  <form aria-label="Rename project" novalidate="{{ true }}" onSubmit="{{ st.rename }}">
+                    <label class="tl-field__label" for="st-name">Name</label>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="width:360px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="st-name" maxlength="{{ 60 }}" value="{{ f.rename.value }}" onChange="{{ f.rename.on }}" aria-invalid="{{ inv.rename }}" hint-size="100%,36px"></x-import></div>
+                      <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" disabled="{{ btn.rename.dis }}" hint-size="auto,38px">{{ btn.rename.txt }}</x-import>
+                      <sc-if value="{{ note.rename }}" hint-placeholder-val="{{ false }}"><p role="status" style="margin:0;font-size:12px;color:var(--color-ink-2)">{{ note.rename }}</p></sc-if>
+                    </div>
+                    <sc-if value="{{ err.rename }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.rename }}</x-import></sc-if><sc-if value="{{ tr.rename }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.rename }}</x-import></sc-if>
+                  </form>
+                </sc-if>
+                <sc-if value="{{ st.archived }}" hint-placeholder-val="{{ false }}"><div><div class="tl-field__label">Name</div><p style="margin:0;font-size:14px">{{ st.name }}</p></div></sc-if>
+                <div>
+                  <div class="tl-field__label">Key</div>
+                  <p style="margin:0;font-family:var(--font-mono);font-size:14px">{{ st.key }}</p>
+                  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Issue IDs start with the key, such as <span style="font-family:var(--font-mono)">{{ st.sample }}</span>. It can’t be changed.</p>
+                </div>
+              </div>
+              <section aria-label="Labels" style="display:flex;flex-direction:column;gap:20px;padding:30px 0;border-top:1px solid var(--color-divider)">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;justify-content:space-between;min-height:26px">
+              <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Labels</h2>
+              <sc-if value="{{ lb.showNew }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" onClick="{{ lb.openNew }}" hint-size="auto,26px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import>New label</x-import></sc-if>
+            </div>
+            <p style="margin:0;font-size:12px;color:var(--color-ink-2)">Renaming or deleting a label changes every issue in this project that has it.</p>
+          </div>
+          <sc-if value="{{ lb.empty }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font-size:13px;color:var(--color-ink-2)">No labels yet. <sc-if value="{{ lb.canEdit }}" hint-placeholder-val="{{ true }}"><a href="#" onClick="{{ lb.openNew }}">Create one.</a></sc-if></p></sc-if>
+          <sc-if value="{{ lb.creating }}" hint-placeholder-val="{{ false }}">
+            <form aria-label="New label" novalidate="{{ true }}" onSubmit="{{ lb.create }}" style="display:grid;grid-template-columns:minmax(0,320px) auto auto;gap:10px;align-items:start;padding-bottom:20px;border-bottom:1px solid var(--color-divider)">
+              <div>
+                <label for="lb-name" class="tl-field__label">Name</label>
+                <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="lb-name" autoFocus="{{ af }}" autocomplete="off" placeholder="Label name" value="{{ f.lname.value }}" onChange="{{ f.lname.on }}" readOnly="{{ btn.lcreate.dis }}" aria-invalid="{{ inv.lname }}" hint-size="100%,36px"></x-import>
+                <sc-if value="{{ err.lname }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.lname }}</x-import></sc-if><sc-if value="{{ tr.lcreate }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.lcreate }}</x-import></sc-if>
+              </div>
+              <div data-pop="" style="position:relative">
+                <span id="lb-cc" class="tl-field__label">Color</span>
+                <button type="button" class="tl-btn tl-btn--secondary tl-btn--sm" aria-haspopup="menu" aria-expanded="{{ lb.newColorOpen }}" aria-labelledby="lb-cc lb-ccv" onClick="{{ lb.togNewColor }}" style="height:36px;gap:10px"><span id="lb-ccv">{{ lb.newColor }}</span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></button>
+                <sc-if value="{{ lb.newColorOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;right:0;top:calc(100% + 4px);z-index:5;width:200px">
+                    <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" role="menu" aria-label="Color" hint-size="200px,260px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopLabel" hint-size="100%,22px">Color</x-import><sc-for list="{{ lb.newColors }}" as="c" hint-placeholder-count="8"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" role="menuitemradio" aria-checked="{{ c.sel }}" selected="{{ c.sel }}" autoFocus="{{ c.af }}" onClick="{{ c.pick }}" hint-size="100%,29px">{{ c.name }}</x-import></sc-for></x-import>
+                  </div>
+                </sc-if>
+              </div>
+              <div style="display:flex;gap:6px;padding-top:22px;height:36px;align-items:center">
+                <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" size="sm" type="submit" disabled="{{ btn.lcreate.dis }}" hint-size="auto,26px">{{ btn.lcreate.txt }}</x-import>
+                <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" type="button" onClick="{{ lb.cancelNew }}" hint-size="auto,26px">Cancel</x-import>
+              </div>
+            </form>
+          </sc-if>
+          <sc-if value="{{ lb.has }}" hint-placeholder-val="{{ true }}">
+            <ul aria-label="Labels" style="margin:0;padding:0;list-style:none;border-top:1px solid var(--color-hair)">
+              <sc-for list="{{ lb.rows }}" as="l" hint-placeholder-count="6">
+                <li data-pop="" style="position:relative;border-bottom:1px solid var(--color-hair)">
+                  <sc-if value="{{ l.show }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) 90px 90px 40px;align-items:center;gap:15px;min-height:40px;padding:0 5px">
+                      <span style="min-width:0"><span class="tl-pill tl-pill--label" style="color:var(--color-neutral-800)">{{ l.name }}</span></span>
+                      <span style="font-size:12px;color:var(--color-ink-2)">{{ l.color }}</span>
+                      <span style="font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">{{ l.n }}</span> {{ l.word }}</span>
+                      <sc-if value="{{ lb.canEdit }}" hint-placeholder-val="{{ true }}">
+                        <div style="display:flex;justify-content:flex-end"><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-haspopup="menu" aria-expanded="{{ l.menuOpen }}" aria-label="{{ l.menuLabel }}" onClick="{{ l.toggleMenu }}" style="width:26px;height:26px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="dots-three" size="{{ 15 }}" hint-size="15px,15px"></x-import></button></div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ l.ren }}" hint-placeholder-val="{{ false }}">
+                    <form aria-label="{{ l.renLabel }}" novalidate="{{ true }}" onSubmit="{{ l.saveRen }}" style="display:grid;grid-template-columns:minmax(0,320px) auto;gap:10px;align-items:start;padding:7px 5px">
+                      <div>
+                        <label for="lb-rn" class="sr-only">Name</label>
+                        <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="lb-rn" autoFocus="{{ af }}" autocomplete="off" value="{{ f.lrename.value }}" onChange="{{ f.lrename.on }}" readOnly="{{ btn.lsave.dis }}" aria-invalid="{{ inv.lrename }}" hint-size="100%,36px"></x-import>
+                        <sc-if value="{{ err.lrename }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.lrename }}</x-import></sc-if><sc-if value="{{ tr.lsave }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.lsave }}</x-import></sc-if>
+                      </div>
+                      <div style="display:flex;gap:6px;height:36px;align-items:center">
+                        <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" size="sm" type="submit" disabled="{{ btn.lsave.dis }}" hint-size="auto,26px">{{ btn.lsave.txt }}</x-import>
+                        <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" type="button" onClick="{{ l.cancelRen }}" hint-size="auto,26px">Cancel</x-import>
+                      </div>
+                    </form>
+                  </sc-if>
+                  <sc-if value="{{ l.menuOpen }}" hint-placeholder-val="{{ false }}">
+                    <div role="menu" style="position:absolute;right:5px;top:36px;z-index:5;width:200px">
+                      <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" aria-label="{{ l.menuLabel }}" hint-size="200px,95px">
+                        <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" role="menuitem" autoFocus="{{ af }}" onClick="{{ l.rename }}" hint-size="100%,29px">Rename</x-import>
+                        <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" role="menuitem" onClick="{{ l.openColor }}" hint-size="100%,29px">Change color…</x-import>
+                        <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" role="menuitem" danger="{{ true }}" onClick="{{ l.del }}" hint-size="100%,29px">Delete…</x-import>
+                      </x-import>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ l.colorOpen }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;right:5px;top:36px;z-index:5;width:200px">
+                      <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" role="menu" aria-label="{{ l.colorLabel }}" hint-size="200px,260px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopLabel" hint-size="100%,22px">Color</x-import><sc-for list="{{ l.colors }}" as="c" hint-placeholder-count="8"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" role="menuitemradio" aria-checked="{{ c.sel }}" selected="{{ c.sel }}" autoFocus="{{ c.af }}" onClick="{{ c.pick }}" hint-size="100%,29px">{{ c.name }}</x-import></sc-for></x-import>
+                    </div>
+                  </sc-if>
+                </li>
+              </sc-for>
+            </ul>
+          </sc-if>
+              </section>
+              <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:30px 0;border-top:1px solid var(--color-divider)">
+                <sc-if value="{{ st.active }}" hint-placeholder-val="{{ true }}">
+                  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Archive project</h2>
+                  <p style="margin:0;font-size:13px;line-height:1.5;color:var(--color-ink-2)">The project moves to Archived projects. Its description, issues, comments and labels become read-only, and its issues leave My issues. You can unarchive it later.</p>
+                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" disabled="{{ btn.archive.dis }}" onClick="{{ st.archive }}" hint-size="auto,38px">{{ btn.archive.txt }}</x-import>
+                </sc-if>
+                <sc-if value="{{ st.archived }}" hint-placeholder-val="{{ false }}">
+                  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Unarchive project</h2>
+                  <p style="margin:0;font-size:13px;line-height:1.5;color:var(--color-ink-2)">The project returns to the sidebar and becomes editable again.</p>
+                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" disabled="{{ btn.archive.dis }}" onClick="{{ st.unarchive }}" hint-size="auto,38px">{{ btn.unarchive.txt }}</x-import>
+                </sc-if>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding-top:30px;border-top:1px solid var(--color-divider)">
+                <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Delete project</h2>
+                <p style="margin:0;font-size:13px;line-height:1.5;color:var(--color-ink-2)">Permanently deletes the project with all its issues and comments. Nothing can be restored.</p>
+                <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" aria-haspopup="dialog" onClick="{{ st.del }}" hint-size="auto,38px">Delete project…</x-import>
+              </div>
+            </div>
+          </main>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ pg.archived }}" hint-placeholder-val="{{ false }}">
+        <header class="tl-appbar"><h1 class="tl-appbar__title">Archived projects</h1></header>
+        <sc-if value="{{ arc.empty }}" hint-placeholder-val="{{ false }}"><main style="padding:40px 40px 0"><p style="margin:0;font-size:13px;color:var(--color-ink-2)">No archived projects.</p></main></sc-if>
+        <sc-if value="{{ arc.has }}" hint-placeholder-val="{{ true }}">
+          <main style="max-width:900px;padding:40px">
+            <table class="tl-table" aria-label="Archived projects">
+              <thead><tr><th scope="col">Project</th><th scope="col">Archived</th></tr></thead>
+              <tbody>
+                <sc-for list="{{ arc.rows }}" as="r" hint-placeholder-count="1">
+                  <tr><td><a href="#" onClick="{{ r.go }}" style="color:inherit">{{ r.full }}</a></td><td style="font-family:var(--font-mono);font-size:12.5px;color:var(--color-ink-2);width:160px">{{ r.date }}</td></tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </main>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ pg.members }}" hint-placeholder-val="{{ false }}">
+        <header class="tl-appbar"><h1 class="tl-appbar__title">Members</h1></header>
+        <sc-if value="{{ mb.denied }}" hint-placeholder-val="{{ false }}"><main style="padding:40px 40px 0"><p role="alert" style="margin:0;font-size:13px">You don’t have permission to do that.</p></main></sc-if>
+        <sc-if value="{{ mb.allowed }}" hint-placeholder-val="{{ true }}">
+          <main style="flex:1;min-height:0;overflow-y:auto">
+            <div style="max-width:900px;padding:40px;display:flex;flex-direction:column;gap:40px">
+              <section aria-labelledby="mb-mem-h" style="display:flex;flex-direction:column;gap:10px">
+                <h2 id="mb-mem-h" style="margin:0;display:flex;align-items:baseline;gap:10px;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Members<span style="font-family:var(--font-mono);font-weight:400;font-size:12.5px;letter-spacing:0;color:var(--color-ink-2)">{{ mb.memCount }}</span></h2>
+                <div style="overflow-x:auto">
+                  <table class="tl-table" aria-labelledby="mb-mem-h" style="table-layout:fixed;min-width:560px">
+                    
+                    <thead><tr><th scope="col">Name</th><th scope="col" style="width:110px">Username</th><th scope="col">Email</th><th scope="col" style="width:90px">Role</th><th scope="col" style="width:100px"><span class="sr-only">Actions</span></th></tr></thead>
+                    <tbody>
+                      <sc-for list="{{ mb.members }}" as="m" hint-placeholder-count="4">
+                        <tr>
+                          <td><div style="display:flex;align-items:center;gap:10px;min-width:0"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="{{ m.ini }}" size="md" tone="{{ m.tone }}" hint-size="22px,22px"></x-import><span style="min-width:0;overflow-wrap:break-word;color:{{ m.ink }}">{{ m.name }}<sc-if value="{{ m.self }}" hint-placeholder-val="{{ false }}"> <span style="color:var(--color-ink-2)">(you)</span></sc-if></span></div></td>
+                          <td style="font-family:var(--font-mono);font-size:12.5px;overflow-wrap:break-word;color:{{ m.ink }}">{{ m.u }}</td>
+                          <td style="overflow-wrap:break-word;color:{{ m.ink }}">{{ m.email }}</td>
+                          <td><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Tag" variant="{{ m.roleTag }}" hint-size="auto,20px">{{ m.role }}</x-import></td>
+                          <td data-pop="" style="position:relative;text-align:right">
+                            <sc-if value="{{ m.hasMenu }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-haspopup="menu" aria-expanded="{{ m.menuOpen }}" aria-label="{{ m.menuLabel }}" onClick="{{ m.toggle }}" style="color:var(--color-ink-2)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="dots-three" size="{{ 16 }}" hint-size="16px,16px"></x-import></button></sc-if>
+                            <sc-if value="{{ m.menuOpen }}" hint-placeholder-val="{{ false }}">
+                              <div role="menu" style="position:absolute;right:0;top:calc(100% - 4px);z-index:5;text-align:left">
+                                <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" aria-label="Member actions" hint-size="220px,66px">
+                                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" role="menuitem" autoFocus="{{ af }}" onClick="{{ m.roleAct }}" hint-size="100%,29px">{{ m.roleActLabel }}</x-import>
+                                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" role="menuitem" danger="{{ m.isActive }}" onClick="{{ m.activeAct }}" hint-size="100%,29px">{{ m.activeActLabel }}</x-import>
+                                </x-import>
+                              </div>
+                            </sc-if>
+                          </td>
+                        </tr>
+                      </sc-for>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section aria-labelledby="mb-invs-h" style="display:flex;flex-direction:column;gap:15px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap">
+                  <h2 id="mb-invs-h" style="margin:0;display:flex;align-items:baseline;gap:10px;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Invitations<span style="font-family:var(--font-mono);font-weight:400;font-size:12.5px;letter-spacing:0;color:var(--color-ink-2)">{{ mb.invCount }}</span></h2>
+                  <a href="#" class="tl-btn tl-btn--secondary tl-btn--sm" onClick="{{ nav.notifs }}" style="text-decoration:none">Notification status</a>
+                </div>
+                <form aria-label="Invite by email" novalidate="{{ true }}" onSubmit="{{ mb.invite }}" style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">
+                  <div style="width:340px;max-width:100%">
+                    <label class="tl-field__label" for="mb-email">Email</label>
+                    <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="mb-email" type="email" autocomplete="off" value="{{ f.invite.value }}" onChange="{{ f.invite.on }}" aria-invalid="{{ inv.invite }}" hint-size="100%,36px"></x-import>
+                    <sc-if value="{{ err.invite }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.invite }}</x-import></sc-if><sc-if value="{{ tr.invite }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.invite }}</x-import></sc-if>
+                    <sc-if value="{{ mb.noErr }}" hint-placeholder-val="{{ true }}"><p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">The link works once and expires after <span style="font-family:var(--font-mono)">7</span> days.</p></sc-if>
+                  </div>
+                  <div style="padding-top:21px"><button type="submit" class="tl-btn tl-btn--primary tl-btn--md" disabled="{{ btn.invite.dis }}" style="height:36px;padding-top:0;padding-bottom:0">{{ btn.invite.txt }}</button></div>
+                </form>
+                <sc-if value="{{ mb.noInvites }}" hint-placeholder-val="{{ false }}"><p style="margin:0;padding:10px 0;border-top:1px solid var(--color-divider);font-size:13px;color:var(--color-ink-2)">No open invitations. Invite someone by email above.</p></sc-if>
+                <sc-if value="{{ mb.hasInvites }}" hint-placeholder-val="{{ true }}">
+                  <div style="overflow-x:auto">
+                    <table class="tl-table" aria-labelledby="mb-invs-h" style="table-layout:fixed;min-width:560px">
+                      
+                      <thead><tr><th scope="col">Email</th><th scope="col" style="width:110px">Invited by</th><th scope="col">Sent</th><th scope="col" style="width:90px">State</th><th scope="col" style="width:100px"><span class="sr-only">Actions</span></th></tr></thead>
+                      <tbody>
+                        <sc-for list="{{ mb.invites }}" as="i" hint-placeholder-count="2">
+                          <tr>
+                            <td style="overflow-wrap:break-word">{{ i.email }}</td>
+                            <td>{{ i.by }}</td>
+                            <td style="font-family:var(--font-mono);font-size:12.5px;color:var(--color-ink-2)"><span title="{{ i.full }}">{{ i.rel }}</span></td>
+                            <td><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Tag" variant="{{ i.tag }}" hint-size="auto,20px">{{ i.state }}</x-import></td>
+                            <td data-pop="" style="position:relative;text-align:right">
+                              <div style="display:inline-flex;align-items:center;gap:5px">
+                                <sc-if value="{{ i.inlineResend }}" hint-placeholder-val="{{ false }}"><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm" aria-label="{{ i.resendLabel }}" onClick="{{ i.resend }}">Resend</button></sc-if>
+                                <button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-haspopup="menu" aria-expanded="{{ i.menuOpen }}" aria-label="{{ i.menuLabel }}" onClick="{{ i.toggle }}" style="color:var(--color-ink-2)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="dots-three" size="{{ 16 }}" hint-size="16px,16px"></x-import></button>
+                              </div>
+                              <sc-if value="{{ i.menuOpen }}" hint-placeholder-val="{{ false }}">
+                                <div role="menu" style="position:absolute;right:0;top:calc(100% - 4px);z-index:5;text-align:left">
+                                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" aria-label="{{ i.menuLabel }}" hint-size="220px,66px">
+                                    <sc-if value="{{ i.menuResend }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" role="menuitem" autoFocus="{{ af }}" onClick="{{ i.resend }}" hint-size="100%,29px">Resend</x-import></sc-if>
+                                    <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" role="menuitem" danger="{{ true }}" autoFocus="{{ i.revokeAf }}" onClick="{{ i.revoke }}" hint-size="100%,29px">Revoke…</x-import>
+                                  </x-import>
+                                </div>
+                              </sc-if>
+                            </td>
+                          </tr>
+                        </sc-for>
+                      </tbody>
+                    </table>
+                  </div>
+                </sc-if>
+              </section>
+            </div>
+          </main>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ pg.profile }}" hint-placeholder-val="{{ false }}">
+        <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
+        <main style="flex:1;min-height:0;overflow-y:auto">
+          <div style="max-width:480px;padding:30px 40px 40px">
+            <section aria-labelledby="pf-acc">
+              <h2 id="pf-acc" style="margin:0 0 15px;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Account</h2>
+              <form aria-labelledby="pf-acc" novalidate="{{ true }}" onSubmit="{{ pf.saveName }}" style="padding-bottom:20px">
+                <label class="tl-field__label" for="pf-name">Full name</label>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="width:360px;min-width:0"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="pf-name" autocomplete="name" maxlength="{{ 60 }}" value="{{ f.pfName.value }}" onChange="{{ pf.nameChange }}" aria-invalid="{{ inv.pfName }}" hint-size="100%,36px"></x-import></div>
+                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" disabled="{{ btn.pfName.dis }}" hint-size="auto,38px">{{ btn.pfName.txt }}</x-import>
+                  <sc-if value="{{ note.pfName }}" hint-placeholder-val="{{ false }}"><p role="status" style="margin:0;font-size:12px;color:var(--color-ink-2)">{{ note.pfName }}</p></sc-if>
+                </div>
+                <sc-if value="{{ err.pfName }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.pfName }}</x-import></sc-if><sc-if value="{{ tr.pfName }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.pfName }}</x-import></sc-if>
+              </form>
+              <dl style="margin:0;display:grid;grid-template-columns:120px minmax(0,1fr);border-top:1px solid var(--color-divider);font-size:13px">
+                <dt style="padding:10px 0;border-bottom:1px solid var(--color-hair);color:var(--color-ink-2)">Username</dt><dd style="margin:0;padding:10px 0;border-bottom:1px solid var(--color-hair);font-family:var(--font-mono);font-size:12.5px">{{ me.u }}</dd>
+                <dt style="padding:10px 0;border-bottom:1px solid var(--color-hair);color:var(--color-ink-2)">Email</dt><dd style="margin:0;padding:10px 0;border-bottom:1px solid var(--color-hair)">{{ me.email }}</dd>
+                <dt style="padding:10px 0;border-bottom:1px solid var(--color-hair);color:var(--color-ink-2)">Role</dt><dd style="margin:0;padding:10px 0;border-bottom:1px solid var(--color-hair)">{{ me.roleName }}</dd>
+              </dl>
+              <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
+            </section>
+            <form aria-labelledby="pf-pwh" novalidate="{{ true }}" onSubmit="{{ pf.savePw }}" style="display:flex;flex-direction:column;gap:15px;margin-top:30px;padding-top:30px;border-top:1px solid var(--color-divider)">
+              <h2 id="pf-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+              <div>
+                <label class="tl-field__label" for="pf-cur">Current password</label>
+                <div style="width:360px;max-width:100%"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="pf-cur" type="password" autocomplete="current-password" value="{{ f.pwCur.value }}" onChange="{{ f.pwCur.on }}" aria-invalid="{{ inv.pwCur }}" hint-size="100%,36px"></x-import></div>
+                <sc-if value="{{ err.pwCur }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.pwCur }}</x-import></sc-if>
+              </div>
+              <div>
+                <label class="tl-field__label" for="pf-new">New password</label>
+                <div style="width:360px;max-width:100%"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="pf-new" type="password" autocomplete="new-password" value="{{ f.pwNew.value }}" onChange="{{ f.pwNew.on }}" aria-invalid="{{ inv.pwNew }}" hint-size="100%,36px"></x-import></div>
+                <sc-if value="{{ err.pwNew }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.pwNew }}</x-import></sc-if>
+                <sc-if value="{{ pf.pwHelp }}" hint-placeholder-val="{{ true }}"><p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></sc-if>
+              </div>
+              <sc-if value="{{ err.pwForm }}" hint-placeholder-val="{{ false }}"><div role="alert"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.pwForm }}</x-import></div></sc-if><sc-if value="{{ tr.pw }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.pw }}</x-import></sc-if>
+              <div style="display:flex;align-items:center;gap:15px">
+                <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" disabled="{{ btn.pw.dis }}" hint-size="auto,38px">{{ btn.pw.txt }}</x-import>
+                <sc-if value="{{ note.pw }}" hint-placeholder-val="{{ false }}"><p role="status" style="margin:0;font-size:12px;color:var(--color-ink-2)">{{ note.pw }}</p></sc-if>
+              </div>
+            </form>
+          </div>
+        </main>
+      </sc-if>
+
+      <sc-if value="{{ pg.notifs }}" hint-placeholder-val="{{ false }}">
+        <header class="tl-appbar"><h1 class="tl-appbar__title">Notification status</h1><sc-if value="{{ nt.showRefresh }}" hint-placeholder-val="{{ true }}"><div class="tl-appbar__end"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" disabled="{{ nt.refreshDis }}" aria-busy="{{ btn.refresh.dis }}" onClick="{{ nt.refresh }}" hint-size="auto,26px">{{ btn.refresh.txt }}</x-import></div></sc-if></header>
+        <sc-if value="{{ nt.denied }}" hint-placeholder-val="{{ false }}"><main style="padding:40px 40px 0"><p role="alert" style="margin:0;font-size:13px">You don’t have permission to do that.</p></main></sc-if>
+        <sc-if value="{{ nt.allowed }}" hint-placeholder-val="{{ true }}">
+          <main aria-busy="{{ btn.refresh.dis }}" style="flex:1;min-height:0;overflow-y:auto">
+            <div style="max-width:900px;padding:40px 40px 60px;display:flex;flex-direction:column;gap:40px">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px">
+                <div style="display:flex;flex-direction:column;gap:10px"><h2 id="nt-w" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Worker</h2><dl aria-labelledby="nt-w" style="margin:0;border-top:1px solid var(--color-divider)"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px"><dt style="color:var(--color-ink-2)">Last seen</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px;color:{{ nt.workerColor }}"><time title="{{ nt.workerFull }}">{{ nt.worker }}</time></dd></div></dl><sc-if value="{{ nt.stale }}" hint-placeholder-val="{{ false }}"><p role="status" style="margin:0;font-size:12px;line-height:1.45;color:var(--color-accent-2-700)">No pass for <span style="font-family:var(--font-mono)">{{ nt.staleMin }}</span> min. Notifications wait in the queue until the worker runs.</p></sc-if><sc-if value="{{ nt.never }}" hint-placeholder-val="{{ false }}"><p role="status" style="margin:0;font-size:12px;line-height:1.45;color:var(--color-accent-2-700)">The worker has never run. No notifications are sent until it does.</p></sc-if></div>
+                <div style="display:flex;flex-direction:column;gap:10px"><h2 id="nt-q" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Queue</h2><dl aria-labelledby="nt-q" style="margin:0;border-top:1px solid var(--color-divider)"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px"><dt style="color:var(--color-ink-2)">Pending</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">{{ nt.pending }}</dd></div><div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px"><dt style="color:var(--color-ink-2)">Due</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">{{ nt.due }}</dd></div><div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px"><dt style="color:var(--color-ink-2)">Oldest due has waited</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">{{ nt.wait }}</dd></div></dl></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <h2 id="nt-d" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Last 24 hours</h2>
+                <table class="tl-table" aria-labelledby="nt-d">
+                  <thead><tr><th scope="col">Channel</th><th scope="col" style="text-align:right;width:110px">Sent</th><th scope="col" style="text-align:right;width:110px">Dropped</th><th scope="col" style="text-align:right;width:110px">Failed</th><th scope="col" style="text-align:right;width:110px">Bounced</th></tr></thead>
+                  <tbody><tr><th scope="row" style="font-weight:400;text-align:left;text-transform:none;font-size:13px;letter-spacing:normal;color:var(--color-ink);padding:10px;border-bottom:1px solid color-mix(in srgb,var(--color-ink) 8%,transparent)">Email</th><td style="text-align:right;font-family:var(--font-mono);font-size:12.5px">{{ nt.day.sent }}</td><td style="text-align:right;font-family:var(--font-mono);font-size:12.5px">{{ nt.day.dropped }}</td><td style="text-align:right;font-family:var(--font-mono);font-size:12.5px">{{ nt.day.failed }}</td><td style="text-align:right;font-family:var(--font-mono);font-size:12.5px">{{ nt.day.bounced }}</td></tr></tbody>
+                </table>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <h2 id="nt-r" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Recent problems</h2>
+                <sc-if value="{{ nt.none }}" hint-placeholder-val="{{ false }}"><p style="margin:0;padding:10px 0;border-top:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);font-size:13px;color:var(--color-ink-2)">No failed or bounced notifications.</p></sc-if>
+                <sc-if value="{{ nt.has }}" hint-placeholder-val="{{ true }}">
+                  <table class="tl-table" aria-labelledby="nt-r">
+                    <thead><tr><th scope="col">Recipient</th><th scope="col">Channel</th><th scope="col">Issue or project</th><th scope="col" style="text-align:right;width:110px">Attempts</th><th scope="col" style="text-align:right;width:140px">When</th></tr></thead>
+                    <tbody>
+                      <sc-for list="{{ nt.problems }}" as="p" hint-placeholder-count="3">
+                        <tr><td style="font-family:var(--font-mono);font-size:12.5px">{{ p.user }}</td><td>Email</td><td style="font-family:var(--font-mono);font-size:12.5px">{{ p.target }}</td><td style="text-align:right;font-family:var(--font-mono);font-size:12.5px">{{ p.attempts }}</td><td style="text-align:right;font-family:var(--font-mono);font-size:12.5px"><time title="{{ p.full }}">{{ p.rel }}</time></td></tr>
+                      </sc-for>
+                    </tbody>
+                  </table>
+                </sc-if>
+              </div>
+            </div>
+          </main>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ pg.notfound }}" hint-placeholder-val="{{ false }}">
+        <main style="padding:40px;display:flex;flex-direction:column;gap:10px">
+          <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:27px;letter-spacing:-0.02em">Not found</h1>
+          <p style="margin:0;font-size:13px"><a href="#" onClick="{{ nav.my }}">Go to My issues</a></p>
+        </main>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ dlg.issue }}" hint-placeholder-val="{{ false }}">
+      <div class="tl-backdrop" style="position:absolute" onMouseDown="{{ dlgBackdrop }}">
+        <div role="dialog" aria-modal="true" aria-labelledby="ni-h" class="tl-appdialog">
+          <form novalidate="{{ true }}" onSubmit="{{ onCreateIssue }}" style="display:contents">
+            <div class="tl-appdialog__head">
+              <h2 id="ni-h" style="margin:0;font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--color-ink)">New issue</h2>
+              <span>in {{ dlg.proj }}</span>
+              <sc-if value="{{ dlg.hasCol }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:5px"><span aria-hidden="true">·</span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="{{ dlg.st }}" hint-size="14px,14px"></x-import>{{ dlg.stName }}</span></sc-if>
+            </div>
+            <div class="tl-appdialog__main" style="gap:0">
+              <label for="ni-title" class="sr-only">Title</label>
+              <input id="ni-title" class="tl-title-input" type="text" placeholder="Issue title" autocomplete="off" autoFocus="{{ af }}" value="{{ f.niTitle.value }}" onChange="{{ f.niTitle.on }}" readOnly="{{ btn.newIssue.dis }}" aria-invalid="{{ inv.niTitle }}">
+              <sc-if value="{{ err.niTitle }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.niTitle }}</x-import></sc-if><sc-if value="{{ tr.newIssue }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ tr.newIssue }}</x-import></sc-if>
+            </div>
+            <div class="tl-appdialog__foot" style="justify-content:flex-end"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" size="sm" type="submit" disabled="{{ btn.newIssue.dis }}" hint-size="auto,26px">{{ btn.newIssue.txt }}</x-import></div>
+          </form>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ dlg.project }}" hint-placeholder-val="{{ false }}">
+      <div class="tl-backdrop" style="position:absolute" onMouseDown="{{ dlgBackdrop }}">
+        <form role="dialog" aria-modal="true" aria-labelledby="np-t" novalidate="{{ true }}" class="tl-dialog" onSubmit="{{ onCreateProject }}">
+          <h2 id="np-t" class="tl-dialog__title" style="margin:0">New project</h2>
+          <div>
+            <label class="tl-field__label" for="np-name">Name</label>
+            <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="np-name" autoFocus="{{ af }}" autocomplete="off" value="{{ f.npName.value }}" onChange="{{ f.npName.on }}" aria-invalid="{{ inv.npName }}" hint-size="100%,36px"></x-import>
+            <sc-if value="{{ err.npName }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.npName }}</x-import></sc-if>
+          </div>
+          <div>
+            <label class="tl-field__label" for="np-key">Key</label>
+            <div style="width:140px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="np-key" autocomplete="off" value="{{ f.npKey.value }}" onChange="{{ f.npKey.on }}" aria-invalid="{{ inv.npKey }}" hint-size="100%,36px"></x-import></div>
+            <sc-if value="{{ err.npKey }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" hint-size="100%,16px">{{ err.npKey }}</x-import></sc-if>
+            <sc-if value="{{ dlg.keyHelp }}" hint-placeholder-val="{{ true }}"><p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">2 to 5 letters. Issue IDs start with it, such as <span style="font-family:var(--font-mono)">WEB-42</span>. It can’t be changed later.</p></sc-if>
+          </div>
+          <div class="tl-dialog__actions">
+            <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" onClick="{{ closeDlg }}" hint-size="auto,38px">Cancel</x-import>
+            <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" disabled="{{ btn.newProject.dis }}" hint-size="auto,38px">{{ btn.newProject.txt }}</x-import>
+          </div>
+        </form>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ dlg.confirm }}" hint-placeholder-val="{{ false }}">
+      <div class="tl-backdrop" style="position:absolute" onMouseDown="{{ dlgBackdrop }}">
+        <div role="alertdialog" aria-modal="true" aria-labelledby="cf-t" aria-describedby="cf-b" class="tl-dialog">
+          <h2 id="cf-t" class="tl-dialog__title" style="margin:0">{{ dlg.title }}</h2>
+          <p id="cf-b" style="margin:0;font-size:13px;line-height:1.5;color:var(--color-ink-2)">{{ dlg.body }}</p>
+          <div class="tl-dialog__actions">
+            <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" autoFocus="{{ af }}" onClick="{{ closeDlg }}" hint-size="auto,38px">Cancel</x-import>
+            <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="danger" disabled="{{ btn.confirm.dis }}" onClick="{{ dlg.yes }}" hint-size="auto,38px">{{ btn.confirm.txt }}</x-import>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</sc-if>
+
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+  <div aria-live="polite" style="position:absolute;left:0;right:0;bottom:30px;display:flex;justify-content:center;z-index:70;pointer-events:none"><div role="status" class="tl-toast"><span class="tl-toast__stripe {{ toast.cls }}"></span><span>{{ toast.text }}</span></div></div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;start&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Sign in&quot;,&quot;My issues as Sam (admin)&quot;,&quot;My issues as Alex (member)&quot;,&quot;Board · Website&quot;,&quot;List · Website&quot;,&quot;Project details · Website&quot;,&quot;Forgot password&quot;,&quot;Issue WEB-42&quot;,&quot;Project settings · Website&quot;,&quot;Archived project&quot;,&quot;Members&quot;,&quot;Notification status&quot;,&quot;Profile&quot;,&quot;Accept invitation&quot;,&quot;Reset password&quot;],&quot;default&quot;:&quot;Sign in&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;failSaves&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;scene&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;}}">
+const ST = [['backlog','Backlog'],['progress','In Progress'],['review','In Review'],['done','Done'],['canceled','Canceled']];
+const PR = [['urgent','Urgent'],['high','High'],['med','Medium'],['low','Low'],['none','No priority']];
+const STN = Object.fromEntries(ST), PRN = Object.fromEntries(PR), PRR = { urgent:0, high:1, med:2, low:3, none:4 };
+const MIN = 60000, H = 60 * MIN, D = 24 * H;
+const NOW = new Date(2026, 9, 19, 10, 0).getTime(), T0 = Date.now();
+const clock = () => NOW + (Date.now() - T0);
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const pad = x => String(x).padStart(2, '0');
+const fmtD = t => { const d = new Date(t); return MON[d.getMonth()] + ' ' + d.getDate(); };
+const fmtY = t => { const d = new Date(t); return MON[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear(); };
+const fmtFull = t => { const d = new Date(t); return fmtY(t) + ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+const rel = t => {
+  const m = Math.floor((clock() - t) / MIN);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + ' min ago';
+  const h = Math.floor(m / 60); if (h < 24) return h + (h === 1 ? ' hour ago' : ' hours ago');
+  const d = Math.floor(h / 24); if (d <= 7) return d + (d === 1 ? ' day ago' : ' days ago');
+  return fmtD(t);
+};
+const initials = n => n.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+const paras = s => (s || '').split(/\n\s*\n/).map(t => t.trim()).filter(Boolean).map(t => ({ t }));
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const LCOLORS = ['Gray', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple', 'Pink'];
+const lsort = a => a.sort((x, y) => x.n.toLowerCase().localeCompare(y.n.toLowerCase()));
+function inl(t, users) {
+  return t.split(/(`[^`]+`|\*\*[^*]+\*\*|@[a-z0-9-]+)/g).filter(Boolean).map(x => {
+    if (/^`.+`$/.test(x)) return { text: x.slice(1, -1), code: true };
+    if (/^\*\*.+\*\*$/.test(x)) return { text: x.slice(2, -2), strong: true };
+    if (/^@/.test(x) && users[x.slice(1)]) return { text: x, mention: true, title: users[x.slice(1)] };
+    return { text: x, plain: true };
+  });
+}
+const isoT = t => { const d = new Date(t); return isNaN(d) ? '' : d.toISOString(); };
+function md(src, users) {
+  const out = [], L = (src || '').split('\n'); let i = 0;
+  const isChk = l => /^\s*- \[( |x)\] /i.test(l), isLi = l => /^\s*[-*] /.test(l) && !isChk(l);
+  while (i < L.length) {
+    const l = L[i];
+    if (/^```/.test(l)) { const b = []; i++; while (i < L.length && !/^```/.test(L[i])) b.push(L[i++]); i++; out.push({ code: true, text: b.join('\n') }); continue; }
+    if (isChk(l)) { const items = []; while (i < L.length && isChk(L[i])) { const m = L[i].match(/^\s*- \[( |x)\] (.*)$/i); items.push({ done: m[1].toLowerCase() === 'x', tick: m[1].toLowerCase() === 'x' ? '✓' : '', segs: inl(m[2], users), ln: i, mark: m[1].toLowerCase() === 'x' ? '✓' : '○', srState: m[1].toLowerCase() === 'x' ? 'Done: ' : 'Not done: ' }); i++; } out.push({ check: true, items }); continue; }
+    if (isLi(l)) { const items = []; while (i < L.length && isLi(L[i])) { items.push({ segs: inl(L[i].replace(/^\s*[-*] /, ''), users) }); i++; } out.push({ ul: true, items }); continue; }
+    if (!l.trim()) { i++; continue; }
+    const b = []; while (i < L.length && L[i].trim() && !/^```/.test(L[i]) && !isChk(L[i]) && !isLi(L[i])) b.push(L[i++]);
+    out.push({ p: true, segs: inl(b.join(' '), users) });
+  }
+  return out;
+}
+const DESC42 = 'The Sign in button on `/login` does nothing on the first click in Safari 17. A second click signs you in.\n\n- [x] Reproduce in Safari 17.4\n- [ ] Wait for the validity check before submitting\n- [ ] Test with password manager autofill\n\n```js\nform.addEventListener(\'submit\', async (e) => {\n  e.preventDefault();\n  if (!form.checkValidity()) return;\n  await signIn(new FormData(form));\n});\n```\n\n@sam to confirm the fix in Safari 17. First reported by @nobody in support.';
+
+function seed() {
+  const data = seed0();
+  data.issues.forEach((i, n) => { i.ord = PRR[i.pr] * 1000 + n; });
+  return data;
+}
+function seed0() {
+  const I = (id, title, st, pr, asg, labels, age, by, desc) => ({ id, key: id.split('-')[0], n: +id.split('-')[1], title, st, pr, asg, labels, t: NOW - age, created: NOW - age - 3 * D, by: by || 'sam', desc: desc || '' });
+  return {
+    members: [
+      { u: 'sam', name: 'Sam Lee', email: 'sam@acme.com', role: 'admin', active: true },
+      { u: 'alex', name: 'Alex Kim', email: 'alex@acme.com', role: 'member', active: true },
+      { u: 'nina', name: 'Nina Ortiz', email: 'nina@acme.com', role: 'member', active: true },
+      { u: 'jordan', name: 'Jordan Diaz', email: 'jordan@acme.com', role: 'member', active: true },
+      { u: 'jo', name: 'Jo Park', email: 'jo@acme.com', role: 'member', active: false },
+    ],
+    invites: [
+      { email: 'priya@acme.com', by: 'Sam Lee', state: 'Pending', t: NOW - 1 * D },
+      { email: 'dev@acme.com', by: 'Sam Lee', state: 'Expired', t: NOW - 9 * D },
+    ],
+    projects: [
+      { key: 'API', name: 'API', desc: 'Public REST API and the background jobs behind it.', archived: false, created: NOW - 70 * D, by: 'sam' },
+      { key: 'MOB', name: 'Mobile', desc: '', archived: false, created: NOW - 40 * D, by: 'sam' },
+      { key: 'WEB', name: 'Website', desc: 'The marketing site and the sign-in pages at acme.com.\n\nBugs found by customers go here first. Tag them with bug.', archived: false, created: NOW - 90 * D, by: 'sam' },
+      { key: 'OLD', name: 'Old marketing site', desc: 'The 2024 site. Kept for reference.', archived: true, archivedAt: NOW - 19 * D, created: NOW - 400 * D, by: 'sam' },
+    ],
+    labels: {
+      WEB: lsort([['backend', 'Blue'], ['bug', 'Red'], ['design', 'Purple'], ['docs', 'Gray'], ['frontend', 'Green'], ['Safari', 'Orange']].map(([n, c]) => ({ n, c }))),
+      API: lsort([['backend', 'Blue'], ['security', 'Red'], ['email', 'Yellow'], ['infra', 'Gray']].map(([n, c]) => ({ n, c }))),
+      MOB: lsort([['mobile', 'Green'], ['bug', 'Red']].map(([n, c]) => ({ n, c }))),
+      OLD: [{ n: 'content', c: 'Gray' }],
+    },
+    issues: [
+      I('WEB-42', 'Fix login button', 'progress', 'high', 'alex', ['bug', 'frontend'], 5 * MIN, 'sam', DESC42),
+      I('WEB-43', 'Show the project key in the browser tab title', 'backlog', 'low', 'sam', [], 5 * D),
+      I('WEB-5', 'Email digest sends twice on Mondays', 'done', 'urgent', 'sam', ['backend'], 4 * D),
+      I('WEB-7', 'Add password rules to the reset form', 'backlog', 'med', 'sam', ['frontend', 'Safari'], 3 * D),
+      I('WEB-9', 'Members list puts deactivated accounts above active ones', 'done', 'med', 'alex', ['backend', 'bug'], 8 * D),
+      I('WEB-18', 'Make board columns scroll on their own', 'progress', 'high', 'sam', ['frontend'], 3 * H),
+      I('WEB-38', 'Handle 404 for deleted labels', 'review', 'med', 'sam', ['backend'], 2 * H),
+      I('WEB-39', 'Tidy up footer links', 'backlog', 'none', null, [], 15 * D),
+      I('WEB-40', 'Check contrast on disabled buttons', 'review', 'low', 'alex', ['design'], 1 * D, 'alex'),
+      I('WEB-41', 'Redirect old blog URLs', 'canceled', 'low', 'alex', [], 6 * D),
+      I('WEB-44', 'Fix tab order in the comment form', 'progress', 'med', 'alex', ['frontend', 'bug'], 50 * MIN, 'alex'),
+      I('API-9', 'Rate-limit the sign-in endpoint', 'progress', 'urgent', 'sam', ['backend', 'security'], 40 * MIN),
+      I('API-12', 'Return 404 for deleted projects', 'backlog', 'med', 'sam', ['backend'], 2 * D),
+      I('API-4', 'Send invitation emails from a queue', 'review', 'high', 'sam', ['backend', 'email', 'infra'], 1 * D),
+      I('API-13', 'Paginate the members API response', 'backlog', 'low', 'alex', ['backend'], 3 * D),
+      I('MOB-14', 'Keep the session after the app restarts', 'progress', 'med', 'sam', ['mobile', 'bug'], 6 * H),
+      I('MOB-15', 'Show a clear error when offline', 'backlog', 'med', 'alex', ['mobile'], 4 * D, 'alex'),
+      I('OLD-3', 'Replace the hero image', 'done', 'low', 'sam', ['content'], 40 * D),
+      I('OLD-4', 'Move the pricing table to the new site', 'canceled', 'none', null, [], 30 * D),
+    ],
+    comments: [
+      { id: 1, issue: 'WEB-42', by: 'alex', body: 'Reproduced on Safari 17.4. The click handler runs before the form’s validity check finishes, so the first submit is dropped.', t: NOW - 2 * D },
+      { id: 2, issue: 'WEB-42', by: 'sam', body: 'Thanks. @alex, can you check whether WEB-9 has the same cause?', t: NOW - D - 5 * H },
+    ],
+    notif: {
+      worker: NOW - 20000, pending: '3', due: '1', wait: '40 seconds',
+      day: { sent: '12', dropped: '2', failed: '1', bounced: '1' },
+      problems: [['sam', 'WEB-42', 4, 3 * H], ['alex', 'WEB', 1, 5 * H], ['nina', 'WEB-7', 4, 2 * D]].map(([user, target, attempts, ago]) => ({ user, target, attempts, t: NOW - ago })),
+    },
+  };
+}
+function fullNotif(d) {
+  const U = ['sam', 'alex', 'nina', 'jordan', 'jo'], T = ['WEB-42', 'WEB', 'WEB-43', 'MOB-3', 'WEB-5', 'MOB', 'WEB-9', 'WEB-7'];
+  const AGO = [0, 18 * MIN, H, 3 * H, 5 * H, 9 * H, D, D + 3 * H, 2 * D, 2 * D + 4 * H, 3 * D, 4 * D, 5 * D, 6 * D, 8 * D, 12 * D, 21 * D, 39 * D, 66 * D, 300 * D];
+  d.notif.problems = AGO.map((a, i) => ({ user: U[i % 5], target: T[(i * 3) % 8], attempts: i % 3 === 1 ? 1 : 4, t: NOW - a }));
+  d.notif.day = { sent: '31', dropped: '2', failed: '4', bounced: '2' };
+}
+
+const START = {
+  'Sign in': [null, { r: 'signin' }],
+  'My issues as Sam (admin)': ['sam', { r: 'my' }],
+  'My issues as Alex (member)': ['alex', { r: 'my' }],
+  'Board · Website': ['sam', { r: 'board', key: 'WEB' }],
+  'List · Website': ['sam', { r: 'list', key: 'WEB' }],
+  'Project details · Website': ['sam', { r: 'details', key: 'WEB' }],
+  'Forgot password': [null, { r: 'forgot' }],
+  'Issue WEB-42': ['sam', { r: 'issue', id: 'WEB-42' }],
+  'Project settings · Website': ['sam', { r: 'settings', key: 'WEB' }],
+  'Archived project': ['sam', { r: 'board', key: 'OLD' }],
+  'Members': ['sam', { r: 'members' }],
+  'Notification status': ['sam', { r: 'notifs' }],
+  'Profile': ['sam', { r: 'profile' }],
+  'Accept invitation': [null, { r: 'accept' }],
+  'Reset password': [null, { r: 'reset' }],
+};
+const SAVE_ERR = 'Couldn’t save. Try again.';
+const msgPage = (title, body, o = {}) => ({ r: 'msg', title, body, ...o });
+const SCENES = {
+  'signin-attempts': { me: null, route: { r: 'signin' }, st: { err: { form: 'Too many attempts. Try again later.' } } },
+  'signin-network': { me: null, route: { r: 'signin' }, st: { toast: { text: 'Couldn’t sign in. Try again.', cls: 'tl-toast__stripe--err' }, trace: { where: 'signin', text: 'Couldn’t sign in. Try again.' } } },
+  'forgot-attempts': { me: null, route: { r: 'forgot' }, st: { drafts: { fpEmail: 'sam@acme.com' }, err: { fpForm: 'Too many attempts. Try again later.' } } },
+  'forgot-email': { me: null, route: { r: 'forgot' }, st: { drafts: { fpEmail: 'sam@acme.com' }, err: { fpForm: 'We couldn’t send the email. Try again.' } } },
+  'reset-checking': { me: null, route: { r: 'reset' }, st: { view: 'loading' } },
+  'reset-expired': { me: null, route: msgPage('This link has expired', 'Reset links work once and expire after 30 minutes.', { link: 'Request a new link', to: 'forgot' }) },
+  'reset-other': { me: 'alex', route: msgPage('', 'You’re signed in as Alex Kim. Sign out to reset a password.', { signOut: true }) },
+  'accept-loading': { me: null, route: { r: 'accept' }, st: { view: 'loading' } },
+  'accept-expired': { me: null, route: msgPage('This invitation has expired.', 'Ask an admin for a new one.') },
+  'accept-invalid': { me: null, route: msgPage('This invitation is no longer valid.', '') },
+  'accept-other': { me: 'alex', route: msgPage('', 'You’re signed in as Alex Kim. Sign out to accept this invitation.', { signOut: true }) },
+  'accept-error': { me: null, route: { r: 'accept' }, st: { view: 'error' } },
+  'accept-network': { me: null, route: { r: 'accept' }, st: { drafts: { acName: 'Priya Shah', acUser: 'priya', acPw: 'correct-horse-battery' }, toast: { text: SAVE_ERR, cls: 'tl-toast__stripe--err' }, trace: { where: 'accept', text: SAVE_ERR } } },
+  'board-loading': { route: { r: 'board', key: 'WEB' }, st: { view: 'loading' } },
+  'board-error': { route: { r: 'board', key: 'WEB' }, st: { view: 'error' } },
+  'board-empty': { route: { r: 'board', key: 'WEB' }, data: d => { d.issues = d.issues.filter(i => i.key !== 'WEB'); } },
+  'board-long': { route: { r: 'board', key: 'WEB' }, data: d => { const T = ['Check contrast on disabled buttons', 'Trim whitespace in label names', 'Add alt text to the pricing table', 'Cache the members list', 'Fix date format in emails', 'Retry failed invitation emails']; for (let n = 0; n < 30; n++) d.issues.push({ id: 'WEB-' + (100 + n), key: 'WEB', n: 100 + n, title: T[n % 6], st: 'backlog', pr: ['high', 'med', 'low', 'none'][n % 4], asg: [null, 'sam', 'alex', 'nina'][n % 4], labels: n % 3 ? [] : ['frontend'], t: NOW - n * H, created: NOW - 10 * D, by: 'sam', desc: '', ord: 5000 + n }); } },
+  'board-mouse': { route: { r: 'board', key: 'WEB' }, st: { drag: 'WEB-7', over: 'review' } },
+  'board-failed': { route: { r: 'board', key: 'WEB' }, st: { toast: { text: 'Couldn’t move WEB-42', cls: 'tl-toast__stripe--err' }, trace: { where: 'card:WEB-42', text: 'Couldn’t move WEB-42' } } },
+  'issue-loading': { route: { r: 'issue', id: 'WEB-42' }, st: { view: 'loading' } },
+  'issue-error': { route: { r: 'issue', id: 'WEB-42' }, st: { view: 'error' } },
+  'issue-asg': { route: { r: 'issue', id: 'WEB-42' }, st: { asgErr: true } },
+  'issue-pickfail': { route: { r: 'issue', id: 'WEB-42' }, st: { toast: { text: SAVE_ERR, cls: 'tl-toast__stripe--err' }, trace: { where: 'st', text: SAVE_ERR } } },
+  'issue-deleted': { me: 'alex', route: { r: 'issue', id: 'WEB-42' }, st: { drafts: { comment: 'Same cause as WEB-9. A fix that waits for the validity check covers both.' }, toast: { text: 'This issue was deleted', cls: 'tl-toast__stripe--err' }, trace: { where: 'comment', text: 'This issue was deleted' } } },
+  'issue-lbl-max': { route: { r: 'issue', id: 'WEB-42' }, st: { pop: 'lbl', lerr: true }, data: d => { ['a11y', 'api', 'auth', 'copy', 'mobile', 'regression', 'security', 'ux'].forEach(n => d.labels.WEB.push({ n, c: 'Gray' })); lsort(d.labels.WEB); d.issues.find(i => i.id === 'WEB-42').labels = ['a11y', 'api', 'auth', 'backend', 'bug', 'copy', 'design', 'docs', 'frontend', 'mobile']; } },
+  'issue-lbl-gone': { route: { r: 'issue', id: 'WEB-42' }, st: { pop: 'lbl', toast: { text: 'That label no longer exists', cls: 'tl-toast__stripe--err' }, trace: { where: 'lbl', text: 'That label no longer exists' } } },
+  'issue-lbl-fail': { route: { r: 'issue', id: 'WEB-42' }, st: { pop: 'lbl', toast: { text: SAVE_ERR, cls: 'tl-toast__stripe--err' }, trace: { where: 'lbl', text: SAVE_ERR } } },
+  'issue-desc-conflict': { route: { r: 'issue', id: 'WEB-42' }, st: { editDesc: true, conflict: true } },
+  'issue-new-fail': { route: { r: 'board', key: 'WEB' }, st: { dlg: { type: 'issue', key: 'WEB', st: 'backlog' }, drafts: { niTitle: 'Add password strength hint' }, toast: { text: SAVE_ERR, cls: 'tl-toast__stripe--err' }, trace: { where: 'newIssue', text: SAVE_ERR } } },
+  'details-saving': { route: { r: 'details', key: 'WEB' }, st: { editProj: true, busy: 'projDesc', drafts: { projDesc: 'The marketing site and the sign-in pages at acme.com.\n\nBugs found by customers go here first. Tag them with bug and set a priority.' } } },
+  'details-fail': { route: { r: 'details', key: 'WEB' }, st: { editProj: true, drafts: { projDesc: 'The marketing site and the sign-in pages at acme.com.\n\nBugs found by customers go here first. Tag them with bug and set a priority.' }, toast: { text: SAVE_ERR, cls: 'tl-toast__stripe--err' }, trace: { where: 'projDesc', text: SAVE_ERR } } },
+  'details-archived': { route: { r: 'details', key: 'OLD' } },
+  'notfound': { route: { r: 'notfound' } },
+  'my-member': { me: 'alex', route: { r: 'my' } },
+  'my-focus': { me: 'alex', route: { r: 'my' }, st: { focusId: 'WEB-42' } },
+  'my-empty': { me: 'alex', route: { r: 'my' }, data: d => { d.issues = d.issues.filter(i => i.asg !== 'alex'); } },
+  'my-loading': { me: 'alex', route: { r: 'my' }, st: { view: 'loading' } },
+  'my-error': { me: 'alex', route: { r: 'my' }, st: { view: 'error' } },
+  'labels-loading': { route: { r: 'settings', key: 'WEB' }, st: { view: 'loading' } },
+  'labels-error': { route: { r: 'settings', key: 'WEB' }, st: { view: 'error' } },
+  'labels-gone': { route: { r: 'settings', key: 'WEB' }, st: { lren: 'docs', drafts: { lrename: 'documentation' }, toast: { text: 'That label no longer exists', cls: 'tl-toast__stripe--err' }, trace: { where: 'lsave', text: 'That label no longer exists' } } },
+  'labels-archived': { route: { r: 'settings', key: 'WEB' }, st: { lren: 'bug', drafts: { lrename: 'defect' }, toast: { text: 'This project is archived', cls: 'tl-toast__stripe--err' }, trace: { where: 'lsave', text: 'This project is archived' } } },
+  'profile-loading': { route: { r: 'profile' }, st: { view: 'loading' } },
+  'profile-error': { route: { r: 'profile' }, st: { view: 'error' } },
+  'profile-attempts': { route: { r: 'profile' }, st: { err: { pwForm: 'Too many attempts. Try again later.' } } },
+  'profile-namefail': { route: { r: 'profile' }, st: { drafts: { pfName: 'Samuel Lee' }, toast: { text: SAVE_ERR, cls: 'tl-toast__stripe--err' }, trace: { where: 'pfName', text: SAVE_ERR } } },
+  'profile-pwfail': { route: { r: 'profile' }, st: { toast: { text: SAVE_ERR, cls: 'tl-toast__stripe--err' }, trace: { where: 'pw', text: SAVE_ERR } } },
+  'notifs-never': { route: { r: 'notifs' }, data: d => { Object.assign(d.notif, { worker: null, pending: '0', due: '0', wait: 'None', day: { sent: '0', dropped: '0', failed: '0', bounced: '0' }, problems: [] }); } },
+  'notifs-down': { route: { r: 'notifs' }, data: d => { Object.assign(d.notif, { worker: NOW - 12 * MIN, pending: '9', due: '9', wait: '14 min' }); } },
+  'notifs-clean': { route: { r: 'notifs' }, data: d => { Object.assign(d.notif, { problems: [], day: { sent: '12', dropped: '2', failed: '0', bounced: '0' } }); } },
+  'notifs-full': { route: { r: 'notifs' }, data: fullNotif },
+  'members-loading': { route: { r: 'members' }, st: { view: 'loading' } },
+  'members-error': { route: { r: 'members' }, st: { view: 'error' } },
+  'members-sending': { route: { r: 'members' }, st: { busy: 'invite', drafts: { invite: 'nina@acme.com' } } },
+  'members-emailfail': { route: { r: 'members' }, st: { drafts: { invite: 'nina@acme.com' }, toast: { text: 'We couldn’t send the email. Try again.', cls: 'tl-toast__stripe--err' }, trace: { where: 'invite', text: 'We couldn’t send the email. Try again.' } } },
+  'members-exists': { route: { r: 'members' }, st: { drafts: { invite: 'alex@acme.com' }, err: { invite: 'Alex Kim is already a member' } } },
+  'notifs-loading': { route: { r: 'notifs' }, st: { view: 'loading' } },
+  'notifs-error': { route: { r: 'notifs' }, st: { view: 'error' } },
+  'notifs-denied': { me: 'alex', route: { r: 'notifs' } },
+  'settings-denied': { me: 'alex', route: { r: 'settings', key: 'WEB' } },
+};
+const BUSY = {
+  signin: ['Sign in', 'Signing in…'], forgot: ['Send link', 'Sending…'], reset: ['Set password', 'Saving…'], accept: ['Join Tracklite', 'Joining…'], lcreate: ['Create label', 'Creating…'], lsave: ['Save', 'Saving…'], refresh: ['Refresh', 'Refreshing…'],
+  desc: ['Save', 'Saving…'], comment: ['Comment', 'Posting…'], projDesc: ['Save', 'Saving…'], label: ['Add label', 'Adding…'],
+  rename: ['Save', 'Saving…'], archive: ['Archive project', 'Archiving…'], unarchive: ['Unarchive project', 'Unarchiving…'],
+  invite: ['Send invitation', 'Sending…'], pfName: ['Save', 'Saving…'], pw: ['Change password', 'Changing…'],
+  newIssue: ['Create', 'Creating…'], newProject: ['Create', 'Creating…'], confirm: ['', ''],
+};
+const DRAFTS = ['lname','lrename','q','lq','email','password','fpEmail','rpPw','acName','acUser','acPw','title','desc','comment','projDesc','label','rename','invite','pfName','pwCur','pwNew','niTitle','niDesc','npName','npKey'];
+const ERRS = ['fpForm','pwForm','lname','lrename','desc','email','password','form','fpEmail','rpPw','acName','acUser','acPw','title','comment','label','rename','invite','pfName','pwCur','pwNew','niTitle','npName','npKey'];
+
+class Component extends DCLogic {
+  state = { data: seed(), me: null, route: { r: 'signin' }, drafts: { email: 'sam@acme.com', password: 'correct-horse-battery' }, err: {}, note: {}, busy: null, toast: null, dlg: null, pop: null, menu: false, rowMenu: null, editDesc: false, editProj: false, drag: null, over: null, kbd: false, next: null, pw: 'correct-horse-battery', view: null, mn: null, cm: null, lnew: false, lcolor: null, lren: null, newColor: 'Gray', lerr: false, asgErr: false, conflict: false, trace: null };
+
+  componentDidMount() {
+    this.applyStart();
+    if (this.props.scene) return;
+    this._key = e => {
+      const s = this.state;
+      if (s.menu && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
+        const it = [...document.querySelectorAll('.tl-rail__foot [role="menuitem"]')], n = it.length;
+        if (n) { e.preventDefault(); const i = it.indexOf(document.activeElement); it[e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : e.key === 'ArrowDown' ? (i + 1) % n : (i <= 0 ? n - 1 : i - 1)].focus(); }
+        return;
+      }
+      if (s.pop && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
+        const ae = document.activeElement, box = ae && ae.closest && ae.closest('[data-pop]'), list = box && box.querySelector('[role="listbox"]');
+        if (list) { const it = [...list.querySelectorAll('.tl-pop__item')].filter(x => x.tagName === 'BUTTON' || x.getAttribute('role') === 'option' || x.tabIndex >= 0); if (it.length) { e.preventDefault(); const k = it.indexOf(ae), n = e.key === 'Home' ? 0 : e.key === 'End' ? it.length - 1 : e.key === 'ArrowDown' ? (k + 1) % it.length : (k <= 0 ? it.length - 1 : k - 1); it[n].focus(); } }
+        return;
+      }
+      if (e.key !== 'Escape') return;
+      if (s.mn) this.setState({ mn: null });
+      else if (s.dlg) { if (!s.busy) this.setState({ dlg: null, err: {} }); }
+      else if (s.kbd) this.setState({ drag: null, over: null, kbd: false });
+      else if (s.pop || s.menu || s.rowMenu || s.cm || s.lcolor) { const t = document.querySelector('[data-pop] [aria-expanded="true"]'); this.closeMenus(); if (t) setTimeout(() => t.focus(), 0); }
+      else if (s.editDesc || s.editProj) { const p = s.editProj; this.setState({ editDesc: false, editProj: false, conflict: false }); if (p) this.focusEditDesc(); }
+      else if (s.lnew || s.lren) this.setState({ lnew: false, lren: null, err: {} });
+    };
+    this._down = e => { if (!e.target.closest || !e.target.closest('[data-pop]')) { const s = this.state; if (s.pop || s.menu || s.rowMenu || s.cm || s.lcolor) this.closeMenus(); } };
+    document.addEventListener('keydown', this._key);
+    document.addEventListener('mousedown', this._down);
+  }
+  componentDidUpdate(prev) { if (prev.start !== this.props.start || prev.scene !== this.props.scene) this.applyStart(); }
+  componentWillUnmount() { document.removeEventListener('keydown', this._key); document.removeEventListener('mousedown', this._down); clearTimeout(this._tt); clearTimeout(this._bt); }
+  closeMenus = () => this.setState(s => ({ pop: null, menu: false, rowMenu: null, cm: null, lcolor: null, drafts: { ...s.drafts, q: '', lq: '' } }));
+
+  applyStart() {
+    const sc = this.props.scene && SCENES[this.props.scene];
+    if (sc) {
+      const data = seed(); if (sc.data) sc.data(data);
+      const st = sc.st || {};
+      this.setState({ data, me: sc.me === undefined ? 'sam' : sc.me }, () => { this.go(sc.route); this.setState(s => ({ ...st, drafts: { ...s.drafts, ...(st.drafts || {}) } })); });
+      return;
+    }
+    const [me, route] = START[this.props.start] || START['Sign in'];
+    this.setState({ me }, () => this.go(route));
+  }
+
+  focusEditDesc() { setTimeout(() => { const b = document.querySelector('[aria-label="Edit project description"]'); if (b) b.focus(); }, 0); }
+  proj(key) { return this.state.data.projects.find(p => p.key === key); }
+  issue(id) { return this.state.data.issues.find(i => i.id === id); }
+  member(u) { return this.state.data.members.find(m => m.u === u); }
+  meM() { return this.member(this.state.me); }
+  isAdmin() { const m = this.meM(); return !!m && m.role === 'admin'; }
+
+  draftsFor(route) {
+    const s = this.state, d = {};
+    if (route.r === 'signin') Object.assign(d, { email: s.drafts.email || 'sam@acme.com', password: s.drafts.password || '' });
+    if (route.r === 'issue') { const i = this.issue(route.id); if (i) { d.title = i.title; d.desc = i.desc; } }
+    if (route.r === 'details') { const p = this.proj(route.key); if (p) d.projDesc = p.desc; }
+    if (route.r === 'settings') { const p = this.proj(route.key); if (p) d.rename = p.name; }
+    if (route.r === 'profile') { const m = this.meM(); if (m) d.pfName = m.name; }
+    if (route.r === 'forgot') d.fpEmail = s.drafts.email || '';
+    return d;
+  }
+  go(route) {
+    const out = ['signin', 'forgot', 'sent', 'reset', 'accept', 'msg'].includes(route.r);
+    if (!out && !this.state.me) return this.setState({ next: route, route: { r: 'signin' }, drafts: this.draftsFor({ r: 'signin' }), err: {}, note: {} });
+    if (route.r === 'issue' && !this.issue(route.id)) route = { r: 'notfound' };
+    if (route.key && !this.proj(route.key)) route = { r: 'notfound' };
+    this.setState({ route, drafts: this.draftsFor(route), err: {}, note: {}, pop: null, menu: false, rowMenu: null, editDesc: false, editProj: false, dlg: null, view: null, mn: null, cm: null, lnew: false, lcolor: null, lren: null, lerr: false, asgErr: false, conflict: false, drag: null, over: null, kbd: false, trace: null });
+  }
+  nav(route) { return e => { if (e && e.preventDefault) e.preventDefault(); this.go(route); }; }
+
+  setData(fn) { this.setState(s => ({ data: fn(JSON.parse(JSON.stringify(s.data))) })); }
+  patchIssue(id, patch, msg) { this.setData(d => { const i = d.issues.find(x => x.id === id); Object.assign(i, patch, { t: clock() }); return d; }); if (msg) this.toast(msg); }
+
+  toast(text, err, where) {
+    clearTimeout(this._tt);
+    this.setState({ toast: { text, cls: err ? 'tl-toast__stripe--err' : '' }, ...(where ? { trace: { where, text } } : {}) });
+    this._tt = setTimeout(() => this.setState({ toast: null }), 5000);
+  }
+  fail(email, where) { this.toast(email ? 'We couldn’t send the email. Try again.' : 'Couldn’t save. Try again.', true, where); }
+  save(key, fn, o = {}) {
+    if (this.state.busy) return;
+    this.setState({ busy: key, err: {}, note: {}, trace: null });
+    this._bt = setTimeout(() => {
+      this.setState({ busy: null });
+      if (this.props.failSaves && !o.noFail) return o.onFail ? o.onFail() : this.fail(o.email, key);
+      fn();
+    }, 500);
+  }
+  bad(err) { const keys = Object.keys(err).filter(k => err[k]); if (keys.length) { this.setState({ err }); return true; } return false; }
+  setDraft(k, v) { this.setState(s => ({ drafts: { ...s.drafts, [k]: v }, trace: null })); }
+  pe(e) { if (e && e.preventDefault) e.preventDefault(); }
+
+  // ---------- signed out
+  onSignIn = e => {
+    this.pe(e);
+    const { email = '', password = '' } = this.state.drafts;
+    if (this.bad({ email: !email.trim() ? 'Enter your email' : !EMAIL.test(email.trim()) ? 'Enter a valid email' : '', password: password ? '' : 'Enter your password' })) return;
+    this.save('signin', () => {
+      const m = this.state.data.members.find(x => x.email.toLowerCase() === email.trim().toLowerCase() && x.active);
+      const ok = m && (m.u !== 'sam' ? password.length >= 4 : password === this.state.pw);
+      if (!ok) return this.setState({ err: { form: 'Incorrect email or password.' } });
+      const next = this.state.next || { r: 'my' };
+      this.setState({ me: m.u, next: null }, () => this.go(next));
+    }, { noFail: true });
+  };
+  onForgot = e => {
+    this.pe(e);
+    const v = (this.state.drafts.fpEmail || '').trim();
+    if (this.bad({ fpEmail: !v ? 'Enter your email' : !EMAIL.test(v) ? 'Enter a valid email' : '' })) return;
+    this.save('forgot', () => { this.setState({ sentTo: v }); this.go({ r: 'sent' }); }, { onFail: () => this.setState({ err: { fpForm: 'We couldn’t send the email. Try again.' } }) });
+  };
+  onReset = e => {
+    this.pe(e);
+    const v = this.state.drafts.rpPw || '';
+    if (this.bad({ rpPw: v.length < 12 ? 'At least 12 characters' : v.length > 128 ? 'Too long (max 128)' : '' })) return;
+    this.save('reset', () => { this.setState({ pw: v, me: null }); this.go({ r: 'signin' }); this.setState({ note: { signin: 'Password changed. Sign in with your new password.' }, drafts: { email: 'sam@acme.com', password: '' } }); });
+  };
+  onAccept = e => {
+    this.pe(e);
+    const { acName = '', acUser = '', acPw = '' } = this.state.drafts;
+    const u = acUser.trim().toLowerCase();
+    if (this.bad({
+      acName: acName.trim() ? '' : 'Name required',
+      acUser: !/^[a-z0-9-]{2,20}$/.test(u) ? 'Use 2 to 20 letters, digits or hyphens' : '',
+      acPw: acPw.length < 12 ? 'At least 12 characters' : acPw.length > 128 ? 'Too long (max 128)' : '',
+    })) return;
+    this.save('accept', () => {
+      if (this.member(u)) return this.setState({ err: { acUser: 'Username taken' } });
+      this.setData(d => { d.members.push({ u, name: acName.trim(), email: 'priya@acme.com', role: 'member', active: true }); d.invites = d.invites.filter(i => i.email !== 'priya@acme.com'); return d; });
+      this.setState({ me: u }, () => this.go({ r: 'my' }));
+    });
+  };
+  signOut = () => { this.setState({ me: null, menu: false, next: null }, () => { this.go({ r: 'signin' }); this.setState({ drafts: { email: '', password: '' } }); }); };
+
+  // ---------- dialogs
+  closeDlg = () => { if (!this.state.busy) this.setState({ dlg: null, err: {} }); };
+  dlgBackdrop = e => { if (e.target === e.currentTarget) this.closeDlg(); };
+  openNewIssue(key, st, fromCol) { this.setState(s => ({ dlg: { type: 'issue', key, st: st || 'backlog', fromCol }, err: {}, drafts: { ...s.drafts, niTitle: '', niDesc: '' } })); }
+  openNewProject = () => { this.setState(s => ({ dlg: { type: 'project' }, err: {}, drafts: { ...s.drafts, npName: '', npKey: '' } })); };
+  confirm(title, body, label, fn) { this.setState({ dlg: { type: 'confirm', title, body, label, fn } }); }
+  onCreateIssue = e => {
+    this.pe(e);
+    const { key, st } = this.state.dlg;
+    const title = (this.state.drafts.niTitle || '').trim();
+    if (this.bad({ niTitle: !title ? 'Title required' : title.length > 200 ? 'Too long (max 200)' : '' })) return;
+    this.save('newIssue', () => {
+      const d0 = this.state.data;
+      const n = Math.max(0, ...d0.issues.filter(i => i.key === key).map(i => i.n)) + 1, id = key + '-' + n;
+      this.setData(d => { d.issues.push({ id, key, n, title, st, pr: 'none', asg: null, labels: [], t: clock(), created: clock(), by: this.state.me, desc: '', ord: Math.min(0, ...d.issues.map(i => i.ord)) - 1 }); return d; });
+      this.setState({ dlg: null }, () => this.go({ r: 'issue', id }));
+    });
+  };
+  onCreateProject = e => {
+    this.pe(e);
+    const name = (this.state.drafts.npName || '').trim(), key = (this.state.drafts.npKey || '').trim().toUpperCase();
+    if (this.bad({
+      npName: !name ? 'Name required' : name.length > 60 ? 'Too long (max 60)' : '',
+      npKey: !key ? 'Key required' : !/^[A-Z]{2,5}$/.test(key) ? 'Use 2 to 5 letters' : this.proj(key) ? 'Key already used' : '',
+    })) return;
+    this.save('newProject', () => {
+      this.setData(d => { d.projects.push({ key, name, desc: '', archived: false, created: clock(), by: this.state.me }); d.labels[key] = []; return d; });
+      this.setState({ dlg: null }, () => this.go({ r: 'board', key }));
+      this.toast('Created ' + name + ' · ' + key);
+    });
+  };
+
+  // ---------- mentions
+  mnOpts(q) { const ql = (q || '').toLowerCase(); return this.state.data.members.filter(m => m.active && (m.u.includes(ql) || m.name.toLowerCase().includes(ql))); }
+  mnChange(field) { return e => { const v = e.target.value, pos = e.target.selectionStart; const m = v.slice(0, pos).match(/(^|\s)@([a-z0-9-]*)$/i); this.setState(s => ({ drafts: { ...s.drafts, [field]: v }, mn: m ? { field, q: m[2], i: 0, end: pos } : null, conflict: field === 'desc' ? s.conflict : s.conflict })); }; }
+  mnInsert(m) { const s = this.state, { field, q, end } = s.mn, v = s.drafts[field] || '', start = end - q.length - 1; this.setState({ mn: null, drafts: { ...s.drafts, [field]: v.slice(0, start) + '@' + m.u + ' ' + v.slice(end) } }); }
+  mnKey(field) { return e => { const mn = this.state.mn; if (!mn || mn.field !== field) return; const o = this.mnOpts(mn.q), n = Math.max(o.length, 1);
+    if (e.key === 'ArrowDown') { e.preventDefault(); this.setState({ mn: { ...mn, i: (mn.i + 1) % n } }); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); this.setState({ mn: { ...mn, i: (mn.i + n - 1) % n } }); }
+    else if (e.key === 'Enter' && o.length) { e.preventDefault(); this.mnInsert(o[mn.i] || o[0]); }
+    else if (e.key === 'Escape') { e.stopPropagation(); this.setState({ mn: null }); } }; }
+  mnView(field) {
+    const mn = this.state.mn, open = !!mn && mn.field === field;
+    const opts = open ? this.mnOpts(mn.q).map((m, i) => ({ name: m.name, u: m.u, ini: initials(m.name), tone: m.u === this.state.me ? 'tl-avatar--accent' : 'tl-avatar--neutral', hl: i === mn.i, ring: i === mn.i ? { outline: '2px solid var(--color-accent)', outlineOffset: '-2px', borderRadius: '1px' } : {}, pick: e => { e.preventDefault(); this.mnInsert(m); } })) : [];
+    return { open, opts, none: open && !opts.length ? 'No results for “@' + mn.q + '”' : '' };
+  }
+  users() { const u = {}; this.state.data.members.forEach(m => { u[m.u] = m.name + (m.active ? '' : ' (deactivated)'); }); return u; }
+  move(id, st, where) {
+    const i = this.issue(id); if (!i) return;
+    this.setState({ cm: null, drag: null, over: null, kbd: false, trace: null });
+    if (this.props.failSaves) return this.toast('Couldn’t move ' + id, true, 'card:' + id);
+    const col = this.state.data.issues.filter(x => x.key === i.key && x.st === st && x.id !== id).map(x => x.ord);
+    const ord = where === 'bottom' ? Math.max(0, ...col) + 1 : Math.min(0, ...col) - 1;
+    this.patchIssue(id, { st, ord }, st !== i.st ? id + ' moved to ' + STN[st] : null);
+  }
+
+  // ---------- view models
+  row(i) {
+    const p = this.proj(i.key), a = i.asg && this.member(i.asg);
+    const lb = [...i.labels].sort((x, y) => x.localeCompare(y)), shown = lb.slice(0, 2), extra = lb.length - 2;
+    return {
+      id: i.id, title: i.title, project: p.name, pr: i.pr, prName: PRN[i.pr], hasPrio: true, ol: this.state.focusId === i.id ? '2px solid var(--color-accent)' : undefined,
+      labels: shown.map(name => ({ name })), more: extra > 0 ? '+' + extra : '', moreTitle: extra > 0 ? lb.slice(2).join(', ') : '',
+      labels1: lb.slice(0, 1).map(name => ({ name })), more1: lb.length > 1 ? '+' + (lb.length - 1) : '', moreTitle1: lb.slice(1).join(', '),
+      prOp: ['done', 'canceled'].includes(i.st) ? 0.45 : 1, noAsg: !a,
+      titleStyle: this.state.rowFocus === i.id ? { whiteSpace: 'normal', padding: '9px 0', lineHeight: 1.35 } : {},
+      focus: () => this.setState({ rowFocus: i.id }), blur: () => this.setState(x => x.rowFocus === i.id ? { rowFocus: null } : null),
+      rel: rel(i.t), exact: 'Updated ' + fmtFull(i.t), aria: i.id + ', ' + i.title + ', ' + PRN[i.pr] + ', ' + (a ? 'assigned to ' + a.name : 'unassigned') + ', updated ' + fmtFull(i.t),
+      hasAsg: !!a, ini: a ? initials(a.name) : '', who: a ? a.name + (a.active ? '' : ' (deactivated)') : '', tone: a && a.u === this.state.me ? 'tl-avatar--accent' : 'tl-avatar--neutral',
+      open: this.nav({ r: 'issue', id: i.id }),
+    };
+  }
+  groups(list) {
+    return ST.map(([st, name]) => {
+      const closedSt = ['done', 'canceled'].includes(st), old = closedSt ? list.filter(i => i.st === st && clock() - i.t > 14 * D).length : 0;
+      const rows = list.filter(i => i.st === st && (!closedSt || clock() - i.t <= 14 * D)).sort((a, b) => PRR[a.pr] - PRR[b.pr] || b.t - a.t);
+      const r = this.state.route, ck = r.r + ':' + (r.key || '') + ':' + st, cv = (this.state.collapsed || {})[ck], closed = cv === undefined ? r.r === 'my' && ['done', 'canceled'].includes(st) : !!cv;
+      const mapped = rows.map(i => this.row(i));
+      return { st, name, count: String(rows.length), aria: name + ', ' + rows.length + ' issues', rows: mapped, shown: closed ? [] : mapped,
+        open: !closed, toggleLabel: (closed ? 'Expand ' : 'Collapse ') + name + ', ' + rows.length + ' issues',
+        caretStyle: { display: 'flex', color: 'var(--color-ink-2)', transform: closed ? 'rotate(-90deg)' : 'none' },
+        old, note: closedSt ? 'Showing issues closed in the last 14 days. ' + old + (old === 1 ? ' older issue isn’t shown.' : ' older issues aren’t shown.') : '', showNote: !closed && r.r === 'list' && old > 0,
+        toggle: () => this.setState(x => ({ collapsed: { ...(x.collapsed || {}), [ck]: !closed } })) };
+    }).filter(g => g.rows.length || (this.state.route.r === 'list' && g.old)).map((g, k, all) => {
+      const nx = all[k + 1], on = this.state.skipFocus === g.st;
+      return { ...g, hasSkip: !!nx && g.open && g.rows.length > 0, nextName: nx ? nx.name : '',
+        skip: e => { e && e.preventDefault(); const b = nx && document.querySelector('[data-grp="' + nx.st + '"]'); b && b.focus(); },
+        skipOn: () => this.setState({ skipFocus: g.st }), skipOff: () => this.setState({ skipFocus: null }),
+        skipStyle: on ? { display: 'block', padding: '7px 15px', fontSize: 12, borderBottom: '1px solid var(--color-hair)', outline: '2px solid var(--color-accent)', outlineOffset: -2 } : { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' } };
+    });
+  }
+
+  renderVals() {
+    const s = this.state, r = s.route, d = s.data, meM = this.meM(), admin = this.isAdmin();
+    const pg = {}; if (!s.view) pg[r.r] = true;
+    const f = {}; DRAFTS.forEach(k => { f[k] = { value: s.drafts[k] ?? '', on: e => this.setDraft(k, e.target.value) }; });
+    const err = {}, inv = {}; ERRS.forEach(k => { err[k] = s.err[k] || ''; inv[k] = !!s.err[k]; });
+    const btn = {}; Object.keys(BUSY).forEach(k => { btn[k] = { dis: s.busy === k, txt: s.busy === k ? BUSY[k][1] : BUSY[k][0] }; });
+    btn.archive.dis = s.busy === 'archive' || s.busy === 'unarchive';
+    const note = { signin: s.note.signin || '', rename: s.note.rename || '', invite: s.note.invite || '', pfName: s.note.pfName || '', pw: s.note.pw || '' };
+    const nav = {}; ['signin', 'forgot', 'reset', 'my', 'archived', 'members', 'profile', 'notifs'].forEach(k => { nav[k] = this.nav({ r: k }); });
+    const isOut = !s.me || ['signin', 'forgot', 'sent', 'reset', 'accept', 'msg'].includes(r.r);
+    const help = { acUser: !s.err.acUser, acPw: !s.err.acPw, rpPw: !s.err.rpPw };
+    const loading = s.view === 'loading', failed = s.view === 'error', ready = !s.view;
+    const tr = {}; ['signin','accept','newIssue','pfName','pw','comment','desc','lcreate','lsave','invite','rename','projDesc','st','pr','asg','lbl','title'].forEach(k => { tr[k] = s.trace && s.trace.where === k ? s.trace.text : ''; });
+    const v = {
+      isOut, isIn: !isOut, pg, f, err, inv, btn, note, nav, help, padL: { style: { paddingLeft: 32 } }, sentTo: s.sentTo || '',
+      rootH: this.props.scene ? '100%' : '100vh', af: !this.props.scene, loading, failed, ready, retry: () => this.setState({ view: null }),
+      outReady: ready, outLoadText: r.r === 'reset' ? 'Checking your link…' : 'Checking your invitation…',
+      msg: r.r === 'msg' ? { title: r.title || '', body: r.body || '', link: r.link || '', go: this.nav({ r: r.to || 'signin' }), signOut: !!r.signOut } : {},
+      toast: s.toast, closeMenus: this.closeMenus,
+      closeDlg: this.closeDlg, dlgBackdrop: this.dlgBackdrop, onCreateIssue: this.onCreateIssue, onCreateProject: this.onCreateProject, openNewProject: this.openNewProject,
+      onSignIn: this.onSignIn, onForgot: this.onForgot, onReset: this.onReset, onAccept: this.onAccept, signOut: this.signOut,
+      toggleMenu: () => this.setState(x => ({ menu: !x.menu })),
+      newProjBtn: (() => { const D = window.TrackLiteDesignSystem_803a56 || {}, b = React.createElement('button', { type: 'button', className: 'tl-rail-label__action', 'aria-label': 'New project', 'aria-haspopup': 'dialog', onClick: this.openNewProject }, D.Icon ? React.createElement(D.Icon, { name: 'plus', weight: 'regular', size: 12 }) : '+'); return D.TipTrigger ? React.createElement(D.TipTrigger, { tip: 'New project' }, b) : b; })(),
+      screenLabel: r.r, tr,
+    };
+    if (isOut) return v;
+
+    v.me = { name: meM.name, ini: initials(meM.name), isAdmin: admin, u: meM.u, email: meM.email, roleName: admin ? 'Admin' : 'Member' };
+    const curP = r.key ? this.proj(r.key) : r.r === 'issue' && this.issue(r.id) ? this.proj(this.issue(r.id).key) : null;
+    const active = d.projects.filter(p => !p.archived).sort((a, b) => a.name.localeCompare(b.name));
+    v.rail = {
+      my: r.r === 'my' ? 'page' : undefined, arc: r.r === 'archived' || (curP && curP.archived) ? 'page' : undefined, ntf: r.r === 'notifs' ? 'page' : undefined, mem: r.r === 'members' || r.r === 'notifs' ? 'page' : undefined, prof: r.r === 'profile' ? 'page' : undefined,
+      menu: s.menu, emptyAdmin: active.length === 0 && admin, emptyMember: active.length === 0 && !admin,
+      projects: active.map(p => {
+        const cur = r.key === p.key || (r.r === 'issue' && this.issue(r.id) && this.issue(r.id).key === p.key);
+        return { name: p.name, key: p.key, full: p.name + ' · ' + p.key, cur: cur ? 'page' : undefined, go: this.nav({ r: 'board', key: p.key }) };
+      }),
+    };
+
+    const P = r.key ? this.proj(r.key) : null;
+    const projPage = ['board', 'list', 'details'].includes(r.r) && P;
+    const curI = r.r === 'issue' && !s.view ? this.issue(r.id) : null;
+    const HP = projPage ? P : curI ? this.proj(curI.key) : null;
+    v.ph = { show: !!HP };
+    if (HP) {
+      const P = HP;
+      v.ph = {
+        show: true, isProj: !!projPage, isIssue: !!curI, issueId: curI ? curI.id : '', issueTitle: curI ? curI.title : '', title: P.name + ' · ' + P.key, archived: P.archived, canCreate: !P.archived,
+        boardOn: r.r === 'board' ? '' : undefined, listOn: r.r === 'list' ? '' : undefined,
+        boardCur: r.r === 'board' ? 'page' : undefined, listCur: r.r === 'list' ? 'page' : undefined,
+        detCur: r.r === 'details' ? 'page' : undefined, detStyle: { width: 26, height: 26, padding: 0, color: r.r === 'details' ? 'var(--color-paper)' : 'var(--color-ink-2)', background: r.r === 'details' ? 'var(--color-accent)' : 'transparent' },
+        goBoard: this.nav({ r: 'board', key: P.key }), goList: this.nav({ r: 'list', key: P.key }),
+        goDetails: this.nav({ r: 'details', key: P.key }), goSettings: this.nav({ r: 'settings', key: P.key }),
+        newIssue: e => { this.pe(e); this.openNewIssue(P.key, 'backlog'); },
+      };
+    }
+
+    v.lh = { show: !!s.view && !projPage, crumb: !!s.view && r.r === 'issue' && !!curP, proj: curP ? curP.name + ' · ' + curP.key : '', goProject: curP ? this.nav({ r: 'board', key: curP.key }) : null,
+      title: { profile: 'Profile', notifs: 'Notification status', my: 'My issues', members: 'Members', archived: 'Archived projects' }[r.r] || '', refresh: r.r === 'notifs' };
+    v.lh.plain = v.lh.show && !v.lh.crumb;
+
+    if (r.r === 'my') {
+      const live = new Set(active.map(p => p.key));
+      const groups = this.groups(d.issues.filter(i => i.asg === s.me && live.has(i.key)));
+      const tot = groups.reduce((n, g) => n + g.rows.length, 0);
+      v.my = { groups, empty: !groups.length, has: !!groups.length, total: String(tot), totalLabel: tot + (tot === 1 ? ' issue' : ' issues'),
+        hasProj: !!active.length, noProj: !active.length, goFirst: active.length ? this.nav({ r: 'board', key: active[0].key }) : null };
+    }
+
+    if (r.r === 'board' && P) {
+      const list = d.issues.filter(i => i.key === P.key);
+      v.cols = ST.map(([st, name]) => {
+        const items = list.filter(i => i.st === st && (!['done', 'canceled'].includes(st) || clock() - i.t <= 14 * D)).sort((a, b) => a.ord - b.ord);
+        const closed = ['done', 'canceled'].includes(st);
+        return {
+          st, name, count: String(items.length), empty: !items.length, canCreate: !P.archived && !closed,
+          emptyText: P.archived ? 'No issues.' : closed ? 'Nothing moved here in the last 14 days.' : 'No issues yet.',
+          headRule: (s.colScr || {})[st] ? 'var(--color-divider)' : undefined,
+          onScroll: e => { const on = e.currentTarget.scrollTop > 0; if (!!(this.state.colScr || {})[st] !== on) this.setState(x2 => ({ colScr: { ...(x2.colScr || {}), [st]: on } })); },
+          addLabel: 'New issue in ' + name, add: e => { this.pe(e); this.openNewIssue(P.key, st, true); },
+          isOver: s.over === st && !!s.drag && !!this.issue(s.drag) && (s.kbd || this.issue(s.drag).st !== st),
+          over: e => { if (P.archived || !s.drag) return; e.preventDefault(); if (this.state.over !== st) this.setState({ over: st }); },
+          leave: e => { if (!e.currentTarget.contains(e.relatedTarget) && this.state.over === st) this.setState({ over: null }); },
+          drop: e => {
+            e.preventDefault(); const id = this.state.drag; this.setState({ drag: null, over: null });
+            const i = id && this.issue(id); if (!i || i.st === st) return;
+            this.move(id, st, 'top');
+          },
+          cards: items.map((i, idx) => {
+            const x = this.row(i);
+            const ring = s.kbd && s.drag === i.id ? { outline: '2px solid var(--color-accent)', outlineOffset: '2px' } : {};
+            const mr = x.hasAsg ? 36 : 6;
+            return { ...x, hasPrio: i.pr !== 'none', prFilter: closed ? 'grayscale(1)' : 'none', canDrag: !P.archived, canMenu: !P.archived, hasFoot: i.labels.length > 0, dragCls: s.drag === i.id ? 'tl-board-card--dragging' : '',
+              handleStyle: { width: 24, height: 24, position: 'absolute', top: 9, right: P.archived ? mr : mr + 26, zIndex: 1, ...ring },
+              moreStyle: { width: 24, height: 24, position: 'absolute', top: 9, right: mr, zIndex: 1, ...(s.cm && s.cm.id === i.id ? { background: 'var(--color-tint-2)', color: 'var(--color-ink)' } : {}) },
+              trace: s.trace && s.trace.where === 'card:' + i.id ? 'Couldn’t move. Try again.' : '', menuOpen: !!(s.cm && s.cm.id === i.id), dragLabel: 'Drag ' + i.id, menuLabel: 'Actions for ' + i.id,
+              openMenu: e => { const b = e.currentTarget.getBoundingClientRect(); this.setState(x2 => ({ cm: x2.cm && x2.cm.id === i.id ? null : { id: i.id, x: b.right - 220, y: b.bottom + 4, sub: false, first: idx === 0, last: idx === items.length - 1 } })); },
+              handleKey: e => {
+                const k = e.key, x2 = this.state;
+                if (!x2.kbd && (k === 'Enter' || k === ' ')) { e.preventDefault(); this.setState({ kbd: true, drag: i.id, over: i.st }); return; }
+                if (!x2.kbd || x2.drag !== i.id) return;
+                const ix = ST.findIndex(z => z[0] === x2.over);
+                if (k === 'ArrowRight' || k === 'ArrowDown') { e.preventDefault(); this.setState({ over: ST[Math.min(4, ix + 1)][0] }); }
+                if (k === 'ArrowLeft' || k === 'ArrowUp') { e.preventDefault(); this.setState({ over: ST[Math.max(0, ix - 1)][0] }); }
+                if (k === 'Enter' || k === ' ') { e.preventDefault(); this.move(i.id, x2.over, 'top'); }
+              },
+              dragStart: e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', i.id); this.setState({ drag: i.id }); },
+              dragEnd: () => this.setState({ drag: null, over: null }) };
+          }),
+        };
+      });
+    }
+
+    if (r.r === 'board' && P && s.cm && this.issue(s.cm.id)) {
+      const i = this.issue(s.cm.id), cm = s.cm;
+      v.cm = { open: true, x: cm.x, y: cm.y, sub: cm.sub, subStyle: cm.sub ? { background: 'var(--color-tint-2)' } : {}, first: cm.first, last: cm.last,
+        toggleSub: () => this.setState({ cm: { ...cm, sub: !cm.sub } }), openSub: () => this.setState({ cm: { ...cm, sub: true } }),
+        subKey: e => { if (e.key === 'ArrowRight') { e.preventDefault(); this.setState({ cm: { ...cm, sub: true } }); } },
+        top: () => this.move(i.id, i.st, 'top'), bottom: () => this.move(i.id, i.st, 'bottom'),
+        opts: ST.map(([key, name]) => ({ key, name, cur: key === i.st, pick: () => this.move(i.id, key, 'top') })) };
+    } else v.cm = { open: false };
+    v.kbdMsg = s.kbd && s.drag ? 'Picked up ' + s.drag + '. Drop place: ' + STN[s.over] + '.' : '';
+
+    if (r.r === 'list' && P) {
+      const groups = this.groups(d.issues.filter(i => i.key === P.key));
+      v.lst = { groups, empty: !groups.length, has: !!groups.length, emptyText: P.archived ? 'No issues.' : 'No issues yet.' };
+    }
+
+    if (r.r === 'issue') {
+      const nw = !!s.narrow;
+      this._layRef = this._layRef || (el => { if (this._ro) this._ro.disconnect(); if (!el || typeof ResizeObserver === 'undefined') return; this._ro = new ResizeObserver(([en]) => { const n = en.contentRect.width < 860; if (n !== !!this.state.narrow) this.setState({ narrow: n }); }); this._ro.observe(el); });
+      v.ilay = { ref: this._layRef, cols: nw ? 'minmax(0,1fr)' : 'minmax(0,1fr) 252px', ov: nw ? 'auto' : 'visible', pad: nw ? '20px 30px 0' : '0', gap: nw ? '30px' : '0', ac: nw ? 'start' : 'stretch', mainD: nw ? 'contents' : 'flex',
+        sideBL: nw ? '0' : '1px solid var(--color-divider)', sideBT: nw ? '1px solid var(--color-divider)' : '0', sideCols: nw ? 'repeat(auto-fill,minmax(180px,1fr))' : 'minmax(0,1fr)', sidePad: nw ? '15px 0 0' : '15px' };
+      const i = this.issue(r.id);
+      if (i) {
+        const p = this.proj(i.key), a = i.asg && this.member(i.asg), canEdit = !p.archived;
+        const pick = (k, val, msg) => () => { const ft = document.querySelector('[data-pop] [aria-expanded="true"]'); if (ft) setTimeout(() => ft.focus(), 0); this.setState({ pop: null }); if (this.props.failSaves) return this.fail(false, k); this.patchIssue(i.id, { [k]: val }, msg); };
+        const tog = k => () => this.setState(x => ({ pop: x.pop === k ? null : k, lerr: false, trace: null, drafts: { ...x.drafts, q: '', lq: '' } }));
+        const U = this.users();
+        const comments = d.comments.filter(c => c.issue === i.id).sort((x, y) => x.t - y.t).map(c => {
+          const m = this.member(c.by);
+          return { name: m.name + (m.active ? '' : ' (deactivated)'), ini: initials(m.name), tone: c.by === s.me ? 'tl-avatar--accent' : 'tl-avatar--neutral', date: rel(c.t), exact: fmtFull(c.t), iso: isoT(c.t), blocks: md(c.body, U) };
+        });
+        const lbls = (d.labels[i.key] || []).map(l => l.n);
+        const lq = (s.drafts.lq || '').trim(), q = (s.drafts.q || '').trim().toLowerCase();
+        const lshown = lbls.filter(n => n.toLowerCase().includes(lq.toLowerCase()));
+        const canCreate = !!lq && !lbls.some(n => n.toLowerCase() === lq.toLowerCase()) && lq.length <= 30;
+        const toggleLbl = name => { const has = i.labels.includes(name); if (!has && i.labels.length >= 10) return this.setState({ lerr: true }); if (this.props.failSaves) return this.fail(false, 'lbl'); this.setState({ lerr: false }); this.patchIssue(i.id, { labels: has ? i.labels.filter(x => x !== name) : lbls.filter(x => x === name || i.labels.includes(x)) }); };
+        const createLbl = () => { if (i.labels.length >= 10) return this.setState({ lerr: true }); if (this.props.failSaves) return this.fail(false, 'lbl'); this.setData(dd => { dd.labels[i.key].push({ n: lq, c: 'Gray' }); lsort(dd.labels[i.key]); const ii = dd.issues.find(x => x.id === i.id); ii.labels = dd.labels[i.key].map(l => l.n).filter(n => n === lq || ii.labels.includes(n)); ii.t = clock(); return dd; }); this.setState(x => ({ drafts: { ...x.drafts, lq: '' } })); };
+        const asgList = [{ u: null, name: 'Unassigned', ini: '', tone: 'tl-avatar--empty' }].concat(d.members.filter(m => m.active && (!q || m.name.toLowerCase().includes(q) || m.u.includes(q))).map(m => ({ u: m.u, name: m.name, ini: initials(m.name), tone: m.u === s.me ? 'tl-avatar--accent' : 'tl-avatar--neutral' })));
+        const creator = this.member(i.by);
+        v.is = {
+          id: i.id, title: i.title, project: p.name + ' · ' + p.key, goProject: this.nav({ r: 'board', key: p.key }), archived: p.archived, canEdit,
+          st: i.st, stName: STN[i.st], pr: i.pr, prName: PRN[i.pr],
+          asgIni: a ? initials(a.name) : '', asgName: a ? a.name + (a.active ? '' : ' (deactivated)') : 'Unassigned', asgTone: a ? (a.u === s.me ? 'tl-avatar--accent' : 'tl-avatar--neutral') : 'tl-avatar--empty', asgCls: a ? '' : 'tl-pick--empty',
+          labels: i.labels.map(name => ({ name })), noLabels: i.labels.length ? '' : 'None', lblCls: i.labels.length ? '' : 'tl-pick--empty',
+          popStatus: s.pop === 'status', popPrio: s.pop === 'prio', popAsg: s.pop === 'asg', popLbl: s.pop === 'lbl', anyPop: !!s.pop,
+          togStatus: tog('status'), togPrio: tog('prio'), togAsg: tog('asg'), togLbl: tog('lbl'),
+          stOpts: ST.map(([key, name]) => ({ key, name, sel: key === i.st, af: key === i.st && !this.props.scene, pick: pick('st', key, i.id + ' moved to ' + name) })),
+          prOpts: PR.map(([key, name]) => ({ key, name, sel: key === i.pr, af: key === i.pr && !this.props.scene, pick: pick('pr', key, i.id + ' priority set to ' + name) })),
+          asgOpts: asgList.map(o => ({ ...o, sel: o.u === i.asg, pick: pick('asg', o.u, o.u ? i.id + ' assigned to ' + o.name : i.id + ' unassigned') })),
+          asgKey: e => { if (e.key === 'Enter' && asgList.length) { e.preventDefault(); const o = asgList.find(x => x.u) || asgList[0]; pick('asg', o.u, o.u ? i.id + ' assigned to ' + o.name : i.id + ' unassigned')(); } },
+          asgErr: s.asgErr,
+          lblOpts: lshown.map(name => ({ name, sel: i.labels.includes(name), pick: () => toggleLbl(name) })),
+          lblCreate: canCreate ? 'Create label “' + lq + '”' : '', createLbl, lerr: s.lerr,
+          lblKey: e => { if (e.key !== 'Enter') return; e.preventDefault(); if (canCreate) createLbl(); else if (lshown.length) toggleLbl(lshown[0]); },
+          noLblOpts: !lbls.length,
+          editing: s.editDesc, showEditDesc: canEdit && !s.editDesc, showDesc: !s.editDesc && !!i.desc.trim(), noDesc: !s.editDesc && !i.desc.trim(), blocks: md(i.desc, U).map(b => b.check ? { ...b, items: b.items.map(c => ({ ...c, ro: !canEdit, cursor: canEdit ? 'pointer' : 'default', toggle: () => { if (!canEdit) return; if (this.props.failSaves) return this.fail(false); const L = i.desc.split('\n'); L[c.ln] = L[c.ln].replace(/\[( |x)\]/i, c.done ? '[ ]' : '[x]'); this.patchIssue(i.id, { desc: L.join('\n') }); } })) } : b),
+          cmDis: btn.comment.dis || !(s.drafts.comment || '').trim(),
+          conflict: s.conflict, saveDescDis: btn.desc.dis || s.conflict, reloadDesc: () => this.setState(x => ({ conflict: false, err: {}, drafts: { ...x.drafts, desc: i.desc } })), descMn: this.mnView('desc'), descChange: this.mnChange('desc'), descKey: this.mnKey('desc'),
+          cmMn: this.mnView('comment'), cmChange: this.mnChange('comment'), cmKey: this.mnKey('comment'),
+          editDesc: e => { this.pe(e); this.setState(x => ({ editDesc: true, conflict: false, err: {}, drafts: { ...x.drafts, desc: i.desc } })); },
+          cancelDesc: () => this.setState({ editDesc: false, conflict: false, mn: null, err: {} }),
+          saveDesc: e => { this.pe(e); const val = s.drafts.desc || ''; if (this.bad({ desc: val.length > 20000 ? 'Too long (max 20,000)' : '' })) return; this.save('desc', () => { this.patchIssue(i.id, { desc: val }); this.setState({ editDesc: false }); }); },
+          comments, noComments: !comments.length,
+          postComment: e => {
+            this.pe(e); const body = (s.drafts.comment || '').trim();
+            if (this.bad({ comment: body ? '' : 'Comment required' })) return;
+            this.save('comment', () => { this.setData(dd => { dd.comments.push({ id: Date.now(), issue: i.id, by: s.me, body, t: clock() }); return dd; }); this.setDraft('comment', ''); this.patchIssue(i.id, {}); });
+          },
+          saveTitle: () => {
+            const t = (this.state.drafts.title || '').trim();
+            if (t === i.title) return this.setState({ err: {} });
+            if (this.bad({ title: !t ? 'Title required' : t.length > 200 ? 'Too long (max 200)' : '' })) return;
+            if (this.props.failSaves) { this.fail(false, 'title'); return; }
+            this.setState({ err: {} }); this.patchIssue(i.id, { title: t });
+          },
+          titleKey: e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } if (e.key === 'Escape') { this.setDraft('title', i.title); this.setState({ err: {} }); } },
+          creator: creator ? creator.name : 'Unknown', created: fmtD(i.created), createdFull: fmtFull(i.created), createdIso: isoT(i.created),
+          canDelete: canEdit && (admin || i.by === s.me),
+          del: () => this.confirm('Delete ' + i.id + '?', '“' + i.title + '” and its ' + comments.length + (comments.length === 1 ? ' comment' : ' comments') + ' will be deleted permanently. You can’t undo this.', 'Delete issue', () => {
+            this.setData(dd => { dd.issues = dd.issues.filter(x => x.id !== i.id); dd.comments = dd.comments.filter(c => c.issue !== i.id); return dd; });
+            this.go({ r: 'board', key: i.key }); this.toast('Deleted ' + i.id);
+          }),
+        };
+      }
+    }
+
+    if (r.r === 'details' && P) {
+      const by = this.member(P.by);
+      v.det = {
+        open: String(d.issues.filter(i => i.key === P.key && !['done', 'canceled'].includes(i.st)).length), createdBy: by ? by.name : 'Unknown', created: fmtY(P.created),
+        rows: ST.map(([k, name]) => { const n = d.issues.filter(i => i.key === P.key && i.st === k).length; return { st: k, name, n: String(n), aria: name + ', ' + n + (n === 1 ? ' issue' : ' issues') + '. Open list view', go: this.nav({ r: 'list', key: P.key }) }; }),
+        canEdit: !P.archived, showEdit: !P.archived && !s.editProj, editing: s.editProj, showDesc: !s.editProj && !!P.desc.trim(), noDesc: !s.editProj && !P.desc.trim(), desc: paras(P.desc),
+        edit: e => { this.pe(e); this.setState(x => ({ editProj: true, drafts: { ...x.drafts, projDesc: P.desc } })); },
+        cancel: () => { this.setState({ editProj: false, trace: null }); this.focusEditDesc(); },
+        save: e => { this.pe(e); const val = s.drafts.projDesc || ''; this.save('projDesc', () => { this.setData(dd => { dd.projects.find(p => p.key === P.key).desc = val; return dd; }); this.setState({ editProj: false, trace: null }); this.focusEditDesc(); }); },
+      };
+    }
+
+    if (r.r === 'settings' && P) {
+      const L = d.labels[P.key] || [], canEdit = !P.archived;
+      const cnt = n => d.issues.filter(i => i.key === P.key && i.labels.includes(n)).length;
+      const check = (name, except) => !name ? 'Name required' : name.length > 30 ? 'Too long (max 30)' : L.some(l => l.n.toLowerCase() === name.toLowerCase() && l.n !== except) ? 'Label already exists' : '';
+      v.lb = {
+        canEdit, showNew: canEdit && !s.lnew && ready, empty: ready && !L.length && !s.lnew, has: ready && !!L.length, creating: ready && canEdit && s.lnew,
+        newColor: s.newColor, newColorOpen: s.lcolor === '__new',
+        openNew: () => this.setState(x => ({ lnew: true, lren: null, newColor: 'Gray', err: {}, drafts: { ...x.drafts, lname: '' } })),
+        cancelNew: () => this.setState({ lnew: false, err: {} }),
+        togNewColor: () => this.setState(x => ({ lcolor: x.lcolor === '__new' ? null : '__new' })),
+        newColors: LCOLORS.map(c => ({ name: c, sel: c === s.newColor, af: c === s.newColor && !this.props.scene, pick: () => this.setState({ newColor: c, lcolor: null }) })),
+        create: e => { this.pe(e); const name = (s.drafts.lname || '').trim(); if (this.bad({ lname: check(name) })) return; this.save('lcreate', () => { const c = this.state.newColor; this.setData(dd => { dd.labels[P.key].push({ n: name, c }); lsort(dd.labels[P.key]); return dd; }); this.setState({ lnew: false }); }); },
+        rows: L.map(l => {
+          const ren = s.lren === l.n, n = cnt(l.n);
+          return { name: l.n, color: l.c, n: String(n), word: n === 1 ? 'issue' : 'issues', show: !ren, ren,
+            renLabel: 'Rename ' + l.n, menuLabel: 'Actions for ' + l.n, menuOpen: s.rowMenu === 'lbl:' + l.n,
+            toggleMenu: () => this.setState(x => ({ rowMenu: x.rowMenu === 'lbl:' + l.n ? null : 'lbl:' + l.n, lcolor: null })),
+            openColor: () => this.setState({ rowMenu: null, lcolor: l.n }), colorLabel: 'Change color of ' + l.n, delLabel: 'Delete ' + l.n,
+            colorOpen: s.lcolor === l.n, colorBtn: s.lcolor === l.n ? { background: 'var(--color-tint-2)' } : {},
+            rename: () => this.setState(x => ({ rowMenu: null, lren: l.n, lnew: false, err: {}, drafts: { ...x.drafts, lrename: l.n } })),
+            cancelRen: () => this.setState({ lren: null, err: {} }),
+            saveRen: e => { this.pe(e); const name = (this.state.drafts.lrename || '').trim(); if (name === l.n) return this.setState({ lren: null }); if (this.bad({ lrename: check(name, l.n) })) return; this.save('lsave', () => { this.setData(dd => { const x = dd.labels[P.key].find(z => z.n === l.n); x.n = name; lsort(dd.labels[P.key]); dd.issues.forEach(i => { if (i.key === P.key) i.labels = i.labels.map(z => z === l.n ? name : z); }); return dd; }); this.setState({ lren: null }); }); },
+            togColor: () => this.setState(x => ({ lcolor: x.lcolor === l.n ? null : l.n })),
+            colors: LCOLORS.map(c => ({ name: c, sel: c === l.c, af: c === l.c && !this.props.scene, pick: () => { this.setState({ lcolor: null }); if (this.props.failSaves) return this.fail(); this.setData(dd => { dd.labels[P.key].find(z => z.n === l.n).c = c; return dd; }); } })),
+            del: () => this.setState({ rowMenu: null }) || this.confirm('Delete ' + l.n + '?', 'It will be removed from ' + n + (n === 1 ? ' issue.' : ' issues.'), 'Delete', () => { this.setData(dd => { dd.labels[P.key] = dd.labels[P.key].filter(z => z.n !== l.n); dd.issues.forEach(i => { if (i.key === P.key) i.labels = i.labels.filter(z => z !== l.n); }); return dd; }); this.setState({ dlg: null }); }),
+          };
+        }),
+      };
+    }
+
+    if (r.r === 'notifs') {
+      const N = d.notif;
+      const problems = N.problems.slice().sort((x, y) => y.t - x.t).slice(0, 20).map(p => ({ user: p.user, target: p.target, attempts: String(p.attempts), rel: rel(p.t), full: fmtFull(p.t) }));
+      const stale = !!N.worker && clock() - N.worker > 5 * MIN;
+      v.nt = { stale, never: !N.worker, staleMin: N.worker ? String(Math.floor((clock() - N.worker) / MIN)) : '', workerColor: stale || !N.worker ? 'var(--color-accent-2-700)' : 'inherit', denied: !admin, allowed: admin && ready, showRefresh: admin, worker: N.worker ? rel(N.worker) : 'Never', workerFull: N.worker ? fmtFull(N.worker) : 'The worker has never run',
+        pending: N.pending, due: N.due, wait: N.wait, day: N.day, problems, none: !problems.length, has: !!problems.length,
+        refreshDis: s.busy === 'refresh' || loading,
+        refresh: () => this.save('refresh', () => this.setData(dd => { if (dd.notif.worker) dd.notif.worker = clock(); return dd; }), { noFail: true }) };
+    }
+
+    if (r.r === 'settings' && P) {
+      v.st = {
+        full: P.name + ' · ' + P.key, name: P.name, key: P.key, sample: P.key + '-1', archived: P.archived, active: !P.archived,
+        denied: !admin, allowed: admin, goProject: this.nav({ r: 'board', key: P.key }),
+        rename: e => {
+          this.pe(e); const name = (s.drafts.rename || '').trim();
+          if (this.bad({ rename: !name ? 'Name required' : name.length > 60 ? 'At most 60 characters' : '' })) return;
+          this.save('rename', () => { this.setData(dd => { dd.projects.find(p => p.key === P.key).name = name; return dd; }); this.setState({ note: { rename: 'Saved.' } }); });
+        },
+        archive: () => this.save('archive', () => { this.setData(dd => { const p = dd.projects.find(x => x.key === P.key); p.archived = true; p.archivedAt = clock(); return dd; }); this.toast('Archived ' + P.name + ' · ' + P.key); }),
+        unarchive: () => this.save('unarchive', () => { this.setData(dd => { dd.projects.find(x => x.key === P.key).archived = false; return dd; }); this.toast('Unarchived ' + P.name + ' · ' + P.key); }),
+        del: () => this.confirm('Delete ' + P.name + ' · ' + P.key + '?', 'All its issues, comments and labels are deleted permanently. Nothing can be restored.', 'Delete project', () => {
+          this.setData(dd => { dd.projects = dd.projects.filter(p => p.key !== P.key); dd.issues = dd.issues.filter(i => i.key !== P.key); return dd; });
+          this.go({ r: 'my' }); this.toast('Deleted ' + P.name + ' · ' + P.key);
+        }),
+      };
+    }
+
+    if (r.r === 'archived') {
+      const rows = d.projects.filter(p => p.archived).sort((a, b) => b.archivedAt - a.archivedAt).map(p => ({ full: p.name + ' · ' + p.key, date: fmtY(p.archivedAt), go: this.nav({ r: 'board', key: p.key }) }));
+      v.arc = { rows, empty: !rows.length, has: !!rows.length };
+    }
+
+    if (r.r === 'members') {
+      const TAG = { Pending: 'neutral', Expired: 'neutral', Bounced: 'accent-2' };
+      v.mb = {
+        denied: !admin, allowed: admin, noErr: !s.err.invite,
+        invite: e => {
+          this.pe(e); const em = (s.drafts.invite || '').trim();
+          const m = d.members.find(x => x.email.toLowerCase() === em.toLowerCase());
+          if (this.bad({ invite: !em ? 'Enter an email' : !EMAIL.test(em) ? 'Enter a valid email' : m ? (m.active ? m.name + ' is already a member' : m.name + ' is deactivated. Reactivate them instead.') : '' })) return;
+          this.save('invite', () => {
+            this.setData(dd => { dd.invites = dd.invites.filter(i => i.email.toLowerCase() !== em.toLowerCase()); dd.invites.unshift({ email: em, by: meM.name, state: 'Pending', t: clock() }); return dd; });
+            this.setState({ drafts: { ...this.state.drafts, invite: '' } }); this.toast('Invitation sent to ' + em);
+          }, { email: true });
+        },
+        invites: d.invites.map(i => ({ ...i, tag: TAG[i.state] || 'neutral', rel: rel(i.t || NOW - D), full: fmtFull(i.t || NOW - D), inlineResend: i.state !== 'Pending', menuResend: i.state === 'Pending', revokeAf: !this.props.scene && i.state !== 'Pending', resendLabel: 'Resend invitation to ' + i.email, menuLabel: 'Actions for ' + i.email, menuOpen: s.rowMenu === 'inv:' + i.email, toggle: () => this.setState(x => ({ rowMenu: x.rowMenu === 'inv:' + i.email ? null : 'inv:' + i.email })), revokeLabel: 'Revoke invitation to ' + i.email,
+          resend: () => { this.setState({ rowMenu: null }); if (this.props.failSaves) return this.fail(true, 'invite'); this.setData(dd => { Object.assign(dd.invites.find(x => x.email === i.email), { state: 'Pending', t: clock() }); return dd; }); this.toast('Sent a new invitation to ' + i.email); },
+          revoke: () => this.setState({ rowMenu: null }) || this.confirm('Revoke invitation?', 'The link sent to ' + i.email + ' stops working.', 'Revoke invitation', () => { this.setData(dd => { dd.invites = dd.invites.filter(x => x.email !== i.email); return dd; }); this.setState({ dlg: null }); this.toast('Revoked invitation to ' + i.email); }),
+        })),
+        members: d.members.slice().sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name)).map(m => {
+          const isAd = m.role === 'admin', self = m.u === s.me;
+          const upd = (patch, msg) => { this.setState({ rowMenu: null, dlg: null }); if (this.props.failSaves) return this.fail(); this.setData(dd => { Object.assign(dd.members.find(x => x.u === m.u), patch); return dd; }); this.toast(msg); };
+          return {
+            u: m.u, email: m.email, name: m.name + (m.active ? '' : ' (deactivated)'), ini: initials(m.name), tone: self ? 'accent' : 'neutral',
+            role: isAd ? 'Admin' : 'Member', roleTag: isAd ? 'accent' : 'neutral', hasMenu: !self, self, isActive: m.active, ink: m.active ? 'inherit' : 'var(--color-ink-2)',
+            menuOpen: s.rowMenu === m.u, menuLabel: 'Actions for ' + m.name, toggle: () => this.setState(x => ({ rowMenu: x.rowMenu === m.u ? null : m.u })),
+            roleActLabel: isAd ? 'Make member' : 'Make admin', roleAct: () => upd({ role: isAd ? 'member' : 'admin' }, m.name + ' is now ' + (isAd ? 'a member' : 'an admin')),
+            activeActLabel: m.active ? 'Deactivate…' : 'Reactivate',
+            activeAct: () => m.active
+              ? (this.setState({ rowMenu: null }), this.confirm('Deactivate ' + m.name + '?', m.name + ' can’t sign in any more. Their issues and comments stay, shown as “' + m.name + ' (deactivated)”.', 'Deactivate', () => upd({ active: false }, 'Deactivated ' + m.name)))
+              : upd({ active: true }, 'Reactivated ' + m.name),
+          };
+        }),
+      };
+      v.mb.memCount = String(d.members.length); v.mb.invCount = String(d.invites.length); v.mb.noInvites = !v.mb.invites.length; v.mb.hasInvites = !!v.mb.invites.length;
+    }
+
+    if (r.r === 'profile') {
+      const meName = (this.meM() || {}).name || '';
+      if (s.busy !== 'pfName' && (s.drafts.pfName || '').trim() === meName) v.btn.pfName.dis = true;
+      v.pf = {
+        pwHelp: !s.err.pwNew, ready, nameChange: e => this.setState(x => ({ drafts: { ...x.drafts, pfName: e.target.value }, note: { ...x.note, pfName: '' } })),
+        saveName: e => {
+          this.pe(e); const name = (s.drafts.pfName || '').trim();
+          if (name === meName) return;
+          if (this.bad({ pfName: !name ? 'Name required' : name.length > 60 ? 'Too long (max 60)' : '' })) return;
+          this.save('pfName', () => { this.setData(dd => { dd.members.find(m => m.u === s.me).name = name; return dd; }); this.setState({ note: { pfName: 'Name saved.' } }); });
+        },
+        savePw: e => {
+          this.pe(e); const cur = s.drafts.pwCur || '', nw = s.drafts.pwNew || '';
+          if (this.bad({ pwCur: cur ? '' : 'Enter your current password', pwNew: nw.length < 12 ? 'At least 12 characters' : nw.length > 128 ? 'Too long (max 128)' : '' })) return;
+          this.save('pw', () => {
+            if (s.me === 'sam' && cur !== this.state.pw) return this.setState({ err: { pwCur: 'Incorrect password' } });
+            if (s.me === 'sam') this.setState({ pw: nw });
+            this.setState({ note: { pw: 'Password changed. You’ve been signed out everywhere else.' }, drafts: { ...this.state.drafts, pwCur: '', pwNew: '' } });
+          });
+        },
+      };
+    }
+
+    const dl = s.dlg;
+    v.dlg = { issue: dl && dl.type === 'issue', project: dl && dl.type === 'project', confirm: dl && dl.type === 'confirm', keyHelp: !s.err.npKey };
+    if (dl && dl.type === 'issue') { const p = this.proj(dl.key); Object.assign(v.dlg, { proj: p.name + ' · ' + p.key, hasCol: !!dl.fromCol, st: dl.st, stName: STN[dl.st] }); }
+    if (dl && dl.type === 'confirm') {
+      Object.assign(v.dlg, { title: dl.title, body: dl.body, yes: () => this.save('confirm', dl.fn) });
+      v.btn.confirm = { dis: s.busy === 'confirm', txt: s.busy === 'confirm' ? (/^Delete/.test(dl.label) ? 'Deleting…' : 'Saving…') : dl.label };
+    }
+    return v;
+  }
+}
+</script>
+</body>
+</html>

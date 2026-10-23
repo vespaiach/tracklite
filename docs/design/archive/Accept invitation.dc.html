@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/icons.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/base.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/components/components.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/styles.css">
+  <script src="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/_ds_bundle.js"></script>
+  <style>
+    body{margin:0;background:var(--color-surface);font-family:var(--font-ui);color:var(--color-ink)}
+    a{color:var(--color-accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .tl-field-error{align-items:center}
+    .tl-field-error__mark{margin-top:-2px}
+  </style>
+</helmet>
+
+<section data-screen-label="Accept invitation" style="padding:60px;display:flex;flex-direction:column;gap:20px">
+  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Accept invitation · /invite?token=…</h2>
+  <div style="display:flex;flex-wrap:wrap;gap:40px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:500">Accept invitation — default</div>
+      <div data-screen-label="Accept invitation — default" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+        <main style="width:360px;margin:60px auto 0;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Join Tracklite</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">You’re invited as sam@acme.com. Your username and email can’t be changed later.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <div><span class="tl-field__label" id="ai1-email-l">Email</span><p aria-labelledby="ai1-email-l" style="margin:0;font-size:13px;color:var(--color-ink)">sam@acme.com</p></div>
+            <div><label class="tl-field__label" for="ai1-name">Full name</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="user" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai1-name" type="text" autocomplete="name" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
+            <div><label class="tl-field__label" for="ai1-user">Username</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="at" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai1-user" type="text" autocomplete="username" aria-describedby="ai1-user-help" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div><p id="ai1-user-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">2</span> to <span style="font-family:var(--font-mono)">20</span> lowercase letters, digits or hyphens. Used for @mentions.</p></div>
+            <div><label class="tl-field__label" for="ai1-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai1-pw" type="password" autocomplete="new-password" aria-describedby="ai1-pw-help" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div><p id="ai1-pw-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+          </div>
+          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Join Tracklite</x-import>
+        </main>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:500">Accept invitation — filled in</div>
+      <div data-screen-label="Accept invitation — filled in" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+        <main style="width:360px;margin:60px auto 0;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Join Tracklite</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">You’re invited as sam@acme.com. Your username and email can’t be changed later.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <div><span class="tl-field__label" id="ai2-email-l">Email</span><p aria-labelledby="ai2-email-l" style="margin:0;font-size:13px;color:var(--color-ink)">sam@acme.com</p></div>
+            <div><label class="tl-field__label" for="ai2-name">Full name</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="user" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai2-name" type="text" autocomplete="name" default-value="Sam Lee" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
+            <div><label class="tl-field__label" for="ai2-user">Username</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="at" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai2-user" type="text" autocomplete="username" default-value="sam" aria-describedby="ai2-user-help" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div><p id="ai2-user-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">2</span> to <span style="font-family:var(--font-mono)">20</span> lowercase letters, digits or hyphens. Used for @mentions.</p></div>
+            <div><label class="tl-field__label" for="ai2-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai2-pw" type="password" autocomplete="new-password" default-value="correct horse battery" aria-describedby="ai2-pw-help" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div><p id="ai2-pw-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+          </div>
+          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Join Tracklite</x-import>
+        </main>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:500">Accept invitation — saving</div>
+      <div data-screen-label="Accept invitation — saving" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+        <main style="width:360px;margin:60px auto 0;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Join Tracklite</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">You’re invited as sam@acme.com. Your username and email can’t be changed later.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <div><span class="tl-field__label" id="ai3-email-l">Email</span><p aria-labelledby="ai3-email-l" style="margin:0;font-size:13px;color:var(--color-ink)">sam@acme.com</p></div>
+            <div><label class="tl-field__label" for="ai3-name">Full name</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="user" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai3-name" type="text" autocomplete="name" default-value="Sam Lee" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
+            <div><label class="tl-field__label" for="ai3-user">Username</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="at" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai3-user" type="text" autocomplete="username" default-value="sam" aria-describedby="ai3-user-help" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div><p id="ai3-user-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">2</span> to <span style="font-family:var(--font-mono)">20</span> lowercase letters, digits or hyphens. Used for @mentions.</p></div>
+            <div><label class="tl-field__label" for="ai3-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai3-pw" type="password" autocomplete="new-password" default-value="correct horse battery" aria-describedby="ai3-pw-help" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div><p id="ai3-pw-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+          </div>
+          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" disabled="{{ true }}" aria-busy="true" hint-size="100%,38px">Joining…</x-import>
+        </main>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:500">Accept invitation — loading <span style="color:var(--color-ink-3);font-weight:400">(text appears after <span style="font-family:var(--font-mono)">300</span> ms)</span></div>
+      <div data-screen-label="Accept invitation — loading" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+        <main aria-busy="true" style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
+          <p role="status" style="margin:0;font-size:13px;color:var(--color-ink-2)">Checking your invitation…</p>
+        </main>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:500">Accept invitation — validation errors</div>
+      <div data-screen-label="Accept invitation — validation errors" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+        <main style="width:360px;margin:60px auto 0;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Join Tracklite</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">You’re invited as sam@acme.com. Your username and email can’t be changed later.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <div><span class="tl-field__label" id="ai5-email-l">Email</span><p aria-labelledby="ai5-email-l" style="margin:0;font-size:13px;color:var(--color-ink)">sam@acme.com</p></div>
+            <div><label class="tl-field__label" for="ai5-name">Full name</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="user" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai5-name" type="text" autocomplete="name" aria-invalid="true" aria-describedby="ai5-name-err" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="ai5-name-err" hint-size="100%,16px">Name required</x-import></div>
+            <div><label class="tl-field__label" for="ai5-user">Username</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="at" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai5-user" type="text" autocomplete="username" default-value="sam lee" aria-invalid="true" aria-describedby="ai5-user-err" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="ai5-user-err" hint-size="100%,16px">Use 2 to 20 letters, digits or hyphens</x-import></div>
+            <div><label class="tl-field__label" for="ai5-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai5-pw" type="password" autocomplete="new-password" default-value="tracklite1" aria-invalid="true" aria-describedby="ai5-pw-err" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="ai5-pw-err" hint-size="100%,16px">At least 12 characters</x-import></div>
+          </div>
+          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Join Tracklite</x-import>
+        </main>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:500">Accept invitation — username taken</div>
+      <div data-screen-label="Accept invitation — username taken" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+        <main style="width:360px;margin:60px auto 0;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Join Tracklite</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">You’re invited as sam@acme.com. Your username and email can’t be changed later.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <div><span class="tl-field__label" id="ai6-email-l">Email</span><p aria-labelledby="ai6-email-l" style="margin:0;font-size:13px;color:var(--color-ink)">sam@acme.com</p></div>
+            <div><label class="tl-field__label" for="ai6-name">Full name</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="user" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai6-name" type="text" autocomplete="name" default-value="Sam Lee" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
+            <div><label class="tl-field__label" for="ai6-user">Username</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="at" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai6-user" type="text" autocomplete="username" default-value="sam" aria-invalid="true" aria-describedby="ai6-user-err" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="ai6-user-err" hint-size="100%,16px">Username taken</x-import></div>
+            <div><label class="tl-field__label" for="ai6-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai6-pw" type="password" autocomplete="new-password" default-value="correct horse battery" aria-describedby="ai6-pw-help" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div><p id="ai6-pw-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+          </div>
+          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Join Tracklite</x-import>
+        </main>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:500">Accept invitation — expired on open</div>
+      <div data-screen-label="Accept invitation — expired on open" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+        <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
+          <p role="status" style="margin:0;font-family:var(--font-serif);font-size:18px;line-height:1.4;text-wrap:pretty">This invitation has expired. Ask an admin for a new one.</p>
+        </main>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:500">Accept invitation — no longer valid after submit</div>
+      <div data-screen-label="Accept invitation — no longer valid after submit" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+        <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
+          <p role="status" style="margin:0;font-family:var(--font-serif);font-size:18px;line-height:1.4;text-wrap:pretty">This invitation is no longer valid.</p>
+        </main>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:500">Accept invitation — signed in as someone else</div>
+      <div data-screen-label="Accept invitation — signed in as someone else" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+        <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
+          <p role="status" style="margin:0;font-family:var(--font-serif);font-size:18px;line-height:1.4;text-wrap:pretty">You’re signed in as Alex Kim. Sign out to accept this invitation.</p>
+          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" block="{{ true }}" hint-size="100%,38px">Sign out</x-import>
+        </main>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:500">Accept invitation — lookup failed</div>
+      <div data-screen-label="Accept invitation — lookup failed" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+        <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
+          <div role="alert" style="display:flex;align-items:center;gap:10px"><span style="font-size:13px">Couldn’t load this.</span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" hint-size="60px,28px">Retry</x-import></div>
+        </main>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:500">Accept invitation — network error on submit</div>
+      <div data-screen-label="Accept invitation — network error on submit" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+        <main style="width:360px;margin:60px auto 0;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Join Tracklite</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">You’re invited as sam@acme.com. Your username and email can’t be changed later.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <div><span class="tl-field__label" id="ai11-email-l">Email</span><p aria-labelledby="ai11-email-l" style="margin:0;font-size:13px;color:var(--color-ink)">sam@acme.com</p></div>
+            <div><label class="tl-field__label" for="ai11-name">Full name</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="user" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai11-name" type="text" autocomplete="name" default-value="Sam Lee" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
+            <div><label class="tl-field__label" for="ai11-user">Username</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="at" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai11-user" type="text" autocomplete="username" default-value="sam" aria-describedby="ai11-user-help" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div><p id="ai11-user-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">2</span> to <span style="font-family:var(--font-mono)">20</span> lowercase letters, digits or hyphens. Used for @mentions.</p></div>
+            <div><label class="tl-field__label" for="ai11-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="ai11-pw" type="password" autocomplete="new-password" default-value="correct horse battery" aria-describedby="ai11-pw-help" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div><p id="ai11-pw-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+          </div>
+          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Join Tracklite</x-import>
+        </main>
+        <div aria-live="polite" style="position:absolute;left:0;right:0;bottom:30px;display:flex;justify-content:center">
+          <div role="status" class="tl-toast"><span class="tl-toast__stripe tl-toast__stripe--err"></span><span>Couldn’t save. Try again.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-screen-label="Missing components" style="padding:0 60px 80px;display:flex;flex-direction:column;gap:10px;max-width:760px">
+  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Not in the kit</h2>
+  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--color-ink-2)">
+    <li>Read-only field. The invited email is drawn as a field label over plain text; Input has no read-only treatment.</li>
+    <li>Inline load-error row. “Couldn’t load this.” drawn as body text beside a small secondary Button.</li>
+    <li>Same gaps as the other signed-out screens: field help text, toast without ×, loading indicator, busy Button, signed-out page layout.</li>
+  </ul>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return { emailInputProps: { style: { paddingLeft: 32 } } };
+  }
+}
+</script>
+</body>
+</html>

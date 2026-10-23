@@ -1,0 +1,3 @@
+/* Track Lite loads its faces from Google Fonts (next/font/google in the source app).
+   No font binaries ship in the codebase, so these are linked from the Google CDN. */
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&display=swap");

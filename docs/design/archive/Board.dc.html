@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/icons.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/base.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/components/components.css">
+  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/styles.css">
+  <script src="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/_ds_bundle.js"></script>
+  <style>
+    body{margin:0;background:var(--color-surface);font-family:var(--font-ui);color:var(--color-ink)}
+    a{color:var(--color-accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .tl-rail-item{color:inherit}
+    .tl-rail-item:hover{text-decoration:none}
+  </style>
+</helmet>
+
+<section data-screen-label="Board" style="padding:60px 60px 20px;display:flex;flex-direction:column;gap:20px">
+  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Board</h2>
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+    <sc-for list="{{ frames }}" as="f" hint-placeholder-count="3">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:500">{{ f.label }} <span style="color:var(--color-ink-3);font-weight:400">{{ f.note }}</span></div>
+        <div style="{{ f.size }}">
+        <div data-screen-label="{{ f.label }}" class="tl-shell" style="{{ f.shellStyle }}">
+          <sc-if value="{{ f.hasRail }}" hint-placeholder-val="{{ true }}">
+          <aside class="tl-rail" aria-label="Sidebar">
+            <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+            <nav class="tl-rail__main" style="grid-template-columns:minmax(0,1fr);min-width:0">
+              <div class="tl-rail-group" style="grid-template-columns:minmax(0,1fr);min-width:0"><a href="#" class="tl-rail-item"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+              <div class="tl-rail-group" style="grid-template-columns:minmax(0,1fr);min-width:0">
+                <div style="display:flex;align-items:center;justify-content:space-between;min-height:22px"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" aria-haspopup="dialog" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+                <sc-for list="{{ f.rail.projects }}" as="p" hint-placeholder-count="3">
+                  <a href="#" class="tl-rail-item" aria-current="{{ p.cur }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">{{ p.full }}</span></a>
+                </sc-for>
+              </div>
+              <div class="tl-rail-group" style="grid-template-columns:minmax(0,1fr);min-width:0">
+                <a href="#" class="tl-rail-item" aria-current="{{ f.rail.arcCur }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a>
+                <a href="#" class="tl-rail-item"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a>
+              </div>
+            </nav>
+            <div class="tl-rail__foot">
+              <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+            </div>
+          </aside>
+          </sc-if>
+
+          <div class="tl-shell__body" style="position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:0">
+            <sc-if value="{{ f.hasRail }}" hint-placeholder-val="{{ true }}">
+            <header class="tl-appbar">
+              <h1 class="tl-appbar__title">Website · WEB</h1>
+              <sc-if value="{{ f.archived }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Tag" variant="neutral" hint-size="auto,20px">Archived</x-import></sc-if>
+              <a href="#" style="font-size:12px">Details</a>
+              <span aria-hidden="true" style="width:1px;height:18px;background:var(--color-divider);margin:0 5px"></span>
+              <nav aria-label="Project views" class="tl-seg tl-seg--compact"><a href="#" class="tl-seg__opt" data-on="" aria-current="page" style="color:var(--color-paper);text-decoration:none">Board</a><a href="#" class="tl-seg__opt" style="color:inherit;text-decoration:none">List</a></nav>
+              <a href="#" class="tl-navlink" style="font-size:13px">Labels</a>
+              <div class="tl-appbar__end">
+                <a href="#" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="Project settings" style="color:inherit"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="gear" size="{{ 15 }}" hint-size="15px,15px"></x-import></a>
+                <sc-if value="{{ f.canCreate }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" size="sm" aria-haspopup="dialog" hint-size="auto,26px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" weight="bold" size="{{ 12 }}" hint-size="12px,12px"></x-import>New issue</x-import></sc-if>
+              </div>
+            </header>
+            </sc-if>
+            <sc-if value="{{ f.phone }}" hint-placeholder-val="{{ false }}">
+              <header class="tl-appbar">
+                <h1 class="tl-appbar__title">Website · WEB</h1>
+                <div class="tl-appbar__end"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" size="sm" aria-haspopup="dialog" hint-size="auto,26px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" weight="bold" size="{{ 12 }}" hint-size="12px,12px"></x-import>New issue</x-import></div>
+              </header>
+              <div style="display:flex;align-items:center;gap:15px;height:36px;flex-shrink:0;padding:0 15px;border-bottom:1px solid var(--color-hair)">
+                <nav aria-label="Project views" class="tl-seg tl-seg--compact"><a href="#" class="tl-seg__opt" data-on="" aria-current="page" style="color:var(--color-paper);text-decoration:none">Board</a><a href="#" class="tl-seg__opt" style="color:inherit;text-decoration:none">List</a></nav>
+                <a href="#" class="tl-navlink" style="font-size:13px">Labels</a>
+                <a href="#" style="font-size:12px">Details</a>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ f.isLoading }}" hint-placeholder-val="{{ false }}">
+              <main aria-busy="true" style="padding:40px 40px 0"><p role="status" style="margin:0;font-size:13px;color:var(--color-ink-2)">Loading…</p></main>
+            </sc-if>
+            <sc-if value="{{ f.isError }}" hint-placeholder-val="{{ false }}">
+              <main style="padding:40px 40px 0"><div role="alert" style="display:flex;align-items:center;gap:15px"><p style="margin:0;font-size:13px">Couldn’t load this.</p><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" hint-size="auto,26px">Retry</x-import></div></main>
+            </sc-if>
+
+            <sc-if value="{{ f.isBoard }}" hint-placeholder-val="{{ true }}">
+              <main class="tl-board" aria-label="Board" style="flex:1;min-height:0">
+                <sc-for list="{{ f.cols }}" as="col" hint-placeholder-count="5">
+                  <section class="tl-board-col" aria-label="{{ col.name }}" style="min-height:0">
+                    <div class="tl-board-col__head">
+                      <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="{{ col.status }}" hint-size="14px,14px"></x-import>
+                      <h2 style="margin:0;font:inherit">{{ col.name }}</h2>
+                      <span class="tl-board-col__count">{{ col.count }}</span>
+                      <sc-if value="{{ col.canCreate }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New issue in {{ col.name }}" aria-haspopup="dialog" style="width:22px;height:22px;margin-right:-5px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></sc-if>
+                    </div>
+                    <div class="tl-board-col__body" data-scroll="{{ col.scroll }}" style="flex:1;min-height:0;overflow-y:auto">
+                      <sc-if value="{{ col.isEmpty }}" hint-placeholder-val="{{ false }}">
+                        <p style="margin:0;padding:8px 3px;font-size:12px;line-height:1.45;color:var(--color-ink-2)">{{ col.emptyText }} <sc-if value="{{ col.emptyLink }}" hint-placeholder-val="{{ false }}"><a href="#">Create one.</a></sc-if></p>
+                      </sc-if>
+                      <sc-for list="{{ col.items }}" as="it" hint-placeholder-count="3">
+                        <sc-if value="{{ it.isDrop }}" hint-placeholder-val="{{ false }}"><div class="tl-board-drop" aria-hidden="true"></div></sc-if>
+                        <sc-if value="{{ it.isCard }}" hint-placeholder-val="{{ true }}">
+                          <div style="{{ it.wrap }}">
+                            <div class="tl-board-card {{ it.dragCls }}" style="position:relative;cursor:default">
+                              <span class="tl-board-card__top">
+                                <sc-if value="{{ it.canDrag }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="Drag {{ it.id }}" style="{{ it.handleStyle }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="dots-six-vertical" size="{{ 13 }}" hint-size="13px,13px"></x-import></button></sc-if>
+                                <sc-if value="{{ it.hasPrio }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Priority" priority="{{ it.prio }}" hint-size="13px,11px"></x-import></sc-if>
+                                <span>{{ it.id }}</span>
+                                <span class="tl-board-card__assignee" style="display:flex;align-items:center;gap:5px">
+                                  <sc-if value="{{ it.hasAv }}" hint-placeholder-val="{{ true }}"><span title="{{ it.who }}" style="display:flex"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="{{ it.initials }}" size="sm" tone="neutral" hint-size="18px,18px"></x-import></span></sc-if>
+                                  <sc-if value="{{ it.canMenu }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="Actions for {{ it.id }}" aria-haspopup="menu" aria-expanded="{{ it.menuOpen }}" style="{{ it.moreStyle }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="dots-three" weight="bold" size="{{ 13 }}" hint-size="13px,13px"></x-import></button></sc-if>
+                                </span>
+                              </span>
+                              <a href="#" class="tl-board-card__title" style="color:var(--color-ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden" style-hover="text-decoration:none" style-after="content:'';position:absolute;inset:0">{{ it.title }}</a>
+                              <sc-if value="{{ it.hasFoot }}" hint-placeholder-val="{{ true }}">
+                                <span class="tl-board-card__foot">
+                                  <sc-for list="{{ it.labels }}" as="l" hint-placeholder-count="2"><span class="tl-pill tl-pill--label" style="color:var(--color-neutral-800)">{{ l.name }}</span></sc-for>
+                                  <sc-if value="{{ it.more }}" hint-placeholder-val="{{ false }}"><span class="tl-pill tl-pill--est" title="{{ it.moreTitle }}">{{ it.more }}</span></sc-if>
+                                </span>
+                              </sc-if>
+                            </div>
+                          </div>
+                        </sc-if>
+                      </sc-for>
+                    </div>
+                  </section>
+                </sc-for>
+              </main>
+            </sc-if>
+
+            <sc-if value="{{ f.menu }}" hint-placeholder-val="{{ false }}">
+              <div role="menu" aria-label="Actions for WEB-42" class="tl-pop" style="position:absolute;left:236px;top:112px;z-index:10;width:220px">
+                <button type="button" role="menuitem" class="tl-pop__item" aria-haspopup="menu" aria-expanded="true" style="background:var(--color-tint-2)">Move to<span class="tl-pop__end" style="display:flex;color:var(--color-ink-2)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-right" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+                <button type="button" role="menuitem" class="tl-pop__item" aria-disabled="true">Move to top</button>
+                <button type="button" role="menuitem" class="tl-pop__item">Move to bottom</button>
+              </div>
+              <div role="menu" aria-label="Move to" class="tl-pop" style="position:absolute;left:460px;top:112px;z-index:11;width:200px">
+                <button type="button" role="menuitemradio" aria-checked="true" aria-disabled="true" class="tl-pop__item"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="backlog" hint-size="14px,14px"></x-import>Backlog<span class="tl-pop__check">✓</span></button>
+                <button type="button" role="menuitemradio" aria-checked="false" class="tl-pop__item"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="progress" hint-size="14px,14px"></x-import>In Progress</button>
+                <button type="button" role="menuitemradio" aria-checked="false" class="tl-pop__item" style="background:var(--color-tint-2);outline:2px solid var(--color-accent);outline-offset:-2px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="review" hint-size="14px,14px"></x-import>In Review</button>
+                <button type="button" role="menuitemradio" aria-checked="false" class="tl-pop__item"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="done" hint-size="14px,14px"></x-import>Done</button>
+                <button type="button" role="menuitemradio" aria-checked="false" class="tl-pop__item"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="canceled" hint-size="14px,14px"></x-import>Canceled</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ f.phoneMenu }}" hint-placeholder-val="{{ false }}">
+              <div role="menu" aria-label="Actions for WEB-42" class="tl-pop" style="position:absolute;left:24px;top:148px;z-index:10;width:228px">
+                <div class="tl-pop__label" id="pm-move">Move to</div>
+                <div role="group" aria-labelledby="pm-move">
+                  <button type="button" role="menuitemradio" aria-checked="true" aria-disabled="true" class="tl-pop__item"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="backlog" hint-size="14px,14px"></x-import>Backlog<span class="tl-pop__check">✓</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" class="tl-pop__item"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="progress" hint-size="14px,14px"></x-import>In Progress</button>
+                  <button type="button" role="menuitemradio" aria-checked="false" class="tl-pop__item"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="review" hint-size="14px,14px"></x-import>In Review</button>
+                  <button type="button" role="menuitemradio" aria-checked="false" class="tl-pop__item" style="background:var(--color-tint-2)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="done" hint-size="14px,14px"></x-import>Done</button>
+                  <button type="button" role="menuitemradio" aria-checked="false" class="tl-pop__item"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="canceled" hint-size="14px,14px"></x-import>Canceled</button>
+                </div>
+                <div class="tl-pop__sep"></div>
+                <button type="button" role="menuitem" class="tl-pop__item" aria-disabled="true">Move to top</button>
+                <button type="button" role="menuitem" class="tl-pop__item">Move to bottom</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ f.toast }}" hint-placeholder-val="{{ false }}">
+              <div aria-live="polite" style="position:absolute;left:0;right:0;bottom:30px;display:flex;justify-content:center;z-index:20"><div role="status" class="tl-toast"><span class="tl-toast__stripe tl-toast__stripe--err"></span><span>Couldn’t move <span style="font-family:var(--font-mono)">WEB-42</span></span></div></div>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ f.dialog }}" hint-placeholder-val="{{ false }}">
+            <div class="tl-backdrop" style="position:absolute">
+              <form role="dialog" aria-modal="true" aria-labelledby="{{ f.id }}-ni-t" novalidate="{{ true }}" class="tl-dialog">
+                <h2 id="{{ f.id }}-ni-t" class="tl-dialog__title" style="margin:0">New issue</h2>
+                <p class="tl-dialog__body" style="margin:0;display:flex;align-items:center;gap:7px">It starts in <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="review" hint-size="14px,14px"></x-import>In Review.</p>
+                <div>
+                  <label class="tl-field__label" for="{{ f.id }}-ni-title">Title</label>
+                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="{{ f.id }}-ni-title" default-value="" aria-invalid="true" aria-describedby="{{ f.id }}-ni-msg" hint-size="100%,36px"></x-import>
+                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="{{ f.id }}-ni-msg" hint-size="100%,16px">Title required</x-import>
+                </div>
+                <div class="tl-dialog__actions">
+                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" type="button" hint-size="auto,38px">Cancel</x-import>
+                  <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Create</x-import>
+                </div>
+              </form>
+            </div>
+          </sc-if>
+        </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section data-screen-label="Notes" style="padding:40px 60px 80px;display:flex;flex-direction:column;gap:10px;max-width:820px">
+  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Notes and gaps</h2>
+  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--color-ink-2)">
+    <li>Move to submenu: the current status stays in the list, marked ✓ and disabled, so the five statuses always read in the same order. Move to top is disabled when the card is already first, and Move to bottom when it is last.</li>
+    <li>Done and Canceled counts only include issues moved there in the last <span style="font-family:var(--font-mono)">14</span> days, matching the cards shown. Their empty state reads “Nothing moved here in the last 14 days.”</li>
+    <li>Empty open columns read “No issues yet. Create one.” The link does the same as that column’s +. In an archived project they read “No issues.” with no link.</li>
+    <li>Card: the title is the link that opens the issue, and its hit area covers the whole card. The drag handle and ⋯ sit above it in tab order: handle, title, ⋯. Title is cut off after <span style="font-family:var(--font-mono)">2</span> lines; the full title shows on the issue page.</li>
+    <li>Mouse drag: the source card leaves its column, and counts change on drop. If the move fails, the card returns to where it was and the toast shows for <span style="font-family:var(--font-mono)">5</span> s.</li>
+    <li>Keyboard drag: Enter on the handle starts it, arrow keys move between drop places, Enter drops and Escape cancels, with React Aria’s screen-reader announcements. Nothing on screen describes the keys, since R1 shows no shortcut hints.</li>
+    <li>Phone: dragging is off, so there are no handles, and the ⋯ menu lists the statuses directly under a “Move to” label because a side submenu doesn’t fit. The board scrolls sideways, one column at a time. The sidebar isn’t shown; phone navigation is still open.</li>
+    <li>New issue dialog: Cancel and Escape close it without saving. On success it goes to the new issue’s page, such as <span style="font-family:var(--font-mono)">WEB-43</span> in In Review.</li>
+    <li>Long Backlog frame: the count shows <span style="font-family:var(--font-mono)">300</span>; the frame renders the first <span style="font-family:var(--font-mono)">30</span> cards.</li>
+  </ul>
+  <h3 style="margin:20px 0 0;font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Missing from the kit (confirmed)</h3>
+  <p style="margin:0;font-size:13px;line-height:1.6;color:var(--color-ink-2)">I can’t change the kit project from here, so these frames use existing kit classes as stand-ins. Each one should go into the kit before build:</p>
+  <ol style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--color-ink-2)">
+    <li>BoardCard is a single button. Needs a container with a title link as the open target, plus handle and ⋯ slots. Stand-in: <span style="font-family:var(--font-mono)">tl-board-card</span> on a div, quiet icon buttons at <span style="font-family:var(--font-mono)">20</span>px, and a stretched title link.</li>
+    <li>BoardColumn head has no action slot. Stand-in: a quiet <span style="font-family:var(--font-mono)">22</span>px icon button after the count.</li>
+    <li>Pop has no submenu: no caret item, no open-submenu state, no placement. Stand-in: a second Pop beside the first, with tint-2 on the item that opened it.</li>
+    <li>No line clamp on the card title. Stand-in: an inline 2-line clamp.</li>
+    <li>BoardColumn body has no overflow or fixed height. Stand-in: flex 1 with overflow-y auto. Scrolling near an edge while dragging is behaviour, not drawn.</li>
+    <li>No empty-column state, and no “+N” label pill. Stand-ins: a <span style="font-family:var(--font-mono)">12</span>px ink-2 line, and the estimate pill (mono on tint-2). I used that over Tag neutral because Tag is taller than the label pills.</li>
+    <li>Also missing: a keyboard-drag state for the handle and drop zone, Pop items at <span style="font-family:var(--font-mono)">44</span>px for touch, a toast with no dismiss and a <span style="font-family:var(--font-mono)">5</span> s timeout, a loading indicator, and phone navigation for the shell.</li>
+  </ol>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    let n = 0;
+    this._iv = setInterval(() => { if (this.applyScroll() || ++n > 100) clearInterval(this._iv); }, 100);
+  }
+  componentWillUnmount() { clearInterval(this._iv); }
+  applyScroll() {
+    let ok = true, found = false;
+    document.querySelectorAll('[data-scroll]').forEach(el => {
+      const v = +el.getAttribute('data-scroll');
+      if (v > 0) { found = true; if (Math.abs(el.scrollTop - v) > 2) { el.scrollTop = v; ok = Math.abs(el.scrollTop - v) <= 2 && ok; } }
+    });
+    return found && ok;
+  }
+  renderVals() {
+    const SAM = ['SL', 'Sam Lee'], ALEX = ['AK', 'Alex Kim'], PRIYA = ['PS', 'Priya Shah'];
+    const ISS = {
+      42: ['Fix login button', 'high', SAM, ['bug', 'frontend', 'Safari', 'design', 'backend']],
+      7: ['Add password rules to the reset form', 'med', ALEX, ['frontend']],
+      9: ['Show the project key in the browser tab title', 'low', PRIYA, []],
+      12: ['Tidy up footer links', 'none', null, []],
+      15: ['Members list puts deactivated accounts above active ones after the role filter is cleared', 'med', ALEX, ['backend', 'bug']],
+      5: ['Email digest sends twice on Mondays', 'urgent', ALEX, ['backend']],
+      18: ['Make board columns scroll on their own', 'high', SAM, ['frontend']],
+      21: ['Update sign-in page copy', 'low', PRIYA, ['docs']],
+      3: ['Redirect old blog URLs', 'med', SAM, []],
+      11: ['Fix broken favicon on Safari', 'low', ALEX, ['Safari']],
+    };
+    const LONGT = ['Check contrast on disabled buttons', 'Trim whitespace in label names', 'Add alt text to the pricing table', 'Cache the members list', 'Fix date format in emails', 'Retry failed invitation emails', 'Show archived badge on project cards', 'Keep scroll position after closing an issue', 'Validate key length on the server', 'Fix tab order in the comment form', 'Shorten the reset link expiry copy', 'Handle 404 for deleted labels'];
+    const PR = ['high', 'med', 'low', 'none', 'med', 'urgent'], WHO = [SAM, ALEX, PRIYA, null];
+    for (let i = 0; i < 30; i++) ISS[300 + i] = [LONGT[i % LONGT.length], PR[i % PR.length], WHO[i % WHO.length], i % 3 === 0 ? ['frontend'] : []];
+    const ST = [['backlog', 'Backlog'], ['progress', 'In Progress'], ['review', 'In Review'], ['done', 'Done'], ['canceled', 'Canceled']];
+    const BTN = { width: '20px', height: '20px', position: 'relative', zIndex: 1 };
+    const RING = { outline: '2px solid var(--color-accent)', outlineOffset: '2px' };
+    const card = (n, o, cs = {}) => {
+      const [title, prio, who, labels] = ISS[n];
+      const id = n >= 300 ? 'WEB-' + (n - 290) : 'WEB-' + n;
+      const shown = labels.slice(0, 3), extra = labels.length - 3;
+      return {
+        isCard: true, isDrop: false, id, title, prio, hasPrio: prio !== 'none',
+        hasAv: !!who, initials: who ? who[0] : '', who: who ? who[1] : '',
+        labels: shown.map(name => ({ name })), more: extra > 0 ? '+' + extra : '', moreTitle: extra > 0 ? labels.slice(3).join(', ') : '',
+        hasFoot: labels.length > 0,
+        canDrag: !o.archived && !o.phone, canMenu: !o.archived,
+        dragCls: cs.dragging ? 'tl-board-card--dragging' : '',
+        handleStyle: { ...BTN, margin: '-3px -2px -3px -4px', ...(cs.focus ? RING : {}) },
+        moreStyle: { ...BTN, margin: '-3px -4px -3px 0', ...(cs.menu ? { background: 'var(--color-tint-2)', color: 'var(--color-ink)' } : {}) },
+        menuOpen: cs.menu ? 'true' : 'false',
+        wrap: cs.ghost ? { position: 'relative', height: 0, top: '-53px', zIndex: 3 } : {},
+      };
+    };
+    const DEF = { backlog: [42, 7, 9, 12, 15], progress: [5, 18], review: [21], done: [3, 11], canceled: [] };
+    const cols = (spec, o = {}) => ST.map(([status, name]) => {
+      const entries = spec[status] || [];
+      const items = entries.map(e => typeof e === 'number' ? card(e, o, (o.cs || {})[e]) : e.drop ? { isDrop: true, isCard: false } : card(e.ghost, o, { dragging: true, ghost: true }));
+      const cardN = items.filter(i => i.isCard && !(i.wrap && i.wrap.top)).length;
+      const terminal = status === 'done' || status === 'canceled';
+      return {
+        status, name, count: (o.counts || {})[status] ?? cardN, items,
+        canCreate: !o.archived, isEmpty: entries.length === 0,
+        emptyText: terminal ? 'Nothing moved here in the last 14 days.' : o.archived ? 'No issues.' : 'No issues yet.',
+        emptyLink: !terminal && !o.archived,
+        scroll: (o.scroll || {})[status] || '',
+      };
+    });
+    const rail = (archived) => ({
+      projects: (archived ? [['API', 'API'], ['Mobile', 'MOB']] : [['API', 'API'], ['Mobile', 'MOB'], ['Website', 'WEB']]).map(([n, k]) => ({ full: n + ' · ' + k, cur: k === 'WEB' ? 'page' : undefined })),
+      arcCur: archived ? 'page' : undefined,
+    });
+    const F = (id, label, note, o = {}) => ({
+      id, label, note: note ? '(' + note + ')' : '',
+      size: o.phone ? { width: '390px', height: '760px' } : { width: '1600px', height: '900px' },
+      shellStyle: { position: 'relative', width: '100%', height: '100%', border: '1px solid var(--color-divider)', overflow: 'hidden', boxSizing: 'border-box', gridTemplateColumns: o.phone ? 'minmax(0,1fr)' : '232px minmax(0,1fr)' },
+      hasRail: !o.phone, phone: !!o.phone, archived: !!o.archived, canCreate: !o.archived,
+      rail: rail(!!o.archived),
+      isLoading: o.state === 'loading', isError: o.state === 'error', isBoard: !o.state,
+      cols: o.state ? [] : cols(o.spec || DEF, o),
+      menu: !!o.menu, phoneMenu: !!o.phoneMenu, dialog: !!o.dialog, toast: !!o.toast,
+    });
+    const LONG = { ...DEF, backlog: Array.from({ length: 30 }, (_, i) => 300 + i) };
+    const frames = [
+      F('b1', 'Board — default', '/project/WEB; Sam, admin'),
+      F('b2', 'Board — empty', 'no issues; “Create one.” opens New issue with that column’s status', { spec: {} }),
+      F('b3', 'Board — loading', 'text appears after 300 ms', { state: 'loading' }),
+      F('b4', 'Board — load failure', '', { state: 'error' }),
+      F('b5', 'Board — long Backlog scrolled', 'Backlog scrolls on its own; header and count stay put', { spec: LONG, counts: { backlog: 300 }, scroll: { backlog: 1400 } }),
+      F('b6', 'Board — ⋯ menu on WEB-42, Move to open', 'focus on In Review; current status marked ✓ and disabled', { menu: true, cs: { 42: { menu: true } } }),
+      F('b7', 'Board — New issue from In Review’s +, title required', 'nothing saved', { dialog: true }),
+      F('b8', 'Board — mouse drag', 'WEB-7 from Backlog to the top of In Review', { spec: { ...DEF, backlog: [42, 9, 12, 15], review: [{ drop: true }, { ghost: 7 }, 21] }, counts: { backlog: 5, review: 1 } }),
+      F('b9', 'Board — keyboard drag', 'focus on WEB-42’s handle; drop place at the top of In Progress', { spec: { ...DEF, progress: [{ drop: true }, 5, 18] }, cs: { 42: { focus: true, dragging: true } } }),
+      F('b10', 'Board — move failed', 'WEB-42 back in Backlog; toast for 5 s', { toast: true }),
+      F('b11', 'Board — archived project', 'read-only: no +, handles, ⋯ or New issue', { archived: true }),
+      F('b12', 'Board — phone, ⋯ menu', 'Sam moves WEB-42 to Done', { phone: true, phoneMenu: true, cs: { 42: { menu: true } } }),
+    ];
+    return { frames };
+  }
+}
+</script>
+</body>
+</html>
