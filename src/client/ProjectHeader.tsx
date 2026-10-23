@@ -12,10 +12,12 @@ import { NewIssueButton } from "./NewIssueDialog";
 
 export type ProjectView = "board" | "list" | "detail" | "labels";
 
+type IssueCrumb = Pick<Issue, "id"> & Partial<Pick<Issue, "title">>;
+
 export type ProjectHeaderProps = {
   project: ProjectSummary;
   admin: boolean;
-} & ({ view: ProjectView; issue?: never } | { issue: Pick<Issue, "id" | "title">; view?: never });
+} & ({ view: ProjectView; issue?: never } | { issue: IssueCrumb; view?: never });
 
 export function ProjectHeader({ project, view, issue, admin }: ProjectHeaderProps) {
   const base = `/project/${project.key}`;
@@ -90,7 +92,7 @@ type IssueCrumbsProps = {
   details: ReactNode;
   projectTitle: string;
   projectHref: string;
-  issue: Pick<Issue, "id" | "title">;
+  issue: IssueCrumb;
 };
 
 function IssueCrumbs({ details, projectTitle, projectHref, issue }: IssueCrumbsProps) {

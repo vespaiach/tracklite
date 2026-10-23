@@ -85,7 +85,7 @@ Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` 
   - Reads: + spec REQ-024–028 · `src/client/screens/Board.tsx`
   - Needs: M17.5, M17.8
 
-- [ ] **M17.10 Issue page.** The M17.8 header (also while loading and on load failure); the 42 px title; sections with the rule on top; one column below 860 px of container width with the fields panel between the title and the description; pickers with caret, md avatars and the "No labels in this project yet." empty note; "No description yet. Add one."; the "changed by someone else" state with Reload and Save disabled; the restyled comments (keeping edit, delete and "(edited)" per C7); "Delete issue…" with "Deleting…"; the mono created date.
+- [x] **M17.10 Issue page.** The M17.8 header (also while loading and on load failure); the 42 px title; sections with the rule on top; one column below 860 px of container width with the fields panel between the title and the description; pickers with caret, md avatars and the "No labels in this project yet." empty note; "No description yet. Add one."; the "changed by someone else" state with Reload and Save disabled; the restyled comments (keeping edit, delete and "(edited)" per C7); "Delete issue…" with "Deleting…"; the mono created date.
   - Reads: + spec REQ-018–023, REQ-031–034, STD-8 · `src/client/screens/Issue.tsx`, `CommentThread.tsx`, `DescriptionEditor.tsx`
   - Needs: M17.3, M17.5, M17.8
   - Split if too big: M17.10a layout, title and fields · M17.10b description and comments.

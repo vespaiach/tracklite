@@ -54,7 +54,7 @@ function mockSidebar({
 }
 
 function sidebar() {
-  return screen.findByRole("complementary");
+  return screen.findByRole("complementary", { name: "Sidebar" });
 }
 
 async function projectLinks() {

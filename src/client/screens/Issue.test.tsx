@@ -4,6 +4,7 @@ import {
   admin,
   alex,
   apiError,
+  deferred,
   issue,
   memberOf,
   mockApi,
@@ -45,13 +46,17 @@ function mockIssue({
   me = sam,
   shown = issue(),
   inProject = web,
+  get,
   patch,
+  remove,
   labels = () => webLabels,
 }: {
   me?: Me;
   shown?: Issue;
   inProject?: Project;
+  get?: Answer;
   patch?: Answer;
+  remove?: Answer;
   labels?: () => Label[];
 } = {}) {
   let current: Issue | undefined = shown;
@@ -67,7 +72,8 @@ function mockIssue({
       created.push(made);
       return Response.json(made, { status: 201 });
     },
-    [`GET /api/issues/${shown.id}`]: () => (current ? Response.json(current) : apiError(404, "Not found")),
+    [`GET /api/issues/${shown.id}`]:
+      get ?? (() => (current ? Response.json(current) : apiError(404, "Not found"))),
     [`PATCH /api/issues/${shown.id}`]:
       patch ??
       ((body) => {
@@ -90,9 +96,10 @@ function mockIssue({
         };
         return Response.json(current);
       }),
-    [`DELETE /api/issues/${shown.id}`]: () => {
-      current = undefined;
-      return noContent();
+    [`DELETE /api/issues/${shown.id}`]: async (body) => {
+      const answer = await (remove ?? noContent)(body);
+      if (answer.ok) current = undefined;
+      return answer;
     },
   });
 }
@@ -143,6 +150,22 @@ it("REQ-046: the issue page header shows the breadcrumb to the project and no vi
   expect(current.getAttribute("title")).toBe("Fix login button");
   const views = screen.getByRole("navigation", { name: "Project views" });
   expect(within(views).queryAllByRole("link", { current: "page" })).toEqual([]);
+});
+
+it("REQ-046, STD-7: the project header stays while the issue loads and when it fails to load", async () => {
+  const loading = deferred();
+  mockIssue({ get: loading.answer });
+  renderAppAt("/issue/WEB-42");
+
+  const crumbs = await screen.findByRole("navigation", { name: "Breadcrumb" });
+  expect(within(crumbs).getByRole("link", { name: "Website · WEB" })).toBeTruthy();
+  expect(within(crumbs).getByText("WEB-42").getAttribute("aria-current")).toBe("page");
+
+  loading.resolve(apiError(500, "Internal error"));
+
+  expect(await screen.findByText("Couldn’t load this.")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+  expect(screen.getByRole("navigation", { name: "Breadcrumb" })).toBeTruthy();
 });
 
 it("REQ-016: Enter or leaving the title saves it; Escape restores the saved title", async () => {
@@ -259,11 +282,12 @@ it("STD-9: a failed picker save shows the toast and keeps the old value", async 
   expect(screen.getByRole("button", { name: /^Priority/ }).textContent).toContain("High");
 });
 
-it("REQ-023, REQ-023.1: Cancel closes without deleting; confirming deletes and lands on the board", async () => {
-  const fetchMock = mockIssue();
+it("REQ-023, REQ-023.1: Cancel closes without deleting; confirming shows Deleting…, deletes and lands on the board", async () => {
+  const deletion = deferred();
+  const fetchMock = mockIssue({ remove: deletion.answer });
   renderAppAt("/issue/WEB-42");
 
-  fireEvent.click(await screen.findByRole("button", { name: "Delete issue" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Delete issue…" }));
   fireEvent.click(
     within(screen.getByRole("alertdialog", { name: "Delete WEB-42?" })).getByRole("button", {
       name: "Cancel",
@@ -272,7 +296,7 @@ it("REQ-023, REQ-023.1: Cancel closes without deleting; confirming deletes and l
   expect(screen.queryByRole("alertdialog")).toBeNull();
   expect(requestsTo(fetchMock, "DELETE /api/issues/WEB-42")).toEqual([]);
 
-  fireEvent.click(screen.getByRole("button", { name: "Delete issue" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete issue…" }));
   const dialog = screen.getByRole("alertdialog", { name: "Delete WEB-42?" });
   expect(
     within(dialog).getByText(
@@ -280,6 +304,10 @@ it("REQ-023, REQ-023.1: Cancel closes without deleting; confirming deletes and l
     ),
   ).toBeTruthy();
   fireEvent.click(within(dialog).getByRole("button", { name: "Delete issue" }));
+
+  const busy = await within(dialog).findByRole("button", { name: "Deleting…" });
+  expect((busy as HTMLButtonElement).disabled).toBe(true);
+  deletion.resolve(noContent());
 
   await waitFor(() => expect(window.location.pathname).toBe("/project/WEB"));
   expect(requestsTo(fetchMock, "DELETE /api/issues/WEB-42")).toHaveLength(1);
@@ -289,12 +317,12 @@ it("REQ-023.2: a member who didn't create the issue sees no Delete option, while
   mockIssue({ me: alex });
   renderAppAt("/issue/WEB-42");
   await titleField();
-  expect(screen.queryByRole("button", { name: "Delete issue" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Delete issue…" })).toBeNull();
   cleanup();
 
   mockIssue({ me: { ...admin, username: "jordan", fullName: "Jordan Diaz", initials: "JD" } });
   renderAppAt("/issue/WEB-42");
-  expect(await screen.findByRole("button", { name: "Delete issue" })).toBeTruthy();
+  expect(await screen.findByRole("button", { name: "Delete issue…" })).toBeTruthy();
 });
 
 it("STD-4: an unknown issue ID shows Not found", async () => {
@@ -321,13 +349,23 @@ it("REQ-013: an archived issue is read-only: title, pickers, labels, description
   expect(screen.getByText("In Progress")).toBeTruthy();
   expect(screen.queryByRole("textbox", { name: "Title" })).toBeNull();
   expect(screen.queryByRole("button", { name: /^(Status|Priority|Assignee)/ })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Delete issue" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Delete issue…" })).toBeNull();
 
   expect(screen.getByText("bug")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /^Labels/ })).toBeNull();
 
   expect(screen.getByText("Old text")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Edit description" })).toBeNull();
+});
+
+it("REQ-020: in a project with no labels the label picker opens and says No labels in this project yet.", async () => {
+  mockIssue({ labels: () => [] });
+  renderAppAt("/issue/WEB-42");
+
+  fireEvent.click(await pick("Labels"));
+
+  expect(await screen.findByText("No labels in this project yet.")).toBeTruthy();
+  expect(screen.getByRole("searchbox", { name: "Filter or create labels" })).toBeTruthy();
 });
 
 function labelsPick() {
@@ -454,5 +492,53 @@ it("REQ-022.1: saving a description with a checklist and a code block shows it f
   expect(screen.queryByRole("textbox", { name: "Description (Markdown)" })).toBeNull();
   expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([
     { description: text, descriptionVersion: 0 },
+  ]);
+});
+
+it("STD-7: an empty description says No description yet. and Add one. opens the editor", async () => {
+  mockIssue({ shown: issue({ description: "" }) });
+  renderAppAt("/issue/WEB-42");
+
+  expect((await screen.findByText(/^No description yet\./)).textContent).toBe("No description yet. Add one.");
+  fireEvent.click(screen.getByRole("button", { name: "Add one." }));
+
+  expect(await screen.findByRole("textbox", { name: "Description (Markdown)" })).toBeTruthy();
+});
+
+it("STD-8: a description changed by someone else keeps your text with Save disabled until Reload brings in theirs", async () => {
+  let saved = issue({ description: "First text", descriptionVersion: 0 });
+  const answers = [
+    () => {
+      saved = { ...saved, description: "Their text", descriptionVersion: 1 };
+      return apiError(409, "This was changed by Alex Kim. Copy your text and reload.");
+    },
+    () => Response.json({ ...saved, description: "Merged text", descriptionVersion: 2 }),
+  ];
+  const fetchMock = mockIssue({
+    get: () => Response.json(saved),
+    patch: () => (answers.shift() as () => Response)(),
+  });
+  renderAppAt("/issue/WEB-42");
+
+  const editor = await editDescription();
+  fireEvent.change(editor, { target: { value: "My version" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toContain("This was changed by Alex Kim. Copy your text and reload.");
+  expect(editor.value).toBe("My version");
+  expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
+
+  fireEvent.click(within(alert).getByRole("button", { name: "Reload" }));
+
+  await waitFor(() => expect(editor.value).toBe("Their text"));
+  expect(screen.queryByRole("alert")).toBeNull();
+  fireEvent.change(editor, { target: { value: "Merged text" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+  await waitFor(() => expect(screen.queryByRole("textbox", { name: "Description (Markdown)" })).toBeNull());
+  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([
+    { description: "My version", descriptionVersion: 0 },
+    { description: "Merged text", descriptionVersion: 1 },
   ]);
 });
