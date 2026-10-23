@@ -77,17 +77,19 @@ export type LinkTabsProps = {
   options: {
     href: string;
     label: ReactNode;
+    icon?: ReactNode;
     current?: boolean;
     onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
   }[];
+  variant?: "solid" | "soft";
   className?: string;
 };
 
-export function LinkTabs({ label, options, className }: LinkTabsProps) {
+export function LinkTabs({ label, options, variant = "solid", className }: LinkTabsProps) {
   return (
     <nav
       aria-label={label}
-      className={cx("tl-seg", "tl-seg--compact", className)}>
+      className={cx("tl-seg", "tl-seg--compact", variant === "soft" && "tl-seg--soft", className)}>
       {options.map((option) => (
         <a
           key={option.href}
@@ -96,6 +98,13 @@ export function LinkTabs({ label, options, className }: LinkTabsProps) {
           className="tl-seg__opt"
           data-on={option.current || undefined}
           aria-current={option.current ? "page" : undefined}>
+          {option.icon && (
+            <span
+              aria-hidden="true"
+              className="tl-seg__icon">
+              {option.icon}
+            </span>
+          )}
           {option.label}
         </a>
       ))}

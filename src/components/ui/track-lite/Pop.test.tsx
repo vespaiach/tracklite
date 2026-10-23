@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { Menu, MenuItem } from "./Pop";
+import { Menu, MenuItem, MultiPicker, Picker, PickerItem } from "./Pop";
 
 afterEach(cleanup);
 
@@ -37,4 +37,72 @@ it("Menu: a text trigger shows its text and checks the selected item; Escape clo
 
   await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
   await waitFor(() => expect(document.activeElement).toBe(trigger));
+});
+
+it("Picker and MultiPicker: the trigger ends in a hidden caret and the open list shows the empty note", async () => {
+  const pickers = [
+    {
+      name: /^Assignee/,
+      note: "No members yet.",
+      element: (
+        <Picker
+          label="Assignee"
+          selectedKey="none"
+          value="Unassigned"
+          emptyNote="No members yet."
+          onChange={vi.fn()}>
+          <PickerItem
+            id="none"
+            textValue="Unassigned">
+            Unassigned
+          </PickerItem>
+        </Picker>
+      ),
+    },
+    {
+      name: /^Labels/,
+      note: "No labels in this project yet.",
+      element: (
+        <MultiPicker
+          label="Labels"
+          selectedKeys={[]}
+          value="None"
+          emptyNote="No labels in this project yet."
+          onToggle={vi.fn()}
+          search={{ label: "Filter or create labels" }}>
+          {[]}
+        </MultiPicker>
+      ),
+    },
+  ];
+  for (const picker of pickers) {
+    render(picker.element);
+    const trigger = screen.getByRole("button", { name: picker.name });
+    expect(trigger.lastElementChild?.classList.contains("tl-pick__caret")).toBe(true);
+    expect(trigger.lastElementChild?.getAttribute("aria-hidden")).toBe("true");
+
+    fireEvent.click(trigger);
+    expect(await screen.findByText(picker.note)).toBeTruthy();
+    cleanup();
+  }
+});
+
+it("Menu: the rail variant is a rail item whose menu opens upward", async () => {
+  render(
+    <Menu
+      label="Sam Lee"
+      variant="rail"
+      text="Sam Lee"
+      onAction={vi.fn()}>
+      <MenuItem id="profile">Profile</MenuItem>
+      <MenuItem id="sign-out">Sign out</MenuItem>
+    </Menu>,
+  );
+  const trigger = screen.getByRole("button", { name: "Sam Lee" });
+  expect(trigger.classList.contains("tl-rail-item")).toBe(true);
+  trigger.getBoundingClientRect = () => new DOMRect(0, 700, 220, 32);
+
+  fireEvent.click(trigger);
+  const menu = await screen.findByRole("menu");
+  await waitFor(() => expect(menu.closest("[data-placement]")?.getAttribute("data-placement")).toBe("top"));
 });
