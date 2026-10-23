@@ -1,10 +1,10 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { BoardCard, CollapsibleListGroup, ListRowHead, ListRowLink } from "./ListRow";
+import { BoardCard, BoardColumn, CollapsibleListGroup, ListRowHead, ListRowLink } from "./ListRow";
 
 afterEach(cleanup);
 
-it("BoardCard links its title to the issue, with the handle and ⋯ as separate controls in tab order", () => {
+it("BoardCard links its title to the issue, with the handle and ⋯ kept reachable by keyboard in tab order", () => {
   const onOpen = vi.fn((event: { preventDefault: () => void }) => event.preventDefault());
   render(
     <BoardCard
@@ -26,11 +26,43 @@ it("BoardCard links its title to the issue, with the handle and ⋯ as separate 
   expect(card.textContent).toContain("SL");
   expect(card.textContent).toContain("bug");
 
-  const focusable = Array.from(card.querySelectorAll("a, button")).map((element) => element.textContent);
-  expect(focusable).toEqual(["Drag WEB-42", "Fix login button", "WEB-42 actions"]);
+  const focusable = Array.from(card.querySelectorAll<HTMLElement>("a, button"));
+  expect(focusable.map((element) => element.textContent)).toEqual([
+    "Drag WEB-42",
+    "Fix login button",
+    "WEB-42 actions",
+  ]);
+  for (const control of focusable) {
+    expect(control.closest("[aria-hidden], [hidden], [inert]")).toBeNull();
+    control.focus();
+    expect(document.activeElement).toBe(control);
+  }
 
   fireEvent.click(link);
   expect(onOpen).toHaveBeenCalledTimes(1);
+});
+
+it("BoardColumn names its head as a heading and marks the column scrolled while its list is scrolled down", () => {
+  render(
+    <BoardColumn
+      label="In Progress"
+      count={2}>
+      <ul data-testid="cards" />
+    </BoardColumn>,
+  );
+
+  const column = screen.getByRole("region", { name: "In Progress" });
+  expect(within(column).getByRole("heading", { level: 2, name: "In Progress" })).toBeTruthy();
+  expect(column.hasAttribute("data-scrolled")).toBe(false);
+
+  const cards = screen.getByTestId("cards");
+  cards.scrollTop = 40;
+  fireEvent.scroll(cards);
+  expect(column.hasAttribute("data-scrolled")).toBe(true);
+
+  cards.scrollTop = 0;
+  fireEvent.scroll(cards);
+  expect(column.hasAttribute("data-scrolled")).toBe(false);
 });
 
 function TwoGroups({ todoExpanded }: { todoExpanded?: boolean }) {
