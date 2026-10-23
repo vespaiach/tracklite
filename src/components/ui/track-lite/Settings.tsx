@@ -9,10 +9,12 @@ export function SettingsLayout({ children, wide }: { children: ReactNode; wide?:
 
 export function SettingsSection({
   title,
+  count,
   status,
   children,
 }: {
   title: string;
+  count?: number;
   status?: ReactNode;
   children: ReactNode;
 }) {
@@ -26,12 +28,17 @@ export function SettingsSection({
           id={titleId}
           className="tl-settings__title">
           {title}
+          {count != null && <span className="tl-settings__count">{count}</span>}
         </h2>
         {status}
       </div>
       {children}
     </section>
   );
+}
+
+export function SettingsGrid({ children }: { children: ReactNode }) {
+  return <div className="tl-settings__grid">{children}</div>;
 }
 
 export function SettingsInline({ children }: { children: ReactNode }) {
@@ -125,6 +132,16 @@ export function FormStatus({ children }: { children: ReactNode }) {
     <p
       role="status"
       className="tl-form-status">
+      {children}
+    </p>
+  );
+}
+
+export function WarningNote({ children }: { children: ReactNode }) {
+  return (
+    <p
+      role="status"
+      className="tl-warning tl-warning--note">
       {children}
     </p>
   );
