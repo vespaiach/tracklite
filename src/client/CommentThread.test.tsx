@@ -242,7 +242,7 @@ it("STD-5, STD-9: a failed post keeps the text; the retry reuses the requestId a
   await type("Merged on staging.");
   post();
 
-  expect(await screen.findByText("Couldn't save. Try again.")).toBeTruthy();
+  expect(await screen.findByText("Couldn’t save. Try again.")).toBeTruthy();
   expect((await commentBox()).value).toBe("Merged on staging.");
 
   post();
@@ -384,13 +384,13 @@ it("REQ-032.4: all 200 comments are shown", async () => {
   expect(await shownComments()).toHaveLength(200);
 });
 
-it("STD-7: a failed load shows “Couldn't load this.” with Retry and no comment box", async () => {
+it("STD-7: a failed load shows “Couldn’t load this.” with Retry and no comment box", async () => {
   mockThread({ list: () => apiError(500, "Internal error") });
   openIssue();
 
   const section = await thread();
 
-  expect(await within(section).findByText("Couldn't load this.")).toBeTruthy();
+  expect(await within(section).findByText("Couldn’t load this.")).toBeTruthy();
   expect(within(section).getByRole("button", { name: "Retry" })).toBeTruthy();
   expect(screen.queryByRole("textbox", { name: "Comment (Markdown)" })).toBeNull();
 });

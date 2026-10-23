@@ -118,11 +118,11 @@ it("REQ-012.2, REQ-022.2, STD-8, STD-9: a refused save shows the field error, th
   expect(alert.closest(".tl-editor")).toBeTruthy();
   expect(editor().value).toBe("My version");
   expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(false);
-  expect(screen.queryByText("Couldn't save. Try again.")).toBeNull();
+  expect(screen.queryByText("Couldn’t save. Try again.")).toBeNull();
 
   save();
 
-  expect(await screen.findByText("Couldn't save. Try again.")).toBeTruthy();
+  expect(await screen.findByText("Couldn’t save. Try again.")).toBeTruthy();
   expect(editor().value).toBe("My version");
 });
 

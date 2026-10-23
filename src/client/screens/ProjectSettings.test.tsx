@@ -94,7 +94,7 @@ it("STD-9: a failed rename shows the toast and keeps the typed name", async () =
   fireEvent.change(await nameField(), { target: { value: "Marketing site" } });
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-  expect(await screen.findByText("Couldn't save. Try again.")).toBeTruthy();
+  expect(await screen.findByText("Couldn’t save. Try again.")).toBeTruthy();
   expect((await nameField()).value).toBe("Marketing site");
 });
 

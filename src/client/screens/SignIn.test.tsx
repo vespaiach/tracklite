@@ -87,13 +87,13 @@ it("REQ-047.5: signing in from /sign-in?next=/issue/WEB-42 lands on /issue/WEB-4
   await waitFor(() => expect(window.location.pathname).toBe("/issue/WEB-42"));
 });
 
-it('STD-9.3: a network error shows the toast "Couldn\'t save. Try again." and keeps both fields', async () => {
+it('STD-9.3: a network error shows the toast "Couldn’t save. Try again." and keeps both fields', async () => {
   mockSignIn(networkError);
   renderAppAt("/sign-in");
 
   await signInAs("sam@acme.com", "correct-horse-battery");
 
-  expect((await screen.findByRole("status")).textContent).toBe("Couldn't save. Try again.");
+  expect((await screen.findByRole("status")).textContent).toBe("Couldn’t save. Try again.");
   expect(screen.queryByRole("alert")).toBeNull();
   expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("sam@acme.com");
   expect((screen.getByLabelText("Password") as HTMLInputElement).value).toBe("correct-horse-battery");

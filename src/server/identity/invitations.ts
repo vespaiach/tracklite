@@ -75,7 +75,7 @@ async function sendLink(executor: Executor, inviter: Member, invitation: { id: s
     to: invitation.email,
     ...invitationEmail({ inviterName: inviter.fullName, token }),
   }).catch(() => {
-    throw new ApiError(503, "We couldn't send the email. Try again.");
+    throw new ApiError(503, "We couldn’t send the email. Try again.");
   });
 
   await executor.update(invitations).set({ providerMessageId }).where(eq(invitations.id, invitation.id));

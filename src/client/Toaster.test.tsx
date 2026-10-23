@@ -29,10 +29,10 @@ it("STD-9.1, STD-9.2: one toast at a time; a new one replaces it and each disapp
   const store = renderToaster();
 
   act(() => {
-    store.dispatch(showToast("Couldn't save. Try again."));
+    store.dispatch(showToast("Couldn’t save. Try again."));
   });
   expect(screen.getAllByRole("status").map((toast) => toast.textContent)).toEqual([
-    "Couldn't save. Try again.",
+    "Couldn’t save. Try again.",
   ]);
   expect(screen.queryByRole("button")).toBeNull();
 

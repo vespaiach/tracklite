@@ -49,7 +49,7 @@ The tasks below follow these decisions. Pages never invent styles (design-system
 
 Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` (the screen's `pg.*` block), the matching frames in `docs/design/Tracklite states.dc.html`, and `docs/design-system.md`. Build from kit components and tokens, never from the design's inline styles. Existing tests keep passing; where copy changes by decision, update the spec, then the test name and assertion.
 
-- [ ] **M17.0 Spec updates.** Edit `docs/tracklite-spec.md` for the **Design** rows, with one changelog line each: C16 (REQ-053 warnings "No pass for {N} min. Notifications wait in the queue until the worker runs." and "The worker has never run. No notifications are sent until it does.", after 2 min per OPS-005), C17 (REQ-041.4 empty copy), C18 (curly apostrophes in "Couldn’t …" messages, with the tests that assert them).
+- [x] **M17.0 Spec updates.** Edit `docs/tracklite-spec.md` for the **Design** rows, with one changelog line each: C16 (REQ-053 warnings "No pass for {N} min. Notifications wait in the queue until the worker runs." and "The worker has never run. No notifications are sent until it does.", after 2 min per OPS-005), C17 (REQ-041.4 empty copy), C18 (curly apostrophes in "Couldn’t …" messages, with the tests that assert them).
   - Needs: none
   - Done: spec version bumped; `npm test` green with the apostrophe change.
 

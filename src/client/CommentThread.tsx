@@ -45,7 +45,7 @@ export function CommentThread({ threadPath, editable }: { threadPath: string; ed
   if (query.isError && !query.data) {
     return (
       <SettingsActions>
-        <FormStatus>Couldn't load this.</FormStatus>
+        <FormStatus>Couldn’t load this.</FormStatus>
         <Button
           size="sm"
           onClick={query.refetch}>

@@ -40,7 +40,7 @@ function queryCauseName(cause: unknown) {
 }
 
 function unreadableRequest() {
-  return new ApiError(422, "Couldn't read the request.");
+  return new ApiError(422, "Couldn’t read the request.");
 }
 
 async function readInput(request: Request, schema: v.GenericSchema) {

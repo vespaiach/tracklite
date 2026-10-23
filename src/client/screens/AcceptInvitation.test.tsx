@@ -149,12 +149,12 @@ it("STD-3, REQ-003.2: the server's field errors for name, username and password 
   expect(typedInto("Password")).toBe("tracklite1");
 });
 
-it('STD-7: a failed lookup shows "Couldn\'t load this." and Retry looks the link up again', async () => {
+it('STD-7: a failed lookup shows "Couldn’t load this." and Retry looks the link up again', async () => {
   const answers = [() => apiError(500, "boom"), invitedSam];
   const fetchMock = mockInvite(() => (answers.shift() ?? invitedSam)(), accepted);
   renderAppAt("/invite?token=abc");
 
-  expect(await screen.findByText("Couldn't load this.")).toBeTruthy();
+  expect(await screen.findByText("Couldn’t load this.")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
 
   expect(await screen.findByRole("heading", { name: "Join Tracklite" })).toBeTruthy();
@@ -168,7 +168,7 @@ it("STD-9.3: a network error on submit shows the toast and keeps what was typed"
   await fillIn("Sam Lee", "sam", "correct horse battery");
   join();
 
-  expect((await screen.findByRole("status")).textContent).toBe("Couldn't save. Try again.");
+  expect((await screen.findByRole("status")).textContent).toBe("Couldn’t save. Try again.");
   expect(typedInto("Full name")).toBe("Sam Lee");
   expect(typedInto("Username")).toBe("sam");
   expect(typedInto("Password")).toBe("correct horse battery");

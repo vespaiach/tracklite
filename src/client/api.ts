@@ -44,7 +44,7 @@ export type IssueChange =
 
 type ApiRequest = string | { path: string; method: "POST" | "PATCH" | "PUT" | "DELETE"; body?: unknown };
 
-const couldNotSave = "Couldn't save. Try again.";
+const couldNotSave = "Couldn’t save. Try again.";
 
 function placeCard(board: Board, id: string, status: IssueStatus, place: BoardPlace) {
   const from = board.find((column) => column.cards.some((card) => card.id === id));
@@ -244,7 +244,7 @@ export const api = createApi({
         } catch (failure) {
           moved.undo();
           const { status: code, message } = (failure as { error: ApiFailure }).error;
-          dispatch(showToast(code === "network" || code >= 500 ? `Couldn't move ${id}` : message));
+          dispatch(showToast(code === "network" || code >= 500 ? `Couldn’t move ${id}` : message));
         }
       },
     }),

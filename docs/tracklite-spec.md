@@ -1,9 +1,9 @@
 ---
 product: "Tracklite"
-version: "0.30"
+version: "0.31"
 release: "R1"
 status: Ready to build
-updated: "2026-10-12"
+updated: "2026-10-22"
 ---
 
 # Tracklite: Spec
@@ -111,14 +111,14 @@ No question is open. These were left to the agent, within the limits in section 
 
 **Rules and examples**
 
-- **REQ-001** When an admin invites an email address, the system shall email a single-use invitation link that expires after 7 days, and the admin can resend or revoke it. Emails are compared ignoring capitals, and an address that isn't a valid email gets the field error "Enter a valid email". If the email belongs to an active member, the system shall refuse with "Already a member". If it belongs to a deactivated member, it shall refuse with "This person is deactivated. Reactivate them instead." If the email can't be sent, nothing is saved (a resent invitation keeps its previous link) and the admin sees "We couldn't send the email. Try again." (STD-6).
+- **REQ-001** When an admin invites an email address, the system shall email a single-use invitation link that expires after 7 days, and the admin can resend or revoke it. Emails are compared ignoring capitals, and an address that isn't a valid email gets the field error "Enter a valid email". If the email belongs to an active member, the system shall refuse with "Already a member". If it belongs to a deactivated member, it shall refuse with "This person is deactivated. Reactivate them instead." If the email can't be sent, nothing is saved (a resent invitation keeps its previous link) and the admin sees "We couldn’t send the email. Try again." (STD-6).
   - REQ-001.1: Admin invites `sam@acme.com` → email sent; the invitation shows as Pending. (Verify: auto)
   - REQ-001.2: Admin invites an existing member's email → "Already a member", no email. (Verify: auto)
   - REQ-001.3: Admin resends Sam's pending invitation → a new link is sent and the old link stops working. (Verify: auto)
   - REQ-001.4: Admin revokes Sam's invitation → the link stops working. (Verify: auto)
   - REQ-001.5: Admin invites `Sam@Acme.com` while `sam@acme.com` is a member → "Already a member". (Verify: auto)
   - REQ-001.6: Admin invites the email of deactivated member Jo → "This person is deactivated. Reactivate them instead.", no email. (Verify: auto)
-  - REQ-001.7: The email service is down when the admin invites `sam@acme.com` → "We couldn't send the email. Try again."; no invitation is listed. (Verify: auto)
+  - REQ-001.7: The email service is down when the admin invites `sam@acme.com` → "We couldn’t send the email. Try again."; no invitation is listed. (Verify: auto)
 - **REQ-002** When a person who isn't signed in opens a valid invitation link, the system shall ask for their profile and a password (REQ-048), create them as a member, and sign them in. If a signed-in member opens an invitation link, the system shall ask them to sign out first. If the invitation expires or is revoked before the profile is submitted, no member is created.
   - REQ-002.1: Sam opens the link on day 3 and enters "Sam Lee", `sam` and a valid password → member created, signed in, lands on My issues. (Verify: auto)
   - REQ-002.2: Sam opens the link on day 8, or after already accepting it → "This invitation has expired. Ask an admin for a new one." (Verify: auto)
@@ -311,7 +311,7 @@ No question is open. These were left to the agent, within the limits in section 
   - REQ-025.2: `WEB-42` is unassigned with No priority → no initials or priority icon on the card. (Verify: auto)
 - **REQ-026** When a member drops a card in a new place, the system shall save straight away both the card's status and its place relative to its neighbouring cards, then refresh the columns involved. If two saves touch the same card, the last one wins (STD-8). If the save fails, the card returns to its old place and a toast appears (STD-9).
   - REQ-026.1: Sam drags `WEB-42` from Backlog to In Progress → status In Progress; after a reload it's still there. (Verify: auto)
-  - REQ-026.2: The network drops during the save → the card goes back to its old place in Backlog, with the toast "Couldn't move WEB-42". (Verify: auto)
+  - REQ-026.2: The network drops during the save → the card goes back to its old place in Backlog, with the toast "Couldn’t move WEB-42". (Verify: auto)
   - REQ-026.3: Sam moves `WEB-5` and Alex moves `WEB-9` within In Progress at about the same time → both moves are kept. (Verify: auto)
   - REQ-026.4: Alex has moved `WEB-42` to Done; Sam, on an older board, drags it to In Review → `WEB-42` is In Review, and Sam's Done and In Review columns refresh. (Verify: auto)
   - REQ-026.5: Sam drags `WEB-42` after another member deleted it → the toast "This issue was deleted" (STD-9), and the card is removed from Sam's board. (Verify: auto)
@@ -441,7 +441,7 @@ No question is open. These were left to the agent, within the limits in section 
   - REQ-041.1: Sam is assigned `API-7` (Backlog), `WEB-42` (In Progress) and `WEB-3` (In Progress) → groups Backlog (1) and In Progress (2). (Verify: auto)
   - REQ-041.2: Sam's `WEB-10` was moved to Done 20 days ago → not shown. (Verify: auto)
   - REQ-041.3: Project `API` is archived → `API-7` isn't shown (REQ-013). (Verify: auto)
-  - REQ-041.4: Nothing is assigned to Sam → "Nothing assigned to you" (STD-7). (Verify: auto)
+  - REQ-041.4: Nothing is assigned to Sam → "Nothing assigned to you. Open a project to find or create issues." (STD-7). (Verify: auto)
   - REQ-041.5: Sam is assigned 300 open issues → all 300 are on the page, grouped. (Verify: auto)
   - REQ-041.6: Alex reassigns `WEB-42` to themselves while Sam has the page open → `WEB-42` stays listed until Sam reloads; opening it shows Alex as assignee. (Verify: manual)
 - **REQ-042** Each row shall show the issue ID, title, project name, priority, labels and last updated. A title or project name too long for one line is cut off with "…" and shown in full on hover. Within a group, rows are sorted by priority from Urgent down, then by most recently updated. There's no filtering, search or manual ordering on this page in R1.
@@ -487,16 +487,17 @@ No question is open. These were left to the agent, within the limits in section 
   - REQ-045.6: The email service reports that Sam's mailbox doesn't exist → the bounce is logged; nothing is resent. (Verify: auto)
   - REQ-045.7: Alex assigns `WEB-42` to Sam, and `WEB-42` is deleted a minute later → Sam still gets the email, and its link shows Not found (STD-4). (Verify: auto)
   - REQ-045.8: Alex mentions `@sam` on `WEB-42` at 10:00 and again at 10:01:30, then at 10:02:30 → one email at about 10:02 covers the first two; the third goes in a new email at about 10:04:30. (Verify: auto)
-- **REQ-053** The system shall give admins a notification status page, `/settings/notifications`, that shows whether notifications are going out. It shows when the background worker was last seen; how many deliveries are pending, how many of those are due, and how long the oldest due one has waited (in seconds under a minute, then minutes, hours or days, such as "40 seconds" or "14 min", and "None" when nothing is due); per channel, how many deliveries were sent, dropped, failed and bounced in the last 24 hours; and the 20 most recent failed or bounced deliveries, newest first, each with the recipient's username, the channel, the issue ID or project key, the number of attempts and when it failed or bounced. A delivery is counted once, under the state it's in now, so an email that was sent and then bounced counts as bounced. The page never shows email addresses or notification text (SEC-007). It's read-only: it loads when opened and again when the admin clicks **Refresh**, and never refreshes by itself. Members who aren't admins can't open it (STD-2).
+- **REQ-053** The system shall give admins a notification status page, `/settings/notifications`, that shows whether notifications are going out. It shows when the background worker was last seen; how many deliveries are pending, how many of those are due, and how long the oldest due one has waited (in seconds under a minute, then minutes, hours or days, such as "40 seconds" or "14 min", and "None" when nothing is due); per channel, how many deliveries were sent, dropped, failed and bounced in the last 24 hours; and the 20 most recent failed or bounced deliveries, newest first, each with the recipient's username, the channel, the issue ID or project key, the number of attempts and when it failed or bounced. A delivery is counted once, under the state it's in now, so an email that was sent and then bounced counts as bounced. The page never shows email addresses or notification text (SEC-007). When the worker hasn't finished a pass in the last 2 minutes (OPS-005), the page warns "No pass for {N} min. Notifications wait in the queue until the worker runs.", where {N} is the whole minutes since its last pass; when it has never run, it warns "The worker has never run. No notifications are sent until it does." It's read-only: it loads when opened and again when the admin clicks **Refresh**, and never refreshes by itself. Members who aren't admins can't open it (STD-2).
   - REQ-053.1: The worker finished a pass 4 seconds ago, and 3 notifications are pending, 1 of them due for 40 seconds → the page shows the worker last seen "just now", 3 pending, 1 due, and 40 seconds for the oldest due. (Verify: auto)
   - REQ-053.2: In the last 24 hours, 12 emails were sent, 2 dropped, 1 failed and 1 bounced, and one more failed 2 days ago → the Email row shows 12 sent, 2 dropped, 1 failed and 1 bounced. (Verify: auto)
   - REQ-053.3: Sam's email about `WEB-42` failed after 4 attempts → the recent list shows `sam`, Email, `WEB-42`, 4 and when it failed. Sam's email address and the excerpt appear nowhere on the page or in what the API returns. (Verify: auto)
   - REQ-053.4: 25 deliveries have failed or bounced → the 20 most recent are listed, newest first. (Verify: auto)
-  - REQ-053.5: The worker has never run → it shows as last seen "Never". (Verify: auto)
+  - REQ-053.5: The worker has never run → it shows as last seen "Never", with the warning "The worker has never run. No notifications are sent until it does." (Verify: auto)
   - REQ-053.6: Nothing has failed or bounced → the recent list shows "No failed or bounced notifications." (Verify: auto)
   - REQ-053.7: An admin has the page open while another notification is sent → the numbers don't change until they click **Refresh**, then the sent count goes up by one. (Verify: auto)
   - REQ-053.8: Alex, a member, opens `/settings/notifications` → "You don't have permission to do that." (Verify: auto)
   - REQ-053.9: 2 notifications are pending and neither is due yet → the page shows 2 pending, 0 due, and "None" for the oldest due. (Verify: auto)
+  - REQ-053.10: The worker last finished a pass 3 minutes ago → the page warns "No pass for 3 min. Notifications wait in the queue until the worker runs."; after a pass 4 seconds ago, as in REQ-053.1, there's no warning. (Verify: auto)
 
 **Exceptions to standard behaviors:** None.
 **Uses:** Notification, Issue, Project, Comment, Member · DATA-001 (mentions) · STD-6 · REQ-007 · API-002, API-003, API-004 · SEC-007 · OPS-005
@@ -512,15 +513,15 @@ No question is open. These were left to the agent, within the limits in section 
 | STD-3 | Invalid input | The error shows next to the field, the form keeps everything typed, and nothing is saved. API: `422` with an error per field. |
 | STD-4 | Item not found | A "Not found" page with a link to My issues. This also covers a project key or issue ID that doesn't exist, such as `WEB-999`. API: `404`. |
 | STD-5 | Same action sent twice | The submit button is disabled while saving. Creating an issue or comment carries a request ID, so a retry or double-click never creates two. |
-| STD-6 | A service we depend on fails | The only outside service is email. If an invitation or password reset email fails, nothing is saved and the person sees "We couldn't send the email. Try again." If a notification email fails, the app retries 3 times over about 15 minutes, then logs the failure; the action that caused it still succeeds. |
-| STD-7 | Every screen | A loading indicator shows if loading takes more than 300 ms. Empty states name the next action ("No issues yet. Create one."). An error state shows "Couldn't load this." beside a Retry button (DEC-006). Speed targets are in section 11. |
+| STD-6 | A service we depend on fails | The only outside service is email. If an invitation or password reset email fails, nothing is saved and the person sees "We couldn’t send the email. Try again." If a notification email fails, the app retries 3 times over about 15 minutes, then logs the failure; the action that caused it still succeeds. |
+| STD-7 | Every screen | A loading indicator shows if loading takes more than 300 ms. Empty states name the next action ("No issues yet. Create one."). An error state shows "Couldn’t load this." beside a Retry button (DEC-006). Speed targets are in section 11. |
 | STD-8 | Two members edit the same thing | Single fields such as status, assignee, priority and labels: the last save wins. Descriptions: if someone else saved since you opened the editor, nothing is saved. You see "This was changed by [name]. Copy your text and reload.", and your text stays in the editor. |
-| STD-9 | A form submission fails | A toast error appears, disappears after 5 seconds with no dismiss or pause control, and the form keeps everything typed (DEC-006). This covers failures not tied to one field, such as a network error, a server error, a `403` (STD-2) or a failed invitation or password reset email (STD-6). Validation errors stay next to their fields (STD-3), and the STD-8 conflict message stays in the editor. For a network error or a server error, the toast reads "Couldn't save. Try again." |
+| STD-9 | A form submission fails | A toast error appears, disappears after 5 seconds with no dismiss or pause control, and the form keeps everything typed (DEC-006). This covers failures not tied to one field, such as a network error, a server error, a `403` (STD-2) or a failed invitation or password reset email (STD-6). Validation errors stay next to their fields (STD-3), and the STD-8 conflict message stays in the editor. For a network error or a server error, the toast reads "Couldn’t save. Try again." |
 
 **STD-9 examples**
   - STD-9.1: Sam's save fails → one error toast shows, and 5 seconds later it's gone; it has no dismiss or pause control. (Verify: auto)
   - STD-9.2: A second save fails while the first toast is showing → the new message replaces it, and the 5 seconds start again. (Verify: auto)
-  - STD-9.3: Sam's save fails with a network error or a server error → the toast reads "Couldn't save. Try again."; any other failure shows the server's message. (Verify: auto)
+  - STD-9.3: Sam's save fails with a network error or a server error → the toast reads "Couldn’t save. Try again."; any other failure shows the server's message. (Verify: auto)
 
 ### 7. Roles and permissions
 
@@ -584,7 +585,7 @@ There are no private projects. Nobody, including admins, can see or set another 
 | ID | Call or system | Used for |
 |---|---|---|
 | API-001 | The app's own HTTP API, under `/api/…`, used only by its own web front end | Every feature. It isn't public or documented for outside use. Errors follow STD-1 to STD-4 (`401`, `403`, `422`, `404`) and STD-8 (`409`); an expired, used or revoked invitation or reset link gets `410` (REQ-002, REQ-050). The exact list of endpoints is the agent's choice (DEC-002). |
-| API-002 | Outgoing email service (a transactional email provider, DEC-003) | Invitations (REQ-001), password reset links (REQ-050) and notifications (F-008). If it fails, see STD-6: a password reset request shows "We couldn't send the email", and notifications are retried 3 times. |
+| API-002 | Outgoing email service (a transactional email provider, DEC-003) | Invitations (REQ-001), password reset links (REQ-050) and notifications (F-008). If it fails, see STD-6: a password reset request shows "We couldn’t send the email", and notifications are retried 3 times. |
 | API-003 | `POST /webhooks/email` (bounce reports from the email service) | Marking notifications as Bounced (REQ-045.6). It accepts only requests signed by the email service; anything else gets `401`. |
 | API-004 | Page addresses: `/sign-in`, `/forgot-password`, `/reset-password?token=…`, `/invite?token=…`, `/my-issues`, `/project/{KEY}` (board), `/project/{KEY}/list`, `/project/{KEY}/detail`, `/project/{KEY}/labels`, `/project/{KEY}/settings`, `/projects/archived`, `/issue/{ID}`, `/settings/profile`, `/settings/members`, `/settings/notifications` | Links in emails and between members. Keys and IDs are matched ignoring capitals (REQ-016.5). The list view's filters go in the query string (REQ-040). |
 
@@ -679,7 +680,7 @@ All emails are plain text. `{…}` are filled in when the email is sent, `{APP_U
 These are accepted for a small invite-only team. The sign-in and password reset pages' messages stay the same for members and non-members (REQ-047.3, REQ-050.2, SEC-001.3).
 
 - The time to answer a sign-in or password reset request may differ between member and non-member emails, so it can hint at which emails are members. No minimum response time is required.
-- During an email-service outage, only a member's email gets "We couldn't send the email. Try again." (STD-6), so that message can reveal which emails are members.
+- During an email-service outage, only a member's email gets "We couldn’t send the email. Try again." (STD-6), so that message can reveal which emails are members.
 - Someone who knows a member's email can block that member's sign-in for up to an hour by using up SEC-001's per-email limit with wrong passwords. The member waits, or an admin investigates; there's no permanent lockout.
 - Each password check uses about 19 MiB of memory (SEC-008), and SEC-001 only limits failures per hour, so a burst of sign-in requests at once can strain a small server.
 
@@ -741,10 +742,11 @@ Deploys, rollbacks, backups, log retention and uptime monitoring are part of the
 |---|---|---|
 | DEC-001 | R1 descriptions and comments use GitHub-flavoured Markdown (tables, task lists, strikethrough and autolinks), shown formatted. Task-list checkboxes are shown but can't be ticked in the formatted view; members edit the text instead. | It's normal for the team and gives a clean path to rich text (F-010). |
 | DEC-005 | Test tools: Vitest with React Testing Library on jsdom, run through npm scripts, for all `Verify: auto` examples. Server tests run against a real test PostgreSQL database. There are no browser end-to-end tests; shared screen states are checked by component tests. | The owner chose one fast test setup with no browser end-to-end tool. |
-| DEC-006 | Generic error copy: a network or server error toast reads "Couldn't save. Try again." (STD-9), and an error state reads "Couldn't load this." beside Retry (STD-7). The STD-9 toast keeps its fixed 5 seconds with no dismiss or pause control. | The owner chose short, plain copy, and kept the fixed toast timing deliberately despite WCAG 2.2 timing guidance. |
+| DEC-006 | Generic error copy: a network or server error toast reads "Couldn’t save. Try again." (STD-9), and an error state reads "Couldn’t load this." beside Retry (STD-7). The STD-9 toast keeps its fixed 5 seconds with no dismiss or pause control. | The owner chose short, plain copy, and kept the fixed toast timing deliberately despite WCAG 2.2 timing guidance. |
 
 **Changelog**
 
+- **0.31 (2026-10-22):** From the design refresh. REQ-053 warns when the worker hasn't finished a pass in the last 2 minutes or has never run, using OPS-005's threshold (REQ-053.5 extended, new REQ-053.10). REQ-041.4's empty My issues copy names the next action: "Nothing assigned to you. Open a project to find or create issues." (STD-7). The "Couldn’t …" messages use a curly apostrophe: "Couldn’t load this.", "Couldn’t save. Try again.", "Couldn’t move WEB-42" and "We couldn’t send the email. Try again." (REQ-001, REQ-026.2, STD-6, STD-7, STD-9, API-002, DEC-006).
 - **0.30 (2026-10-22):** Deployment leaves the repository. OPS-002 (deploy), OPS-003 (backups) and OPS-004 (rollback) are removed. OPS-005 keeps the two health endpoints but no longer sets up the uptime checker or its emails (OPS-005.6 removed). OPS-006 drops log rotation. Section 3 drops the single-VPS limitation and backups as the data export.
 - **0.29 (2026-10-12):** Docs synced with the code; no behaviour changes. Section 4 says no question is open. API-001 lists `409` and `410`. DEC-002's endpoints without a session add invitation lookups and the health checks. The `X-Forwarded-For` limitation leaves section 10, since the reverse proxy now overwrites that header. The 0.9 entry cites REQ-001.7 and API-003.2, the examples that exist.
 - **0.28 (2026-10-11):** REQ-053 names how the oldest due wait reads, such as "40 seconds" or "14 min", and "None" when nothing is due (new REQ-053.9).

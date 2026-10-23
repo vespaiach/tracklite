@@ -92,7 +92,7 @@ it("STD-9.3: a failed name save or password change shows the toast and keeps wha
 
   await saveName("Samuel Lee");
 
-  expect(await screen.findByText("Couldn't save. Try again.")).toBeTruthy();
+  expect(await screen.findByText("Couldn’t save. Try again.")).toBeTruthy();
   expect(input("Full name").value).toBe("Samuel Lee");
   expect(screen.queryByText("Name saved.")).toBeNull();
   const nameToast = screen.getByRole("status");
@@ -100,7 +100,7 @@ it("STD-9.3: a failed name save or password change shows the toast and keeps wha
   await changePassword("correct-horse-battery", "staple-lantern-orbit");
 
   await waitFor(() => expect(screen.getByRole("status")).not.toBe(nameToast));
-  expect(within(screen.getByRole("status")).getByText("Couldn't save. Try again.")).toBeTruthy();
+  expect(within(screen.getByRole("status")).getByText("Couldn’t save. Try again.")).toBeTruthy();
   expect(input("Current password").value).toBe("correct-horse-battery");
   expect(input("New password").value).toBe("staple-lantern-orbit");
 });

@@ -88,7 +88,7 @@ export function ResetPassword() {
   if (lookupFailure) {
     return (
       <SignedOutLayout>
-        <SignedOutNote>Couldn't load this.</SignedOutNote>
+        <SignedOutNote>Couldn’t load this.</SignedOutNote>
         <Button onClick={() => lookup.refetch()}>Retry</Button>
       </SignedOutLayout>
     );

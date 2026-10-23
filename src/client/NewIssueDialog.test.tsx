@@ -86,7 +86,7 @@ it("STD-5, STD-9: a failed create shows the toast and keeps the title; the retry
   const title = typeTitle(dialog, "Fix login button");
   fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
 
-  expect(await screen.findByText("Couldn't save. Try again.")).toBeTruthy();
+  expect(await screen.findByText("Couldn’t save. Try again.")).toBeTruthy();
   expect(title.value).toBe("Fix login button");
   expect(window.location.pathname).toBe("/project/WEB");
 

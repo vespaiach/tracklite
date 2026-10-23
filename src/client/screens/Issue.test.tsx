@@ -236,7 +236,7 @@ it("STD-9: a failed picker save shows the toast and keeps the old value", async 
   const listbox = await openPicker("Priority");
   fireEvent.click(within(listbox).getByRole("option", { name: "Urgent" }));
 
-  expect(await screen.findByText("Couldn't save. Try again.")).toBeTruthy();
+  expect(await screen.findByText("Couldn’t save. Try again.")).toBeTruthy();
   expect(screen.getByRole("button", { name: /^Priority/ }).textContent).toContain("High");
 });
 

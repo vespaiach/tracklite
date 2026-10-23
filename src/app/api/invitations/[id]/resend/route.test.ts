@@ -57,7 +57,7 @@ it("REQ-001.7: a failed resend answers 503 and keeps the previous link working",
   const response = await resendInvitation(cookie, invitation.id);
 
   expect(response.status).toBe(503);
-  expect(await response.json()).toEqual({ error: { message: "We couldn't send the email. Try again." } });
+  expect(await response.json()).toEqual({ error: { message: "We couldn’t send the email. Try again." } });
   expect(await (await lookUp(token)).json()).toEqual({ email });
   expect(await listedInvitation(cookie, email)).toEqual(invitation);
 });

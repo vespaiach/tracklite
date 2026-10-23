@@ -112,7 +112,7 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
   - leaves every other error to the component, which shows field errors (STD-3), an editor conflict (`409`, STD-8), or a toast.
 - **Fresh data on every visit.** Queries use `refetchOnMountOrArgChange: true`, so each screen loads current data when opened. That matches "pages show current data when they load" (spec §12). There's no `refetchOnFocus` and no polling: no live updates in R1, and REQ-041.6 expects an open page to stay as it is.
 - **Tags drive refreshing.** Tags are per type, with no IDs: `Me`, `Members`, `Invitations`, `Projects`, `Labels`, `Issue`, `Board`, `Comments`. A successful mutation invalidates the type it changes (`updateMember` also `Me`), and a mounted screen showing that data refetches. Label updates and deletes, comment deletes and board moves also invalidate on a `404`, since the row was deleted meanwhile. `updateIssue` instead writes the saved issue into the `issue` cache, and invalidates `Labels` only on a `404` (a label deleted meanwhile). Creating or deleting an issue, and deleting a project, invalidate nothing, because the app then navigates to a screen that refetches on mount (the project delete also invalidates `Projects` for the sidebar). The list, My issues and the notification status carry no tags; they rely on the refetch on every visit.
-- **Optimistic board moves (NFR-005, REQ-026).** `moveIssue` updates the cached board in `onQueryStarted` before the request goes out. If the request fails, it undoes the change and shows a toast: the server's message, or "Couldn't move WEB-42" for a network error or a `5xx`. If it succeeds, or fails with `404` because the card was deleted meanwhile (REQ-026.5), it invalidates `Board`, which refreshes the board on screen.
+- **Optimistic board moves (NFR-005, REQ-026).** `moveIssue` updates the cached board in `onQueryStarted` before the request goes out. If the request fails, it undoes the change and shows a toast: the server's message, or "Couldn’t move WEB-42" for a network error or a `5xx`. If it succeeds, or fails with `404` because the card was deleted meanwhile (REQ-026.5), it invalidates `Board`, which refreshes the board on screen.
 - **UI slice:** one `toast` slice (STD-9: one message at a time, 5 seconds, no dismiss).
 - **Kept out of Redux on purpose:**
   - list-view filters, search and sort live in the URL (`useSearchParams`), since REQ-040 already makes the URL their home. The parameters are the list endpoint's (3.3), with enum values as their keys, such as `status=in_progress`. A filter or sort change adds a history entry; search replaces the current one, so Back doesn't step through each typed word;
@@ -314,7 +314,7 @@ Rules that need the database answer with a field error when one field is at faul
 
 Changing a field that can't be changed (username, email, project key) gets `422` with a field error. The stored value stays as it was (REQ-003.3, REQ-010.1).
 
-A body schema failure gets `422` with "Check the highlighted fields" and the first failing rule's message for each field (STD-3). A rule on the body as a whole, such as "Change one field at a time" on an issue `PATCH`, gets `422` with its own message and no `fields`. A field missing from the body gets the field error "Required". A body that isn't valid JSON, or isn't a JSON object, gets `422` "Couldn't read the request." with no `fields`. The browser never sends either, so this only keeps such requests from becoming a `500`. Query strings and path segments aren't covered by schemas.
+A body schema failure gets `422` with "Check the highlighted fields" and the first failing rule's message for each field (STD-3). A rule on the body as a whole, such as "Change one field at a time" on an issue `PATCH`, gets `422` with its own message and no `fields`. A field missing from the body gets the field error "Required". A body that isn't valid JSON, or isn't a JSON object, gets `422` "Couldn’t read the request." with no `fields`. The browser never sends either, so this only keeps such requests from becoming a `500`. Query strings and path segments aren't covered by schemas.
 
 ### 3.3 Endpoints
 
@@ -536,7 +536,7 @@ The route says who you are; the domain says what you may do (D-43). SEC-006's si
 
 Also useful: Resend accepts an `Idempotency-Key` header, which closes the duplicate-on-crash gap in 1.4.
 
-**Risk: the 100/day cap.** A team of under 15 with 2-minute combining should stay well below it, but a very busy day could hit it. Sends over the cap fail and are retried like any other failure, so a notification can end up `failed`, and an invitation or reset shows STD-6's "We couldn't send the email". If that ever happens, the fix is a paid plan or Amazon SES. The `sendEmail()` module (5.2) is the only code that would change.
+**Risk: the 100/day cap.** A team of under 15 with 2-minute combining should stay well below it, but a very busy day could hit it. Sends over the cap fail and are retried like any other failure, so a notification can end up `failed`, and an invitation or reset shows STD-6's "We couldn’t send the email". If that ever happens, the fix is a paid plan or Amazon SES. The `sendEmail()` module (5.2) is the only code that would change.
 
 ### 5.2 Sending
 
