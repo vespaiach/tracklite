@@ -1488,6 +1488,12 @@ a.tl-rail-item {
   text-transform: uppercase;
   color: var(--color-ink-2);
 }
+fieldset.tl-list-head {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-divider);
+}
 .tl-list-head > :last-child {
   justify-self: end;
 }
@@ -1518,12 +1524,31 @@ a.tl-rail-item {
   font-size: 12.5px;
   color: var(--color-ink-2);
 }
+.tl-list-row__cell {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: 12.5px;
+}
+.tl-list-row__cell > :last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .tl-list-row__labels {
   display: flex;
   align-items: center;
   gap: 5px;
   min-width: 0;
   overflow: hidden;
+}
+.tl-list-message {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px 15px 30px;
+  font-size: 13px;
 }
 .tl-list-note {
   margin: 0;
@@ -3082,7 +3107,8 @@ a.tl-rail-item {
   color: var(--color-ink);
   border-bottom-color: color-mix(in srgb, var(--color-ink) 8%, transparent);
 }
-.tl-table__sort {
+.tl-table__sort,
+.tl-list-head__sort {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -3096,7 +3122,9 @@ a.tl-rail-item {
   cursor: pointer;
 }
 .tl-table__sort:hover,
-.tl-table__sort--on {
+.tl-table__sort--on,
+.tl-list-head__sort:hover,
+.tl-list-head__sort--on {
   color: var(--color-ink);
 }
 .tl-table-scroll {

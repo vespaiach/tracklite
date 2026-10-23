@@ -1,6 +1,13 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { BoardCard, BoardColumn, CollapsibleListGroup, ListRowHead, ListRowLink } from "./ListRow";
+import {
+  BoardCard,
+  BoardColumn,
+  CollapsibleListGroup,
+  ListRowHead,
+  ListRowLink,
+  ListSortButton,
+} from "./ListRow";
 
 afterEach(cleanup);
 
@@ -137,4 +144,40 @@ it("ListRowLink and ListRowHead share the grid columns; the head row is hidden f
   expect(head.style.gridTemplateColumns).toBe(columns);
   expect(link.style.gridTemplateColumns).toBe(columns);
   expect(link.getAttribute("href")).toBe("/issue/WEB-42");
+});
+
+it("ListRowHead with a label is a named group; ListSortButton says its sort direction and sorts on click", () => {
+  const onSort = vi.fn();
+  render(
+    <ListRowHead
+      columns="64px 1fr 100px"
+      label="Sort issues">
+      <ListSortButton
+        sort="ascending"
+        onSort={onSort}>
+        ID
+      </ListSortButton>
+      <ListSortButton
+        sort="descending"
+        onSort={() => {}}>
+        Status
+      </ListSortButton>
+      <ListSortButton
+        sort="none"
+        onSort={() => {}}>
+        Last updated
+      </ListSortButton>
+    </ListRowHead>,
+  );
+
+  const head = screen.getByRole("group", { name: "Sort issues" });
+  expect(head.hasAttribute("aria-hidden")).toBe(false);
+  expect(
+    within(head)
+      .getAllByRole("button")
+      .map((button) => button.textContent),
+  ).toEqual(["ID, sorted ascending", "Status, sorted descending", "Last updated"]);
+
+  fireEvent.click(within(head).getByRole("button", { name: "ID, sorted ascending" }));
+  expect(onSort).toHaveBeenCalledTimes(1);
 });

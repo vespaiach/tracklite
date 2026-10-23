@@ -1,6 +1,9 @@
+import { ArrowDown } from "@phosphor-icons/react/dist/csr/ArrowDown";
+import { ArrowUp } from "@phosphor-icons/react/dist/csr/ArrowUp";
 import { CaretDown } from "@phosphor-icons/react/dist/csr/CaretDown";
 import { type MouseEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { cx } from "./cx";
+import type { TableSort } from "./Table";
 
 export type ListGroupProps = { label: string; count?: number; icon?: ReactNode; action?: ReactNode };
 
@@ -75,14 +78,51 @@ function SkipLink({ target }: { target: { id: string; label: string } }) {
   );
 }
 
-export function ListRowHead({ columns, children }: { columns: string; children: ReactNode }) {
+export type ListRowHeadProps = { columns: string; label?: string; children: ReactNode };
+
+export function ListRowHead({ columns, label, children }: ListRowHeadProps) {
+  const style = { gridTemplateColumns: columns };
+  if (label) {
+    return (
+      <fieldset
+        aria-label={label}
+        className="tl-list-head"
+        style={style}>
+        {children}
+      </fieldset>
+    );
+  }
+
   return (
     <div
       aria-hidden="true"
       className="tl-list-head"
-      style={{ gridTemplateColumns: columns }}>
+      style={style}>
       {children}
     </div>
+  );
+}
+
+export type ListSortButtonProps = { sort: TableSort; onSort: () => void; children: ReactNode };
+
+export function ListSortButton({ sort, onSort, children }: ListSortButtonProps) {
+  const Arrow = sort === "ascending" ? ArrowUp : ArrowDown;
+  return (
+    <button
+      type="button"
+      onClick={onSort}
+      className={cx("tl-list-head__sort", sort !== "none" && "tl-list-head__sort--on")}>
+      {children}
+      {sort !== "none" && (
+        <>
+          <span className="sr-only">, sorted {sort}</span>
+          <Arrow
+            aria-hidden="true"
+            size={11}
+          />
+        </>
+      )}
+    </button>
   );
 }
 
