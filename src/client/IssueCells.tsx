@@ -1,31 +1,8 @@
-import { type FocusEvent, type MouseEvent, useState } from "react";
-import { Link } from "react-router";
-import { Pill, TipTrigger } from "../components/ui/track-lite";
+import { Pill } from "../components/ui/track-lite";
 import type { IssueLabel } from "./api";
 import { formatExact, formatUpdated } from "./dates";
 
 const labelsShown = 2;
-
-export function TitleLink({ issue }: { issue: { id: string; title: string } }) {
-  const [cut, setCut] = useState(false);
-  const measure = (event: MouseEvent<HTMLElement> | FocusEvent<HTMLElement>) =>
-    setCut(event.currentTarget.scrollWidth > event.currentTarget.clientWidth);
-  return (
-    <TipTrigger
-      tip={issue.title}
-      wide
-      block
-      open={cut ? undefined : false}>
-      <Link
-        to={`/issue/${issue.id}`}
-        onMouseEnter={measure}
-        onFocus={measure}
-        className="tl-table__link">
-        {issue.title}
-      </Link>
-    </TipTrigger>
-  );
-}
 
 export function LabelPills({
   labels,

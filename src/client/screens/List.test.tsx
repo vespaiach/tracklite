@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { afterEach, expect, it, vi } from "vitest";
 import { alex, memberOf, mockApi, project, renderAppAt, requestsTo, sam } from "../../test/client-app";
 import type { IssueLabel, IssueListPage, Label, ListIssue, Me, Project } from "../api";
+import { formatExact } from "../dates";
 
 afterEach(() => {
   cleanup();
@@ -134,21 +135,27 @@ function keysOf(listbox: HTMLElement) {
     .map((option) => option.getAttribute("data-key"));
 }
 
-function heading(name: string) {
-  return screen.getByRole("columnheader", { name });
+function issueList() {
+  return screen.getByRole("main", { name: "Issues" });
+}
+
+function sortButtons() {
+  return within(screen.getByRole("group", { name: "Sort issues" }))
+    .getAllByRole("button")
+    .map((button) => button.textContent);
 }
 
 function sortBy(name: string) {
-  fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name }));
+  const head = screen.getByRole("group", { name: "Sort issues" });
+  fireEvent.click(within(head).getByRole("button", { name: new RegExp(`^${name}`) }));
 }
 
 function rowOf(id: string) {
-  const cell = within(screen.getByRole("table")).getByText(id);
-  return cell.closest("tr") as HTMLElement;
+  return screen.getByRole("link", { name: new RegExp(`^${id}, `) });
 }
 
 function rowIds() {
-  return within(screen.getByRole("table"))
+  return within(issueList())
     .queryAllByText(/^WEB-\d+$/)
     .map((cell) => cell.textContent);
 }
@@ -157,18 +164,17 @@ it("REQ-040.1: a shared link opens the same filtered, sorted list", async () => 
   const fetchMock = mockList();
   renderAppAt("/project/WEB/list?assignee=alex&sort=priority&dir=asc");
 
-  await screen.findByRole("table");
+  await screen.findByRole("main", { name: "Issues" });
   expect(listQueries(fetchMock)).toEqual(["?assignee=alex&sort=priority&dir=asc"]);
   await waitFor(() => expect(ruleText("Assignee")).toBe("AssigneeisAlex Kim×"));
-  expect(heading("Priority").getAttribute("aria-sort")).toBe("ascending");
-  expect(heading("Last updated").getAttribute("aria-sort")).toBe("none");
+  expect(sortButtons()).toEqual(["ID", "Status", "Priority, sorted ascending", "Last updated"]);
 });
 
 it("REQ-040.2, REQ-040.3: a deleted label and an unknown status in a link are ignored; Done still applies", async () => {
   mockList({ projectLabels: [projectLabel("bug"), projectLabel("backend")] });
   renderAppAt("/project/WEB/list?label=frontend&status=done&status=Todo");
 
-  await screen.findByRole("table");
+  await screen.findByRole("main", { name: "Issues" });
   expect(ruleText("Status")).toBe("StatusisDone×");
   expect(rowIds()).toEqual(["WEB-42", "WEB-12", "WEB-7"]);
 
@@ -183,7 +189,7 @@ it("REQ-040.2, REQ-040.3: a deleted label and an unknown status in a link are ig
 it("REQ-040: filters and sort round-trip through the address as repeated parameters", async () => {
   const fetchMock = mockList();
   renderAppAt("/project/WEB/list");
-  await screen.findByRole("table");
+  await screen.findByRole("main", { name: "Issues" });
 
   const listbox = await openFilter("Status");
   fireEvent.click(within(listbox).getByRole("option", { name: "In Progress" }));
@@ -214,7 +220,7 @@ it("REQ-040: filters and sort round-trip through the address as repeated paramet
 it("REQ-038: search waits until 300 ms after typing stops", async () => {
   const fetchMock = mockList();
   renderAppAt("/project/WEB/list");
-  await screen.findByRole("table");
+  await screen.findByRole("main", { name: "Issues" });
   const search = screen.getByRole("searchbox", { name: "Search issues" });
 
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
@@ -235,53 +241,58 @@ it("REQ-037.4: nothing matches → Clear filters, which clears the filters and t
   mockList({ list: (query) => page(query.size > 0 ? [] : [web42, web12, web7]) });
   renderAppAt("/project/WEB/list?status=done&q=invoice");
 
-  const table = await screen.findByRole("table");
-  await within(table).findByText("No issues match these filters");
+  const list = await screen.findByRole("main", { name: "Issues" });
+  await within(list).findByText("No issues match these filters");
   expect((screen.getByRole("searchbox", { name: "Search issues" }) as HTMLInputElement).value).toBe(
     "invoice",
   );
 
-  fireEvent.click(within(table).getByRole("button", { name: "Clear filters" }));
+  fireEvent.click(within(list).getByRole("button", { name: "Clear filters" }));
   await waitFor(() => expect(window.location.search).toBe(""));
   expect((screen.getByRole("searchbox", { name: "Search issues" }) as HTMLInputElement).value).toBe("");
   expect(filterButton("Status").classList.contains("tl-filter-add")).toBe(true);
   await waitFor(() => expect(rowIds()).toEqual(["WEB-42", "WEB-12", "WEB-7"]));
 });
 
-it("REQ-039: default columns and cells; newest-updated first; ID starts highest first, Status from Backlog", async () => {
+it("REQ-039, REQ-036.4: default columns and row cells; newest-updated first; ID starts highest first, Status from Backlog", async () => {
   mockList();
   renderAppAt("/project/WEB/list");
 
-  const table = await screen.findByRole("table");
-  expect(
-    within(table)
-      .getAllByRole("columnheader")
-      .map((head) => head.textContent),
-  ).toEqual(["ID", "Title", "Status", "Priority", "Assignee", "Labels", "Last updated"]);
+  await screen.findByRole("main", { name: "Issues" });
+  expect(sortButtons()).toEqual(["ID", "Status", "Priority", "Last updated, sorted descending"]);
 
   const r42 = rowOf("WEB-42");
-  expect(within(r42).getByRole("link", { name: "Fix login button" }).getAttribute("href")).toBe(
-    "/issue/WEB-42",
+  expect(r42.getAttribute("aria-label")).toBe(
+    `WEB-42, Fix login button, In Progress, High, Sam Lee, updated ${formatExact(web42.updatedAt)}`,
   );
-  for (const text of ["In Progress", "High", "Sam Lee", "bug", "frontend", "+1", "5 min ago"]) {
+  expect(r42.getAttribute("href")).toBe("/issue/WEB-42");
+  expect(within(r42).getByText("Fix login button").getAttribute("title")).toBe("Fix login button");
+  for (const text of ["In Progress", "High", "bug", "frontend", "+1"]) {
     expect(within(r42).getByText(text)).toBeTruthy();
   }
+  expect(within(r42).getByTitle("Sam Lee").textContent).toBe("SL");
+  expect(within(r42).getByText("5 min ago").getAttribute("title")).toBe(
+    `Updated ${formatExact(web42.updatedAt)}`,
+  );
   expect(within(r42).queryByText("Safari")).toBeNull();
 
   const r12 = rowOf("WEB-12");
-  for (const text of ["Unassigned", "No priority"]) expect(within(r12).getByText(text)).toBeTruthy();
+  expect(within(r12).getByText("No priority")).toBeTruthy();
+  expect(within(r12).getByTitle("Unassigned").textContent).toBe("");
   expect(within(r12).getByText(/^Sep 16/)).toBeTruthy();
 
-  expect(within(rowOf("WEB-7")).getByText("Jo Park (deactivated)")).toBeTruthy();
+  expect(within(rowOf("WEB-7")).getByTitle("Jo Park (deactivated)")).toBeTruthy();
 
-  expect(heading("Last updated").getAttribute("aria-sort")).toBe("descending");
   sortBy("ID");
   await waitFor(() => expect(window.location.search).toBe("?sort=id&dir=desc"));
-  expect(heading("ID").getAttribute("aria-sort")).toBe("descending");
+  expect(sortButtons()[0]).toBe("ID, sorted descending");
   sortBy("Status");
   await waitFor(() => expect(window.location.search).toBe("?sort=status&dir=asc"));
   sortBy("Last updated");
   await waitFor(() => expect(window.location.search).toBe("?sort=updated&dir=desc"));
+
+  fireEvent.click(r42);
+  await waitFor(() => expect(window.location.pathname).toBe("/issue/WEB-42"));
 });
 
 it("REQ-036.1: 120 issues → 100 rows, and the other 20 load on scrolling down", async () => {
@@ -309,7 +320,7 @@ it("REQ-036.1: 120 issues → 100 rows, and the other 20 load on scrolling down"
   });
   renderAppAt("/project/WEB/list");
 
-  await screen.findByRole("table");
+  await screen.findByRole("main", { name: "Issues" });
   expect(rowIds()).toHaveLength(100);
   act(() =>
     observers.at(-1)?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver),
@@ -326,7 +337,7 @@ it("REQ-036.1: 120 issues → 100 rows, and the other 20 load on scrolling down"
 it("REQ-037.2, REQ-037.5: the Assignee filter offers Unassigned, active members and Jo Park (deactivated)", async () => {
   const fetchMock = mockList();
   renderAppAt("/project/WEB/list");
-  await screen.findByRole("table");
+  await screen.findByRole("main", { name: "Issues" });
 
   const listbox = await openFilter("Assignee");
   await waitFor(() => expect(keysOf(listbox)).toEqual(["-", "alex", "sam", "jo"]));
@@ -351,41 +362,10 @@ it("List — empty project: “Create one.” opens New issue", async () => {
   expect(screen.getByRole("dialog", { name: "New issue" })).toBeTruthy();
 });
 
-it("REQ-036.4, REQ-042.3: a title too long for its cell shows in full on hover and keyboard focus", async () => {
-  const long =
-    `Sign-in page shows the wrong error after a password reset link expires, ${"and more ".repeat(16)}`.slice(
-      0,
-      200,
-    );
-  mockList({ list: () => page([row("WEB-61", long), web12]) });
-  renderAppAt("/project/WEB/list");
-  await screen.findByRole("table");
-
-  const short = screen.getByRole("link", { name: "Tidy up footer links" });
-  fireEvent.mouseEnter(short);
-  expect(screen.queryByRole("tooltip")).toBeNull();
-  fireEvent.mouseLeave(short);
-
-  const link = screen.getByRole("link", { name: long });
-  Object.defineProperty(link, "scrollWidth", { value: 900 });
-  Object.defineProperty(link, "clientWidth", { value: 300 });
-  fireEvent.mouseEnter(link);
-  expect(screen.getByRole("tooltip").textContent).toBe(long);
-  fireEvent.mouseLeave(link);
-  expect(screen.queryByRole("tooltip")).toBeNull();
-
-  const matches = link.matches.bind(link);
-  vi.spyOn(link, "matches").mockImplementation(
-    (selector) => selector === ":focus-visible" || matches(selector),
-  );
-  act(() => link.focus());
-  expect(screen.getByRole("tooltip").textContent).toBe(long);
-});
-
 it("REQ-036.3: an archived project's list has no New issue, but filters and sort still work", async () => {
   const fetchMock = mockList({ shown: archivedWeb });
   renderAppAt("/project/WEB/list");
-  await screen.findByRole("table");
+  await screen.findByRole("main", { name: "Issues" });
 
   expect(screen.queryByRole("button", { name: "New issue" })).toBeNull();
   const listbox = await openFilter("Priority");

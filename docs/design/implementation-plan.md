@@ -115,7 +115,7 @@ Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` 
   - Reads: + spec REQ-009–014, REQ-021 · `src/client/screens/{ProjectSettings,Labels}.tsx`
   - Needs: M17.3
 
-- [ ] **M17.16 List view restyle.** Keep the filters, search, sort and paging (C1). Restyle the rows to match My issues (row-link grid, avatar or dashed "Unassigned", relative time).
+- [x] **M17.16 List view restyle.** Keep the filters, search, sort and paging (C1). Restyle the rows to match My issues (row-link grid, avatar or dashed "Unassigned", relative time).
   - Reads: + spec REQ-036–040 · `src/client/screens/List.tsx`
   - Needs: M17.4, M17.8
 

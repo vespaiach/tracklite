@@ -9,12 +9,13 @@ import {
   FilterPicker,
   Filters,
   Input,
+  ListRowHead,
+  ListRowLink,
+  ListSortButton,
   PickerItem,
   Priority,
   SettingsLayout,
   Status,
-  Table,
-  TableSortHead,
   type TableSort,
 } from "../../components/ui/track-lite";
 import {
@@ -23,11 +24,14 @@ import {
   type ProjectSummary,
   useIssueListInfiniteQuery,
   useLabelsQuery,
+  useMeQuery,
   useMembersQuery,
 } from "../api";
-import { LabelPills, TitleLink, UpdatedAt } from "../IssueCells";
+import { formatExact } from "../dates";
+import { LabelPills, UpdatedAt } from "../IssueCells";
 import { issuePriorities, issueStatuses } from "../../contract";
 import { priorities, statuses } from "../issue-fields";
+import { useRouterClick } from "../links";
 import { LoadFailed, Loading } from "../LoadStates";
 import { NewIssueDialog } from "../NewIssueDialog";
 import { useShowLoading } from "../useShowLoading";
@@ -45,15 +49,7 @@ const filterNames: Record<FilterParam, string> = {
   label: "Label",
 };
 const firstDir: Record<SortColumn, SortDir> = { id: "desc", status: "asc", priority: "asc", updated: "desc" };
-const columns = {
-  id: "100px",
-  title: "auto",
-  status: "150px",
-  priority: "130px",
-  assignee: "190px",
-  labels: "210px",
-  updated: "140px",
-};
+const columns = "64px minmax(240px, 1fr) 110px 100px minmax(0, 160px) 24px 110px";
 const unassigned = "-";
 const searchPause = 300;
 
@@ -80,6 +76,7 @@ function icon(content: ReactNode) {
 export function ListView({ project }: { project: ProjectSummary }) {
   const [params, setParams] = useSearchParams();
   const list = useIssueListInfiniteQuery({ key: project.key, query: params.toString() });
+  const { data: me } = useMeQuery();
   const { data: members = [] } = useMembersQuery();
   const { data: projectLabels = [] } = useLabelsQuery(project.key);
   const showLoading = useShowLoading(list.isLoading);
@@ -254,68 +251,62 @@ export function ListView({ project }: { project: ProjectSummary }) {
           )}
         </SettingsLayout>
       ) : (
-        <div className="tl-table-scroll">
-          <Table
-            sticky
+        <>
+          <ListRowHead
             columns={columns}
-            minWidth="1160px">
-            <thead>
-              <tr>
-                <TableSortHead
-                  sort={sortOf("id")}
-                  onSort={() => sortBy("id")}>
-                  ID
-                </TableSortHead>
-                <th scope="col">Title</th>
-                <TableSortHead
-                  sort={sortOf("status")}
-                  onSort={() => sortBy("status")}>
-                  Status
-                </TableSortHead>
-                <TableSortHead
-                  sort={sortOf("priority")}
-                  onSort={() => sortBy("priority")}>
-                  Priority
-                </TableSortHead>
-                <th scope="col">Assignee</th>
-                <th scope="col">Labels</th>
-                <TableSortHead
-                  sort={sortOf("updated")}
-                  onSort={() => sortBy("updated")}>
-                  Last updated
-                </TableSortHead>
-              </tr>
-            </thead>
-            <tbody>
-              {issues.map((issue) => (
-                <IssueRow
-                  key={issue.id}
-                  issue={issue}
-                />
-              ))}
-              {issues.length === 0 && (
-                <tr className="tl-table__message-row">
-                  <td colSpan={7}>
-                    <div className="tl-table__message">
-                      No issues match these filters
-                      <Button
-                        size="sm"
-                        onClick={clearAll}>
-                        Clear filters
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              )}
-              {list.hasNextPage && (
-                <MoreRows
-                  loading={list.isFetchingNextPage}
-                  onVisible={() => void list.fetchNextPage()}
-                />
-              )}
-            </tbody>
-          </Table>
-        </div>
+            label="Sort issues">
+            <ListSortButton
+              sort={sortOf("id")}
+              onSort={() => sortBy("id")}>
+              ID
+            </ListSortButton>
+            <span aria-hidden="true">Title</span>
+            <ListSortButton
+              sort={sortOf("status")}
+              onSort={() => sortBy("status")}>
+              Status
+            </ListSortButton>
+            <ListSortButton
+              sort={sortOf("priority")}
+              onSort={() => sortBy("priority")}>
+              Priority
+            </ListSortButton>
+            <span aria-hidden="true">Labels</span>
+            <span />
+            <ListSortButton
+              sort={sortOf("updated")}
+              onSort={() => sortBy("updated")}>
+              Last updated
+            </ListSortButton>
+          </ListRowHead>
+          <main
+            aria-label="Issues"
+            className="tl-table-scroll">
+            {issues.map((issue) => (
+              <IssueRow
+                key={issue.id}
+                issue={issue}
+                mine={me !== undefined && issue.assignee?.username === me.username}
+              />
+            ))}
+            {issues.length === 0 && (
+              <div className="tl-list-message">
+                No issues match these filters
+                <Button
+                  size="sm"
+                  onClick={clearAll}>
+                  Clear filters
+                </Button>
+              </div>
+            )}
+            {list.hasNextPage && (
+              <MoreRows
+                loading={list.isFetchingNextPage}
+                onVisible={() => void list.fetchNextPage()}
+              />
+            )}
+          </main>
+        </>
       )}
       {creating && (
         <NewIssueDialog
@@ -368,59 +359,56 @@ function AssigneeAvatar({ initials }: { initials: string }) {
   );
 }
 
-function IssueRow({ issue }: { issue: ListIssue }) {
+function IssueRow({ issue, mine }: { issue: ListIssue; mine: boolean }) {
+  const href = `/issue/${issue.id}`;
+  const open = useRouterClick(href);
   const { name: statusName, kind: statusKind } = statuses[issue.status];
   const { name: priorityName, kind: priorityKind } = priorities[issue.priority];
+  const assigneeName = issue.assignee ? memberName(issue.assignee) : "Unassigned";
   return (
-    <tr className="tl-table__row">
-      <td>
-        <span className="tl-list-row__id">{issue.id}</span>
-      </td>
-      <td>
-        <TitleLink issue={issue} />
-      </td>
-      <td>
-        <span className="tl-table__cell">
-          {icon(<Status status={statusKind} />)}
-          <span>{statusName}</span>
-        </span>
-      </td>
-      <td>
-        <span className="tl-table__cell">
-          {issue.priority === "none" ? (
-            <span className="tl-table__muted">{priorityName}</span>
-          ) : (
-            <>
-              {icon(<Priority priority={priorityKind} />)}
-              <span>{priorityName}</span>
-            </>
-          )}
-        </span>
-      </td>
-      <td>
-        <span className="tl-table__cell">
-          {issue.assignee ? (
-            <>
-              {icon(<AssigneeAvatar initials={issue.assignee.initials} />)}
-              <span>{memberName(issue.assignee)}</span>
-            </>
-          ) : (
-            <span className="tl-table__muted">Unassigned</span>
-          )}
-        </span>
-      </td>
-      <td>
-        <LabelPills labels={issue.labels} />
-      </td>
-      <td>
-        <UpdatedAt at={issue.updatedAt} />
-      </td>
-    </tr>
+    <ListRowLink
+      columns={columns}
+      href={href}
+      label={`${issue.id}, ${issue.title}, ${statusName}, ${priorityName}, ${assigneeName}, updated ${formatExact(issue.updatedAt)}`}
+      onClick={open}>
+      <span className="tl-list-row__id">{issue.id}</span>
+      <span
+        className="tl-list-row__title"
+        title={issue.title}>
+        {issue.title}
+      </span>
+      <span className="tl-list-row__cell">
+        {icon(<Status status={statusKind} />)}
+        <span>{statusName}</span>
+      </span>
+      <span className="tl-list-row__cell">
+        {issue.priority === "none" ? (
+          <span className="tl-list-row__muted">{priorityName}</span>
+        ) : (
+          <>
+            {icon(<Priority priority={priorityKind} />)}
+            <span>{priorityName}</span>
+          </>
+        )}
+      </span>
+      <LabelPills
+        labels={issue.labels}
+        className="tl-list-row__labels"
+      />
+      <Avatar
+        size="md"
+        empty={!issue.assignee}
+        tone={mine ? "accent" : "neutral"}
+        initials={issue.assignee?.initials}
+        title={assigneeName}
+      />
+      <UpdatedAt at={issue.updatedAt} />
+    </ListRowLink>
   );
 }
 
 function MoreRows({ loading, onVisible }: { loading: boolean; onVisible: () => void }) {
-  const row = useRef<HTMLTableRowElement>(null);
+  const row = useRef<HTMLDivElement>(null);
   const visible = useRef(onVisible);
   visible.current = onVisible;
 
@@ -434,19 +422,16 @@ function MoreRows({ loading, onVisible }: { loading: boolean; onVisible: () => v
   }, [loading]);
 
   return (
-    <tr
+    <div
       ref={row}
-      className="tl-table__message-row"
       aria-busy={loading}>
-      <td colSpan={7}>
-        {loading && (
-          <p
-            role="status"
-            className="tl-table__note">
-            Loading more…
-          </p>
-        )}
-      </td>
-    </tr>
+      {loading && (
+        <p
+          role="status"
+          className="tl-list-note">
+          Loading more…
+        </p>
+      )}
+    </div>
   );
 }
