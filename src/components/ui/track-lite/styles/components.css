@@ -2901,6 +2901,9 @@ a.tl-rail-item {
   align-items: baseline;
   gap: 15px;
 }
+.tl-settings__section-action {
+  margin-left: auto;
+}
 .tl-settings__title:has(.tl-settings__count) {
   display: flex;
   align-items: baseline;

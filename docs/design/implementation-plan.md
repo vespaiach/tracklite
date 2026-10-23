@@ -103,7 +103,7 @@ Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` 
   - Reads: + spec REQ-041–042 · `src/client/screens/MyIssues.tsx`, `IssueCells.tsx`
   - Needs: M17.0, M17.4
 
-- [ ] **M17.13 Members.** Order Members, then Invitations (the invite form inside it, with a "Notification status" link button); mono counts in the headings; no Status column ("(deactivated)" in the name, row in ink-2); "(you)" on your row; the Pending row with a ⋯ menu (Resend, Revoke…), Expired and Bounced with inline Resend plus ⋯; the Pending tag neutral. Copy and actions stay per C14.
+- [x] **M17.13 Members.** Order Members, then Invitations (the invite form inside it, with a "Notification status" link button); mono counts in the headings; no Status column ("(deactivated)" in the name, row in ink-2); "(you)" on your row; the Pending row with a ⋯ menu (Resend, Revoke…), Expired and Bounced with inline Resend plus ⋯; the Pending tag neutral. Copy and actions stay per C14.
   - Reads: + spec REQ-001–007, REQ-051 · `src/client/screens/Members.tsx`
   - Needs: M17.2, M17.4
 

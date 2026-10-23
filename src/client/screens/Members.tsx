@@ -1,5 +1,6 @@
 import { DotsThree } from "@phosphor-icons/react/dist/csr/DotsThree";
 import { type FormEvent, useState } from "react";
+import { Link } from "react-router";
 import {
   AppBar,
   AppBarTitle,
@@ -57,6 +58,7 @@ export function Members() {
 }
 
 function MembersAdmin() {
+  const { data: me } = useMeQuery();
   const members = useMembersQuery();
   const invitations = useInvitationsQuery();
   const showLoading = useShowLoading(members.isLoading || invitations.isLoading);
@@ -72,15 +74,17 @@ function MembersAdmin() {
     );
   }
 
-  if (!members.data || !invitations.data) {
+  if (!me || !members.data || !invitations.data) {
     return <Loading show={showLoading} />;
   }
 
   return (
     <SettingsLayout wide>
-      <InviteForm />
+      <MembersSection
+        members={members.data}
+        you={me.username}
+      />
       <InvitationsSection invitations={invitations.data} />
-      <MembersSection members={members.data} />
     </SettingsLayout>
   );
 }
@@ -111,43 +115,41 @@ function InviteForm() {
   }
 
   return (
-    <SettingsSection title="Invite">
-      <SettingsForm
-        aria-label="Invite"
-        onSubmit={submit}>
-        <SettingsInline>
-          <Field
-            label="Email"
-            help="The link works once and expires after 7 days."
-            error={error}>
-            {(props) => (
-              <Input
-                {...props}
-                type="email"
-                autoComplete="off"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            )}
-          </Field>
-          <SettingsActions>
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={sending}
-              aria-busy={sending || undefined}>
-              {sending ? "Sending…" : "Send invitation"}
-            </Button>
-            {sentTo && <FormStatus>Invitation sent to {sentTo}.</FormStatus>}
-          </SettingsActions>
-        </SettingsInline>
-      </SettingsForm>
-    </SettingsSection>
+    <SettingsForm
+      aria-label="Invite by email"
+      onSubmit={submit}>
+      <SettingsInline>
+        <Field
+          label="Email"
+          help="The link works once and expires after 7 days."
+          error={error}>
+          {(props) => (
+            <Input
+              {...props}
+              type="email"
+              autoComplete="off"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          )}
+        </Field>
+        <SettingsActions>
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={sending}
+            aria-busy={sending || undefined}>
+            {sending ? "Sending…" : "Send invitation"}
+          </Button>
+          {sentTo && <FormStatus>Invitation sent to {sentTo}.</FormStatus>}
+        </SettingsActions>
+      </SettingsInline>
+    </SettingsForm>
   );
 }
 
 const invitationStates = {
-  pending: { label: "Pending", tag: "outline", when: "Expires" },
+  pending: { label: "Pending", tag: "neutral", when: "Expires" },
   bounced: { label: "Bounced", tag: "accent-2", when: "Expires" },
   expired: { label: "Expired", tag: "neutral", when: "Expired" },
 } as const;
@@ -181,7 +183,16 @@ function InvitationsSection({ invitations }: { invitations: Invitation[] }) {
   return (
     <SettingsSection
       title="Invitations"
-      status={resentTo && <FormStatus>Invitation resent to {resentTo}.</FormStatus>}>
+      count={invitations.length}
+      status={resentTo && <FormStatus>Invitation resent to {resentTo}.</FormStatus>}
+      action={
+        <Link
+          to="/settings/notifications"
+          className="tl-btn tl-btn--sm tl-btn--secondary">
+          Notification status
+        </Link>
+      }>
+      <InviteForm />
       {invitations.length === 0 ? (
         <SettingsEmpty>No open invitations. Invite someone by email above.</SettingsEmpty>
       ) : (
@@ -214,20 +225,28 @@ function InvitationsSection({ invitations }: { invitations: Invitation[] }) {
                     </div>
                   </td>
                   <td className="tl-table__end">
-                    <Button
-                      size="sm"
-                      variant="quiet"
-                      aria-label={`Resend invitation to ${invitation.email}`}
-                      onClick={() => resend(invitation)}>
-                      Resend
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="quiet"
-                      aria-label={`Revoke invitation to ${invitation.email}`}
-                      onClick={() => setPendingRevoke(invitation)}>
-                      Revoke
-                    </Button>
+                    {invitation.state !== "pending" && (
+                      <Button
+                        size="sm"
+                        variant="quiet"
+                        aria-label={`Resend invitation to ${invitation.email}`}
+                        onClick={() => resend(invitation)}>
+                        Resend
+                      </Button>
+                    )}
+                    <Menu
+                      label={`Actions for ${invitation.email}`}
+                      icon={<ActionsIcon />}
+                      onAction={(key) =>
+                        key === "resend" ? resend(invitation) : setPendingRevoke(invitation)
+                      }>
+                      {invitation.state === "pending" && <MenuItem id="resend">Resend</MenuItem>}
+                      <MenuItem
+                        id="revoke"
+                        danger>
+                        Revoke…
+                      </MenuItem>
+                    </Menu>
                   </td>
                 </tr>
               );
@@ -249,7 +268,16 @@ function InvitationsSection({ invitations }: { invitations: Invitation[] }) {
   );
 }
 
-function MembersSection({ members }: { members: Me[] }) {
+function ActionsIcon() {
+  return (
+    <DotsThree
+      size={15}
+      weight="duotone"
+    />
+  );
+}
+
+function MembersSection({ members, you }: { members: Me[]; you: string }) {
   const [updateMember, { isLoading: updating }] = useUpdateMemberMutation();
   const toastFailure = useFailureToast();
   const [deactivating, setDeactivating] = useState<Me>();
@@ -270,15 +298,18 @@ function MembersSection({ members }: { members: Me[] }) {
   }
 
   return (
-    <SettingsSection title="Members">
-      <Table aria-label="Members">
+    <SettingsSection
+      title="Members"
+      count={members.length}>
+      <Table
+        aria-label="Members"
+        columns={{ name: "auto", username: "110px", email: "auto", role: "90px", actions: "100px" }}>
         <thead>
           <tr>
             <th scope="col">Name</th>
             <th scope="col">Username</th>
             <th scope="col">Email</th>
             <th scope="col">Role</th>
-            <th scope="col">Status</th>
             <th scope="col">
               <span className="sr-only">Actions</span>
             </th>
@@ -286,16 +317,19 @@ function MembersSection({ members }: { members: Me[] }) {
         </thead>
         <tbody>
           {members.map((member) => (
-            <tr key={member.username}>
+            <tr
+              key={member.username}
+              className={member.deactivated ? "tl-table__muted" : undefined}>
               <td>
                 <div className="tl-table__who">
                   <Avatar
                     initials={member.initials}
-                    tone={member.deactivated ? "neutral" : "accent"}
+                    tone={member.username === you ? "accent" : "neutral"}
                   />
                   <span>
                     {member.fullName}
-                    {member.deactivated && <span className="tl-table__muted"> (deactivated)</span>}
+                    {member.deactivated && " (deactivated)"}
+                    {member.username === you && <span className="tl-table__muted"> (you)</span>}
                   </span>
                 </div>
               </td>
@@ -306,22 +340,10 @@ function MembersSection({ members }: { members: Me[] }) {
                   {member.role === "admin" ? "Admin" : "Member"}
                 </Tag>
               </td>
-              <td>
-                {member.deactivated ? (
-                  <Tag variant="neutral">Deactivated</Tag>
-                ) : (
-                  <span className="tl-table__muted">Active</span>
-                )}
-              </td>
               <td className="tl-table__end">
                 <Menu
                   label={`Actions for ${member.fullName}`}
-                  icon={
-                    <DotsThree
-                      size={15}
-                      weight="duotone"
-                    />
-                  }
+                  icon={<ActionsIcon />}
                   onAction={(key) => act(member, String(key))}>
                   {member.deactivated ? (
                     <MenuItem id="reactivate">Reactivate</MenuItem>

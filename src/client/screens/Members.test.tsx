@@ -122,37 +122,73 @@ async function invite(email: string) {
   fireEvent.click(screen.getByRole("button", { name: "Send invitation" }));
 }
 
-async function openMenu(fullName: string) {
-  fireEvent.click(await screen.findByRole("button", { name: `Actions for ${fullName}` }));
+async function openMenu(name: string) {
+  fireEvent.click(await screen.findByRole("button", { name: `Actions for ${name}` }));
   return screen.findByRole("menu");
 }
 
-async function choose(fullName: string, action: string) {
-  const menu = await openMenu(fullName);
+async function choose(name: string, action: string) {
+  const menu = await openMenu(name);
   fireEvent.click(within(menu).getByRole("menuitem", { name: action }));
 }
 
-it('REQ-051.1, REQ-051: an admin sees every member with their role, deactivated members marked "(deactivated)", and Sam\'s pending invitation with Resend and Revoke', async () => {
+function section(name: string) {
+  return screen.getByRole("region", { name: new RegExp(`^${name}`) });
+}
+
+function menuItems(menu: HTMLElement) {
+  return within(menu)
+    .getAllByRole("menuitem")
+    .map((item) => item.textContent);
+}
+
+it('REQ-051.1, REQ-051: an admin sees Members then Invitations with counts, every member with their role, "(you)" and "(deactivated)" in the name, a Pending invitation with Resend and Revoke… in its menu, and Expired and Bounced ones with Resend beside the menu', async () => {
   mockMembersPage();
   renderAppAt("/settings/members");
 
-  const samRow = await row("Members", "Sam Lee");
+  const samRow = await row("Members", /Sam Lee/);
+  const [membersHead, invitationsHead] = screen.getAllByRole("heading", { level: 2 });
+  expect(membersHead.textContent).toBe("Members3");
+  expect(invitationsHead.textContent).toBe("Invitations3");
+  expect(within(section("Invitations")).getByLabelText("Email")).toBeTruthy();
+  expect(within(await table("Members")).queryByRole("columnheader", { name: "Status" })).toBeNull();
+
+  expect(within(samRow).getByText("(you)")).toBeTruthy();
   expect(within(samRow).getByText("sam")).toBeTruthy();
   expect(within(samRow).getByText("sam@acme.com")).toBeTruthy();
   expect(within(samRow).getByText("Admin")).toBeTruthy();
-  expect(within(await row("Members", "Alex Kim")).getByText("Member")).toBeTruthy();
+  const alexRow = await row("Members", "Alex Kim");
+  expect(within(alexRow).getByText("Member")).toBeTruthy();
+  expect(within(alexRow).queryByText("(you)")).toBeNull();
   const joRow = await row("Members", /Jo Park/);
   expect(within(joRow).getByText("Member")).toBeTruthy();
   expect(within(joRow).getByText(/\(deactivated\)/)).toBeTruthy();
-  expect(within(joRow).getByText("Deactivated")).toBeTruthy();
+  expect(within(joRow).queryByText("Deactivated")).toBeNull();
 
   const priyaRow = await row("Invitations", "priya@acme.com");
   expect(within(priyaRow).getByText("Pending")).toBeTruthy();
   expect(within(priyaRow).getByText("Sam Lee")).toBeTruthy();
-  expect(within(priyaRow).getByRole("button", { name: "Resend invitation to priya@acme.com" })).toBeTruthy();
-  expect(within(priyaRow).getByRole("button", { name: "Revoke invitation to priya@acme.com" })).toBeTruthy();
-  expect(within(await row("Invitations", "dev@acme.com")).getByText("Bounced")).toBeTruthy();
-  expect(within(await row("Invitations", "lee@acme.com")).getByText("Expired")).toBeTruthy();
+  expect(within(priyaRow).queryByRole("button", { name: "Resend invitation to priya@acme.com" })).toBeNull();
+  expect(menuItems(await openMenu("priya@acme.com"))).toEqual(["Resend", "Revoke…"]);
+  fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+
+  const devRow = await row("Invitations", "dev@acme.com");
+  expect(within(devRow).getByText("Bounced")).toBeTruthy();
+  expect(within(devRow).getByRole("button", { name: "Resend invitation to dev@acme.com" })).toBeTruthy();
+  const leeRow = await row("Invitations", "lee@acme.com");
+  expect(within(leeRow).getByText("Expired")).toBeTruthy();
+  expect(within(leeRow).getByRole("button", { name: "Resend invitation to lee@acme.com" })).toBeTruthy();
+  expect(menuItems(await openMenu("lee@acme.com"))).toEqual(["Revoke…"]);
+});
+
+it("REQ-053: the Invitations section links to Notification status", async () => {
+  mockMembersPage();
+  renderAppAt("/settings/members");
+
+  await table("Members");
+  const link = within(section("Invitations")).getByRole("link", { name: "Notification status" });
+  expect(link.getAttribute("href")).toBe("/settings/notifications");
 });
 
 it("REQ-051.2: a member who isn't an admin sees \"You don't have permission to do that.\"", async () => {
@@ -165,7 +201,7 @@ it("REQ-051.2: a member who isn't an admin sees \"You don't have permission to d
   expect(requestsTo(fetchMock, "GET /api/invitations")).toEqual([]);
 });
 
-it("REQ-051.3: resending an expired invitation shows it as Pending", async () => {
+it("REQ-051.3, REQ-001: resending an expired invitation shows it as Pending; a Pending one resends from its menu", async () => {
   const fetchMock = mockMembersPage();
   renderAppAt("/settings/members");
 
@@ -176,6 +212,11 @@ it("REQ-051.3: resending an expired invitation shows it as Pending", async () =>
     expect(within(await row("Invitations", "lee@acme.com")).getByText("Pending")).toBeTruthy(),
   );
   expect(requestsTo(fetchMock, "POST /api/invitations/inv-lee/resend")).toHaveLength(1);
+
+  await choose("priya@acme.com", "Resend");
+
+  expect(await screen.findByText("Invitation resent to priya@acme.com.")).toBeTruthy();
+  expect(requestsTo(fetchMock, "POST /api/invitations/inv-priya/resend")).toHaveLength(1);
 });
 
 it("REQ-001.1, STD-5: Send invitation is disabled while sending, then posts the email and lists it as Pending", async () => {
@@ -245,7 +286,7 @@ it("REQ-001.4: Revoke asks first; Cancel sends nothing; confirming removes the r
   const fetchMock = mockMembersPage();
   renderAppAt("/settings/members");
 
-  fireEvent.click(await screen.findByRole("button", { name: "Revoke invitation to priya@acme.com" }));
+  await choose("priya@acme.com", "Revoke…");
 
   const cancelled = await screen.findByRole("dialog", { name: "Revoke invitation?" });
   expect(within(cancelled).getByText("The link sent to priya@acme.com will stop working.")).toBeTruthy();
@@ -255,7 +296,7 @@ it("REQ-001.4: Revoke asks first; Cancel sends nothing; confirming removes the r
   expect(requestsTo(fetchMock, "DELETE /api/invitations/inv-priya")).toEqual([]);
   expect(await row("Invitations", "priya@acme.com")).toBeTruthy();
 
-  fireEvent.click(screen.getByRole("button", { name: "Revoke invitation to priya@acme.com" }));
+  await choose("priya@acme.com", "Revoke…");
   const dialog = await screen.findByRole("dialog", { name: "Revoke invitation?" });
   fireEvent.click(within(dialog).getByRole("button", { name: "Revoke invitation" }));
 
@@ -294,11 +335,7 @@ it("REQ-008: Reactivate needs no confirmation and is a deactivated member's only
   renderAppAt("/settings/members");
 
   const menu = await openMenu("Jo Park");
-  expect(
-    within(menu)
-      .getAllByRole("menuitem")
-      .map((item) => item.textContent),
-  ).toEqual(["Reactivate"]);
+  expect(menuItems(menu)).toEqual(["Reactivate"]);
   fireEvent.click(within(menu).getByRole("menuitem", { name: "Reactivate" }));
 
   await waitFor(() =>
