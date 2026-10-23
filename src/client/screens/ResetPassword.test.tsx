@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
   alex,
   apiError,
+  deferred,
   mockApi,
   networkError,
   noContent,
@@ -37,8 +38,9 @@ async function setPassword(password: string) {
   fireEvent.click(screen.getByRole("button", { name: "Set password" }));
 }
 
-it("REQ-050.3, §4.2: a valid link shows the form and drops the token from the address; a valid password posts { token, password } and lands on My issues", async () => {
-  const fetchMock = mockReset(noContent, noContent);
+it('REQ-050.3, STD-5, §4.2: a valid link shows the form and drops the token from the address; Set password reads "Saving…" and is disabled while saving, then posts { token, password } and lands on My issues', async () => {
+  const save = deferred();
+  const fetchMock = mockReset(noContent, save.answer);
   renderAppAt("/reset-password?token=abc");
 
   expect(await screen.findByRole("heading", { name: "Set a new password" })).toBeTruthy();
@@ -46,6 +48,11 @@ it("REQ-050.3, §4.2: a valid link shows the form and drops the token from the a
   expect(new URLSearchParams(window.location.search).has("token")).toBe(false);
 
   await setPassword("a much longer password");
+
+  const button = await screen.findByRole("button", { name: "Saving…" });
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+
+  save.resolve(noContent());
 
   expect(await screen.findByRole("heading", { name: "My issues" })).toBeTruthy();
   expect(window.location.pathname).toBe("/my-issues");

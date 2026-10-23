@@ -79,11 +79,12 @@ it("REQ-002.1, STD-5, §4.2: a valid link shows the invited email read-only and 
   ]);
 });
 
-it("REQ-002.2: a link the lookup rejects (410) shows the expired message and no form", async () => {
+it("REQ-002.2: a link the lookup rejects (410) shows the expired message as a title plus body and no form", async () => {
   mockInvite(() => apiError(410, expiredMessage), accepted);
   renderAppAt("/invite?token=old");
 
-  expect(await screen.findByText(expiredMessage)).toBeTruthy();
+  expect(await screen.findByRole("heading", { name: "This invitation has expired." })).toBeTruthy();
+  expect(screen.getByText("Ask an admin for a new one.")).toBeTruthy();
   expect(screen.queryByLabelText("Full name")).toBeNull();
   expect(screen.queryByRole("button", { name: "Join Tracklite" })).toBeNull();
 });
@@ -95,7 +96,7 @@ it("REQ-002.2, REQ-002.4: a 410 on submit replaces the form with the server's me
   await fillIn("Sam Lee", "sam", "correct horse battery");
   join();
 
-  expect(await screen.findByText(revokedMessage)).toBeTruthy();
+  expect(await screen.findByRole("heading", { name: revokedMessage })).toBeTruthy();
   expect(screen.queryByLabelText("Full name")).toBeNull();
   expect(screen.queryByRole("button", { name: "Join Tracklite" })).toBeNull();
 });
@@ -149,12 +150,12 @@ it("STD-3, REQ-003.2: the server's field errors for name, username and password 
   expect(typedInto("Password")).toBe("tracklite1");
 });
 
-it('STD-7: a failed lookup shows "Couldn’t load this." and Retry looks the link up again', async () => {
+it('STD-7: a failed lookup announces "Couldn’t load this." as an alert and Retry looks the link up again', async () => {
   const answers = [() => apiError(500, "boom"), invitedSam];
   const fetchMock = mockInvite(() => (answers.shift() ?? invitedSam)(), accepted);
   renderAppAt("/invite?token=abc");
 
-  expect(await screen.findByText("Couldn’t load this.")).toBeTruthy();
+  expect((await screen.findByRole("alert")).textContent).toBe("Couldn’t load this.Retry");
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
 
   expect(await screen.findByRole("heading", { name: "Join Tracklite" })).toBeTruthy();

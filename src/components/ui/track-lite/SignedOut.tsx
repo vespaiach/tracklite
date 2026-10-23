@@ -1,11 +1,12 @@
 import type { ComponentProps, ReactNode } from "react";
 import { FieldError } from "./Field";
+import { Logo } from "./Logo";
 
 export function SignedOutLayout({ children }: { children: ReactNode }) {
   return (
     <div className="tl-signed-out">
       <header className="tl-signed-out__bar">
-        <span className="tl-signed-out__brand">Tracklite</span>
+        <Logo size="signed-out" />
       </header>
       <main className="tl-signed-out__main">{children}</main>
     </div>
@@ -45,8 +46,33 @@ export function SignedOutFormError({ children }: { children: ReactNode }) {
   );
 }
 
-export function SignedOutNote({ children }: { children: ReactNode }) {
-  return <p className="tl-signed-out__note">{children}</p>;
+export function SignedOutMessage({
+  title,
+  text,
+  children,
+}: {
+  title?: string;
+  text?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="tl-signed-out__message">
+      {title && <h1 className="tl-signed-out__title">{title}</h1>}
+      {text && <p className="tl-signed-out__lede">{text}</p>}
+      {children}
+    </div>
+  );
+}
+
+export function SignedOutAlert({ text, children }: { text: string; children: ReactNode }) {
+  return (
+    <div
+      role="alert"
+      className="tl-signed-out__alert">
+      <p className="tl-signed-out__alert-text">{text}</p>
+      {children}
+    </div>
+  );
 }
 
 export function SignedOutStatus({ children }: { children: ReactNode }) {

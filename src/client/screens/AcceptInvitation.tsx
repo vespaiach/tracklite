@@ -7,11 +7,12 @@ import {
   FactList,
   Field,
   Input,
+  SignedOutAlert,
   SignedOutFields,
   SignedOutForm,
   SignedOutHeading,
   SignedOutLayout,
-  SignedOutNote,
+  SignedOutMessage,
   SignedOutStatus,
 } from "../../components/ui/track-lite";
 import {
@@ -26,6 +27,11 @@ import { useShowLoading } from "../useShowLoading";
 import { useTokenFromAddress } from "../useTokenFromAddress";
 
 type ProfileField = "fullName" | "username" | "password";
+
+function asTitleAndText(message: string) {
+  const [title, ...rest] = message.split(/(?<=\.) /);
+  return { title, text: rest.join(" ") };
+}
 
 export function AcceptInvitation() {
   const token = useTokenFromAddress();
@@ -68,16 +74,14 @@ export function AcceptInvitation() {
   if (me.isSuccess) {
     return (
       <SignedOutLayout>
-        <SignedOutNote>
-          You're signed in as {me.data.fullName}. Sign out to accept this invitation.
-        </SignedOutNote>
-        <Button
-          variant="primary"
-          block
-          disabled={signingOut}
-          onClick={() => signOut()}>
-          Sign out
-        </Button>
+        <SignedOutMessage
+          text={`You're signed in as ${me.data.fullName}. Sign out to accept this invitation.`}>
+          <Button
+            disabled={signingOut}
+            onClick={() => signOut()}>
+            Sign out
+          </Button>
+        </SignedOutMessage>
       </SignedOutLayout>
     );
   }
@@ -88,7 +92,7 @@ export function AcceptInvitation() {
   if (ended) {
     return (
       <SignedOutLayout>
-        <SignedOutNote>{ended}</SignedOutNote>
+        <SignedOutMessage {...asTitleAndText(ended)} />
       </SignedOutLayout>
     );
   }
@@ -96,8 +100,13 @@ export function AcceptInvitation() {
   if (lookupFailure) {
     return (
       <SignedOutLayout>
-        <SignedOutNote>Couldn’t load this.</SignedOutNote>
-        <Button onClick={() => lookup.refetch()}>Retry</Button>
+        <SignedOutAlert text="Couldn’t load this.">
+          <Button
+            size="sm"
+            onClick={() => lookup.refetch()}>
+            Retry
+          </Button>
+        </SignedOutAlert>
       </SignedOutLayout>
     );
   }
