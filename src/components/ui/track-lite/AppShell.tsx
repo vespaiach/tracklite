@@ -40,6 +40,10 @@ export function RailGroup({ children }: { children: ReactNode }) {
   return <div className="tl-rail-group">{children}</div>;
 }
 
+export function RailNote({ children }: { children: ReactNode }) {
+  return <p className="tl-rail-note">{children}</p>;
+}
+
 export function RailLabel({
   children,
   count,

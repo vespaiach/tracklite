@@ -65,7 +65,7 @@ function cellTexts(row: HTMLElement) {
     .map((cell) => cell.textContent);
 }
 
-it("REQ-053.1, REQ-053.2, REQ-053.3, REQ-053.4, STD-2: worker, queue, Email counts, problem rows newest first, Notifications link current", async () => {
+it("REQ-053.1, REQ-053.2, REQ-053.3, REQ-053.4, STD-2: worker, queue, Email counts, problem rows newest first, Members link current", async () => {
   const older = Array.from({ length: 19 }, (_, index) =>
     problem({ id: `d-${index + 2}`, target: `WEB-${index + 1}`, at: secondsAgo((index + 4) * 3600) }),
   );
@@ -89,9 +89,8 @@ it("REQ-053.1, REQ-053.2, REQ-053.3, REQ-053.4, STD-2: worker, queue, Email coun
   expect(within(rows[0]).getByText("3 hours ago").getAttribute("title")).toBeTruthy();
   expect(document.body.textContent).not.toContain("sam@acme.com");
 
-  const link = within(screen.getByRole("complementary")).getByRole("link", { name: "Notifications" });
-  expect(link.getAttribute("href")).toBe("/settings/notifications");
-  expect(link.getAttribute("aria-current")).toBe("page");
+  const members = within(screen.getByRole("complementary")).getByRole("link", { name: "Members" });
+  expect(members.getAttribute("aria-current")).toBe("page");
 });
 
 it("REQ-053.5, REQ-053.6, REQ-053.9: a worker that never ran shows Never, nothing due shows None, no problems shows the empty message", async () => {

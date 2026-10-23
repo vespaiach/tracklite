@@ -4,6 +4,7 @@ import {
   admin,
   alex,
   apiError,
+  issue,
   mockApi,
   never,
   noContent,
@@ -83,7 +84,7 @@ it("REQ-015.3: shows active projects as “Name · KEY” links in the order the
   expect(links[2].getAttribute("href")).toBe("/project/SITE");
 });
 
-it("STD-2: only admins see the New project button and the Members link", async () => {
+it("STD-2, REQ-053: only admins see the New project button and the Members link; there is no Notifications link", async () => {
   mockSidebar({ me: alex });
   renderAppAt("/my-issues");
   await projectLinks();
@@ -96,6 +97,30 @@ it("STD-2: only admins see the New project button and the Members link", async (
   await projectLinks();
   expect(screen.getByRole("button", { name: "New project" })).toBeTruthy();
   expect(within(await sidebar()).getByRole("link", { name: "Members" })).toBeTruthy();
+  expect(within(await sidebar()).queryByRole("link", { name: "Notifications" })).toBeNull();
+});
+
+it("REQ-013.1: Archived projects is current while viewing an archived project or one of its issues", async () => {
+  const old = project("OLD", "Old site", "2025-09-14T10:00:00.000Z");
+  mockApi({
+    "GET /api/me": () => Response.json(admin),
+    "GET /api/projects/OLD": () => Response.json(old),
+    "GET /api/projects/WEB": () => Response.json(web),
+    "GET /api/issues/OLD-1": () => Response.json(issue({ id: "OLD-1", archived: true })),
+  });
+  const archivedLink = async () => within(await sidebar()).findByRole("link", { name: "Archived projects" });
+
+  renderAppAt("/project/OLD");
+  await waitFor(async () => expect((await archivedLink()).getAttribute("aria-current")).toBe("page"));
+  cleanup();
+
+  renderAppAt("/issue/OLD-1");
+  await waitFor(async () => expect((await archivedLink()).getAttribute("aria-current")).toBe("page"));
+  cleanup();
+
+  renderAppAt("/project/WEB");
+  expect(await screen.findByRole("heading", { name: "Website · WEB" })).toBeTruthy();
+  expect((await archivedLink()).hasAttribute("aria-current")).toBe(false);
 });
 
 it("STD-7: with no active projects the sidebar says “No projects yet.”, offering admins “Create one.”", async () => {
