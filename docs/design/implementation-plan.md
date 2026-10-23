@@ -59,7 +59,7 @@ Every screen task: **Reads** includes `docs/design/Tracklite prototype.dc.html` 
 - [x] **M17.2 Kit: Toast position.** Centre the toast 30 px from the bottom, with the err stripe and no ×. No success tone and no failure notes (C11, C12).
   - Done: the existing Toaster test extended to check there is no dismiss button.
 
-- [ ] **M17.3 Kit: Controls.** `Button` gets a `busy` label prop; `Picker` and `MultiPicker` get a caret-down and an empty-note slot; `LinkTabs` gets icons and the app-bar selected style (accent-100 / accent-800 / 500); an icon-button `current` state; `Field` help accepts rich content; a rail item that triggers a menu opening upward (`Pop` placement `top`).
+- [x] **M17.3 Kit: Controls.** `Button` gets a `busy` label prop; `Picker` and `MultiPicker` get a caret-down and an empty-note slot; `LinkTabs` gets icons and the app-bar selected style (accent-100 / accent-800 / 500); an icon-button `current` state; `Field` help accepts rich content; a rail item that triggers a menu opening upward (`Pop` placement `top`).
   - Done: one component test each for the behaviour we add (busy label swap, caret present, `aria-current` tab styling hook, upward menu placement).
 
 - [ ] **M17.4 Kit: Lists.** A collapsible `ListGroup` (button head, caret, `aria-expanded`, a "Skip to {next}" link visible on focus); a row-link variant of `tl-list-row` with grid columns passed as a prop and an `aria-hidden` eyebrow header row; a section heading with a mono count; `tl-table__num` right-aligned cells; a two-column settings grid; a warning text style (accent-2-700).

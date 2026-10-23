@@ -6,6 +6,7 @@ export type ButtonProps = ComponentProps<"button"> & {
   size?: "md" | "sm";
   icon?: boolean;
   block?: boolean;
+  busy?: string;
 };
 
 export function Button({
@@ -13,8 +14,11 @@ export function Button({
   size = "md",
   icon,
   block,
+  busy,
   className,
   type = "button",
+  disabled,
+  children,
   ...rest
 }: ButtonProps) {
   return (
@@ -28,7 +32,9 @@ export function Button({
         block && "tl-btn--block",
         className,
       )}
-      {...rest}
-    />
+      disabled={disabled || busy !== undefined}
+      {...rest}>
+      {busy ?? children}
+    </button>
   );
 }

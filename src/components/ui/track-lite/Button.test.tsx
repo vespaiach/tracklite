@@ -18,3 +18,14 @@ it("Button defaults to type=button and can be disabled; the danger variant adds 
   expect(button.disabled).toBe(true);
   expect(button.classList.contains("tl-btn--danger")).toBe(true);
 });
+
+it("Button: a busy label replaces the text and disables the button until busy clears", () => {
+  const { rerender } = render(<Button busy="Saving…">Save</Button>);
+  const button = screen.getByRole("button") as HTMLButtonElement;
+  expect(button.textContent).toBe("Saving…");
+  expect(button.disabled).toBe(true);
+
+  rerender(<Button>Save</Button>);
+  expect(button.textContent).toBe("Save");
+  expect(button.disabled).toBe(false);
+});

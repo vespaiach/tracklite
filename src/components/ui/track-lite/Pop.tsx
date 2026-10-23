@@ -1,3 +1,5 @@
+import { CaretDown } from "@phosphor-icons/react/dist/csr/CaretDown";
+import { CaretUp } from "@phosphor-icons/react/dist/csr/CaretUp";
 import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
 import { type ComponentProps, type CSSProperties, createContext, type ReactNode, use, useState } from "react";
 import {
@@ -88,7 +90,7 @@ export type MenuProps = {
   label: string;
   icon?: ReactNode;
   text?: ReactNode;
-  variant?: "quiet" | "secondary";
+  variant?: "quiet" | "secondary" | "rail";
   selectedKey?: Key;
   onAction: (key: Key) => void;
   children: ReactNode;
@@ -109,6 +111,7 @@ export function Menu({
   id,
   "aria-describedby": describedBy,
 }: MenuProps) {
+  const rail = variant === "rail";
   return (
     <MenuActionContext value={onAction}>
       <MenuTrigger>
@@ -116,10 +119,23 @@ export function Menu({
           id={id}
           aria-label={label}
           aria-describedby={describedBy}
-          className={cx("tl-btn tl-btn--sm", `tl-btn--${variant}`, text === undefined && "tl-btn--icon")}>
+          className={
+            rail
+              ? "tl-rail-item"
+              : cx("tl-btn tl-btn--sm", `tl-btn--${variant}`, text === undefined && "tl-btn--icon")
+          }>
           {text ?? icon}
+          {rail && (
+            <span
+              aria-hidden="true"
+              className="tl-rail-item__end tl-rail-item__caret">
+              <CaretUp size={12} />
+            </span>
+          )}
         </AriaButton>
-        <Popover placement="bottom end">
+        <Popover
+          placement={rail ? "top" : "bottom end"}
+          className={rail ? "tl-rail-menu" : undefined}>
           <AriaMenu
             aria-label={label}
             className="tl-pop"
@@ -211,6 +227,7 @@ export type PickerProps = {
   empty?: boolean;
   onChange: (key: Key) => void;
   search?: PickerSearch;
+  emptyNote?: ReactNode;
   children: ReactNode;
   "aria-describedby"?: string;
 };
@@ -222,6 +239,7 @@ export function Picker({
   empty,
   onChange,
   search,
+  emptyNote,
   children,
   "aria-describedby": describedBy,
 }: PickerProps) {
@@ -232,10 +250,14 @@ export function Picker({
       aria-label={label}
       aria-describedby={describedBy}
       value={selectedKey}
+      allowsEmptyCollection={emptyNote !== undefined}
       onChange={(key) => {
         if (key !== null) onChange(key);
       }}>
-      <AriaButton className={cx("tl-pick", empty && "tl-pick--empty")}>{value}</AriaButton>
+      <AriaButton className={cx("tl-pick", empty && "tl-pick--empty")}>
+        {value}
+        <PickCaret />
+      </AriaButton>
       <Popover
         placement="bottom start"
         className="tl-pop">
@@ -252,6 +274,7 @@ export function Picker({
         ) : (
           list
         )}
+        <PopNote>{emptyNote}</PopNote>
       </Popover>
     </Select>
   );
@@ -279,6 +302,20 @@ export function PickerItem({ id, textValue, children }: { id: Key; textValue: st
   );
 }
 
+function PickCaret() {
+  return (
+    <span
+      aria-hidden="true"
+      className="tl-pick__caret">
+      <CaretDown size={12} />
+    </span>
+  );
+}
+
+function PopNote({ children }: { children: ReactNode }) {
+  return children && <p className="tl-pop__note">{children}</p>;
+}
+
 export function PickValue({ children }: { children: ReactNode }) {
   return <div className="tl-pick tl-pick--static">{children}</div>;
 }
@@ -292,6 +329,7 @@ export type MultiPickerProps = {
   search: PickerSearch;
   createText?: (input: string) => string | undefined;
   onCreate?: (input: string) => void;
+  emptyNote?: ReactNode;
   children: ReactNode;
   "aria-describedby"?: string;
 };
@@ -307,6 +345,7 @@ export function MultiPicker({
   search,
   createText,
   onCreate,
+  emptyNote,
   children,
   "aria-describedby": describedBy,
 }: MultiPickerProps) {
@@ -319,6 +358,7 @@ export function MultiPicker({
       aria-describedby={describedBy}
       selectionMode="multiple"
       value={selectedKeys}
+      allowsEmptyCollection={emptyNote !== undefined}
       onOpenChange={(open) => {
         if (!open) setInput("");
       }}
@@ -330,7 +370,10 @@ export function MultiPicker({
           if (toggled !== undefined) onToggle(toggled);
         }
       }}>
-      <AriaButton className={cx("tl-pick tl-pick--multi", empty && "tl-pick--empty")}>{value}</AriaButton>
+      <AriaButton className={cx("tl-pick tl-pick--multi", empty && "tl-pick--empty")}>
+        <span className="tl-pick__values">{value}</span>
+        <PickCaret />
+      </AriaButton>
       <Popover
         placement="bottom start"
         className="tl-pop">
@@ -362,6 +405,7 @@ export function MultiPicker({
             )}
           </ListBox>
         </Autocomplete>
+        <PopNote>{emptyNote}</PopNote>
       </Popover>
     </Select>
   );
