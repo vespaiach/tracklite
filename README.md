@@ -1,12 +1,6 @@
 # Tracklite
 
-A small, self-hosted issue tracker for one invite-only team.
-
-## Why
-
-Linear and its peers are built for many teams and priced per seat. A team of under about 15 people that only needs to file issues, move them across a board and talk about them in comments ends up paying for, and wading through, cycles, roadmaps, integrations and custom workflows it never uses.
-
-Tracklite keeps the core and drops the rest:
+A small, self-hosted issue tracker for one invite-only team. It covers filing issues, moving them across a board and discussing them in comments, and leaves out cycles, roadmaps, integrations and custom workflows.
 
 - **Projects** with a key (`WEB`), a Markdown description and labels.
 - **Issues** numbered per project (`WEB-42`), with a fixed set of statuses and priorities, an assignee and up to 10 labels.
