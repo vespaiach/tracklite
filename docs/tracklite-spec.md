@@ -92,7 +92,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 **Release:** R1 · **Priority:** Must
 
-**What and why:** Members sign in with their email and a password they choose, and only people an admin invites can join. A forgotten password is reset through a link sent by email. Each member has a simple profile so teammates can recognise and @mention them.
+**What and why:** Only people an admin invites can join. Members sign in with their email and a password they choose, reset by emailed link if forgotten, and have a simple profile so teammates can recognise and @mention them.
 
 **Flow**
 
@@ -107,7 +107,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 **Rules and examples**
 
-- **REQ-001** When an admin invites an email address, the system shall email a single-use invitation link that expires after 7 days, and the admin can resend or revoke it. Emails are compared ignoring capitals, and an address that isn't a valid email gets the field error "Enter a valid email". If the email belongs to an active member, the system shall refuse with "Already a member". If it belongs to a deactivated member, it shall refuse with "This person is deactivated. Reactivate them instead." If the email can't be sent, nothing is saved (a resent invitation keeps its previous link) and the admin sees "We couldn’t send the email. Try again." (STD-6).
+- **REQ-001** When an admin invites an email address, the system shall email a single-use invitation link that expires after 7 days; the admin can resend or revoke it. Emails are compared ignoring capitals. An invalid address gets the field error "Enter a valid email", an active member's email "Already a member", and a deactivated member's "This person is deactivated. Reactivate them instead." If the email can't be sent, nothing is saved (a resent invitation keeps its previous link) and the admin sees "We couldn’t send the email. Try again." (STD-6).
   - REQ-001.1: Admin invites `sam@acme.com` → email sent; the invitation shows as Pending.
   - REQ-001.2: Admin invites an existing member's email → "Already a member", no email.
   - REQ-001.3: Admin resends Sam's pending invitation → a new link is sent and the old link stops working.
@@ -120,27 +120,27 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-002.2: Sam opens the link on day 8, or after already accepting it → "This invitation has expired. Ask an admin for a new one."
   - REQ-002.3: Alex, signed in, opens Sam's invitation link → "You're signed in as Alex. Sign out to accept this invitation." (Alex's full name is shown)
   - REQ-002.4: The admin revokes the invitation while Sam is filling in the profile → on submit: "This invitation is no longer valid.", no member created.
-- **REQ-003** The system shall store each profile as a full name (1 to 60 characters; whitespace at either end is trimmed; a name that is empty or only whitespace gets the field error "Name required", and one over 60 characters after trimming gets "Too long (max 60)" (STD-3)), a unique username (2 to 20 characters: lowercase letters, digits, hyphens; used for @mentions; capitals are lowercased, and anything else gets the field error "Use 2 to 20 letters, digits or hyphens") and the invited email. The avatar is the member's initials. Username and email can't be changed in R1.
+- **REQ-003** The system shall store each profile as a full name, a unique username and the invited email. The full name is 1 to 60 characters after trimming whitespace at either end; empty gets the field error "Name required", longer "Too long (max 60)" (STD-3). The username, used for @mentions, is 2 to 20 lowercase letters, digits or hyphens; capitals are lowercased, and anything else gets "Use 2 to 20 letters, digits or hyphens". The avatar is the member's initials. Username and email can't be changed in R1.
   - REQ-003.1: Sam enters username `Sam` → saved as `sam`.
   - REQ-003.2: Username `sam` is already taken → field error "Username taken" (STD-3).
   - REQ-003.3: Sam opens their profile → the full name can be edited and the password changed (REQ-049); username and email are shown but can't be edited, and an API request that changes them is refused.
   - REQ-003.4: The initials are the first character of the first word and the first character of the last word of the full name, whatever that character is (a letter in any script, a digit or punctuation), uppercased where uppercasing applies: "Alexandria Catherine Montgomery-Fitzwilliam van der Bergholt" → "AB"; a one-word name such as "Sam" → "S"; "(Contractor) Lee" → "(L"; "3M Team" → "3T"; "李 小龙" → "李小".
-- **REQ-047** When someone enters an email and password on the sign-in page, the system shall sign them in only if the email, compared ignoring capitals, belongs to an active member and the password matches. It then sends them to the page they were trying to reach (STD-1), or to My issues. Otherwise it shows "Incorrect email or password." beside the form, the same for an unknown email, a wrong password and a deactivated member; the email stays filled in and the password field is cleared. Attempts are limited by SEC-001.
+- **REQ-047** On the sign-in page, the system shall sign someone in only if the email, compared ignoring capitals, belongs to an active member and the password matches, then send them to the page they were trying to reach (STD-1) or to My issues. Otherwise, whether the email is unknown, the password wrong or the member deactivated, it shows "Incorrect email or password." beside the form, keeps the email and clears the password. Attempts are limited by SEC-001.
   - REQ-047.1: `sam@acme.com` (active member) with the right password → signed in, lands on My issues.
   - REQ-047.2: `sam@acme.com` with a wrong password → "Incorrect email or password."; the email is kept and the password cleared.
   - REQ-047.3: `stranger@x.com` with any password → the same "Incorrect email or password.".
   - REQ-047.4: `Sam@Acme.com` with Sam's password → signed in as Sam.
   - REQ-047.5: Sam, signed out, opens `/issue/WEB-42`, is sent to sign-in and signs in → lands on `WEB-42`.
-- **REQ-048** A password shall be 12 to 128 characters. Any characters are allowed, including spaces; nothing is trimmed, and there are no rules about character types. Too short gets the field error "At least 12 characters", too long gets "Too long (max 128)" (STD-3). These rules apply wherever a password is set: accepting an invitation (REQ-002), changing it (REQ-049) and resetting it (REQ-050). Passwords are stored as SEC-008 requires.
+- **REQ-048** A password shall be 12 to 128 characters of any kind, spaces included, untrimmed, with no character-type rules. Too short gets the field error "At least 12 characters", too long "Too long (max 128)" (STD-3). This applies wherever a password is set (REQ-002, REQ-049, REQ-050). Passwords are stored as SEC-008 requires.
   - REQ-048.1: `correct horse battery` (21 characters, with spaces) → accepted.
   - REQ-048.2: `Sh0rt!pass` (10 characters) → field error "At least 12 characters".
   - REQ-048.3: A 129-character password → field error "Too long (max 128)".
   - REQ-048.4: A password chosen as ` secret phrase 1 ` (leading and trailing spaces) → only that exact text, spaces included, signs in.
-- **REQ-049** When a member changes their password from their profile, the system shall require their current password and a new one (REQ-048). A wrong current password gets the field error "Incorrect password" and nothing changes. On success, the member stays signed in on this browser and all their other sessions end, and the profile shows "Password changed. You've been signed out everywhere else."
+- **REQ-049** To change their password from their profile, a member shall enter their current password and a new one (REQ-048). A wrong current password gets the field error "Incorrect password" and changes nothing. On success, the member stays signed in on this browser, all their other sessions end, and the profile shows "Password changed. You've been signed out everywhere else."
   - REQ-049.1: Sam enters the right current password and a valid new one → saved; Sam stays signed in here and is signed out on their other computer.
   - REQ-049.2: Sam enters a wrong current password → field error "Incorrect password"; the old password still works.
   - REQ-049.3: Someone using Sam's session enters 10 wrong current passwords within an hour → the 11th try shows "Too many attempts. Try again later." even with the right password (SEC-001).
-- **REQ-050** When someone clicks **Forgot password?** on the sign-in page and enters an email, the system shall email a single-use password reset link that expires after 30 minutes, only if the email belongs to an active member. The page shows "Check your email" either way, and requests are limited by SEC-001. Opening a valid link shows a form for a new password without using up the link. An expired, used, unknown or malformed link shows "This link has expired" with a button to request a new one, straight away and without the form. Submitting fails the same way if the link expired meanwhile or the member has been deactivated since (REQ-007). Submitting a valid new password (REQ-048) uses the link, sets the password, ends all of that member's sessions, signs them in on this browser and sends them to My issues. A successful reset also stops the member's other outstanding reset links from working. The link works in any browser.
+- **REQ-050** When someone clicks **Forgot password?** and enters an email, the system shall email a single-use password reset link, valid for 30 minutes, only if the email belongs to an active member. The page shows "Check your email" in every case; requests are limited by SEC-001. The link works in any browser. Opening a valid link shows a new-password form without using up the link; an expired, used, unknown or malformed link shows "This link has expired" with a button to request a new one, and no form. Submitting fails the same way if the link expired meanwhile or the member was deactivated since (REQ-007). Submitting a valid new password (REQ-048) uses the link, sets the password, ends all the member's sessions and other outstanding reset links, signs them in on this browser and sends them to My issues.
   - REQ-050.1: `sam@acme.com` (active member) → email sent; the page shows "Check your email".
   - REQ-050.2: `stranger@x.com` → no email; the page shows the same "Check your email".
   - REQ-050.3: Sam opens the link 10 minutes after it was sent and enters a valid new password → the new password is set, Sam is signed in and lands on My issues, and the old password no longer works.
@@ -153,7 +153,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 - **REQ-006** A session shall last 30 days from the member's last activity. Signing out ends the session on that browser only.
   - REQ-006.1: Sam uses the app every day → stays signed in.
   - REQ-006.2: Sam returns after 31 days away → sign-in page (STD-1).
-- **REQ-007** When an admin deactivates a member, the system shall ask "{Full name} will be signed out and can't sign in until reactivated." to confirm, then end all of that member's sessions immediately and block their sign-in. Their name stays on past work, marked "(deactivated)", and they can't be assigned or mentioned. The last admin can't be deactivated or lose the admin role.
+- **REQ-007** When an admin deactivates a member, the system shall confirm with "{Full name} will be signed out and can't sign in until reactivated.", then end all that member's sessions and block their sign-in. Their name stays on past work, marked "(deactivated)", and they can't be assigned or mentioned. The last admin can't be deactivated or lose the admin role.
   - REQ-007.1: Admin deactivates Sam → Sam's next page load goes to sign-in; signing in with Sam's correct password shows "Incorrect email or password.", and a password reset request sends nothing.
   - REQ-007.2: `WEB-42` was assigned to Sam → it still shows "Sam Lee (deactivated)", and Sam isn't in the assignee picker.
   - REQ-007.3: The only admin tries to deactivate themselves, or remove their own admin role → blocked with "There must be at least one admin."
@@ -162,11 +162,11 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 - **REQ-008** When an admin reactivates a deactivated member, the system shall let them sign in again with their existing profile. They can be assigned and mentioned again.
   - REQ-008.1: Admin reactivates Sam, then Sam signs in with their existing password → signed in with the same username and profile.
   - REQ-008.2: `WEB-42` is still assigned to Sam → "(deactivated)" disappears from Sam's name, and Sam is back in the assignee picker.
-- **REQ-051** The system shall give admins a members page, `/settings/members`, listing members and invitations. Each member row shows the full name, username, email, role and whether they're deactivated, with actions to deactivate or reactivate (REQ-007, REQ-008) and to make admin or remove admin (REQ-052). A deactivated member's only action is reactivate. Each invitation that's Pending, Bounced or Expired shows the email, who sent it and when it expires or expired, with Resend and Revoke (REQ-001); accepted and revoked invitations aren't listed. Members who aren't admins can't open the page (STD-2).
+- **REQ-051** The system shall give admins a members page, `/settings/members`, which other members can't open (STD-2). Each member row shows full name, username, email, role and whether deactivated, with deactivate or reactivate (REQ-007, REQ-008) and make or remove admin (REQ-052); a deactivated member's only action is reactivate. Each Pending, Bounced or Expired invitation shows the email, who sent it and when it expires or expired, with Resend and Revoke (REQ-001); accepted and revoked ones aren't listed.
   - REQ-051.1: An admin opens `/settings/members` → every member with their role, and Sam's pending invitation with Resend and Revoke.
   - REQ-051.2: Alex, a member, opens `/settings/members` → "You don't have permission to do that."
   - REQ-051.3: An admin resends Sam's expired invitation → a new link valid for 7 days is sent, and the row shows Pending.
-- **REQ-052** When an admin makes a member an admin, or removes a member's admin role, the system shall apply it from that member's next request, without signing them out. The last admin keeps the role (REQ-007), even when two admins act at the same moment.
+- **REQ-052** When an admin grants or removes a member's admin role, the system shall apply it from that member's next request, without signing them out. The last admin keeps the role (REQ-007), even when two admins act at once.
   - REQ-052.1: An admin makes Sam an admin → on Sam's next page load, admin controls such as **New project** appear.
   - REQ-052.2: An admin removes Jo's admin role while Jo has project settings open → Jo's next save is refused with "You don't have permission to do that." (STD-2).
   - REQ-052.3: Alex and Jo, the only two admins, remove each other's admin role at the same moment → one change succeeds and the other is refused, so one admin remains.
@@ -189,7 +189,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 **Rules and examples**
 
-- **REQ-009** When an admin creates a project, the system shall require a name (1 to 50 characters after whitespace at either end is trimmed; names may repeat; an empty name gets the field error "Name required" and a longer one gets "Too long (max 50)" (STD-3)) and a key (2 to 5 letters A to Z, stored in uppercase). The key can never have been used by another project, including archived and deleted ones. The new project appears for every member.
+- **REQ-009** When an admin creates a project, the system shall require a name and a key. The name is 1 to 50 characters after trimming and may repeat; empty gets the field error "Name required", longer "Too long (max 50)" (STD-3). The key is 2 to 5 letters A to Z, stored in uppercase, and never used before by any project, archived and deleted ones included. The new project appears for every member.
   - REQ-009.1: Admin creates "Website" with key `WEB` → project created, shown in every member's sidebar.
   - REQ-009.2: Admin enters key `web` → saved as `WEB`.
   - REQ-009.3: Key `WEB` was used by a project that has since been deleted → field error "Key already used" (STD-3).
@@ -203,7 +203,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-012.1: Member saves a description with a heading and a bullet list → shown formatted.
   - REQ-012.2: Description of 20,001 characters → field error "Too long (max 20,000)".
   - REQ-012.3: Description contains `<script>alert(1)</script>` → shown as text; nothing runs.
-- **REQ-013** When an admin archives a project, the system shall move it from the sidebar to an Archived list. It shall make its name, description, issues, comments and labels read-only, and hide its issues from My issues. An admin can unarchive it. With no archived projects, the Archived list shows "No archived projects." (STD-7)
+- **REQ-013** When an admin archives a project, the system shall move it from the sidebar to an Archived list, make its name, description, issues, comments and labels read-only, and hide its issues from My issues, until an admin unarchives it. An empty Archived list shows "No archived projects." (STD-7)
   - REQ-013.1: Admin archives `WEB` → it disappears from the sidebar and appears under Archived; `WEB-42` opens read-only, with no edit or comment controls.
   - REQ-013.2: `WEB-42` is assigned to Sam → it no longer appears in Sam's My issues.
   - REQ-013.3: Admin unarchives `WEB` → it's back in the sidebar and fully editable, and `WEB-42` is back in Sam's My issues.
@@ -211,7 +211,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-013.5: `WEB` is archived → its Labels page still lists the labels, with no create, rename, recolor or delete controls.
   - REQ-013.6: Sam has `WEB`'s Labels page open when `WEB` is archived, then renames `bug` → the toast "This project is archived" (STD-9), and `bug` is unchanged.
   - REQ-013.7: `WEB` is archived → its settings page shows the name with no Save; a rename request is refused with "This project is archived" and the name is unchanged.
-- **REQ-014** When an admin deletes a project, active or archived, the system shall ask them to type the project key to confirm, then permanently delete the project with all its issues and comments (DATA-002). Nothing can be restored.
+- **REQ-014** When an admin deletes a project, active or archived, the system shall ask them to type its key to confirm, then permanently delete it with all its issues and comments (DATA-002). Nothing can be restored.
   - REQ-014.1: Admin types `WEB` and confirms → project gone; opening `WEB-42` shows Not found (STD-4).
   - REQ-014.2: Admin types `WEBB` → the Delete button stays disabled.
   - REQ-014.3: Sam is viewing `WEB-42` when `WEB` is deleted → Sam's next action shows Not found (STD-4).
@@ -220,7 +220,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-015.1: Projects "Website", "API" and "Mobile" → shown as API, Mobile, Website.
   - REQ-015.2: A 50-character name → cut off with "…"; hovering shows the full name. (Verify: manual)
   - REQ-015.3: Two projects named "Website", with keys `WEB` and `SITE` → shown as "Website · SITE", then "Website · WEB".
-- **REQ-046** The system shall show a project's description and comments on its project details page, `/project/{KEY}/detail`. A link or icon next to the project name, at the top of the board and the list view, opens it. The board and list view don't show the description or the project's comments. The details page also shows how many of the project's issues are open (not Done or Canceled), the number in each status, and "Created {date} by {name}" for the admin who created the project. A project created before 0.32, whose creator wasn't recorded, shows only "Created {date}".
+- **REQ-046** The system shall show a project's description and comments only on its project details page, `/project/{KEY}/detail`, opened by a link or icon next to the project name at the top of the board and list view. The page also shows how many of the project's issues are open (not Done or Canceled), the number in each status, and "Created {date} by {name}" for the admin who created it; a project created before 0.32, with no recorded creator, shows only "Created {date}".
   - REQ-046.1: Sam clicks the details link next to "Website" on the `WEB` board → `/project/WEB/detail` opens, with the description and the project's comments.
   - REQ-046.2: Sam opens the `WEB` board → no description or project comments on it.
   - REQ-046.3: `WEB` has 3 Backlog issues, 1 In Progress and 2 Done; `API` has 5 Backlog → the `WEB` details page shows 4 open, with Backlog 3, In Progress 1, In Review 0, Done 2 and Canceled 0.
@@ -245,7 +245,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 **Rules and examples**
 
-- **REQ-016** When a member creates an issue, or edits its title, the system shall require a title of 1 to 200 characters (whitespace at either end is trimmed; an empty title gets the field error "Title required" and a longer one gets "Too long (max 200)" (STD-3)). A new issue gets the project's next number, starting at 1. No two issues in a project ever share a number, and numbers are never reused. A new issue starts as status Backlog, No priority, unassigned, and the system records who created it and when. The issue's ID is its address, matched ignoring capitals.
+- **REQ-016** When a member creates an issue or edits its title, the system shall require a title of 1 to 200 characters after trimming; empty gets the field error "Title required", longer "Too long (max 200)" (STD-3). A new issue gets the project's next number, starting at 1; numbers are never shared or reused within a project. It starts as Backlog, No priority and unassigned, recording who created it and when. The issue's ID is its address, matched ignoring capitals.
   - REQ-016.1: Sam creates "Fix login button" as the first issue in `WEB` → `WEB-1`, Backlog, No priority, unassigned, "Created by Sam Lee".
   - REQ-016.2: The latest issue is `WEB-41` and `WEB-40` was deleted → the next new issue is `WEB-42`.
   - REQ-016.3: The title is only spaces → field error "Title required" (STD-3).
@@ -258,13 +258,13 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 - **REQ-019** An issue shall have no assignee or one active member as its assignee. Anyone else gets the field error "Choose an active member" (STD-3).
   - REQ-019.1: Sam assigns `WEB-42` to Alex → shows Alex.
   - REQ-019.2: Sam clears the assignee → shows Unassigned.
-- **REQ-020** An issue shall have 0 to 10 labels, chosen from its project's labels. In the label picker, typing a name that matches an existing label, ignoring capitals, adds that label; any other name creates the label in the project, colored Gray, and adds it.
+- **REQ-020** An issue shall have 0 to 10 labels from its project. In the label picker, a typed name matching an existing label, ignoring capitals, adds it; any other name creates a Gray label in the project and adds it.
   - REQ-020.1: Sam adds `bug` and `frontend` to `WEB-42` → both shown.
   - REQ-020.2: Sam types `Design`, which doesn't exist in `WEB` yet → label `Design` created in `WEB` and added.
   - REQ-020.3: Sam tries to add an 11th label → "Maximum 10 labels".
   - REQ-020.4: Sam adds `frontend` just as another member deletes it → the toast "That label no longer exists" (STD-9); Sam's other changes are kept.
   - REQ-020.5: Sam types `design` while `Design` exists in `WEB` → `Design` is added; no new label is created.
-- **REQ-021** Any member shall be able to create, rename, recolor and delete a project's labels on that project's Labels page. A label has a name of 1 to 30 characters (whitespace at either end is trimmed), unique within its project ignoring capitals, and one of 8 preset colors: Gray, Red, Orange, Yellow, Green, Blue, Purple and Pink. An empty name gets the field error "Name required", a longer one gets "Too long (max 30)", and any other color gets "Choose a color" (STD-3). Renaming or deleting a label affects every issue in that project that has it. Deleting a label asks for confirmation, naming how many issues have it.
+- **REQ-021** Any member shall be able to create, rename, recolor and delete a project's labels on its Labels page. A label has a name of 1 to 30 characters after trimming, unique within the project ignoring capitals, and one of 8 colors: Gray, Red, Orange, Yellow, Green, Blue, Purple and Pink. Empty gets the field error "Name required", longer "Too long (max 30)", and any other color "Choose a color" (STD-3). Renaming or deleting a label affects every issue in the project that has it; deleting asks for confirmation, naming how many issues have it.
   - REQ-021.1: `bug` is renamed to `defect` → every issue in the project that had `bug` now shows `defect`.
   - REQ-021.2: A member creates `BUG` while `bug` exists in the same project → field error "Label already exists".
   - REQ-021.3: `frontend` is deleted → it's removed from all of the project's issues, and the issues stay otherwise unchanged.
@@ -273,7 +273,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 - **REQ-022** When a member edits an issue description, the system shall save it as Markdown of up to 20,000 characters (empty allowed) and show it formatted (DEC-001, SEC-002). @mentions follow DATA-001, and two members editing at once is handled by STD-8.
   - REQ-022.1: Sam saves a description with a checklist and a code block → shown formatted.
   - REQ-022.2: Description of 20,001 characters → field error "Too long (max 20,000)".
-- **REQ-023** When the issue's creator or an admin deletes an issue, the system shall ask for confirmation ("Delete WEB-42?" with "“Fix login button” and its comments will be deleted permanently. You can’t undo this."), then permanently delete it with its comments (DATA-002). Its number is not reused.
+- **REQ-023** When the issue's creator or an admin deletes an issue, the system shall confirm ("Delete WEB-42?" with "“Fix login button” and its comments will be deleted permanently. You can’t undo this."), then permanently delete it with its comments (DATA-002). Its number isn't reused.
   - REQ-023.1: Sam deletes `WEB-42`, which Sam created, and confirms → gone; opening `WEB-42` shows Not found (STD-4).
   - REQ-023.2: Alex, a member, views `WEB-42`, which Sam created → no Delete option (STD-2).
   - REQ-023.3: Alex is writing a comment on `WEB-42` when it's deleted → on save, the toast "This issue was deleted" (STD-9), and Alex's text stays in the box.
@@ -304,13 +304,13 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 - **REQ-025** Each card shall show the issue ID, the title (cut off after 2 lines), the priority, the assignee's initials, and up to 3 labels followed by "+N" for the rest.
   - REQ-025.1: `WEB-42` has 5 labels → the card shows 3 labels and "+2".
   - REQ-025.2: `WEB-42` is unassigned with No priority → no initials or priority icon on the card.
-- **REQ-026** When a member drops a card in a new place, the system shall save straight away both the card's status and its place relative to its neighbouring cards, then refresh the columns involved. If two saves touch the same card, the last one wins (STD-8). If the save fails, the card returns to its old place and a toast appears (STD-9).
+- **REQ-026** When a member drops a card in a new place, the system shall save its status and its place among its neighbours straight away, then refresh the columns involved. If two saves touch the same card, the last wins (STD-8). A failed save returns the card to its old place with a toast (STD-9).
   - REQ-026.1: Sam drags `WEB-42` from Backlog to In Progress → status In Progress; after a reload it's still there.
   - REQ-026.2: The network drops during the save → the card goes back to its old place in Backlog, with the toast "Couldn’t move WEB-42".
   - REQ-026.3: Sam moves `WEB-5` and Alex moves `WEB-9` within In Progress at about the same time → both moves are kept.
   - REQ-026.4: Alex has moved `WEB-42` to Done; Sam, on an older board, drags it to In Review → `WEB-42` is In Review, and Sam's Done and In Review columns refresh.
   - REQ-026.5: Sam drags `WEB-42` after another member deleted it → the toast "This issue was deleted" (STD-9), and the card is removed from Sam's board.
-- **REQ-027** Within a column, the system shall keep cards in an order that any member can change by dragging. Everyone sees the same order. A new issue, or one whose status is changed anywhere other than the board, goes to the top of its column.
+- **REQ-027** Within a column, the system shall keep cards in one shared order that any member can change by dragging. A new issue, or one whose status changes anywhere but the board, goes to the top of its column.
   - REQ-027.1: Sam drags `WEB-9` above `WEB-5` in In Progress → after a reload, Alex also sees `WEB-9` above `WEB-5`.
   - REQ-027.2: Sam drags `WEB-42` from Backlog and drops it between `WEB-5` and `WEB-9` in In Progress → it's In Progress, between those two.
   - REQ-027.3: Sam clicks **+** on Backlog and creates `WEB-43` → it's at the top of Backlog.
@@ -320,7 +320,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-028.2: `WEB-11` was moved to Done 3 days ago → shown in Done.
 - **REQ-029** When a member creates an issue with a column's **+** button, the system shall give the new issue that column's status. This is a deliberate exception to REQ-016's starting status.
   - REQ-029.1: Sam clicks **+** on In Review and enters "Update pricing copy" → `WEB-43`, status In Review.
-- **REQ-030** Each card shall have a **⋯** menu, reachable by keyboard, with **Move to** (a status), **Move to top** and **Move to bottom**. These do the same as a drag. On touch screens, this menu is how cards are moved; dragging isn't required to work there.
+- **REQ-030** Each card shall have a keyboard-reachable **⋯** menu with **Move to** (a status), **Move to top** and **Move to bottom**, which act like a drag. On touch screens this menu is how cards move; dragging needn't work there.
   - REQ-030.1: Sam uses **⋯ → Move to → In Review** on `WEB-42` → `WEB-42` is at the top of In Review.
   - REQ-030.2: Sam uses **⋯ → Move to bottom** on `WEB-5` in In Progress → `WEB-5` is last in In Progress.
   - REQ-030.3: On a phone, Sam moves `WEB-42` to Done with the **⋯** menu → status Done. (Verify: manual)
@@ -331,7 +331,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 **Release:** R1 · **Priority:** Should
 
-**What and why:** The list view shows a project's issues as a table that members can filter and search. It's for finding what the board makes hard to see, such as issues finished weeks ago or everything assigned to one person.
+**What and why:** A filterable, searchable table of a project's issues, for what the board hides, such as issues finished weeks ago or everything assigned to one person.
 
 **Flow**
 
@@ -344,19 +344,19 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 **Rules and examples**
 
-- **REQ-036** When a member opens the list view, the system shall show every issue in the project, including all Done and Canceled ones, newest-updated first. Rows load 100 at a time as the member scrolls. A title too long for one line is cut off with "…" and shown in full on hover. "Last updated" means the last change to any field or the description; comments don't count, and neither does reordering a card within its column (a status change made by dragging does count).
+- **REQ-036** The list view shall show every issue in the project, all Done and Canceled ones included, most recently updated first, loading 100 rows at a time as the member scrolls. A title too long for one line is cut off with "…" and shown in full on hover. "Last updated" is the last change to any field or the description; comments and reordering within a column don't count, but a status change by dragging does.
   - REQ-036.1: `WEB` has 120 issues, 40 of them Done → the first 100 rows show, and the other 20 load on scrolling down.
   - REQ-036.2: `WEB-10` was Done 20 days ago → it's in the list (compare REQ-028).
   - REQ-036.3: `WEB` is archived → the list, filters, search and sort all work; rows open read-only (REQ-013).
   - REQ-036.4: A 200-character title → one line ending in "…"; hovering shows the full title. (Verify: manual)
   - REQ-036.5: Sam drags `WEB-9` above `WEB-5` within In Progress → `WEB-9`'s last updated is unchanged; dragging it to In Review does change it.
-- **REQ-037** The system shall offer filters for status, assignee, priority and label. The assignee filter lists Unassigned, active members, and any deactivated member who still has issues in the project, marked "(deactivated)". Several values within one filter match any of them. Different filters must all match. **Clear filters** removes every filter and the search.
+- **REQ-037** The system shall offer filters for status, assignee, priority and label. The assignee filter lists Unassigned, active members, and deactivated members who still have issues in the project, marked "(deactivated)". Values within one filter match any; different filters must all match. **Clear filters** removes every filter and the search.
   - REQ-037.1: Status = In Progress and In Review, and Assignee = Sam → only Sam's issues that are in either status.
   - REQ-037.2: Assignee = Unassigned → only issues with no assignee.
   - REQ-037.3: Label = `bug` and `frontend` → issues with either label.
   - REQ-037.4: Nothing matches → "No issues match these filters", with a **Clear filters** button (STD-7) that also empties the search box.
   - REQ-037.5: Jo is deactivated and still assigned to `WEB-7` → the assignee filter offers "Jo Park (deactivated)", and choosing it shows `WEB-7`.
-- **REQ-038** When a member types in the search box, the system shall update the list 300 ms after they stop typing. It shows issues whose ID, title or description contains every word typed, ignoring capitals. Everything typed is plain text, with no wildcards or query syntax. Comments aren't searched.
+- **REQ-038** The search box shall update the list 300 ms after typing stops, showing issues whose ID, title or description contains every typed word, ignoring capitals. Input is plain text, with no wildcards or query syntax. Comments aren't searched.
   - REQ-038.1: "login button" → `WEB-1` "Fix login button", plus any issue whose description has both words.
   - REQ-038.2: "42" or "web-42" → `WEB-42`.
   - REQ-038.3: A word that only appears in a comment → that issue isn't shown.
@@ -364,7 +364,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 - **REQ-039** When a member clicks the ID, Status, Priority or Last updated heading, the system shall sort by that column. Clicking again reverses the order. Status sorts in the REQ-017 order and priority from Urgent down; ties go to the most recently updated.
   - REQ-039.1: Sam clicks Priority → Urgent issues first and No priority last; clicking again → the reverse.
   - REQ-039.2: `WEB-3` and `WEB-7` are both Urgent, and `WEB-7` was updated more recently → `WEB-7` comes first.
-- **REQ-040** The system shall keep the filters, search and sort in the page address, so a reload keeps them and a copied link opens the same view. Values in a link that don't exist, such as a deleted label, an unknown status or an unknown username, are ignored, and the rest still applies.
+- **REQ-040** The system shall keep filters, search and sort in the page address, so a reload or a copied link shows the same view. Unknown values in a link, such as a deleted label, status or username, are ignored, and the rest applies.
   - REQ-040.1: Sam filters Assignee = Alex, sorts by Priority, and sends the link to Alex → Alex opens the same filtered, sorted list.
   - REQ-040.2: A link filters by label `frontend`, which has since been deleted, and by Status = Done → only the Done filter applies.
   - REQ-040.3: A link has `status=Todo` → that value is ignored; the list shows as if no status filter was set.
@@ -387,7 +387,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 **Rules and examples**
 
-- **REQ-031** When a member posts a comment on an issue or a project, the system shall save it as Markdown of 1 to 10,000 characters and show it formatted (DEC-001, SEC-002). It shows the author's name and initials and when it was posted: relative for the past 7 days ("5 min ago"), a date after that, and the exact date and time on hover. Content wider than the comment scrolls sideways inside it. @mentions follow DATA-001, and a double submit is handled by STD-5.
+- **REQ-031** A comment on an issue or project shall be Markdown of 1 to 10,000 characters, shown formatted (DEC-001, SEC-002) with the author's name and initials and when it was posted: relative for the past 7 days ("5 min ago"), then a date, with the exact date and time on hover. Content wider than the comment scrolls sideways inside it. @mentions follow DATA-001 and double submits follow STD-5.
   - REQ-031.1: Sam posts "Looks good. @alex can you review?" on `WEB-42` → shown with "Sam Lee · just now", and `@alex` is highlighted as a mention.
   - REQ-031.2: The comment box is empty or only spaces → the Post button is disabled.
   - REQ-031.3: A comment of 10,001 characters → field error "Too long (max 10,000)".
@@ -407,7 +407,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-034.2: An admin deletes Alex's comment → it's gone.
   - REQ-034.3: Alex, a member, views Sam's comment → no Delete option (STD-2).
   - REQ-034.4: Sam is deactivated → Sam's comments show "Sam Lee (deactivated)", and an admin can still delete them.
-- **REQ-035** If a member tries to leave a page while the comment box holds unsent text, the system shall ask "You have an unsent comment. Leave anyway?" before leaving. If an issue or project description editor holds unsaved changes, it shall ask "You have unsaved changes. Leave anyway?". Closing the tab or reloading shows the browser's own prompt instead.
+- **REQ-035** Leaving a page shall first ask "You have an unsent comment. Leave anyway?" if the comment box holds text, or "You have unsaved changes. Leave anyway?" if an issue or project description editor holds unsaved changes. Closing or reloading the tab shows the browser's own prompt instead.
   - REQ-035.1: Sam types a comment on `WEB-42`, then clicks another project → the prompt appears; Cancel keeps Sam on `WEB-42` with the text intact.
   - REQ-035.2: The comment box is empty → Sam leaves with no prompt.
   - REQ-035.3: Sam edits the `WEB` project description without saving, then clicks My issues → "You have unsaved changes. Leave anyway?".
@@ -419,7 +419,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 **Release:** R1 · **Priority:** Should
 
-**What and why:** My issues shows every issue assigned to the signed-in member across all active projects, so each person sees their own work in one place. It's the page members land on after signing in.
+**What and why:** Each member's assigned issues across active projects, in one place. Members land here after signing in.
 
 **Flow**
 
@@ -429,14 +429,14 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 **Rules and examples**
 
-- **REQ-041** When a member opens My issues, the system shall show all the issues assigned to them in active projects, on one page with no paging. They're grouped by status in the REQ-017 order, each group headed with its count, and empty groups are hidden. As on the board (REQ-028), Done and Canceled show only issues moved there in the last 14 days. The page always shows the signed-in member's own issues; there's no way to view someone else's.
+- **REQ-041** My issues shall show every issue assigned to the signed-in member in active projects, on one page with no paging, grouped by status in the REQ-017 order with a count per group and empty groups hidden. Done and Canceled show only issues moved there in the last 14 days (as REQ-028). Nobody can view another member's My issues.
   - REQ-041.1: Sam is assigned `API-7` (Backlog), `WEB-42` (In Progress) and `WEB-3` (In Progress) → groups Backlog (1) and In Progress (2).
   - REQ-041.2: Sam's `WEB-10` was moved to Done 20 days ago → not shown.
   - REQ-041.3: Project `API` is archived → `API-7` isn't shown (REQ-013).
   - REQ-041.4: Nothing is assigned to Sam → "Nothing assigned to you. Open a project to find or create issues." (STD-7).
   - REQ-041.5: Sam is assigned 300 open issues → all 300 are on the page, grouped.
   - REQ-041.6: Alex reassigns `WEB-42` to themselves while Sam has the page open → `WEB-42` stays listed until Sam reloads; opening it shows Alex as assignee. (Verify: manual)
-- **REQ-042** Each row shall show the issue ID, title, project name, priority, labels and last updated. A title or project name too long for one line is cut off with "…" and shown in full on hover. Within a group, rows are sorted by priority from Urgent down, then by most recently updated. There's no filtering, search or manual ordering on this page in R1.
+- **REQ-042** Each row shall show the issue ID, title, project name, priority, labels and last updated; a title or project name too long for one line is cut off with "…" and shown in full on hover. Rows in a group sort by priority from Urgent down, then most recently updated. R1 has no filtering, search or manual ordering here.
   - REQ-042.1: In Progress holds `WEB-3` (Low) and `API-9` (Urgent) → `API-9` comes first.
   - REQ-042.2: Sam clicks `WEB-42` → the issue opens.
   - REQ-042.3: A 200-character title → one line ending in "…"; hovering shows the full title. (Verify: manual)
@@ -461,7 +461,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-043.1: Alex assigns `WEB-42` to Sam → Sam gets the email.
   - REQ-043.2: Sam assigns `WEB-42` to themselves → no email.
   - REQ-043.3: Alex reassigns `WEB-42` from Sam to Jo → Jo gets the email; Sam gets nothing.
-- **REQ-044** When a mention (DATA-001) is saved in an issue description, a project description or a comment, the system shall email each mentioned member other than the author. The subject is "[WEB-42] Fix login button: Alex Kim mentioned you", or "[WEB] Website: Alex Kim mentioned you" for a project, and the body holds the first 500 characters of the comment or description as plain text, plus a link to it. When text is edited, only members who weren't mentioned in its previously saved version are emailed, so a mention that's removed and later added back emails again. A member mentioned several times in one text gets one email.
+- **REQ-044** When a mention (DATA-001) is saved in an issue description, a project description or a comment, the system shall email each mentioned member except the author. The subject is "[WEB-42] Fix login button: Alex Kim mentioned you", or "[WEB] Website: Alex Kim mentioned you" for a project; the body holds the first 500 characters of the text as plain text and a link to it. An edit emails only members not mentioned in the previously saved version, so a mention removed and later added back emails again. Several mentions of one member in one text send one email.
   - REQ-044.1: Alex comments "@sam can you check?" on `WEB-42` → Sam gets the email, with that text and a link to the comment.
   - REQ-044.2: Sam writes `@sam` in their own comment → no email.
   - REQ-044.3: Alex edits a comment that already mentions `@sam` and adds `@jo` → only Jo is emailed.
@@ -469,7 +469,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-044.5: Alex mentions `@sam` in a comment on project `WEB` → the email links to the `WEB` project details page.
   - REQ-044.6: Alex mentions `@sam` in the `WEB` project description → Sam gets the email, linking to the `WEB` project details page.
   - REQ-044.7: Alex mentions `@sam` in a comment, edits the mention out, then adds it back → Sam gets a second email.
-- **REQ-045** The system shall send a notification 2 minutes after it's created. Further notifications for the same member about the same issue or project, created before that email goes out, join it in one email; they don't restart the wait. A notification is dropped if, within that time, the assignment is undone, the mention is edited out, the comment holding it is deleted, or the recipient is deactivated. A failed send is retried as in STD-6. A bounce reported by the email service is logged and not retried; the action in the app is unaffected. Notifications for issues or projects deleted during the wait are still sent.
+- **REQ-045** The system shall send a notification 2 minutes after it's created. Later notifications for the same member about the same issue or project join that email if created before it goes out, without restarting the wait. A notification is dropped if, before sending, the assignment is undone, the mention is edited out, its comment is deleted, or the recipient is deactivated; it's still sent if its issue or project is deleted. Failed sends retry as in STD-6. A bounce reported by the email service is logged, not retried, and doesn't affect the action in the app.
   - REQ-045.1: Within 1 minute, Alex assigns `WEB-42` to Sam and mentions `@sam` in a comment on it → Sam gets one email covering both.
   - REQ-045.2: Alex assigns `WEB-42` to Sam, then reassigns it to Jo 30 seconds later → Sam gets nothing; Jo gets one email.
   - REQ-045.3: Alex mentions `@sam`, then edits the mention out within a minute → Sam gets nothing.
@@ -478,7 +478,13 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-045.6: The email service reports that Sam's mailbox doesn't exist → the bounce is logged; nothing is resent.
   - REQ-045.7: Alex assigns `WEB-42` to Sam, and `WEB-42` is deleted a minute later → Sam still gets the email, and its link shows Not found (STD-4).
   - REQ-045.8: Alex mentions `@sam` on `WEB-42` at 10:00 and again at 10:01:30, then at 10:02:30 → one email at about 10:02 covers the first two; the third goes in a new email at about 10:04:30.
-- **REQ-053** The system shall give admins a notification status page, `/settings/notifications`, that shows whether notifications are going out. It shows when the background worker was last seen; how many deliveries are pending, how many of those are due, and how long the oldest due one has waited (in seconds under a minute, then minutes, hours or days, such as "40 seconds" or "14 min", and "None" when nothing is due); per channel, how many deliveries were sent, dropped, failed and bounced in the last 24 hours; and the 20 most recent failed or bounced deliveries, newest first, each with the recipient's username, the channel, the issue ID or project key, the number of attempts and when it failed or bounced. A delivery is counted once, under the state it's in now, so an email that was sent and then bounced counts as bounced. The page never shows email addresses or notification text (SEC-007). When the worker hasn't finished a pass in the last 2 minutes (OPS-005), the page warns "No pass for {N} min. Notifications wait in the queue until the worker runs.", where {N} is the whole minutes since its last pass; when it has never run, it warns "The worker has never run. No notifications are sent until it does." It's read-only: it loads when opened and again when the admin clicks **Refresh**, and never refreshes by itself. Members who aren't admins can't open it (STD-2).
+- **REQ-053** The system shall give admins a read-only notification status page, `/settings/notifications`, which other members can't open (STD-2). It shows:
+  - when the background worker was last seen;
+  - how many deliveries are pending, how many of those are due, and how long the oldest due one has waited: seconds under a minute, then minutes, hours or days ("40 seconds", "14 min"), or "None" when nothing is due;
+  - per channel, the deliveries sent, dropped, failed and bounced in the last 24 hours, each counted once under its current state (sent then bounced counts as bounced);
+  - the 20 most recent failed or bounced deliveries, newest first, with the recipient's username, channel, issue ID or project key, attempts and when it failed or bounced.
+
+  It never shows email addresses or notification text (SEC-007). If the worker hasn't finished a pass in the last 2 minutes (OPS-005), it warns "No pass for {N} min. Notifications wait in the queue until the worker runs." ({N} is whole minutes since the last pass), or "The worker has never run. No notifications are sent until it does." if it never has. It loads when opened and when the admin clicks **Refresh**, never by itself.
   - REQ-053.1: The worker finished a pass 4 seconds ago, and 3 notifications are pending, 1 of them due for 40 seconds → the page shows the worker last seen "just now", 3 pending, 1 due, and 40 seconds for the oldest due.
   - REQ-053.2: In the last 24 hours, 12 emails were sent, 2 dropped, 1 failed and 1 bounced, and one more failed 2 days ago → the Email row shows 12 sent, 2 dropped, 1 failed and 1 bounced.
   - REQ-053.3: Sam's email about `WEB-42` failed after 4 attempts → the recent list shows `sam`, Email, `WEB-42`, 4 and when it failed. Sam's email address and the excerpt appear nowhere on the page or in what the API returns.
@@ -506,7 +512,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 | STD-6 | A service we depend on fails | The only outside service is email. If an invitation or password reset email fails, nothing is saved and the person sees "We couldn’t send the email. Try again." If a notification email fails, the app retries 3 times over about 15 minutes, then logs the failure; the action that caused it still succeeds. |
 | STD-7 | Every screen | A loading indicator shows if loading takes more than 300 ms. Empty states name the next action ("No issues yet. Create one."). An error state shows "Couldn’t load this." beside a Retry button (DEC-006). Speed targets are in section 11. |
 | STD-8 | Two members edit the same thing | Single fields such as status, assignee, priority and labels: the last save wins. Descriptions: if someone else saved since you opened the editor, nothing is saved. You see "This was changed by [name]. Copy your text and reload.", and your text stays in the editor. |
-| STD-9 | A form submission fails | A toast error appears, disappears after 5 seconds with no dismiss or pause control, and the form keeps everything typed (DEC-006). This covers failures not tied to one field, such as a network error, a server error, a `403` (STD-2) or a failed invitation or password reset email (STD-6). Validation errors stay next to their fields (STD-3), and the STD-8 conflict message stays in the editor. For a network error or a server error, the toast reads "Couldn’t save. Try again." |
+| STD-9 | A form submission fails | For failures not tied to one field, such as a network or server error, a `403` (STD-2) or a failed invitation or reset email (STD-6), a toast appears for 5 seconds with no dismiss or pause control, and the form keeps everything typed (DEC-006). A network or server error reads "Couldn’t save. Try again." Field errors stay by their fields (STD-3) and the STD-8 conflict message in the editor. |
 
 **STD-9 examples**
   - STD-9.1: Sam's save fails → one error toast shows, and 5 seconds later it's gone; it has no dismiss or pause control.
@@ -542,7 +548,7 @@ There are no private projects. Nobody, including admins, can see or set another 
 
 | Entity | What it holds | Notes |
 |---|---|---|
-| Member | Email, full name, username, password hash, role (Admin or Member), active or deactivated, notification channels, created at | Created by accepting an invitation (REQ-002) or by the setup command (OPS-001). Email and username are unique, ignoring capitals. Never deleted, only deactivated. Notification channels are where F-008 notifications go, at least one; Email is the only channel in R1 and every member has it. |
+| Member | Email, full name, username, password hash, role (Admin or Member), active or deactivated, notification channels, created at | Created by accepting an invitation (REQ-002) or by the setup command (OPS-001). Email and username are unique, ignoring capitals. Never deleted, only deactivated. Notification channels (at least one) are where F-008 notifications go; in R1 every member has Email, the only channel. |
 | Invitation | Email, invited by, secret token, expires at, state (Pending, Accepted, Revoked, Expired, Bounced) | Expires 7 days after sending (REQ-001). At most one pending invitation per email. |
 | Password reset link | Member, secret token, expires at, used at | Expires 30 minutes after sending (REQ-050). |
 | Session | Member, secret token, last active at | Ends 30 days after last activity (REQ-006). |
@@ -551,7 +557,7 @@ There are no private projects. Nobody, including admins, can see or set another 
 | Issue | Project, number, title, Markdown description, status, priority, assignee, labels (0 to 10), board position, created by, created at, last updated, status changed at | Number unique within its project and never reused (REQ-016). Board position is per status column (REQ-027). "Status changed at" drives the 14-day window (REQ-028). |
 | Comment | Either an issue or a project, author, Markdown body, created at, edited at | Belongs to exactly one issue or one project. |
 | Mention | The text it's in (an issue description, a project description or a comment), the member mentioned | Lets an edit email only new mentions (REQ-044). |
-| Notification | Recipient, kind (Assigned or Mentioned), issue or project, who caused it, the issue ID or project key, its title or name, the text excerpt (up to 500 characters), send after, and per notification channel a delivery state (Pending, Sent, Dropped, Failed, Bounced), its number of attempts and when it reached that state | "Send after" is 2 minutes after the recipient's first pending notification about that issue or project (REQ-045). The ID, title and excerpt are saved when it's created, and later edits don't change them (section 9, Email content). Each of the recipient's channels is delivered, retried and failed on its own. Not deleted with its issue or project (REQ-045). |
+| Notification | Recipient, kind (Assigned or Mentioned), issue or project, who caused it, the issue ID or project key, its title or name, the text excerpt (up to 500 characters), send after, and per notification channel a delivery state (Pending, Sent, Dropped, Failed, Bounced), its number of attempts and when it reached that state | "Send after" is 2 minutes after the recipient's first pending notification about that issue or project (REQ-045). The ID, title and excerpt are fixed when it's created (section 9, Email content). Each channel is delivered, retried and failed on its own. Kept when its issue or project is deleted (REQ-045). |
 | Sign-in attempt | Email, IP address, attempted at | Records failed sign-ins and wrong current passwords (REQ-049) for SEC-001. |
 | Password reset request | Email, IP address, requested at | Records reset requests for SEC-001. |
 
@@ -566,7 +572,7 @@ There are no private projects. Nobody, including admins, can see or set another 
   - DATA-002.1: `WEB` is deleted, with 120 issues, 8 labels and 300 comments → all of them are gone from the database, and a new project can't use the key `WEB`.
 - **DATA-003** The system shall store all times in UTC and show them in each member's browser time zone.
   - DATA-003.1: A comment saved at 02:00 UTC → a member whose browser is on UTC+7 sees 09:00.
-- **DATA-004** The system shall delete, 30 days after they stop being useful: invitations that are accepted or revoked, or have passed their expiry; password reset links that are used or expired; sessions that have ended; notifications that are sent, dropped, failed or bounced; sign-in attempts, which stop being useful an hour after they're made; and password reset requests, which stop being useful a day after they're made.
+- **DATA-004** The system shall delete these 30 days after they stop being useful: accepted, revoked or expired invitations; used or expired password reset links; ended sessions; sent, dropped, failed or bounced notifications; sign-in attempts (useful for an hour after they're made); and password reset requests (useful for a day).
   - DATA-004.1: A password reset link expired 31 days ago → it's no longer in the database.
   - DATA-004.2: A notification was sent 10 days ago → still stored.
 
@@ -632,7 +638,7 @@ All emails are plain text. `{…}` are filled in when the email is sent, `{APP_U
 
 ### 10. Security and privacy
 
-- **SEC-001** The system shall allow, per hour, at most 10 failed sign-in attempts per email address and 30 per IP address, and at most 5 password reset requests per email address and 20 per IP address. Past a limit, it shows the inline message "Too many attempts. Try again later.", doesn't sign anyone in even with the right password, and sends nothing, whether or not the email belongs to a member. Wrong current passwords on the profile (REQ-049) count as failed sign-in attempts. Each limit counts the last 60 minutes, and a successful sign-in doesn't reset the count.
+- **SEC-001** The system shall allow, in any 60 minutes, at most 10 failed sign-in attempts per email and 30 per IP address, and at most 5 password reset requests per email and 20 per IP. Wrong current passwords on the profile (REQ-049) count as failed sign-ins, and a successful sign-in doesn't reset the count. Past a limit, it shows the inline message "Too many attempts. Try again later.", signs nobody in even with the right password, and sends nothing, whether or not the email belongs to a member.
   - SEC-001.1: Sam's password is entered wrongly 10 times within an hour, then correctly → the limit message is shown, and Sam isn't signed in.
   - SEC-001.2: Sam requests a 6th reset link within an hour → the limit message is shown, and no email is sent.
   - SEC-001.3: `stranger@x.com` is tried 11 times, or requested for a reset 6 times → the same limit message, so nobody can tell whether the email exists.
@@ -667,12 +673,12 @@ All emails are plain text. `{…}` are filled in when the email is sent, `{APP_U
 
 **Accepted limitations**
 
-These are accepted for a small invite-only team. The sign-in and password reset pages' messages stay the same for members and non-members (REQ-047.3, REQ-050.2, SEC-001.3).
+Accepted for a small invite-only team. The sign-in and password reset messages are the same for members and non-members (REQ-047.3, REQ-050.2, SEC-001.3), but:
 
-- The time to answer a sign-in or password reset request may differ between member and non-member emails, so it can hint at which emails are members. No minimum response time is required.
-- During an email-service outage, only a member's email gets "We couldn’t send the email. Try again." (STD-6), so that message can reveal which emails are members.
-- Someone who knows a member's email can block that member's sign-in for up to an hour by using up SEC-001's per-email limit with wrong passwords. The member waits, or an admin investigates; there's no permanent lockout.
-- Each password check uses about 19 MiB of memory (SEC-008), and SEC-001 only limits failures per hour, so a burst of sign-in requests at once can strain a small server.
+- Response times for sign-in and reset requests may differ for member emails, hinting at which emails are members. No minimum response time is required.
+- During an email-service outage, only a member's email gets "We couldn’t send the email. Try again." (STD-6), revealing that it's a member.
+- Anyone who knows a member's email can block their sign-in for up to an hour by using up SEC-001's per-email limit. The member waits, or an admin investigates; there's no permanent lockout.
+- Each password check uses about 19 MiB of memory (SEC-008), and SEC-001 limits only failures per hour, so a burst of sign-ins can strain a small server.
 
 ### 11. Quality targets
 
@@ -703,7 +709,7 @@ There's no uptime target. Hosting, backups and redundancy belong to the deployme
   - There are no real-time updates; pages show current data when they load.
   - There are two environments: local development and production. No feature flags.
 - **Agent's choices:**
-  - DEC-002 (API endpoints): JSON over HTTPS, resource-style paths such as `/api/issues/WEB-42`, the STD-1 to STD-4 status codes (signing in, `POST /api/sessions` with email and password, may also answer `429` when a SEC-001 limit is reached; requesting a password reset link may answer `429`, and `503` when the email couldn't be sent, STD-6; sending or resending an invitation may also answer `503`), and a request ID on creates (STD-5). Every endpoint needs a session except sign-in, sign-out (which succeeds with or without a session), requesting and using a password reset link, looking up and accepting an invitation, the webhook (API-003) and the health checks (OPS-005). Requesting a password reset link and sending or resending an invitation are exempt from NFR-003's 500 ms write limit, because they include the call to the email service and STD-6 needs the send result before answering.
+  - DEC-002 (API endpoints): JSON over HTTPS, resource-style paths such as `/api/issues/WEB-42`, the STD-1 to STD-4 status codes, and a request ID on creates (STD-5). Also: `429` from sign-in (`POST /api/sessions` with email and password) and reset-link requests past a SEC-001 limit, and `503` from reset-link requests and sending or resending an invitation when the email couldn't be sent (STD-6). Every endpoint needs a session except sign-in, sign-out (which succeeds either way), requesting and using a reset link, looking up and accepting an invitation, the webhook (API-003) and the health checks (OPS-005). Reset-link requests and sending or resending an invitation are exempt from NFR-003's 500 ms write limit, since STD-6 needs the email service's result before answering.
   - DEC-003 (email provider): it must have an HTTP API and bounce webhooks (API-003), fit within NFR-009's budget, send from the team's domain with SPF and DKIM, and keep its API key only in server config (OPS-006). If no provider fits, stop and ask.
   - DEC-004 (background jobs): run alongside the app with no paid queue service, and survive a restart without losing pending notifications.
 
@@ -735,7 +741,7 @@ Deploys, rollbacks, backups, log retention and uptime monitoring are part of the
 
 **Changelog**
 
-- **0.33 (2026-10-25):** Editorial; no behaviour changes. Examples are automated unless marked, so `(Verify: auto)` is dropped. Empty "Exceptions to standard behaviors" lines, the section 4 table and changelog entries before 0.30 are condensed.
+- **0.33 (2026-10-25):** Editorial; no behaviour changes. Examples are automated unless marked, so `(Verify: auto)` is dropped. Empty "Exceptions to standard behaviors" lines, the section 4 table and changelog entries before 0.30 are condensed. Rule wording tightened.
 - **0.32 (2026-10-23):** From the design refresh (C2). Project details shows the open-issue count, the count per status and "Created {date} by {name}" (REQ-046, new REQ-046.3 and REQ-046.4). A project now records the admin who created it (section 8); projects created earlier show only the date.
 - **0.31 (2026-10-22):** From the design refresh. REQ-053 warns when the worker hasn't finished a pass in the last 2 minutes or has never run, using OPS-005's threshold (REQ-053.5 extended, new REQ-053.10). REQ-041.4's empty My issues copy names the next action: "Nothing assigned to you. Open a project to find or create issues." (STD-7). The "Couldn’t …" messages use a curly apostrophe: "Couldn’t load this.", "Couldn’t save. Try again.", "Couldn’t move WEB-42" and "We couldn’t send the email. Try again." (REQ-001, REQ-026.2, STD-6, STD-7, STD-9, API-002, DEC-006).
 - **0.30 (2026-10-22):** Deployment leaves the repository. OPS-002 (deploy), OPS-003 (backups) and OPS-004 (rollback) are removed. OPS-005 keeps the two health endpoints but no longer sets up the uptime checker or its emails (OPS-005.6 removed). OPS-006 drops log rotation. Section 3 drops the single-VPS limitation and backups as the data export.
