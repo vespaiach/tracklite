@@ -41,7 +41,7 @@ Deployment (servers, the reverse proxy, process supervision, deploys, rollbacks,
 
 ### 1.3 Time
 
-Every expiry and time-window check uses the database's `now()` inside the query (`expires_at > now()`, `send_after <= now()`). The app server's clock is never used for these, so there's only one clock to trust. The one exception is the webhook's 5-minute signature window (5.4), which compares the provider's timestamp with the app's clock, since there's no row to compare in SQL. Tests move stored timestamps into the past rather than faking the clock. For example, a test for REQ-050.4 sets `expires_at = now() - interval '1 minute'`.
+Every expiry and time-window check uses the database's `now()` inside the query (`expires_at > now()`, `send_after <= now()`). The app server's clock is never used for these, so there's only one clock to trust. The app's connection sets the session time zone to UTC, so a window such as `interval '7 days'` is always exactly 168 hours, even across a daylight-saving change. The one exception is the webhook's 5-minute signature window (5.4), which compares the provider's timestamp with the app's clock, since there's no row to compare in SQL. Tests move stored timestamps into the past rather than faking the clock. For example, a test for REQ-050.4 sets `expires_at = now() - interval '1 minute'`.
 
 ### 1.4 Background worker (DEC-004)
 
