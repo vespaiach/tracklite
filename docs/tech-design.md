@@ -1,6 +1,6 @@
 # Tracklite: Technical design
 
-Companion to `docs/tracklite-spec.md` (v0.30). The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
+Companion to `docs/tracklite-spec.md`. The spec says *what* the product does; this file records only the technical decisions the spec leaves open. If they disagree, the spec wins and this file gets fixed.
 
 ## 1. Architecture
 
@@ -37,7 +37,7 @@ Deployment (servers, the reverse proxy, process supervision, deploys, rollbacks,
 3. If the route declares a body schema, parse the JSON body and validate it with Valibot (D-42), failing fast with `422`. The schema checks shape and format only, with the spec's own messages, and passes the parsed, trimmed values on.
 4. Call one domain function in its context's `index.ts` under `src/server/` (1.8), passing the signed-in member as its first argument, `actor`. `apiRoute` opens no transaction; the domain function opens its own with `db.transaction`. The domain function checks permissions (4.10), then the rules that need the database (a key already used, the last admin), and writes. The action and any notification rows it creates commit together (spec §12).
 5. Map a thrown `ApiError` to `401`/`403`/`404`/`409`/`410`/`422`/`429`/`503` with `{ error: { message, fields? } }`. Map anything else to `500`.
-6. Write one JSON log line per request, without bodies or tokens (SEC-007). A signed-in request's line names the member as `actor` by username. `/health`, `/health/worker` and `/webhooks/email` don't go through `apiRoute`, so they write no line; Caddy's access log records them.
+6. Write one JSON log line per request, without bodies or tokens (SEC-007). A signed-in request's line names the member as `actor` by username. `/health`, `/health/worker` and `/webhooks/email` don't go through `apiRoute`, so they write no line; the reverse proxy's access log records them.
 
 ### 1.3 Time
 
@@ -168,9 +168,9 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 | `notifications` | batch | the notifications a recipient gets together about one target (2.6) | `notification_batches` |
 | `notifications` | delivery | one batch sent over one channel, with its state | `notification_deliveries`, `deliveryState`, `ProblemDelivery` |
 
-**Typed identifiers (M16.3).** Identifiers are branded types, each with one parse function, made at the edge (the context's `schemas.ts`) and passed inward: `IssueId` (`WEB-42`) in `issues`, `ProjectKey` in `projects`, `Username` in `identity`, `RequestId` and `Uuid` in `shared/` (replacing `isUuid` in `shared/ids.ts`). Domain functions take the branded types, so an unchecked string doesn't compile. Parsing normalises once (keys uppercase, usernames lowercase), so lookups ignore case without each query doing it.
+**Typed identifiers.** Identifiers are branded types, each with one parse function, made at the edge (the context's `schemas.ts`) and passed inward: `IssueId` (`WEB-42`) in `issues`, `ProjectKey` in `projects`, `Username` in `identity`, `RequestId` and `Uuid` in `shared/`. Domain functions take the branded types, so an unchecked string doesn't compile. Parsing normalises once (keys uppercase, usernames lowercase), so lookups ignore case without each query doing it.
 
-**Pure rules (M16.4, M16.5).** Each context keeps the decisions that need no database in its `rules.ts`, as pure functions over plain types, tested by its `rules.test.ts` without a database. A domain function reads as load → decide → write: load rows in its transaction, call the rules, write the result.
+**Pure rules.** Each context keeps the decisions that need no database in its `rules.ts`, as pure functions over plain types, tested by its `rules.test.ts` without a database. A domain function reads as load → decide → write: load rows in its transaction, call the rules, write the result.
 - `issues/rules.ts`: board positions, status and priority changes, label changes, what an edit may touch.
 - `projects/rules.ts`: archived-project and key rules.
 - `comments/rules.ts`: edit and delete ownership. `notifications/rules.ts`: mention parsing (which members a text newly mentions).
@@ -178,9 +178,7 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 
 Permission checks stay where 4.10 puts them: `assertAdmin(actor)` is still an admin-only function's first statement, before any load.
 
-**Domain events (M16.6).** `shared/events.ts` holds `DomainEvent`, a typed union of the facts that cause notifications in R1: `IssueAssigned`, `DescriptionSaved` (issue or project), `CommentPosted` and `CommentEdited`. Each carries the actor, the target ids and, for text, the saved text; which members a text newly mentions is worked out by `notifications`, which owns `mentions`. `publish(tx, event)` hands an event to the one subscriber and throws if none is registered, so a missing import fails loudly instead of dropping notifications. A context publishes inside its own transaction; `notifications` subscribes when its `index.ts` loads and writes its rows (mentions, batches, deliveries, notifications) on the same `tx`, so the action and its notifications commit or roll back together (spec §12). `shared/api-route.ts` and `scripts/worker.ts` import `notifications`, and the `unit` test project loads it in a setup file (`src/test/subscribe-notifications.ts`), so tests that call domain functions directly have the subscriber.
-
-The edit-conflict `409` (`editConflict`, naming the last editor) moved from `notifications` to `identity`, and the description schema to `shared/schemas.ts`, since neither is about notifications. The dependency map is the **Allowed dependencies** paragraph above.
+**Domain events.** `shared/events.ts` holds `DomainEvent`, a typed union of the facts that cause notifications in R1: `IssueAssigned`, `DescriptionSaved` (issue or project), `CommentPosted` and `CommentEdited`. Each carries the actor, the target ids and, for text, the saved text; which members a text newly mentions is worked out by `notifications`, which owns `mentions`. `publish(tx, event)` hands an event to the one subscriber and throws if none is registered, so a missing import fails loudly instead of dropping notifications. A context publishes inside its own transaction; `notifications` subscribes when its `index.ts` loads and writes its rows (mentions, batches, deliveries, notifications) on the same `tx`, so the action and its notifications commit or roll back together (spec §12). `shared/api-route.ts` and `scripts/worker.ts` import `notifications`, and the `unit` test project loads it in a setup file (`src/test/subscribe-notifications.ts`), so tests that call domain functions directly have the subscriber.
 
 ## 2. Schema
 
@@ -657,7 +655,7 @@ The spec gives the copy for these pages; these are the layout choices it leaves 
 
 ### 6.6 Label colours
 
-The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`. Each maps to a Track Lite colour token pair (background and text) that meets WCAG AA contrast (NFR-007). The tokens don't yet cover all eight hues, so until the kit adds the eight pairs, the Labels page (M3.7) draws every label as the neutral label pill with its colour name beside it. The name stays as a non-colour cue once the tokens exist. Labels created from the picker are `gray` (REQ-020). Deleting a label asks for confirmation, naming how many issues have it (REQ-021.5).
+The spec's eight colours (REQ-021): `gray`, `red`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`. Each maps to a Track Lite colour token pair (background and text) that meets WCAG AA contrast (NFR-007). The tokens don't yet cover all eight hues, so until the kit adds the eight pairs, the Labels page draws every label as the neutral label pill with its colour name beside it. The name stays as a non-colour cue once the tokens exist. Labels created from the picker are `gray` (REQ-020). Deleting a label asks for confirmation, naming how many issues have it (REQ-021.5).
 
 ### 6.7 Times
 
