@@ -1302,9 +1302,6 @@ a.tl-rail-item {
 .tl-crumbs__sep {
   color: var(--ink-tertiary);
 }
-.tl-crumbs b {
-  font-weight: 500;
-}
 .tl-crumbs a {
   color: var(--ink-subtle);
   text-decoration: none;
