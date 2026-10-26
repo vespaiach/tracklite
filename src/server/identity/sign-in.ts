@@ -23,10 +23,11 @@ export async function signIn(normalizedEmail: string, password: string, ip: stri
 
   const newPasswordHash = needsRehash(member.passwordHash) ? await hashPassword(password) : undefined;
 
-  return db.transaction(async (tx) => {
+  const token = await db.transaction(async (tx) => {
     if (newPasswordHash) {
       await tx.update(members).set({ passwordHash: newPasswordHash }).where(eq(members.id, member.id));
     }
     return createSession(member.id, tx);
   });
+  return { token, username: member.username };
 }

@@ -88,6 +88,19 @@ it("REQ-047.1, REQ-047.4, §4.1: an active member with the right password is sig
   expect(await storedHash(sam.id)).toBe(passwordHash);
 });
 
+it("SEC-007.1: Sam signs in → the log line names member sam, with no password or token", async () => {
+  const sam = await createMember({ passwordHash });
+
+  const response = await signIn({ email: sam.email, password });
+
+  const lines = vi.mocked(console.log).mock.calls.map(([raw]) => raw as string);
+  const [line] = lines.filter((raw) => JSON.parse(raw).event === "request");
+  expect(JSON.parse(line)).toMatchObject({ method: "POST", path: "/api/sessions", actor: sam.username });
+  for (const secret of [password, cookieFrom(response)?.split("=")[1] ?? "", sam.email]) {
+    expect(line).not.toContain(secret);
+  }
+});
+
 it("REQ-047.2, REQ-047.3, REQ-047: a wrong password, an unknown email and a deactivated member with the right password all get the same refusal", async () => {
   const sam = await createMember({ passwordHash });
   const jo = await createMember({ passwordHash, deactivatedAt: new Date() });
