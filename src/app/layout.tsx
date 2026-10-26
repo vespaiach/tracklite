@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
-import { Archivo, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 import "../components/ui/track-lite/styles/index.css";
 
-const serif = Source_Serif_4({
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  variable: "--font-source-serif",
-});
-const ui = Archivo({ subsets: ["latin"], variable: "--font-archivo" });
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono" });
+const text = Geist({ subsets: ["latin"], variable: "--font-geist" });
+const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
 
 export const metadata: Metadata = {
   title: "Tracklite",
@@ -21,7 +16,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${serif.variable} ${ui.variable} ${mono.variable}`}>
+      className={`${text.variable} ${mono.variable}`}>
       <body>{children}</body>
     </html>
   );

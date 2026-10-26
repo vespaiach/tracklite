@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import { cx } from "./cx";
 
 const tone = {
-  done: "var(--color-accent-600)",
-  active: "var(--color-accent-2-500)",
-  todo: "var(--color-accent-300)",
+  done: "var(--primary)",
+  active: "var(--danger)",
+  todo: "var(--primary-ring)",
 };
 
 export type ProgressProps = { done: number; active?: number; todo?: number; large?: boolean };
@@ -36,7 +36,7 @@ export function Ring({ pct }: { pct: number }) {
   return (
     <span
       className="tl-ring"
-      style={{ background: `conic-gradient(var(--color-accent-600) 0 ${pct}%, var(--color-neutral-200) 0)` }}>
+      style={{ background: `conic-gradient(var(--primary) 0 ${pct}%, var(--bg-selected) 0)` }}>
       <span className="tl-ring__hole" />
       <b>{pct}%</b>
     </span>
@@ -84,7 +84,7 @@ export function Workload({ rows }: { rows: { name: string; pct: number; label: s
             <i
               style={{
                 width: `${Math.min(row.pct, 100)}%`,
-                background: row.pct > 100 ? "var(--color-accent-2-500)" : "var(--color-accent-500)",
+                background: row.pct > 100 ? "var(--danger)" : "var(--primary)",
               }}
             />
           </span>
@@ -113,7 +113,7 @@ export function Timeline({
   rows: TimelineRow[];
   today?: number;
 }) {
-  const lane = `linear-gradient(to right, var(--color-hair) 0 1px, transparent 1px) 0 0 / ${100 / quarters.length}% 100% repeat-x`;
+  const lane = `linear-gradient(to right, var(--hairline) 0 1px, transparent 1px) 0 0 / ${100 / quarters.length}% 100% repeat-x`;
   return (
     <div className="tl-timeline">
       <div className="tl-timeline__names">
