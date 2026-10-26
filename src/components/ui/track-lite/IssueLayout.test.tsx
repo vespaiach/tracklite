@@ -73,3 +73,29 @@ it("IssueLayout reads title, then the Issue fields, then the main column; Editor
   fireEvent.click(add);
   expect(onAction).toHaveBeenCalledOnce();
 });
+
+it("NFR-006: IssueTitleInput's height follows its content, without relying on field-sizing", () => {
+  vi.spyOn(HTMLTextAreaElement.prototype, "scrollHeight", "get").mockImplementation(function (
+    this: HTMLTextAreaElement,
+  ) {
+    return this.value.length > 10 ? 96 : 48;
+  });
+  const { rerender } = render(
+    <IssueTitleInput
+      aria-label="Title"
+      value="Short"
+      onChange={() => {}}
+    />,
+  );
+  const title = screen.getByRole("textbox", { name: "Title" });
+  expect(title.style.height).toBe("48px");
+
+  rerender(
+    <IssueTitleInput
+      aria-label="Title"
+      value="A much longer title that wraps"
+      onChange={() => {}}
+    />,
+  );
+  expect(title.style.height).toBe("96px");
+});
