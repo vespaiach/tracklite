@@ -1,4 +1,4 @@
-import { Avatar, AvatarStack, Pill } from "../components/ui/track-lite";
+import { Avatar, AvatarStack, PickerItem, Pill } from "../components/ui/track-lite";
 import type { IssueLabel, MemberSummary } from "./api";
 import { formatExact, formatUpdated } from "./dates";
 
@@ -48,7 +48,7 @@ export function memberName(member: MemberSummary) {
 }
 
 export function assignedTo(assignees: MemberSummary[]) {
-  return assignees.length > 0 ? `assigned to ${assignees.map(memberName).join(", ")}` : "unassigned";
+  return assignees.length > 0 ? `assigned to ${memberNames(assignees)}` : "unassigned";
 }
 
 export function Assignees({ assignees, me }: { assignees: MemberSummary[]; me?: string }) {
@@ -67,4 +67,32 @@ export function Assignees({ assignees, me }: { assignees: MemberSummary[]; me?: 
       )}
     </span>
   );
+}
+
+export function memberNames(members: MemberSummary[]) {
+  return members.map(memberName).join(", ");
+}
+
+export function assigneeOptions(members: MemberSummary[], me?: string) {
+  return members
+    .filter((member) => !member.deactivated)
+    .map((member) => (
+      <PickerItem
+        key={member.username}
+        id={member.username}
+        textValue={`${member.fullName} ${member.username}`}>
+        <span aria-hidden="true">
+          <Avatar
+            size="md"
+            tone={member.username === me ? "accent" : "neutral"}
+            initials={member.initials}
+          />
+        </span>
+        {member.fullName}
+      </PickerItem>
+    ));
+}
+
+export function toggled(keys: string[], key: string) {
+  return keys.includes(key) ? keys.filter((each) => each !== key) : [...keys, key];
 }

@@ -3,6 +3,7 @@ import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState 
 import { Navigate, useLocation, useNavigate, useParams } from "react-router";
 import {
   Avatar,
+  AvatarStack,
   Button,
   Dialog,
   FieldError,
@@ -44,6 +45,7 @@ import { CommentThread } from "../CommentThread";
 import { formatDate } from "../dates";
 import { type DescriptionDraft, DescriptionEditor } from "../DescriptionEditor";
 import { useFailureToast } from "../failure";
+import { assigneeOptions, memberNames, toggled } from "../IssueCells";
 import { issuePriorities, issueStatuses } from "../../contract";
 import { priorities, statuses } from "../issue-fields";
 import { LoadFailed, Loading } from "../LoadStates";
@@ -51,8 +53,6 @@ import { ProjectGate } from "../ProjectGate";
 import { ProjectHeader } from "../ProjectHeader";
 import { useShowLoading } from "../useShowLoading";
 import { NotFound } from "./NotFound";
-
-const unassigned = "_unassigned";
 
 export function IssuePage() {
   const { id = "" } = useParams();
@@ -150,7 +150,7 @@ function IssueView({ issue, project }: { issue: Issue; project: Project }) {
             issue={issue}
             editable={editable}
           />
-          <AssigneeField
+          <AssigneesField
             issue={issue}
             me={me?.username}
             editable={editable}
@@ -305,93 +305,62 @@ function PriorityField({ issue, editable }: { issue: Issue; editable: boolean })
   );
 }
 
-function memberName(member: MemberSummary) {
-  return member.deactivated ? `${member.fullName} (deactivated)` : member.fullName;
-}
-
-function keepsUnassigned(text: string, input: string) {
-  return text === "Unassigned" || text.toLowerCase().includes(input.trim().toLowerCase());
-}
-
-function MemberAvatar({ member, me }: { member: MemberSummary; me?: string }) {
-  return (
-    <Avatar
-      size="md"
-      tone={member.username === me ? "accent" : "neutral"}
-      initials={member.initials}
-    />
-  );
-}
-
-function AssigneeField({ issue, me, editable }: { issue: Issue; me?: string; editable: boolean }) {
-  const save = useIssueSave(issue.id);
-  const { data: members } = useMembersQuery(undefined, { skip: !editable });
-  const errorId = useId();
-  const [error, setError] = useState<string>();
-  const [assignee] = issue.assignees;
-  const value = (
-    <>
-      <Glyph>
-        {assignee ? (
-          <MemberAvatar
-            member={assignee}
-            me={me}
-          />
-        ) : (
+function AssigneesValue({ assignees, me }: { assignees: MemberSummary[]; me?: string }) {
+  if (assignees.length === 0) {
+    return (
+      <>
+        <Glyph>
           <Avatar
             size="md"
             empty
           />
-        )}
-      </Glyph>
-      {assignee ? memberName(assignee) : "Unassigned"}
+        </Glyph>
+        Unassigned
+      </>
+    );
+  }
+  return (
+    <>
+      <AvatarStack
+        members={assignees}
+        me={me}
+      />
+      <span className="sr-only">{memberNames(assignees)}</span>
     </>
   );
+}
 
-  async function choose(key: string) {
-    const { fieldError } = await save({ assignees: key === unassigned ? [] : [key] });
+function AssigneesField({ issue, me, editable }: { issue: Issue; me?: string; editable: boolean }) {
+  const save = useIssueSave(issue.id);
+  const { data: members } = useMembersQuery(undefined, { skip: !editable });
+  const errorId = useId();
+  const [error, setError] = useState<string>();
+  const selected = issue.assignees.map((member) => member.username);
+  const value = (
+    <AssigneesValue
+      assignees={issue.assignees}
+      me={me}
+    />
+  );
+
+  async function toggle(username: string) {
+    const { fieldError } = await save({ assignees: toggled(selected, username) });
     setError(fieldError);
   }
 
   return (
-    <Meta label="Assignee">
+    <Meta label="Assignees">
       {editable && members ? (
-        <Picker
-          label="Assignee"
-          selectedKey={assignee?.username ?? unassigned}
+        <MultiPicker
+          label="Assignees"
+          selectedKeys={selected}
           value={value}
-          empty={!assignee}
+          empty={selected.length === 0}
           aria-describedby={error ? errorId : undefined}
-          onChange={(key) => void choose(String(key))}
-          search={{ label: "Filter members", placeholder: "Assign to…", filter: keepsUnassigned }}>
-          <PickerItem
-            id={unassigned}
-            textValue="Unassigned">
-            <Glyph>
-              <Avatar
-                size="md"
-                empty
-              />
-            </Glyph>
-            Unassigned
-          </PickerItem>
-          {members
-            .filter((member) => !member.deactivated)
-            .map((member) => (
-              <PickerItem
-                key={member.username}
-                id={member.username}
-                textValue={`${member.fullName} ${member.username}`}>
-                <Glyph>
-                  <MemberAvatar
-                    member={member}
-                    me={me}
-                  />
-                </Glyph>
-                {member.fullName}
-              </PickerItem>
-            ))}
-        </Picker>
+          onToggle={(key) => void toggle(String(key))}
+          search={{ label: "Filter members", placeholder: "Assign to…" }}>
+          {assigneeOptions(members, me)}
+        </MultiPicker>
       ) : (
         <PickValue>{value}</PickValue>
       )}

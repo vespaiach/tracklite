@@ -74,18 +74,20 @@ it("REQ-016.6: the chosen assignees, from active members only, are sent with the
 
   const dialog = await openDialog();
   typeTitle(dialog, "Fix login button");
-  fireEvent.click(within(dialog).getByRole("button", { name: /^Assignees/ }));
-  const listbox = await screen.findByRole("listbox", { name: "Assignees" });
-  expect(within(listbox).getAllByRole("option").map((option) => option.getAttribute("data-key"))).toEqual([
-    "alex",
-    "sam",
-  ]);
+  const assignees = await within(dialog).findByRole("button", { name: /^Assignees/ });
+  fireEvent.click(assignees);
+  const listbox = await screen.findByRole("listbox");
+  expect(
+    within(listbox)
+      .getAllByRole("option")
+      .map((option) => option.getAttribute("data-key")),
+  ).toEqual(["alex", "sam"]);
   fireEvent.click(within(listbox).getByRole("option", { name: /^Sam Lee/ }));
   fireEvent.click(within(listbox).getByRole("option", { name: /^Alex Kim/ }));
-  await waitFor(() =>
-    expect(within(dialog).getByRole("button", { name: /^Assignees/ }).textContent).toContain("Alex Kim, Sam Lee"),
-  );
+  await waitFor(() => expect(assignees.textContent).toContain("Alex Kim, Sam Lee"));
 
+  fireEvent.keyDown(document.activeElement ?? listbox, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
   fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
 
   await waitFor(() => expect(window.location.pathname).toBe("/issue/WEB-1"));

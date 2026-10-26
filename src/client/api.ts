@@ -207,7 +207,7 @@ export const api = createApi({
     issue: build.query<Issue, string>({ query: (id) => `issues/${id}`, providesTags: ["Issue"] }),
     createIssue: build.mutation<
       Issue,
-      { key: string; requestId: string; title: string; status?: IssueStatus }
+      { key: string; requestId: string; title: string; status?: IssueStatus; assignees: string[] }
     >({
       query: ({ key, ...body }) => ({ path: `projects/${key}/issues`, method: "POST", body }),
     }),

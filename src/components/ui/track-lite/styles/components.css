@@ -3396,3 +3396,15 @@ fieldset.tl-list-head {
 .tl-settings--wide .tl-settings__section > .tl-settings__form {
   padding-bottom: 0;
 }
+.tl-appdialog__foot > .react-aria-Select {
+  min-width: 0;
+  margin-right: auto;
+}
+.tl-appdialog__foot > .react-aria-Select > .tl-btn {
+  max-width: 300px;
+}
+.tl-appdialog__foot > .react-aria-Select > .tl-btn > :last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

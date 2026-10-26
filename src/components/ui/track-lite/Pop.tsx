@@ -334,6 +334,7 @@ export type MultiPickerProps = {
   createText?: (input: string) => string | undefined;
   onCreate?: (input: string) => void;
   emptyNote?: ReactNode;
+  variant?: "pick" | "secondary";
   children: ReactNode;
   "aria-describedby"?: string;
 };
@@ -350,6 +351,7 @@ export function MultiPicker({
   createText,
   onCreate,
   emptyNote,
+  variant = "pick",
   children,
   "aria-describedby": describedBy,
 }: MultiPickerProps) {
@@ -374,10 +376,14 @@ export function MultiPicker({
           if (toggled !== undefined) onToggle(toggled);
         }
       }}>
-      <AriaButton className={cx("tl-pick tl-pick--multi", empty && "tl-pick--empty")}>
-        <span className="tl-pick__values">{value}</span>
-        <PickCaret />
-      </AriaButton>
+      {variant === "secondary" ? (
+        <AriaButton className="tl-btn tl-btn--secondary tl-btn--sm">{value}</AriaButton>
+      ) : (
+        <AriaButton className={cx("tl-pick tl-pick--multi", empty && "tl-pick--empty")}>
+          <span className="tl-pick__values">{value}</span>
+          <PickCaret />
+        </AriaButton>
+      )}
       <Popover
         placement="bottom start"
         className="tl-pop">
