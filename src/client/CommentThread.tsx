@@ -373,7 +373,6 @@ function CommentForm({
       noValidate
       onSubmit={submit}>
       <Editor
-        mono
         invalid={Boolean(error)}
         value={text}
         onChange={mentions.onChange}

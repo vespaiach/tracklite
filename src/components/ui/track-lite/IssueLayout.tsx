@@ -255,11 +255,6 @@ export function Comment({ id, highlighted, avatar, author, time, edited, actions
       <div className="tl-comment__head">
         {avatar}
         <b>{author}</b>
-        <span
-          aria-hidden="true"
-          className="tl-comment__dot">
-          ·
-        </span>
         <FeedTime>{time}</FeedTime>
         {edited && <span className="tl-comment__edited">{edited}</span>}
         {actions && <span className="tl-comment__actions">{actions}</span>}
