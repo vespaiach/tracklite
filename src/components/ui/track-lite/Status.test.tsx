@@ -4,7 +4,7 @@ import { Priority, Status } from "./Status";
 
 afterEach(cleanup);
 
-it("Status and Priority icons are named; urgent is a plate and other levels light one bar per step", () => {
+it("Status and Priority icons are named and draw Docket's Lucide glyph for their level", () => {
   render(
     <>
       <Status status="review" />
@@ -12,10 +12,8 @@ it("Status and Priority icons are named; urgent is a plate and other levels ligh
       <Priority priority="med" />
     </>,
   );
-  expect(screen.getByRole("img", { name: "review" })).toBeTruthy();
 
-  expect(screen.getByRole("img", { name: "urgent" }).textContent).toBe("!");
-
-  const bars = [...screen.getByRole("img", { name: "med" }).querySelectorAll("i")];
-  expect(bars.map((b) => b.style.opacity)).toEqual(["1", "1", "0.25"]);
+  expect(screen.getByRole("img", { name: "review" }).querySelector("svg.lucide-circle-dot")).toBeTruthy();
+  expect(screen.getByRole("img", { name: "urgent" }).querySelector("svg.lucide-circle-alert")).toBeTruthy();
+  expect(screen.getByRole("img", { name: "med" }).querySelector("svg.lucide-signal-medium")).toBeTruthy();
 });

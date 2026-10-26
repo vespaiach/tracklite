@@ -1,8 +1,4 @@
-import { BookOpen } from "@phosphor-icons/react/dist/csr/BookOpen";
-import { Gear } from "@phosphor-icons/react/dist/csr/Gear";
-import { Kanban } from "@phosphor-icons/react/dist/csr/Kanban";
-import { ListBullets } from "@phosphor-icons/react/dist/csr/ListBullets";
-import { Tag as TagIcon } from "@phosphor-icons/react/dist/csr/Tag";
+import { BookOpen, Settings, SquareKanban, List as ListIcon, Tag as TagIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { AppBar, AppBarTitle, LinkTabs, Tag } from "../components/ui/track-lite";
@@ -66,10 +62,7 @@ function DetailsButton({ href, current }: { href: string; current: boolean }) {
       title="Project details"
       aria-current={current ? "page" : undefined}
       className="tl-btn tl-btn--sm tl-btn--quiet tl-btn--icon">
-      <BookOpen
-        size={16}
-        weight="duotone"
-      />
+      <BookOpen size={16} />
     </Link>
   );
 }
@@ -80,10 +73,7 @@ function SettingsButton({ href }: { href: string }) {
       to={href}
       aria-label="Project settings"
       className="tl-btn tl-btn--sm tl-btn--quiet tl-btn--icon">
-      <Gear
-        size={15}
-        weight="duotone"
-      />
+      <Settings size={15} />
     </Link>
   );
 }
@@ -135,11 +125,17 @@ function ViewTabs({ base, view }: { base: string; view?: ProjectView }) {
       variant="soft"
       className="tl-appbar__views"
       options={[
-        { href: base, label: "Board", icon: tabIcon(Kanban), current: view === "board", onClick: boardClick },
+        {
+          href: base,
+          label: "Board",
+          icon: tabIcon(SquareKanban),
+          current: view === "board",
+          onClick: boardClick,
+        },
         {
           href: `${base}/list`,
           label: "List",
-          icon: tabIcon(ListBullets),
+          icon: tabIcon(ListIcon),
           current: view === "list",
           onClick: listClick,
         },
@@ -155,11 +151,6 @@ function ViewTabs({ base, view }: { base: string; view?: ProjectView }) {
   );
 }
 
-function tabIcon(Icon: typeof Kanban) {
-  return (
-    <Icon
-      size={14}
-      weight="duotone"
-    />
-  );
+function tabIcon(Icon: typeof SquareKanban) {
+  return <Icon size={14} />;
 }

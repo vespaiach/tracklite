@@ -89,7 +89,7 @@ migrations/       drizzle-kit migrations
 |---|---|
 | Runtime | Node.js ≥ 24, TypeScript |
 | Web framework | Next.js 16 (App Router, used as an SPA host and API server) |
-| UI | React 19, React Router, Redux Toolkit and RTK Query, React Aria Components, Phosphor icons, Tailwind CSS 4 with the Track Lite `tl-*` classes and tokens |
+| UI | React 19, React Router, Redux Toolkit and RTK Query, React Aria Components, Lucide icons (`lucide-react`), Tailwind CSS 4 with the Track Lite `tl-*` classes and tokens |
 | Validation | Valibot |
 | Database | PostgreSQL 18, Drizzle ORM over postgres.js, drizzle-kit migrations, `pg_trgm` for search |
 | Auth | Argon2id passwords (`@node-rs/argon2`), session cookies, tokens stored as sha256 hashes |

@@ -1,6 +1,4 @@
-import { DotsSixVertical } from "@phosphor-icons/react/dist/csr/DotsSixVertical";
-import { DotsThree } from "@phosphor-icons/react/dist/csr/DotsThree";
-import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
+import { GripVertical, Ellipsis, Plus } from "lucide-react";
 import { useState } from "react";
 import {
   Button as AriaButton,
@@ -229,7 +227,7 @@ function IssueCard({ card, status, first, last, archived, dragging }: IssueCardP
           <AriaButton
             slot="drag"
             className="tl-btn tl-btn--sm tl-btn--quiet tl-btn--icon">
-            <DotsSixVertical size={13} />
+            <GripVertical size={13} />
           </AriaButton>
         )
       }
@@ -292,12 +290,7 @@ function MoveMenu({ id, status, first, last }: MoveMenuProps) {
   return (
     <Menu
       label={`Actions for ${id}`}
-      icon={
-        <DotsThree
-          size={15}
-          weight="bold"
-        />
-      }
+      icon={<Ellipsis size={15} />}
       onAction={move}>
       <MenuSubmenu label="Move to">
         {issueStatuses.map((key) => (

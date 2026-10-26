@@ -1,5 +1,4 @@
-import { DotsThree } from "@phosphor-icons/react/dist/csr/DotsThree";
-import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
+import { Ellipsis, Plus } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
 import type { Key } from "react-aria-components";
@@ -132,10 +131,7 @@ function LabelsPage({ project }: { project: Project }) {
               ref={newLabel}
               size="sm"
               onClick={() => setCreating(true)}>
-              <Plus
-                size={12}
-                weight="duotone"
-              />
+              <Plus size={12} />
               New label
             </Button>
           )
@@ -336,12 +332,7 @@ function LabelActions({
   return (
     <Menu
       label={`Actions for ${label.name}`}
-      icon={
-        <DotsThree
-          size={15}
-          weight="duotone"
-        />
-      }
+      icon={<Ellipsis size={15} />}
       onAction={act}>
       <MenuItem id="rename">Rename</MenuItem>
       <MenuSubmenu label="Change color…">

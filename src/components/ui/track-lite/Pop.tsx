@@ -1,6 +1,4 @@
-import { CaretDown } from "@phosphor-icons/react/dist/csr/CaretDown";
-import { CaretUp } from "@phosphor-icons/react/dist/csr/CaretUp";
-import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
+import { ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { type ComponentProps, type CSSProperties, createContext, type ReactNode, use, useState } from "react";
 import {
   Button as AriaButton,
@@ -129,7 +127,7 @@ export function Menu({
             <span
               aria-hidden="true"
               className="tl-rail-item__end tl-rail-item__caret">
-              <CaretUp size={12} />
+              <ChevronUp size={12} />
             </span>
           )}
         </AriaButton>
@@ -307,7 +305,7 @@ function PickCaret() {
     <span
       aria-hidden="true"
       className="tl-pick__caret">
-      <CaretDown size={12} />
+      <ChevronDown size={12} />
     </span>
   );
 }
@@ -398,7 +396,6 @@ export function MultiPicker({
                 <Plus
                   aria-hidden="true"
                   size={12}
-                  weight="bold"
                 />
                 {create}
               </ListBoxItem>

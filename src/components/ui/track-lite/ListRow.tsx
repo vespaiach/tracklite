@@ -1,6 +1,4 @@
-import { ArrowDown } from "@phosphor-icons/react/dist/csr/ArrowDown";
-import { ArrowUp } from "@phosphor-icons/react/dist/csr/ArrowUp";
-import { CaretDown } from "@phosphor-icons/react/dist/csr/CaretDown";
+import { ArrowDown, ArrowUp, ChevronDown } from "lucide-react";
 import { type MouseEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { cx } from "./cx";
 import type { TableSort } from "./Table";
@@ -47,7 +45,7 @@ export function CollapsibleListGroup({
           aria-expanded={expanded}
           onClick={() => setExpanded(!expanded)}
           className="tl-list-group__head">
-          <CaretDown
+          <ChevronDown
             aria-hidden="true"
             size={12}
             className="tl-list-group__caret"
