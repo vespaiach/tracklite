@@ -101,7 +101,7 @@ export function issue(overrides: Partial<Issue> = {}): Issue {
     description: "",
     status: "in_progress",
     priority: "high",
-    assignee: memberOf(alex),
+    assignees: [memberOf(alex)],
     createdBy: memberOf(sam),
     createdAt: "2026-09-20T10:42:00.000Z",
     updatedAt: "2026-09-20T10:42:00.000Z",

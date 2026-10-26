@@ -1,9 +1,22 @@
 import "server-only";
-import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, type SQL, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  notExists,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import { type Member, memberSummary, members } from "../identity";
-import { issueLabels, issues } from "./tables";
+import { issueAssignees, issueLabels, issues } from "./tables";
 import type { IssueId } from "./schemas";
 import { labels, type ProjectKey, projects } from "../projects";
 import {
@@ -15,7 +28,8 @@ import {
   type MyIssueGroup,
 } from "../../contract";
 import {
-  assignees,
+  assigneesFor,
+  assigneesOf,
   byIssueId,
   findIssue,
   labelsFor,
@@ -69,10 +83,24 @@ async function assigneeCondition(values: string[]) {
     values.filter((value) => value !== unassigned).map((value) => value.toLowerCase()),
   );
   const conditions = [
-    ...(values.includes(unassigned) ? [isNull(issues.assigneeId)] : []),
-    ...(assigneeIds.length > 0 ? [inArray(issues.assigneeId, assigneeIds)] : []),
+    ...(values.includes(unassigned) ? [notExists(assignmentsOf(issues.id))] : []),
+    ...(assigneeIds.length > 0 ? [inArray(issues.id, issuesAssignedTo(assigneeIds))] : []),
   ];
   return conditions.length === 0 ? undefined : or(...conditions);
+}
+
+function assignmentsOf(issueId: typeof issues.id) {
+  return db
+    .select({ issueId: issueAssignees.issueId })
+    .from(issueAssignees)
+    .where(eq(issueAssignees.issueId, issueId));
+}
+
+function issuesAssignedTo(memberIds: string[]) {
+  return db
+    .select({ issueId: issueAssignees.issueId })
+    .from(issueAssignees)
+    .where(inArray(issueAssignees.memberId, memberIds));
 }
 
 async function memberIdsNamed(usernames: string[]) {
@@ -135,6 +163,11 @@ export async function listIssues(
 
   const labelRows = await labelsOf(page.map((row) => row.issueId));
 
+  const assigneeRows = await assigneesOf(
+    db,
+    page.map((row) => row.issueId),
+  );
+
   const deactivatedAssignees = await deactivatedAssigneesOf(project.id);
 
   return {
@@ -144,7 +177,7 @@ export async function listIssues(
         title: row.title,
         status: row.status,
         priority: row.priority,
-        assignee: row.assignee ? memberSummary(row.assignee) : null,
+        assignees: assigneesFor(assigneeRows, row.issueId),
         labels: labelsFor(labelRows, row.issueId),
         updatedAt: row.updatedAt.toISOString(),
       }),
@@ -176,14 +209,8 @@ function listRows(where: SQL | undefined, params: URLSearchParams) {
       status: issues.status,
       priority: issues.priority,
       updatedAt: issues.updatedAt,
-      assignee: {
-        username: assignees.username,
-        fullName: assignees.fullName,
-        deactivatedAt: assignees.deactivatedAt,
-      },
     })
     .from(issues)
-    .leftJoin(assignees, eq(assignees.id, issues.assigneeId))
     .where(where)
     .orderBy(...listOrder(params))
     .limit(listPageSize + 1)
@@ -198,7 +225,8 @@ function deactivatedAssigneesOf(projectId: string) {
       deactivatedAt: members.deactivatedAt,
     })
     .from(members)
-    .innerJoin(issues, eq(issues.assigneeId, members.id))
+    .innerJoin(issueAssignees, eq(issueAssignees.memberId, members.id))
+    .innerJoin(issues, eq(issues.id, issueAssignees.issueId))
     .where(and(eq(issues.projectId, projectId), isNotNull(members.deactivatedAt)))
     .orderBy(asc(members.fullName), asc(members.username));
 }
@@ -225,7 +253,7 @@ export async function getMyIssues(actor: Member): Promise<MyIssueGroup[]> {
   });
 }
 
-function myIssueRows(assigneeId: string) {
+function myIssueRows(memberId: string) {
   return db
     .select({
       issueId: issues.id,
@@ -239,6 +267,12 @@ function myIssueRows(assigneeId: string) {
     })
     .from(issues)
     .innerJoin(projects, eq(projects.id, issues.projectId))
-    .where(and(eq(issues.assigneeId, assigneeId), isNull(projects.archivedAt), recentlyClosedOrOpen()))
+    .where(
+      and(
+        inArray(issues.id, issuesAssignedTo([memberId])),
+        isNull(projects.archivedAt),
+        recentlyClosedOrOpen(),
+      ),
+    )
     .orderBy(asc(issues.status), asc(issues.priority), desc(issues.updatedAt), asc(issues.id));
 }

@@ -7,8 +7,8 @@ import { createSession } from "../../../../../server/identity";
 import { createIssue, createLabel, createMember, createProject } from "../../../../../test/factories";
 import { GET } from "./route";
 
-type IssueChange = PgUpdateSetSource<typeof issues>;
-type BoardCard = { id: string; title: string; priority: string; assignee: unknown; labels: unknown[] };
+type IssueChange = PgUpdateSetSource<typeof issues> & { assigneeIds?: string[] };
+type BoardCard = { id: string; title: string; priority: string; assignees: unknown[]; labels: unknown[] };
 type BoardColumn = { status: string; count: number; cards: BoardCard[] };
 
 beforeEach(() => {
@@ -39,10 +39,10 @@ async function boardOf(cookie: string, key: string): Promise<BoardColumn[]> {
 
 async function issueIn(
   project: { id: string; key: string },
-  change: IssueChange = {},
+  { assigneeIds = [], ...change }: IssueChange = {},
   labelIds: string[] = [],
 ) {
-  const issue = await createIssue(project.id, labelIds);
+  const issue = await createIssue(project.id, labelIds, assigneeIds);
   if (Object.keys(change).length > 0) await db.update(issues).set(change).where(eq(issues.id, issue.id));
   return `${project.key}-${issue.number}`;
 }
@@ -122,12 +122,17 @@ it("REQ-025.1: WEB-42 has 5 labels → the card carries all 5, sorted by name", 
   );
 });
 
-it("REQ-025.2: an unassigned issue with No priority has no assignee and priority none; an assigned one carries the assignee's initials and the priority", async () => {
+it("REQ-025.2, REQ-025.3: an unassigned issue with No priority has no assignees and priority none; an assigned one carries every assignee sorted by name, and the priority", async () => {
   const cookie = await signedIn();
   const project = await createProject();
-  const assignee = await createMember({ fullName: "Alex Kim" });
+  const jo = await createMember({ fullName: "Jo Park" });
+  const alex = await createMember({ fullName: "Alex Kim" });
   const bare = await issueIn(project);
-  const assigned = await issueIn(project, { assigneeId: assignee.id, priority: "high", title: "Fix login" });
+  const assigned = await issueIn(project, {
+    assigneeIds: [jo.id, alex.id],
+    priority: "high",
+    title: "Fix login",
+  });
 
   const board = await boardOf(cookie, project.key);
 
@@ -135,14 +140,17 @@ it("REQ-025.2: an unassigned issue with No priority has no assignee and priority
     id: bare,
     title: expect.any(String),
     priority: "none",
-    assignee: null,
+    assignees: [],
     labels: [],
   });
   expect(cardFor(board, assigned)).toEqual({
     id: assigned,
     title: "Fix login",
     priority: "high",
-    assignee: { username: assignee.username, fullName: "Alex Kim", initials: "AK", deactivated: false },
+    assignees: [
+      { username: alex.username, fullName: "Alex Kim", initials: "AK", deactivated: false },
+      { username: jo.username, fullName: "Jo Park", initials: "JP", deactivated: false },
+    ],
     labels: [],
   });
 });

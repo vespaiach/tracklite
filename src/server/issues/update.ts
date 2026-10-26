@@ -1,33 +1,53 @@
 import "server-only";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
 import { parseUuid } from "../shared/ids";
 import type { Transaction } from "../shared/transaction";
 import { publish } from "../shared/events";
 import { editConflict, type Member, members, type Username } from "../identity";
-import { issueLabels, issues } from "./tables";
+import { issueAssignees, issueLabels, issues } from "./tables";
 import { labels } from "../projects";
 import type { IssueChange, IssueId } from "./schemas";
-import { byIssueId, type IssueUpdate, issueGone, lockedIssue, topOfColumn, updatedIssue } from "./rows";
-import { descriptionSaveOf, editOf, type IssueEdit, mayDeleteIssue, sameLabels } from "./rules";
-
-function fieldError(field: string, message: string) {
-  return new ApiError(422, "Check the highlighted fields", { [field]: message });
-}
+import {
+  addAssignees,
+  byIssueId,
+  type IssueUpdate,
+  issueGone,
+  lockedIssue,
+  topOfColumn,
+  updatedIssue,
+} from "./rows";
+import {
+  assigneeChange,
+  descriptionSaveOf,
+  editOf,
+  type IssueEdit,
+  mayDeleteIssue,
+  sameLabels,
+} from "./rules";
 
 function labelGone() {
   return new ApiError(404, "That label no longer exists");
 }
 
-async function activeAssigneeId(tx: Transaction, username: Username | null) {
-  if (username === null) return null;
-  const [assignee] = await tx
-    .select({ id: members.id })
-    .from(members)
-    .where(and(eq(members.username, username), isNull(members.deactivatedAt)));
-  if (!assignee) throw fieldError("assignee", "Choose an active member");
-  return assignee.id;
+async function replaceAssignees(tx: Transaction, actor: Member, issueId: string, usernames: Username[]) {
+  const current = await tx
+    .select({ memberId: issueAssignees.memberId, username: members.username })
+    .from(issueAssignees)
+    .innerJoin(members, eq(members.id, issueAssignees.memberId))
+    .where(eq(issueAssignees.issueId, issueId));
+
+  const { added, removedIds } = assigneeChange(current, usernames);
+
+  if (removedIds.length > 0) {
+    await tx
+      .delete(issueAssignees)
+      .where(and(eq(issueAssignees.issueId, issueId), inArray(issueAssignees.memberId, removedIds)));
+  }
+
+  await addAssignees(tx, actor, issueId, added);
+  return added.length > 0 || removedIds.length > 0;
 }
 
 async function replaceLabels(tx: Transaction, issue: typeof issues.$inferSelect, labelIds: string[]) {
@@ -69,6 +89,7 @@ async function assertProjectLabels(tx: Transaction, projectId: string, labelIds:
 
 async function fieldChange(
   tx: Transaction,
+  actor: Member,
   issue: typeof issues.$inferSelect,
   edit: IssueEdit,
 ): Promise<IssueUpdate> {
@@ -83,10 +104,8 @@ async function fieldChange(
       };
     case "priority":
       return { priority: edit.priority };
-    case "assignee": {
-      const assigneeId = await activeAssigneeId(tx, edit.assignee);
-      return assigneeId === issue.assigneeId ? {} : { assigneeId };
-    }
+    case "assignees":
+      return (await replaceAssignees(tx, actor, issue.id, edit.assignees)) ? { updatedAt: sql`now()` } : {};
     case "labels":
       return (await replaceLabels(tx, issue, edit.labelIds)) ? { updatedAt: sql`now()` } : {};
     case "none":
@@ -142,22 +161,13 @@ export async function updateIssue(actor: Member, id: IssueId | undefined, change
   return db.transaction(async (tx) => {
     const issue = await lockedIssue(tx, where);
 
-    const update = await fieldChange(tx, issue, editOf(issue, change));
+    const update = await fieldChange(tx, actor, issue, editOf(issue, change));
 
     if (Object.keys(update).length > 0) {
       await tx
         .update(issues)
         .set({ ...update, updatedAt: sql`now()` })
         .where(eq(issues.id, issue.id));
-    }
-
-    if (typeof update.assigneeId === "string") {
-      await publish(tx, {
-        type: "IssueAssigned",
-        actorId: actor.id,
-        issueId: issue.id,
-        assigneeId: update.assigneeId,
-      });
     }
 
     return updatedIssue(tx, issue.id);

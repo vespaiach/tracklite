@@ -29,9 +29,9 @@ async function website() {
   return { project, issue, issueRef: `${project.key}-${issue.number}` };
 }
 
-function assign(issueRef: string, by: Member, assignee: Member | null) {
+function assign(issueRef: string, by: Member, ...assignees: Member[]) {
   return updateIssue(by, parseIssueId(issueRef), {
-    assignee: assignee ? parseUsername(assignee.username) : null,
+    assignees: assignees.flatMap((assignee) => parseUsername(assignee.username) ?? []),
   });
 }
 

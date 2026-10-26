@@ -17,7 +17,7 @@ export type Issue = {
   description: string;
   status: IssueStatus;
   priority: IssuePriority;
-  assignee: MemberSummary | null;
+  assignees: MemberSummary[];
   createdBy: MemberSummary;
   createdAt: string;
   updatedAt: string;
@@ -27,7 +27,7 @@ export type Issue = {
   archived: boolean;
 };
 
-export type BoardIssue = Pick<Issue, "id" | "title" | "priority" | "assignee" | "labels">;
+export type BoardIssue = Pick<Issue, "id" | "title" | "priority" | "assignees" | "labels">;
 
 export type BoardStatusColumn = { status: IssueStatus; count: number; cards: BoardIssue[] };
 
@@ -35,7 +35,7 @@ export type Board = BoardStatusColumn[];
 
 export type ListIssue = Pick<
   Issue,
-  "id" | "title" | "status" | "priority" | "assignee" | "labels" | "updatedAt"
+  "id" | "title" | "status" | "priority" | "assignees" | "labels" | "updatedAt"
 >;
 
 export type IssueListPage = { issues: ListIssue[]; hasMore: boolean; deactivatedAssignees: MemberSummary[] };

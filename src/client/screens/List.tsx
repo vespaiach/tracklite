@@ -286,7 +286,7 @@ export function ListView({ project }: { project: ProjectSummary }) {
               <IssueRow
                 key={issue.id}
                 issue={issue}
-                mine={me !== undefined && issue.assignee?.username === me.username}
+                mine={me !== undefined && issue.assignees[0]?.username === me.username}
               />
             ))}
             {issues.length === 0 && (
@@ -364,7 +364,7 @@ function IssueRow({ issue, mine }: { issue: ListIssue; mine: boolean }) {
   const open = useRouterClick(href);
   const { name: statusName, kind: statusKind } = statuses[issue.status];
   const { name: priorityName, kind: priorityKind } = priorities[issue.priority];
-  const assigneeName = issue.assignee ? memberName(issue.assignee) : "Unassigned";
+  const assigneeName = issue.assignees[0] ? memberName(issue.assignees[0]) : "Unassigned";
   return (
     <ListRowLink
       columns={columns}
@@ -397,9 +397,9 @@ function IssueRow({ issue, mine }: { issue: ListIssue; mine: boolean }) {
       />
       <Avatar
         size="md"
-        empty={!issue.assignee}
+        empty={!issue.assignees[0]}
         tone={mine ? "accent" : "neutral"}
-        initials={issue.assignee?.initials}
+        initials={issue.assignees[0]?.initials}
         title={assigneeName}
       />
       <UpdatedAt at={issue.updatedAt} />

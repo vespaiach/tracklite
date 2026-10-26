@@ -5,7 +5,7 @@ import { generateNKeysBetween } from "fractional-indexing";
 import { issuePriorities, issueStatuses } from "../contract";
 import { comments } from "../server/comments";
 import { members, seedMembers } from "../server/identity";
-import { issues } from "../server/issues";
+import { issueAssignees, issues } from "../server/issues";
 import { type ProjectKey, projectKeys, projects } from "../server/projects";
 import { db } from "../server/shared/db";
 import type { Transaction } from "../server/shared/transaction";
@@ -99,21 +99,30 @@ async function seedProject(
 
   const positions = columnPositions(planned);
   const [busiest, ...others] = people;
-  const issueRows = planned.map(({ number, status, inBusyColumn }) => ({
+  const assigneeOf = new Map(
+    planned.map(({ number, inBusyColumn }) => [
+      number,
+      inBusyColumn ? busiest.id : number % 4 === 0 ? null : others[number % others.length].id,
+    ]),
+  );
+  const issueRows = planned.map(({ number, status }) => ({
     projectId: project.id,
     number,
     title: `${verbs[number % verbs.length]} ${subjects[number % subjects.length]} ${number}`,
     description: `Load test issue ${key}-${number}.`,
     status,
     priority: issuePriorities[number % issuePriorities.length],
-    assigneeId: inBusyColumn ? busiest.id : number % 4 === 0 ? null : others[number % others.length].id,
     position: positions.get(status)?.shift() ?? "",
     createdBy: people[number % people.length].id,
     requestId: randomUUID(),
   }));
 
   for (const chunk of chunks(issueRows)) {
-    const inserted = await tx.insert(issues).values(chunk).returning({ id: issues.id });
+    const inserted = await tx
+      .insert(issues)
+      .values(chunk)
+      .returning({ id: issues.id, number: issues.number });
+    await tx.insert(issueAssignees).values(assigneeRowsFor(inserted, assigneeOf));
     for (const commentChunk of chunks(commentRowsFor(inserted, people))) {
       await tx.insert(comments).values(commentChunk);
     }
@@ -127,6 +136,13 @@ function columnPositions(planned: ReturnType<typeof plannedIssues>) {
       return [status, generateNKeysBetween(null, null, cards)];
     }),
   );
+}
+
+function assigneeRowsFor(inserted: { id: string; number: number }[], assigneeOf: Map<number, string | null>) {
+  return inserted.flatMap(({ id, number }) => {
+    const memberId = assigneeOf.get(number);
+    return memberId ? [{ issueId: id, memberId }] : [];
+  });
 }
 
 function commentRowsFor(inserted: { id: string }[], people: Person[]) {

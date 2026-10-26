@@ -327,7 +327,7 @@ function AssigneeField({ issue, me, editable }: { issue: Issue; me?: string; edi
   const { data: members } = useMembersQuery(undefined, { skip: !editable });
   const errorId = useId();
   const [error, setError] = useState<string>();
-  const { assignee } = issue;
+  const [assignee] = issue.assignees;
   const value = (
     <>
       <Glyph>
@@ -348,7 +348,7 @@ function AssigneeField({ issue, me, editable }: { issue: Issue; me?: string; edi
   );
 
   async function choose(key: string) {
-    const { fieldError } = await save({ assignee: key === unassigned ? null : key });
+    const { fieldError } = await save({ assignees: key === unassigned ? [] : [key] });
     setError(fieldError);
   }
 

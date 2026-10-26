@@ -9,7 +9,7 @@ import { jsonRequest } from "../../../test/reset-links";
 import { PATCH as patchProject } from "../projects/[key]/route";
 import { GET } from "./route";
 
-type IssueChange = PgUpdateSetSource<typeof issues>;
+type IssueChange = PgUpdateSetSource<typeof issues> & { assigneeIds?: string[] };
 type MyIssueRow = {
   id: string;
   title: string;
@@ -43,10 +43,10 @@ async function myIssuesOf(cookie: string): Promise<MyIssueGroup[]> {
 
 async function issueIn(
   project: { id: string; key: string },
-  change: IssueChange = {},
+  { assigneeIds = [], ...change }: IssueChange = {},
   labelIds: string[] = [],
 ) {
-  const issue = await createIssue(project.id, labelIds);
+  const issue = await createIssue(project.id, labelIds, assigneeIds);
   await db
     .update(issues)
     .set({ updatedAt: sql`now() - interval '1 hour'`, ...change })
@@ -79,10 +79,10 @@ it("REQ-041.1: Sam is assigned API-7 (Backlog), WEB-42 and WEB-3 (In Progress) �
   const alex = await createMember();
   const api = await createProject();
   const web = await createProject();
-  const api7 = await issueIn(api, { assigneeId: sam.id });
-  const web42 = await issueIn(web, { assigneeId: sam.id, status: "in_progress" });
-  const web3 = await issueIn(web, { assigneeId: sam.id, status: "in_progress" });
-  await issueIn(web, { assigneeId: alex.id, status: "in_review" });
+  const api7 = await issueIn(api, { assigneeIds: [sam.id] });
+  const web42 = await issueIn(web, { assigneeIds: [sam.id], status: "in_progress" });
+  const web3 = await issueIn(web, { assigneeIds: [sam.id], status: "in_progress" });
+  await issueIn(web, { assigneeIds: [alex.id], status: "in_review" });
   await issueIn(web, { status: "in_review" });
 
   const groups = await myIssuesOf(cookie);
@@ -95,17 +95,27 @@ it("REQ-041.1: Sam is assigned API-7 (Backlog), WEB-42 and WEB-3 (In Progress) �
   expect(idsIn(groups, "in_progress")?.sort()).toEqual([web42, web3].sort());
 });
 
+it("REQ-041.7: WEB-42 is assigned to Sam and Alex → it's in both Sam's and Alex's My issues, once each", async () => {
+  const sam = await signedInMember();
+  const alex = await signedInMember();
+  const web = await createProject();
+  const web42 = await issueIn(web, { assigneeIds: [sam.member.id, alex.member.id] });
+
+  expect(allIds(await myIssuesOf(sam.cookie))).toEqual([web42]);
+  expect(allIds(await myIssuesOf(alex.cookie))).toEqual([web42]);
+});
+
 it("REQ-041.2: Sam's Done and Canceled issues moved there 20 days ago aren't shown, and ones moved 3 days ago are", async () => {
   const { member: sam, cookie } = await signedInMember();
   const web = await createProject();
   const twentyDaysAgo = sql`now() - interval '20 days'`;
   const threeDaysAgo = sql`now() - interval '3 days'`;
-  await issueIn(web, { assigneeId: sam.id, status: "done", statusChangedAt: twentyDaysAgo });
-  await issueIn(web, { assigneeId: sam.id, status: "canceled", statusChangedAt: twentyDaysAgo });
-  const open = await issueIn(web, { assigneeId: sam.id, statusChangedAt: twentyDaysAgo });
-  const done = await issueIn(web, { assigneeId: sam.id, status: "done", statusChangedAt: threeDaysAgo });
+  await issueIn(web, { assigneeIds: [sam.id], status: "done", statusChangedAt: twentyDaysAgo });
+  await issueIn(web, { assigneeIds: [sam.id], status: "canceled", statusChangedAt: twentyDaysAgo });
+  const open = await issueIn(web, { assigneeIds: [sam.id], statusChangedAt: twentyDaysAgo });
+  const done = await issueIn(web, { assigneeIds: [sam.id], status: "done", statusChangedAt: threeDaysAgo });
   const canceled = await issueIn(web, {
-    assigneeId: sam.id,
+    assigneeIds: [sam.id],
     status: "canceled",
     statusChangedAt: threeDaysAgo,
   });
@@ -135,7 +145,7 @@ it("REQ-041.5: Sam is assigned 300 open issues → all 300 are returned, grouped
   const web = await createProject();
   const statuses = ["backlog", "in_progress", "in_review"] as const;
   for (let index = 0; index < 300; index++) {
-    await issueIn(web, { assigneeId: sam.id, status: statuses[index % 3] });
+    await issueIn(web, { assigneeIds: [sam.id], status: statuses[index % 3] });
   }
 
   const groups = await myIssuesOf(cookie);
@@ -150,7 +160,7 @@ it("REQ-041: a row carries id, title, project name, priority, labels (sorted by 
   const web = await createProject({ name: "Website" });
   const frontend = await createLabel(web.id, { name: "frontend", color: "blue" });
   const bug = await createLabel(web.id, { name: "Bug", color: "red" });
-  const id = await issueIn(web, { assigneeId: sam.id, title: "Fix login button", priority: "high" }, [
+  const id = await issueIn(web, { assigneeIds: [sam.id], title: "Fix login button", priority: "high" }, [
     frontend.id,
     bug.id,
   ]);
@@ -180,11 +190,11 @@ it("REQ-042.1: In Progress holds WEB-3 (Low) and API-9 (Urgent) → API-9 comes 
   const { member: sam, cookie } = await signedInMember();
   const api = await createProject();
   const web = await createProject();
-  const none = await issueIn(web, { assigneeId: sam.id, status: "in_progress", priority: "none" });
-  const web3 = await issueIn(web, { assigneeId: sam.id, status: "in_progress", priority: "low" });
-  const medium = await issueIn(web, { assigneeId: sam.id, status: "in_progress", priority: "medium" });
-  const api9 = await issueIn(api, { assigneeId: sam.id, status: "in_progress", priority: "urgent" });
-  const high = await issueIn(api, { assigneeId: sam.id, status: "in_progress", priority: "high" });
+  const none = await issueIn(web, { assigneeIds: [sam.id], status: "in_progress", priority: "none" });
+  const web3 = await issueIn(web, { assigneeIds: [sam.id], status: "in_progress", priority: "low" });
+  const medium = await issueIn(web, { assigneeIds: [sam.id], status: "in_progress", priority: "medium" });
+  const api9 = await issueIn(api, { assigneeIds: [sam.id], status: "in_progress", priority: "urgent" });
+  const high = await issueIn(api, { assigneeIds: [sam.id], status: "in_progress", priority: "high" });
 
   expect(idsIn(await myIssuesOf(cookie), "in_progress")).toEqual([api9, high, medium, web3, none]);
 });
@@ -192,9 +202,9 @@ it("REQ-042.1: In Progress holds WEB-3 (Low) and API-9 (Urgent) → API-9 comes 
 it("REQ-042: rows with the same priority are sorted most recently updated first", async () => {
   const { member: sam, cookie } = await signedInMember();
   const web = await createProject();
-  const older = await issueIn(web, { assigneeId: sam.id, updatedAt: sql`now() - interval '3 days'` });
-  const newest = await issueIn(web, { assigneeId: sam.id, updatedAt: sql`now() - interval '1 minute'` });
-  const middle = await issueIn(web, { assigneeId: sam.id, updatedAt: sql`now() - interval '1 day'` });
+  const older = await issueIn(web, { assigneeIds: [sam.id], updatedAt: sql`now() - interval '3 days'` });
+  const newest = await issueIn(web, { assigneeIds: [sam.id], updatedAt: sql`now() - interval '1 minute'` });
+  const middle = await issueIn(web, { assigneeIds: [sam.id], updatedAt: sql`now() - interval '1 day'` });
 
   expect(idsIn(await myIssuesOf(cookie), "backlog")).toEqual([newest, middle, older]);
 });
@@ -203,8 +213,8 @@ it("REQ-041.3, REQ-013.2, REQ-013.3: admin archives API → API-7 no longer appe
   const { member: sam, cookie } = await signedInMember();
   const api = await createProject();
   const web = await createProject();
-  const api7 = await issueIn(api, { assigneeId: sam.id });
-  const web42 = await issueIn(web, { assigneeId: sam.id });
+  const api7 = await issueIn(api, { assigneeIds: [sam.id] });
+  const web42 = await issueIn(web, { assigneeIds: [sam.id] });
   expect(allIds(await myIssuesOf(cookie)).sort()).toEqual([api7, web42].sort());
 
   await setArchived(api.key, true);

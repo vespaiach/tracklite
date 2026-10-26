@@ -5,12 +5,12 @@ import type { Member } from "../identity";
 import { type ProjectKey, takeIssueNumber, writableProject } from "../projects";
 import { issues } from "./tables";
 import type { NewIssue } from "./schemas";
-import { findIssue, topOfColumn } from "./rows";
+import { addAssignees, findIssue, topOfColumn } from "./rows";
 
 export async function createIssue(
   actor: Member,
   projectKey: ProjectKey | undefined,
-  { requestId, title, status }: NewIssue,
+  { requestId, title, status, assignees }: NewIssue,
 ) {
   return db.transaction(async (tx) => {
     const project = await writableProject(tx, projectKey, "update");
@@ -35,6 +35,8 @@ export async function createIssue(
         requestId,
       })
       .returning({ id: issues.id });
+
+    await addAssignees(tx, actor, inserted.id, assignees);
 
     const issue = await findIssue(tx, eq(issues.id, inserted.id));
     if (!issue) throw new Error("Created issue not found");

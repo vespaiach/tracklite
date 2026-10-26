@@ -2,13 +2,14 @@ import "server-only";
 import { and, asc, desc, eq, gt, ne, type SQL, sql } from "drizzle-orm";
 import { db } from "../shared/db";
 import type { Transaction } from "../shared/transaction";
-import { type Member, memberSummary } from "../identity";
+import type { Member } from "../identity";
 import { issues } from "./tables";
 import { type ProjectKey, projects } from "../projects";
 import { type Board, type BoardIssue, type IssueStatus, issueStatuses } from "../../contract";
 import type { IssueId, IssueMove } from "./schemas";
 import {
-  assignees,
+  assigneesFor,
+  assigneesOf,
   byIssueId,
   type IssueUpdate,
   issueGone,
@@ -101,13 +102,18 @@ export async function getBoard(_actor: Member, projectKey: ProjectKey | undefine
 
   const labelRows = await labelsOf(rows.map((row) => row.issueId));
 
+  const assigneeRows = await assigneesOf(
+    db,
+    rows.map((row) => row.issueId),
+  );
+
   const cards = rows.map((row): { status: IssueStatus; card: BoardIssue } => ({
     status: row.status,
     card: {
       id: `${project.key}-${row.number}`,
       title: row.title,
       priority: row.priority,
-      assignee: row.assignee ? memberSummary(row.assignee) : null,
+      assignees: assigneesFor(assigneeRows, row.issueId),
       labels: labelsFor(labelRows, row.issueId),
     },
   }));
@@ -126,14 +132,8 @@ function boardRows(projectId: string) {
       title: issues.title,
       status: issues.status,
       priority: issues.priority,
-      assignee: {
-        username: assignees.username,
-        fullName: assignees.fullName,
-        deactivatedAt: assignees.deactivatedAt,
-      },
     })
     .from(issues)
-    .leftJoin(assignees, eq(assignees.id, issues.assigneeId))
     .where(and(eq(issues.projectId, projectId), recentlyClosedOrOpen()))
     .orderBy(asc(issues.status), asc(issues.position), asc(issues.id));
 }

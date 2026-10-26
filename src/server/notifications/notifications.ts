@@ -127,7 +127,7 @@ async function notify(tx: Transaction, recipientIds: string[], notice: Notice) {
 
 export async function onDomainEvent(tx: Transaction, event: DomainEvent) {
   if (event.type === "IssueAssigned") {
-    await notify(tx, [event.assigneeId], {
+    await notify(tx, event.assigneeIds, {
       kind: "assigned",
       actorId: event.actorId,
       target: { issueId: event.issueId },

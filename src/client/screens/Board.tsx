@@ -233,12 +233,12 @@ function IssueCard({ card, status, first, last, archived, dragging }: IssueCardP
       }
       priority={card.priority !== "none" && <Priority priority={priorityKind} />}
       assignee={
-        card.assignee && (
+        card.assignees[0] && (
           <Avatar
             size="md"
-            tone={card.assignee.username === me?.username ? "accent" : "neutral"}
-            initials={card.assignee.initials}
-            title={card.assignee.fullName}
+            tone={card.assignees[0].username === me?.username ? "accent" : "neutral"}
+            initials={card.assignees[0].initials}
+            title={card.assignees[0].fullName}
           />
         )
       }

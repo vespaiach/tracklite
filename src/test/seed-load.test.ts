@@ -2,7 +2,7 @@ import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { comments } from "../server/comments";
 import { members } from "../server/identity";
-import { createIssue, issues } from "../server/issues";
+import { createIssue, issueAssignees, issues } from "../server/issues";
 import { type ProjectKey, projectKeys, projects } from "../server/projects";
 import { db } from "../server/shared/db";
 import { newRequestId } from "./factories";
@@ -43,7 +43,8 @@ it("NFR-002: one board column holds 300 cards and one member has 300 open assign
   const [busiest] = await db
     .select({ open: sql<number>`count(*)::int` })
     .from(issues)
-    .innerJoin(members, eq(members.id, issues.assigneeId))
+    .innerJoin(issueAssignees, eq(issueAssignees.issueId, issues.id))
+    .innerJoin(members, eq(members.id, issueAssignees.memberId))
     .where(and(isNull(members.deactivatedAt), notInArray(issues.status, ["done", "canceled"])))
     .groupBy(members.id)
     .orderBy(sql`count(*) desc`)
@@ -65,6 +66,7 @@ it("NFR-001: an issue created after seeding gets the next number", async () => {
     requestId: newRequestId(),
     title: "After seeding",
     status: "backlog",
+    assignees: [],
   });
 
   expect(issue.id).toBe(`${project.key}-${highest + 1}`);

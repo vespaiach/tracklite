@@ -6,6 +6,7 @@ import { db } from "../../../../../server/shared/db";
 import { createSession, memberSummary } from "../../../../../server/identity";
 import { comments } from "../../../../../server/comments";
 import { issues } from "../../../../../server/issues";
+import { notificationBatches, notifications } from "../../../../../server/notifications";
 import { labels, projects } from "../../../../../server/projects";
 import { createIssue, createLabel, createMember, createProject } from "../../../../../test/factories";
 import { jsonRequest } from "../../../../../test/reset-links";
@@ -55,7 +56,7 @@ it("REQ-016.1: the first issue in WEB is WEB-1, Backlog, No priority, unassigned
     description: "",
     status: "backlog",
     priority: "none",
-    assignee: null,
+    assignees: [],
     createdBy: memberSummary(sam.member),
     createdAt: expect.any(String),
     updatedAt: expect.any(String),
@@ -65,6 +66,43 @@ it("REQ-016.1: the first issue in WEB is WEB-1, Backlog, No priority, unassigned
     archived: false,
   });
   expect(memberSummary(sam.member).fullName).toBe("Sam Lee");
+});
+
+it("REQ-016.6, REQ-019.5: Sam creates an issue with Alex and Jo as assignees → assigned to both, sorted by name, and each is notified; a deactivated assignee creates nothing", async () => {
+  const sam = await signedIn("Sam Lee");
+  const alex = await createMember({ fullName: "Alex Kim" });
+  const jo = await createMember({ fullName: "Jo Park" });
+  const pat = await createMember({ deactivatedAt: new Date() });
+  const project = await createProject();
+
+  const response = await createWith(sam.cookie, project.key, {
+    requestId: randomUUID(),
+    title: "Fix login button",
+    assignees: [jo.username, alex.username, sam.member.username],
+  });
+
+  expect(response.status).toBe(201);
+  expect((await response.json()).assignees).toEqual([
+    memberSummary(alex),
+    memberSummary(jo),
+    memberSummary(sam.member),
+  ]);
+  const notified = await db
+    .select({ recipientId: notificationBatches.recipientId })
+    .from(notifications)
+    .innerJoin(notificationBatches, eq(notificationBatches.id, notifications.batchId))
+    .where(and(eq(notifications.kind, "assigned"), eq(notifications.actorId, sam.member.id)));
+  expect(notified.map((row) => row.recipientId).sort()).toEqual([alex.id, jo.id].sort());
+
+  const refused = await createWith(sam.cookie, project.key, {
+    requestId: randomUUID(),
+    title: "Fix logout button",
+    assignees: [alex.username, pat.username],
+  });
+
+  expect(refused.status).toBe(422);
+  expect(await refused.json()).toEqual(fieldError({ assignees: "Choose an active member" }));
+  expect(await issuesOf(project.id)).toHaveLength(1);
 });
 
 it("REQ-016.2: after WEB-41 with WEB-40 deleted, the next issue is WEB-42", async () => {
@@ -169,13 +207,13 @@ it("REQ-027.3: Sam clicks + on Backlog and creates WEB-43 → it's at the top of
   ]);
 });
 
-type IssueChange = PgUpdateSetSource<typeof issues>;
+type IssueChange = PgUpdateSetSource<typeof issues> & { assigneeIds?: string[] };
 type ListRow = {
   id: string;
   title: string;
   status: string;
   priority: string;
-  assignee: unknown;
+  assignees: unknown[];
   labels: unknown[];
   updatedAt: string;
 };
@@ -204,10 +242,10 @@ function minutesAgo(minutes: number): SQL {
 
 async function issueIn(
   project: { id: string; key: string },
-  change: IssueChange = {},
+  { assigneeIds = [], ...change }: IssueChange = {},
   labelIds: string[] = [],
 ) {
-  const issue = await createIssue(project.id, labelIds);
+  const issue = await createIssue(project.id, labelIds, assigneeIds);
   if (Object.keys(change).length > 0) await db.update(issues).set(change).where(eq(issues.id, issue.id));
   return `${project.key}-${change.number ?? issue.number}`;
 }
@@ -322,10 +360,10 @@ it("REQ-037.1: Status = In Progress and In Review, and Assignee = Sam → only S
   const sam = await createMember({ fullName: "Sam Lee" });
   const alex = await createMember({ fullName: "Alex Kim" });
   const project = await createProject();
-  const samInProgress = await issueIn(project, { status: "in_progress", assigneeId: sam.id });
-  const samInReview = await issueIn(project, { status: "in_review", assigneeId: sam.id });
-  await issueIn(project, { status: "backlog", assigneeId: sam.id });
-  await issueIn(project, { status: "in_progress", assigneeId: alex.id });
+  const samInProgress = await issueIn(project, { status: "in_progress", assigneeIds: [sam.id] });
+  const samInReview = await issueIn(project, { status: "in_review", assigneeIds: [sam.id] });
+  await issueIn(project, { status: "backlog", assigneeIds: [sam.id] });
+  await issueIn(project, { status: "in_progress", assigneeIds: [alex.id] });
   await issueIn(project, { status: "in_review" });
 
   const ids = await idsOf(
@@ -343,12 +381,31 @@ it("REQ-037.2: Assignee = Unassigned → only issues with no assignee; with a me
   const alex = await createMember();
   const project = await createProject();
   const unassigned = await issueIn(project);
-  const sams = await issueIn(project, { assigneeId: sam.id });
-  await issueIn(project, { assigneeId: alex.id });
+  const sams = await issueIn(project, { assigneeIds: [sam.id] });
+  await issueIn(project, { assigneeIds: [alex.id] });
 
   expect(await idsOf(cookie, project.key, "?assignee=-")).toEqual([unassigned]);
   const either = await idsOf(cookie, project.key, `?assignee=-&assignee=${sam.username}`);
   expect(either.sort()).toEqual([unassigned, sams].sort());
+});
+
+it("REQ-037.6: WEB-7 is assigned to Sam and Jo, WEB-8 to Alex → Assignee = Jo shows WEB-7; Jo and Alex shows both, each once", async () => {
+  const { cookie } = await signedIn();
+  const sam = await createMember();
+  const jo = await createMember();
+  const alex = await createMember();
+  const project = await createProject();
+  const seven = await issueIn(project, { assigneeIds: [sam.id, jo.id] });
+  const eight = await issueIn(project, { assigneeIds: [alex.id] });
+
+  expect(await idsOf(cookie, project.key, `?assignee=${jo.username}`)).toEqual([seven]);
+  const both = await idsOf(
+    cookie,
+    project.key,
+    `?assignee=${jo.username}&assignee=${sam.username}&assignee=${alex.username}`,
+  );
+  expect(both.sort()).toEqual([seven, eight].sort());
+  expect(await idsOf(cookie, project.key, "?assignee=-")).toEqual([]);
 });
 
 it("REQ-037.3: Label = bug and frontend → issues with either label, each listed once, and not another project's bug", async () => {
@@ -390,9 +447,9 @@ it("REQ-037.5: Jo is deactivated and still assigned to WEB-7 → offered as an a
   const elsewhere = await createMember({ deactivatedAt: new Date() });
   const active = await createMember();
   await createMember({ deactivatedAt: new Date() });
-  const sevens = await issueIn(project, { assigneeId: jo.id, status: "done" });
-  await issueIn(project, { assigneeId: active.id });
-  await issueIn(other, { assigneeId: elsewhere.id });
+  const sevens = await issueIn(project, { assigneeIds: [jo.id], status: "done" });
+  await issueIn(project, { assigneeIds: [active.id] });
+  await issueIn(other, { assigneeIds: [elsewhere.id] });
   const joOnly = [{ username: jo.username, fullName: "Jo Park", initials: "JP", deactivated: true }];
 
   const chosen = await listOf(cookie, project.key, `?assignee=${jo.username}`);
@@ -540,9 +597,9 @@ it("REQ-040.3, REQ-040: status=Todo, unknown usernames and unknown priorities ar
   const { cookie } = await signedIn();
   const sam = await createMember();
   const project = await createProject();
-  const sams = await issueIn(project, { assigneeId: sam.id, priority: "high", status: "done" });
+  const sams = await issueIn(project, { assigneeIds: [sam.id], priority: "high", status: "done" });
   await issueIn(project, { priority: "high" });
-  await issueIn(project, { assigneeId: sam.id, priority: "low" });
+  await issueIn(project, { assigneeIds: [sam.id], priority: "low" });
 
   expect(await idsOf(cookie, project.key, "?status=Todo")).toHaveLength(3);
   expect(await idsOf(cookie, project.key, "?assignee=nobody-here&priority=extreme")).toHaveLength(3);
@@ -555,7 +612,7 @@ it("REQ-040.3, REQ-040: status=Todo, unknown usernames and unknown priorities ar
   ).toEqual([sams]);
 });
 
-it("REQ-036: a row carries ID, title, status, priority, assignee, labels sorted by name, and last updated", async () => {
+it("REQ-036: a row carries ID, title, status, priority, assignees, labels sorted by name, and last updated", async () => {
   const { cookie } = await signedIn();
   const alex = await createMember({ fullName: "Alex Kim" });
   const project = await createProject();
@@ -563,7 +620,13 @@ it("REQ-036: a row carries ID, title, status, priority, assignee, labels sorted 
   const bug = await createLabel(project.id, { name: "Bug", color: "red" });
   const id = await issueIn(
     project,
-    { title: "Fix login", status: "in_review", priority: "high", assigneeId: alex.id, description: "secret" },
+    {
+      title: "Fix login",
+      status: "in_review",
+      priority: "high",
+      assigneeIds: [alex.id],
+      description: "secret",
+    },
     [ux.id, bug.id],
   );
 
@@ -574,7 +637,7 @@ it("REQ-036: a row carries ID, title, status, priority, assignee, labels sorted 
     title: "Fix login",
     status: "in_review",
     priority: "high",
-    assignee: { username: alex.username, fullName: "Alex Kim", initials: "AK", deactivated: false },
+    assignees: [{ username: alex.username, fullName: "Alex Kim", initials: "AK", deactivated: false }],
     labels: [
       { id: bug.id, name: "Bug", color: "red" },
       { id: ux.id, name: "ux", color: "blue" },

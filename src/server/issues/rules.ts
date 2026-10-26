@@ -9,7 +9,7 @@ export type IssueEdit =
   | { field: "title"; title: string }
   | { field: "status"; status: IssueStatus }
   | { field: "priority"; priority: IssuePriority }
-  | { field: "assignee"; assignee: Username | null }
+  | { field: "assignees"; assignees: Username[] }
   | { field: "labels"; labelIds: string[] }
   | { field: "none" };
 
@@ -26,12 +26,12 @@ export function descriptionSaveOf({ description, descriptionVersion }: IssueChan
 
 export function editOf(
   issue: IssueFields,
-  { title, status, priority, assignee, labelIds }: IssueChange,
+  { title, status, priority, assignees, labelIds }: IssueChange,
 ): IssueEdit {
   if (title !== undefined) return title === issue.title ? noEdit : { field: "title", title };
   if (status !== undefined) return status === issue.status ? noEdit : { field: "status", status };
   if (priority !== undefined) return priority === issue.priority ? noEdit : { field: "priority", priority };
-  if (assignee !== undefined) return { field: "assignee", assignee };
+  if (assignees !== undefined) return { field: "assignees", assignees };
   if (labelIds !== undefined) return { field: "labels", labelIds };
   return noEdit;
 }
@@ -42,4 +42,14 @@ export function sameLabels(current: string[], next: string[]) {
 
 export function mayDeleteIssue(actor: Pick<Member, "id" | "role">, createdBy: string) {
   return createdBy === actor.id || actor.role === "admin";
+}
+
+export function assigneeChange(current: { memberId: string; username: string }[], next: Username[]) {
+  const currentUsernames = current.map((assignee) => assignee.username);
+  return {
+    added: next.filter((username) => !currentUsernames.includes(username)),
+    removedIds: current
+      .filter((assignee) => !next.includes(assignee.username as Username))
+      .map((assignee) => assignee.memberId),
+  };
 }

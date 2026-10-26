@@ -4,16 +4,16 @@ import { createIssue, createMember, createProject, newRequestId } from "../../te
 import { moveIntoPast } from "../../test/time";
 import { editComment, postIssueComment, postProjectComment } from "../comments";
 import { db } from "../shared/db";
-import { publish } from "../shared/events";
+import { type DomainEvent, publish } from "../shared/events";
 import { parseUuid } from "../shared/ids";
 import { parseIssueId, updateIssue, issues } from "../issues";
 import { updateProject } from "../projects";
 import { members, type Member, parseUsername } from "../identity";
 import { notificationBatches, notificationDeliveries, notifications } from "./tables";
 
-async function website() {
+async function website(assigneeIds: string[] = []) {
   const project = await createProject({ name: "Website" });
-  const issue = await createIssue(project.id);
+  const issue = await createIssue(project.id, [], assigneeIds);
   await db.update(issues).set({ title: "Fix login button" }).where(eq(issues.id, issue.id));
   return { project, issue, issueRef: `${project.key}-${issue.number}` };
 }
@@ -56,9 +56,9 @@ function deliveriesFor(member: { id: string }) {
     .orderBy(asc(notificationDeliveries.createdAt));
 }
 
-function assign(issueRef: string, by: Member, assignee: Member | null) {
+function assign(issueRef: string, by: Member, ...assignees: Member[]) {
   return updateIssue(by, parseIssueId(issueRef), {
-    assignee: assignee ? parseUsername(assignee.username) : null,
+    assignees: assignees.flatMap((assignee) => parseUsername(assignee.username) ?? []),
   });
 }
 
@@ -111,18 +111,38 @@ it("REQ-043.3, REQ-043: Alex reassigns WEB-42 from Sam to Jo → Jo gets the ema
   const alex = await createMember();
   const sam = await createMember();
   const jo = await createMember();
-  const { issue, issueRef } = await website();
-  await db.update(issues).set({ assigneeId: sam.id }).where(eq(issues.id, issue.id));
+  const { issueRef } = await website([sam.id]);
 
   await assign(issueRef, alex, jo);
 
   expect(await notificationsFor(sam)).toEqual([]);
   expect(await notificationsFor(jo)).toMatchObject([{ kind: "assigned", actorId: alex.id }]);
 
-  await assign(issueRef, alex, null);
+  await assign(issueRef, alex);
 
   expect(await notificationsFor(jo)).toHaveLength(1);
   expect(await notificationsFor(alex)).toEqual([]);
+});
+
+it("REQ-043.4: WEB-42 is assigned to Sam; Alex adds Jo, Nina and themselves in one save → Jo and Nina each get one email; Sam and Alex get nothing; removed members get nothing", async () => {
+  const alex = await createMember();
+  const sam = await createMember();
+  const jo = await createMember();
+  const nina = await createMember();
+  const { issueRef } = await website([sam.id]);
+
+  await assign(issueRef, alex, sam, jo, nina, alex);
+
+  expect(await notificationsFor(jo)).toMatchObject([{ kind: "assigned", actorId: alex.id }]);
+  expect(await notificationsFor(nina)).toMatchObject([{ kind: "assigned", actorId: alex.id }]);
+  expect(await notificationsFor(sam)).toEqual([]);
+  expect(await notificationsFor(alex)).toEqual([]);
+
+  await assign(issueRef, alex, jo);
+
+  expect(await notificationsFor(jo)).toHaveLength(1);
+  expect(await notificationsFor(nina)).toHaveLength(1);
+  expect(await notificationsFor(sam)).toEqual([]);
 });
 
 it('REQ-044.1: Alex comments "@sam can you check?" on WEB-42 → Sam gets the email', async () => {
@@ -346,8 +366,8 @@ it("M16: an event and its notification rows commit or roll back together", async
     type: "IssueAssigned",
     actorId: alex.id,
     issueId: issue.id,
-    assigneeId: sam.id,
-  } as const;
+    assigneeIds: [sam.id],
+  } satisfies DomainEvent;
 
   const rolledBack = db.transaction(async (tx) => {
     await publish(tx, assigned);

@@ -34,6 +34,7 @@ it("§2.6: the migration applies to an empty database, with every table, the enu
     expect(tables.map((t) => t.name)).toEqual([
       "comments",
       "invitations",
+      "issue_assignees",
       "issue_labels",
       "issues",
       "labels",
