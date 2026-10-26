@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { Menu, MenuItem, MultiPicker, Picker, PickerItem } from "./Pop";
+import { Menu, MenuItem, MenuSubmenu, MultiPicker, Picker, PickerItem } from "./Pop";
 
 afterEach(cleanup);
 
@@ -105,4 +105,33 @@ it("Menu: the rail variant is a rail item whose menu opens upward", async () => 
   fireEvent.click(trigger);
   const menu = await screen.findByRole("menu");
   await waitFor(() => expect(menu.closest("[data-placement]")?.getAttribute("data-placement")).toBe("top"));
+});
+
+it("REQ-030.3: on a phone-width screen a submenu opens below its item instead of beside the menu", async () => {
+  for (const [width, placement] of [
+    [1280, "right"],
+    [375, "bottom"],
+  ] as const) {
+    window.innerWidth = width;
+    render(
+      <Menu
+        label="Actions"
+        onAction={vi.fn()}>
+        <MenuSubmenu label="Move to">
+          <MenuItem id="done">Done</MenuItem>
+        </MenuSubmenu>
+      </Menu>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Actions" }));
+    const moveTo = within(await screen.findByRole("menu")).getByRole("menuitem", { name: "Move to" });
+    moveTo.focus();
+    fireEvent.keyDown(moveTo, { key: "ArrowRight" });
+    const submenu = (await screen.findAllByRole("menu"))[1];
+
+    await waitFor(() =>
+      expect(submenu.closest("[data-placement]")?.getAttribute("data-placement")).toBe(placement),
+    );
+    cleanup();
+  }
+  window.innerWidth = 1024;
 });

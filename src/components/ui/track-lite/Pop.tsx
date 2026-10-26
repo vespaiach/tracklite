@@ -188,6 +188,8 @@ export function MenuItem({ id, danger, icon, checked, disabled, children }: Menu
   );
 }
 
+const phoneWidth = 480;
+
 export function MenuSubmenu({ label, children }: { label: string; children: ReactNode }) {
   const onAction = use(MenuActionContext);
   return (
@@ -202,7 +204,7 @@ export function MenuSubmenu({ label, children }: { label: string; children: Reac
           <ChevronRight size={14} />
         </span>
       </AriaMenuItem>
-      <Popover placement="end top">
+      <Popover placement={window.innerWidth < phoneWidth ? "bottom end" : "end top"}>
         <AriaMenu
           aria-label={label}
           className="tl-pop"
