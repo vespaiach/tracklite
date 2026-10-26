@@ -143,7 +143,7 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 |---|---|
 | `identity` | `members`, `invitations`, `password_reset_tokens`, `sessions`, `sign_in_attempts`, `password_reset_requests` |
 | `projects` | `project_keys`, `projects`, `labels` |
-| `issues` | `issues`, `issue_labels` |
+| `issues` | `issues`, `issue_labels`, `issue_assignees` |
 | `comments` | `comments` |
 | `notifications` | `mentions`, `notification_batches`, `notification_deliveries`, `notifications`, `worker_heartbeats` |
 
@@ -162,6 +162,7 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 | `issues` | status | where an issue is in the workflow; a board column | `status`, `IssueStatus` |
 | `issues` | priority | how urgent an issue is | `priority`, `IssuePriority` |
 | `issues` | position | an issue's sort key within its board column (2.4) | `position` |
+| `issues` | assignees | the members responsible for an issue, any number or none (REQ-019) | `issue_assignees`, `Issue.assignees` |
 | `comments` | comment | a message on one issue or one project | `comments`, `ThreadComment` |
 | `notifications` | mention | an `@username` in a description or comment, mirrored as a row (2.5) | `mentions` |
 | `notifications` | notification | one thing to tell a member: `assigned` or `mentioned` | `notifications`, `notificationKind` |
@@ -178,11 +179,11 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 
 Permission checks stay where 4.10 puts them: `assertAdmin(actor)` is still an admin-only function's first statement, before any load.
 
-**Domain events.** `shared/events.ts` holds `DomainEvent`, a typed union of the facts that cause notifications in R1: `IssueAssigned`, `DescriptionSaved` (issue or project), `CommentPosted` and `CommentEdited`. Each carries the actor, the target ids and, for text, the saved text; which members a text newly mentions is worked out by `notifications`, which owns `mentions`. `publish(tx, event)` hands an event to the one subscriber and throws if none is registered, so a missing import fails loudly instead of dropping notifications. A context publishes inside its own transaction; `notifications` subscribes when its `index.ts` loads and writes its rows (mentions, batches, deliveries, notifications) on the same `tx`, so the action and its notifications commit or roll back together (spec §12). `shared/api-route.ts` and `scripts/worker.ts` import `notifications`, and the `unit` test project loads it in a setup file (`src/test/subscribe-notifications.ts`), so tests that call domain functions directly have the subscriber.
+**Domain events.** `shared/events.ts` holds `DomainEvent`, a typed union of the facts that cause notifications in R1: `IssueAssigned`, `DescriptionSaved` (issue or project), `CommentPosted` and `CommentEdited`. Each carries the actor, the target ids and, for text, the saved text; `IssueAssigned` carries the ids of the members newly added as assignees (REQ-043), from a create or an assignee change; which members a text newly mentions is worked out by `notifications`, which owns `mentions`. `publish(tx, event)` hands an event to the one subscriber and throws if none is registered, so a missing import fails loudly instead of dropping notifications. A context publishes inside its own transaction; `notifications` subscribes when its `index.ts` loads and writes its rows (mentions, batches, deliveries, notifications) on the same `tx`, so the action and its notifications commit or roll back together (spec §12). `shared/api-route.ts` and `scripts/worker.ts` import `notifications`, and the `unit` test project loads it in a setup file (`src/test/subscribe-notifications.ts`), so tests that call domain functions directly have the subscriber.
 
 ## 2. Schema
 
-PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). Enums and column helpers are in `src/server/shared/schema.ts`, and tables, columns, constraints and indexes in each context's `tables.ts` (1.8); `drizzle-kit generate` writes migrations to `migrations/`. This section records only why the schema is shaped as it is. Every table has a `uuid` id unless stated (`project_keys` is keyed by `key`, `issue_labels` by its pair), and every timestamp is `timestamptz` in UTC (DATA-003).
+PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). Enums and column helpers are in `src/server/shared/schema.ts`, and tables, columns, constraints and indexes in each context's `tables.ts` (1.8); `drizzle-kit generate` writes migrations to `migrations/`. This section records only why the schema is shaped as it is. Every table has a `uuid` id unless stated (`project_keys` is keyed by `key`, `issue_labels` and `issue_assignees` by their pairs), and every timestamp is `timestamptz` in UTC (DATA-003).
 
 ### 2.1 Enums
 
@@ -222,10 +223,11 @@ Postgres sorts an enum by its declared order, so the order is the sort order. `i
 - **Numbering (REQ-016).** The create transaction locks the project row (`for update`, the same read that checks it isn't archived), then runs `update projects set next_issue_number = next_issue_number + 1 where id = $1 returning next_issue_number - 1`. The lock makes simultaneous creates wait for each other, so they get different numbers (REQ-016.4). Deletes never decrement the counter, so numbers aren't reused (REQ-016.2).
 - **Board position (REQ-026, REQ-027).** `position` is a string sort key from the `fractional-indexing` package, in a `text COLLATE "C"` column, because the keys only sort correctly byte by byte (`Zz` before `a0`); a language collation such as `en_US.UTF-8` would put a card moved to the top at the bottom. A drop between two cards gets a key between theirs; "move to top" gets a key before the column's first card. Only the moved row changes, so members reordering different cards don't conflict (REQ-026.3). Columns sort by `(position, id)`: two simultaneous moves between the same pair may get equal keys, and `id` breaks the tie the same way for everyone.
 - **Moving a card.** A move names one neighbour (`place: { after: "WEB-5" }`), not keys. The server computes a key between WEB-5 and whatever follows it *right now*, so a stale board still lands the card next to the chosen one (REQ-026.4). If WEB-5 has left that column, the card goes to the top. A move changes `status` and `status_changed_at` only when the status actually changes. A status change from anywhere else (`PATCH { status }`) also puts the card at the top of its new column (REQ-027.4).
-- **`updated_at` (REQ-036).** Set when the title, description, status, priority, assignee or the issue's labels change; not by reordering within a column (REQ-036.5), comments, or renaming or recoloring a label on the Labels page.
+- **`updated_at` (REQ-036).** Set when the title, description, status, priority, the issue's assignees or its labels change; not by reordering within a column (REQ-036.5), comments, or renaming or recoloring a label on the Labels page.
 - **`status_changed_at`.** Set on every status change; drives the 14-day Done/Canceled window (REQ-028, REQ-041).
 - **`description_version`.** Incremented on each description save. A save sends the version it started from; the transaction locks the row (`for update`) and, if the stored version differs, someone else saved first → the STD-8 conflict message. Other fields don't touch it, so a teammate's status change never blocks your description save. Projects use the same pattern.
 - **Labels.** A label change sends the issue's full set (`labelIds`), replacing its `issue_labels` rows. The body schema checks the 10-label maximum (REQ-020.3).
+- **Assignees (REQ-019).** `issue_assignees` holds one row per issue and member, with the primary key on `(issue_id, member_id)`, `on delete cascade` from the issue, and an index on `member_id` for My issues and the Assignee filter. There is no maximum. A change sends the issue's full set (`assignees: Username[]`, as for labels), so STD-8's last save wins for the whole set; the transaction diffs it against the stored rows, inserts the added members and deletes the removed ones. Only added members must be active (`422` "Choose an active member" on the `assignees` field); a deactivated member already in the set may stay. The newly added members, minus the actor, go in the `IssueAssigned` event (REQ-043). Responses list assignees sorted by full name. `issues.assignee_id` is gone; its migration copied each value into `issue_assignees`.
 
 **Search (REQ-038).** One condition per typed word, joined with `and`: the word appears in the title, the description or the ID (`key || '-' || number`), each by `ILIKE '%word%'` with `%`, `_` and `\` escaped first (REQ-038.4). GIN `gin_trgm_ops` indexes on `title` and `description` keep this fast at 10,000 issues (NFR-004). drizzle-kit can't declare the `pg_trgm` extension they need, so the first migration runs `create extension if not exists pg_trgm` (added by hand).
 
@@ -263,7 +265,7 @@ How the parts fit:
 - **Drop checks at send time (REQ-045).** For each delivery, the worker re-checks each of the batch's notifications not yet dropped:
   - recipient deactivated → drop;
   - target issue or project no longer exists → **send** (REQ-045.7);
-  - `assigned` but the issue's assignee is now someone else → drop;
+  - `assigned` but the recipient is no longer one of the issue's assignees → drop;
   - `mentioned` but the comment is gone, or there's no longer a matching `mentions` row → drop.
 
   A dropped notification stays dropped for every channel. If none is left, the delivery becomes `dropped`.
@@ -290,7 +292,7 @@ Settles DEC-002. Request types live in each context's `schemas.ts` (1.8) and res
 - **List paging** uses `offset`; keyset cursors would be complex with several sort columns. With no live updates (spec §3), rows only shift if someone edits mid-scroll, which is accepted.
 - **Field-by-field saves.** The issue page saves each field as it changes, with a `PATCH` holding only that field, so STD-8's "last save wins" works per field and one failed field leaves the others saved (REQ-020.4).
 - **Creating twice.** Issue and comment creates carry `requestId`; a repeat returns the first result with `200` instead of `201` (STD-5). `request_id` is unique across the whole table. The repeat is looked up after the target's own checks, so a retry to an issue deleted meanwhile gets `404`, and into a project archived meanwhile `403`.
-- **Small member data.** A member appears as `{ username, fullName, initials, deactivated }`. A member's email appears only in a full profile: `/api/me`, the admin member list, an admin's `PATCH /api/members/{username}`, and the new member's own `POST /api/members`. An invited email appears in the admin's invitation responses and the invitation lookup. Password hashes never appear (SEC-008.2).
+- **Small member data.** A member appears as `{ username, fullName, initials, deactivated }`. An issue's `assignees` is an array of these, sorted by full name, empty when unassigned. A member's email appears only in a full profile: `/api/me`, the admin member list, an admin's `PATCH /api/members/{username}`, and the new member's own `POST /api/members`. An invited email appears in the admin's invitation responses and the invitation lookup. Password hashes never appear (SEC-008.2).
 
 ### 3.2 Errors
 
@@ -339,7 +341,7 @@ The domain functions declare the contract types (3.5) as their return types. The
 
 | Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/members` | All members, active and deactivated, for the assignee picker, the @mention suggestions and the members page; with about 15 people the browser filters the list itself | Member (emails only for admins) | DATA-001, REQ-037 |
+| `GET /api/members` | All members, active and deactivated, for the assignee picker (it offers only active ones), the @mention suggestions and the members page; with about 15 people the browser filters the list itself | Member (emails only for admins) | DATA-001, REQ-037 |
 | `PATCH /api/members/{username}` | Role or deactivated; returns the full profile | Admin | REQ-007, REQ-008, REQ-052 |
 | `GET /api/invitations` | Pending, Bounced and Expired invitations | Admin | REQ-001, REQ-051 |
 | `POST /api/invitations` | `201`; works as a resend if the email has an open invitation | Admin | REQ-001 |
@@ -365,13 +367,13 @@ The domain functions declare the contract types (3.5) as their return types. The
 | Method and path | Notes | Who | Spec |
 |---|---|---|---|
 | `GET /api/projects/{KEY}/board` | 5 columns in status order, cards sorted by `(position, id)`. Each card carries all its labels, sorted by name ignoring capitals; the card trims them to 3 and "+N". Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-024, REQ-025, REQ-028 |
-| `GET /api/projects/{KEY}/issues` | Filters `status`, `priority`, `assignee` (`-` for Unassigned) and `label` (name, ignoring capitals), each repeatable; `q`; `sort` (default `updated`) and `dir` (default `desc` for `updated`, `asc` otherwise); `offset`. Ties sort most recently updated first, and unknown values are ignored. Up to 100 rows, plus the deactivated members still assigned in the project, for the assignee filter | Member | REQ-036…040 |
-| `POST /api/projects/{KEY}/issues` | `201`. `status` is used by the column **+** buttons; a missing or unknown value becomes `backlog` | Member | REQ-016, REQ-029 |
+| `GET /api/projects/{KEY}/issues` | Filters `status`, `priority`, `assignee` (a username, or `-` for Unassigned; an issue matches if any of its assignees is chosen, and `-` matches an issue with none) and `label` (name, ignoring capitals), each repeatable; `q`; `sort` (default `updated`) and `dir` (default `desc` for `updated`, `asc` otherwise); `offset`. Ties sort most recently updated first, and unknown values are ignored. Up to 100 rows, plus the deactivated members still assigned in the project, for the assignee filter | Member | REQ-036…040 |
+| `POST /api/projects/{KEY}/issues` | `201`. `status` is used by the column **+** buttons; a missing or unknown value becomes `backlog`. Optional `assignees: Username[]` (2.4), checked as for a `PATCH` | Member | REQ-016, REQ-029 |
 | `GET /api/issues/{ID}` | Includes the description's version and mentions | Member | REQ-016 |
-| `PATCH /api/issues/{ID}` | One field per request (3.1): title, status, priority, assignee, the full label set, or a description save | Member | REQ-016…022, REQ-027.4 |
+| `PATCH /api/issues/{ID}` | One field per request (3.1): title, status, priority, the full assignee set (`assignees`), the full label set, or a description save | Member | REQ-016…022, REQ-027.4 |
 | `PUT /api/issues/{ID}/position` | A status and a place: top, bottom, or after a named card (2.4) | Member | REQ-026, REQ-027, REQ-030 |
 | `DELETE /api/issues/{ID}` | | Creator or Admin | REQ-023 |
-| `GET /api/my-issues` | The member's issues in active projects, grouped by status in order with empty groups left out, sorted by priority from Urgent down, then most recently updated. Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-041, REQ-042 |
+| `GET /api/my-issues` | Issues in active projects that have the member among their assignees, grouped by status in order with empty groups left out, sorted by priority from Urgent down, then most recently updated. Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-041, REQ-042 |
 
 **Comments**
 
@@ -644,7 +646,7 @@ The spec gives the copy for these pages; these are the layout choices it leaves 
 - **Main column:**
   - the description, shown formatted, with an **Edit** button that switches to a Markdown text area with **Save** and **Cancel** (STD-8 conflicts appear here);
   - the comments below it (REQ-032), then the comment box.
-- **Side panel:** Status, Priority, Assignee and Labels pickers, each saving as soon as a value is chosen. A picker shows the new value once the server accepts it; on a failure it keeps the old value. Then "Created by {name}, {date}", and **Delete issue** for the creator or an admin. After a delete, the app goes to the project's board.
+- **Side panel:** Status, Priority, Assignees and Labels pickers (Assignees is a multi-select listing active members, with deactivated assignees shown but not offered), each saving as soon as a value is chosen. A picker shows the new value once the server accepts it; on a failure it keeps the old value. Then "Created by {name}, {date}", and **Delete issue** for the creator or an admin. After a delete, the app goes to the project's board.
 - **Mention suggestions (DATA-001):** typing `@` in the description editor or comment box opens a list of active members, filtered by username or name as the member types. Choosing one inserts `@username`.
 - **Unsaved text (REQ-035):** a comment box holding text, or a description editor (issue or project) with unsaved changes, blocks in-app navigation with `useBlocker` and its REQ-035 message, and closing or reloading the tab with `beforeunload`.
 

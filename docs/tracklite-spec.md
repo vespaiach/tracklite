@@ -1,9 +1,9 @@
 ---
 product: "Tracklite"
-version: "0.33"
+version: "0.34"
 release: "R1"
 status: Ready to build
-updated: "2026-10-25"
+updated: "2026-10-26"
 ---
 
 # Tracklite: Spec
@@ -80,7 +80,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 - **Status:** where an issue is in the workflow; the columns on the board.
 - **Label:** a tag on an issue, belonging to one project.
 - **Priority:** how urgent an issue is.
-- **Assignee:** the member responsible for an issue.
+- **Assignee:** a member responsible for an issue. An issue can have any number of assignees, or none.
 - **Board:** a project's issues shown as cards in one column per status.
 - **Comment:** a message on an issue or a project.
 - **Mention:** an `@username` in an issue description, a project description or a comment that notifies that member (DATA-001).
@@ -155,13 +155,13 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-006.2: Sam returns after 31 days away → sign-in page (STD-1).
 - **REQ-007** When an admin deactivates a member, the system shall confirm with "{Full name} will be signed out and can't sign in until reactivated.", then end all that member's sessions and block their sign-in. Their name stays on past work, marked "(deactivated)", and they can't be assigned or mentioned. The last admin can't be deactivated or lose the admin role.
   - REQ-007.1: Admin deactivates Sam → Sam's next page load goes to sign-in; signing in with Sam's correct password shows "Incorrect email or password.", and a password reset request sends nothing.
-  - REQ-007.2: `WEB-42` was assigned to Sam → it still shows "Sam Lee (deactivated)", and Sam isn't in the assignee picker.
+  - REQ-007.2: `WEB-42` was assigned to Sam and Alex → it still shows "Sam Lee (deactivated)" among its assignees, in the avatar stack's names and the Assignees field, and the assignee picker doesn't offer Sam.
   - REQ-007.3: The only admin tries to deactivate themselves, or remove their own admin role → blocked with "There must be at least one admin."
   - REQ-007.4: Sam is deactivated while editing the description of `WEB-42` → Sam's save fails and goes to sign-in, and nothing is saved.
   - REQ-007.5: Sam requests a password reset link, is deactivated, then submits a new password through the link → "This link has expired"; the password is unchanged and Sam isn't signed in.
 - **REQ-008** When an admin reactivates a deactivated member, the system shall let them sign in again with their existing profile. They can be assigned and mentioned again.
   - REQ-008.1: Admin reactivates Sam, then Sam signs in with their existing password → signed in with the same username and profile.
-  - REQ-008.2: `WEB-42` is still assigned to Sam → "(deactivated)" disappears from Sam's name, and Sam is back in the assignee picker.
+  - REQ-008.2: `WEB-42` is still assigned to Sam → "(deactivated)" disappears from Sam's name in its assignees, and the assignee picker offers Sam again.
 - **REQ-051** The system shall give admins a members page, `/settings/members`, which other members can't open (STD-2). Each member row shows full name, username, email, role and whether deactivated, with deactivate or reactivate (REQ-007, REQ-008) and make or remove admin (REQ-052); a deactivated member's only action is reactivate. Each Pending, Bounced or Expired invitation shows the email, who sent it and when it expires or expired, with Resend and Revoke (REQ-001); accepted and revoked ones aren't listed.
   - REQ-051.1: An admin opens `/settings/members` → every member with their role, and Sam's pending invitation with Resend and Revoke.
   - REQ-051.2: Alex, a member, opens `/settings/members` → "You don't have permission to do that."
@@ -232,32 +232,37 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 **Release:** R1 · **Priority:** Must
 
-**What and why:** An issue is one piece of work in a project, with a readable ID, a Markdown description, and the fields the team uses to track it: status, priority, assignee and labels. Every view in the app is built on issues.
+**What and why:** An issue is one piece of work in a project, with a readable ID, a Markdown description, and the fields the team uses to track it: status, priority, assignees and labels. Every view in the app is built on issues.
 
 **Flow**
 
 1. A member clicks **New issue** in a project and enters a title.
 2. The system gives it the project's next ID, such as `WEB-43`, and a starting status.
-3. The member adds a description, priority, assignee and labels, now or later.
+3. The member adds a description, priority, assignees and labels, now or later; assignees can also be chosen in **New issue**.
 4. Any member opens the issue by its ID to read it, comment on it and change its fields.
 5. As the work progresses, members move it through the statuses until it's done or canceled.
 6. The issue's creator or an admin can delete it.
 
 **Rules and examples**
 
-- **REQ-016** When a member creates an issue or edits its title, the system shall require a title of 1 to 200 characters after trimming; empty gets the field error "Title required", longer "Too long (max 200)" (STD-3). A new issue gets the project's next number, starting at 1; numbers are never shared or reused within a project. It starts as Backlog, No priority and unassigned, recording who created it and when. The issue's ID is its address, matched ignoring capitals.
+- **REQ-016** When a member creates an issue or edits its title, the system shall require a title of 1 to 200 characters after trimming; empty gets the field error "Title required", longer "Too long (max 200)" (STD-3). A new issue gets the project's next number, starting at 1; numbers are never shared or reused within a project. It starts as Backlog and No priority, with the assignees chosen in **New issue** (REQ-019, REQ-043), or unassigned if none were chosen, recording who created it and when. The issue's ID is its address, matched ignoring capitals.
   - REQ-016.1: Sam creates "Fix login button" as the first issue in `WEB` → `WEB-1`, Backlog, No priority, unassigned, "Created by Sam Lee".
   - REQ-016.2: The latest issue is `WEB-41` and `WEB-40` was deleted → the next new issue is `WEB-42`.
   - REQ-016.3: The title is only spaces → field error "Title required" (STD-3).
   - REQ-016.4: Sam and Alex create an issue in `WEB` at the same moment → one gets `WEB-42` and the other `WEB-43`.
   - REQ-016.5: A member opens `/issue/web-42` → `WEB-42` opens.
+  - REQ-016.6: Sam creates "Fix login button" in `WEB` with Alex and Jo chosen as assignees → `WEB-42` is assigned to Alex Kim and Jo Park, and each gets the REQ-043 email.
 - **REQ-017** The system shall offer one fixed set of statuses, in this order: **Backlog, In Progress, In Review, Done, Canceled**. Any member can move an issue to any status at any time.
   - REQ-017.1: `WEB-42` is moved from Backlog straight to Done → allowed.
 - **REQ-018** The system shall offer these priorities, in this order: **Urgent, High, Medium, Low, No priority**.
   - REQ-018.1: Sam sets `WEB-42` to Urgent → `WEB-42` shows Urgent.
-- **REQ-019** An issue shall have no assignee or one active member as its assignee. Anyone else gets the field error "Choose an active member" (STD-3).
+- **REQ-019** An issue shall have any number of assignees, or none; there is no maximum. Each member added must be active: adding a deactivated or unknown member gets the field error "Choose an active member" (STD-3) and nothing is saved. A deactivated member already assigned stays until someone removes them (REQ-007). Assignees are shown sorted by full name; an issue with none shows Unassigned.
   - REQ-019.1: Sam assigns `WEB-42` to Alex → shows Alex.
-  - REQ-019.2: Sam clears the assignee → shows Unassigned.
+  - REQ-019.2: Sam removes the only assignee → shows Unassigned.
+  - REQ-019.3: `WEB-42` is assigned to Jo; Sam adds Alex → shows Alex Kim and Jo Park, in that order.
+  - REQ-019.4: `WEB-42` is assigned to Alex and Jo; Sam removes Alex → shows only Jo Park.
+  - REQ-019.5: Sam tries to add Pat, who is deactivated → field error "Choose an active member"; the assignees are unchanged.
+  - REQ-019.6: `WEB-42` is assigned to Sam, since deactivated; Alex adds Jo → saved, and Sam stays as "Sam Lee (deactivated)".
 - **REQ-020** An issue shall have 0 to 10 labels from its project. In the label picker, a typed name matching an existing label, ignoring capitals, adds it; any other name creates a Gray label in the project and adds it.
   - REQ-020.1: Sam adds `bug` and `frontend` to `WEB-42` → both shown.
   - REQ-020.2: Sam types `Design`, which doesn't exist in `WEB` yet → label `Design` created in `WEB` and added.
@@ -289,7 +294,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 **Flow**
 
 1. A member opens a project, and the board shows one column per status, from Backlog to Canceled.
-2. Each card shows the issue ID, title, priority, assignee and labels.
+2. Each card shows the issue ID, title, priority, assignees and labels.
 3. The member drags a card to another column, or to a new place in the same column.
 4. The system saves the new status and position straight away.
 5. The member clicks a card to open the issue.
@@ -301,9 +306,10 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-024.1: `WEB` has 3 Backlog and 2 In Progress issues → columns Backlog (3), In Progress (2), In Review (0), Done (0), Canceled (0).
   - REQ-024.2: `WEB` is archived → the board shows no **+** buttons, cards can't be moved, and cards open read-only (REQ-013).
   - REQ-024.3: Backlog has 300 cards → Backlog scrolls on its own while the other columns stay put. (Verify: manual)
-- **REQ-025** Each card shall show the issue ID, the title (cut off after 2 lines), the priority, the assignee's initials, and up to 3 labels followed by "+N" for the rest.
+- **REQ-025** Each card shall show the issue ID, the title (cut off after 2 lines), the priority, a stack of up to 3 assignee avatars (initials) followed by "+N" for the rest, and up to 3 labels followed by "+N" for the rest. List rows (REQ-036) show assignees the same way.
   - REQ-025.1: `WEB-42` has 5 labels → the card shows 3 labels and "+2".
-  - REQ-025.2: `WEB-42` is unassigned with No priority → no initials or priority icon on the card.
+  - REQ-025.2: `WEB-42` is unassigned with No priority → no avatars or priority icon on the card.
+  - REQ-025.3: `WEB-42` has 5 assignees → the card shows 3 avatars and "+2", and its name reads every assignee.
 - **REQ-026** When a member drops a card in a new place, the system shall save its status and its place among its neighbours straight away, then refresh the columns involved. If two saves touch the same card, the last wins (STD-8). A failed save returns the card to its old place with a toast (STD-9).
   - REQ-026.1: Sam drags `WEB-42` from Backlog to In Progress → status In Progress; after a reload it's still there.
   - REQ-026.2: The network drops during the save → the card goes back to its old place in Backlog, with the toast "Couldn’t move WEB-42".
@@ -336,7 +342,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 **Flow**
 
 1. A member opens a project and switches from **Board** to **List**.
-2. The system shows every issue in the project as a row: ID, title, status, priority, assignee, labels and last updated.
+2. The system shows every issue in the project as a row: ID, title, status, priority, assignees, labels and last updated.
 3. The member narrows the list with filters for status, assignee, priority and label, or types words to search.
 4. The table updates as they filter or type.
 5. The member clicks a column heading to sort by it.
@@ -350,12 +356,13 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-036.3: `WEB` is archived → the list, filters, search and sort all work; rows open read-only (REQ-013).
   - REQ-036.4: A 200-character title → one line ending in "…"; hovering shows the full title. (Verify: manual)
   - REQ-036.5: Sam drags `WEB-9` above `WEB-5` within In Progress → `WEB-9`'s last updated is unchanged; dragging it to In Review does change it.
-- **REQ-037** The system shall offer filters for status, assignee, priority and label. The assignee filter lists Unassigned, active members, and deactivated members who still have issues in the project, marked "(deactivated)". Values within one filter match any; different filters must all match. **Clear filters** removes every filter and the search.
+- **REQ-037** The system shall offer filters for status, assignee, priority and label. The assignee filter lists Unassigned, active members, and deactivated members who still have issues in the project, marked "(deactivated)". It matches an issue that has any of the chosen members among its assignees; Unassigned matches an issue with no assignees. Values within one filter match any; different filters must all match. **Clear filters** removes every filter and the search.
   - REQ-037.1: Status = In Progress and In Review, and Assignee = Sam → only Sam's issues that are in either status.
   - REQ-037.2: Assignee = Unassigned → only issues with no assignee.
   - REQ-037.3: Label = `bug` and `frontend` → issues with either label.
   - REQ-037.4: Nothing matches → "No issues match these filters", with a **Clear filters** button (STD-7) that also empties the search box.
   - REQ-037.5: Jo is deactivated and still assigned to `WEB-7` → the assignee filter offers "Jo Park (deactivated)", and choosing it shows `WEB-7`.
+  - REQ-037.6: `WEB-7` is assigned to Sam and Jo, `WEB-8` to Alex → Assignee = Jo shows `WEB-7`; Assignee = Jo and Alex shows both.
 - **REQ-038** The search box shall update the list 300 ms after typing stops, showing issues whose ID, title or description contains every typed word, ignoring capitals. Input is plain text, with no wildcards or query syntax. Comments aren't searched.
   - REQ-038.1: "login button" → `WEB-1` "Fix login button", plus any issue whose description has both words.
   - REQ-038.2: "42" or "web-42" → `WEB-42`.
@@ -429,13 +436,14 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 **Rules and examples**
 
-- **REQ-041** My issues shall show every issue assigned to the signed-in member in active projects, on one page with no paging, grouped by status in the REQ-017 order with a count per group and empty groups hidden. Done and Canceled show only issues moved there in the last 14 days (as REQ-028). Nobody can view another member's My issues.
+- **REQ-041** My issues shall show every issue in active projects that has the signed-in member among its assignees, on one page with no paging, grouped by status in the REQ-017 order with a count per group and empty groups hidden. Done and Canceled show only issues moved there in the last 14 days (as REQ-028). Nobody can view another member's My issues.
   - REQ-041.1: Sam is assigned `API-7` (Backlog), `WEB-42` (In Progress) and `WEB-3` (In Progress) → groups Backlog (1) and In Progress (2).
   - REQ-041.2: Sam's `WEB-10` was moved to Done 20 days ago → not shown.
   - REQ-041.3: Project `API` is archived → `API-7` isn't shown (REQ-013).
   - REQ-041.4: Nothing is assigned to Sam → "Nothing assigned to you. Open a project to find or create issues." (STD-7).
   - REQ-041.5: Sam is assigned 300 open issues → all 300 are on the page, grouped.
-  - REQ-041.6: Alex reassigns `WEB-42` to themselves while Sam has the page open → `WEB-42` stays listed until Sam reloads; opening it shows Alex as assignee. (Verify: manual)
+  - REQ-041.6: Alex removes Sam from `WEB-42` and adds themselves while Sam has the page open → `WEB-42` stays listed until Sam reloads; opening it shows Alex as assignee. (Verify: manual)
+  - REQ-041.7: `WEB-42` is assigned to Sam and Alex → it's in both Sam's and Alex's My issues.
 - **REQ-042** Each row shall show the issue ID, title, project name, priority, labels and last updated; a title or project name too long for one line is cut off with "…" and shown in full on hover. Rows in a group sort by priority from Urgent down, then most recently updated. R1 has no filtering, search or manual ordering here.
   - REQ-042.1: In Progress holds `WEB-3` (Low) and `API-9` (Urgent) → `API-9` comes first.
   - REQ-042.2: Sam clicks `WEB-42` → the issue opens.
@@ -457,10 +465,11 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 **Rules and examples**
 
-- **REQ-043** When a member assigns an issue to someone other than themselves, the system shall email the new assignee. The subject is "[WEB-42] Fix login button: assigned to you by Alex Kim", and the body gives the project name and a link to the issue. The previous assignee gets nothing.
+- **REQ-043** When a member adds assignees to an issue, when creating it or later, the system shall email each newly added assignee other than themselves. The subject is "[WEB-42] Fix login button: assigned to you by Alex Kim", and the body gives the project name and a link to the issue. Members who were already assignees, and members removed, get nothing.
   - REQ-043.1: Alex assigns `WEB-42` to Sam → Sam gets the email.
   - REQ-043.2: Sam assigns `WEB-42` to themselves → no email.
   - REQ-043.3: Alex reassigns `WEB-42` from Sam to Jo → Jo gets the email; Sam gets nothing.
+  - REQ-043.4: `WEB-42` is assigned to Sam; Alex adds Jo, Nina and themselves in one save → Jo and Nina each get the email; Sam and Alex get nothing.
 - **REQ-044** When a mention (DATA-001) is saved in an issue description, a project description or a comment, the system shall email each mentioned member except the author. The subject is "[WEB-42] Fix login button: Alex Kim mentioned you", or "[WEB] Website: Alex Kim mentioned you" for a project; the body holds the first 500 characters of the text as plain text and a link to it. An edit emails only members not mentioned in the previously saved version, so a mention removed and later added back emails again. Several mentions of one member in one text send one email.
   - REQ-044.1: Alex comments "@sam can you check?" on `WEB-42` → Sam gets the email, with that text and a link to the comment.
   - REQ-044.2: Sam writes `@sam` in their own comment → no email.
@@ -469,7 +478,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-044.5: Alex mentions `@sam` in a comment on project `WEB` → the email links to the `WEB` project details page.
   - REQ-044.6: Alex mentions `@sam` in the `WEB` project description → Sam gets the email, linking to the `WEB` project details page.
   - REQ-044.7: Alex mentions `@sam` in a comment, edits the mention out, then adds it back → Sam gets a second email.
-- **REQ-045** The system shall send a notification 2 minutes after it's created. Later notifications for the same member about the same issue or project join that email if created before it goes out, without restarting the wait. A notification is dropped if, before sending, the assignment is undone, the mention is edited out, its comment is deleted, or the recipient is deactivated; it's still sent if its issue or project is deleted. Failed sends retry as in STD-6. A bounce reported by the email service is logged, not retried, and doesn't affect the action in the app.
+- **REQ-045** The system shall send a notification 2 minutes after it's created. Later notifications for the same member about the same issue or project join that email if created before it goes out, without restarting the wait. A notification is dropped if, before sending, the recipient is removed from the issue's assignees, the mention is edited out, its comment is deleted, or the recipient is deactivated; it's still sent if its issue or project is deleted. Failed sends retry as in STD-6. A bounce reported by the email service is logged, not retried, and doesn't affect the action in the app.
   - REQ-045.1: Within 1 minute, Alex assigns `WEB-42` to Sam and mentions `@sam` in a comment on it → Sam gets one email covering both.
   - REQ-045.2: Alex assigns `WEB-42` to Sam, then reassigns it to Jo 30 seconds later → Sam gets nothing; Jo gets one email.
   - REQ-045.3: Alex mentions `@sam`, then edits the mention out within a minute → Sam gets nothing.
@@ -511,7 +520,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 | STD-5 | Same action sent twice | The submit button is disabled while saving. Creating an issue or comment carries a request ID, so a retry or double-click never creates two. |
 | STD-6 | A service we depend on fails | The only outside service is email. If an invitation or password reset email fails, nothing is saved and the person sees "We couldn’t send the email. Try again." If a notification email fails, the app retries 3 times over about 15 minutes, then logs the failure; the action that caused it still succeeds. |
 | STD-7 | Every screen | A loading indicator shows if loading takes more than 300 ms. Empty states name the next action ("No issues yet. Create one."). An error state shows "Couldn’t load this." beside a Retry button (DEC-006). Speed targets are in section 11. |
-| STD-8 | Two members edit the same thing | Single fields such as status, assignee, priority and labels: the last save wins. Descriptions: if someone else saved since you opened the editor, nothing is saved. You see "This was changed by [name]. Copy your text and reload.", and your text stays in the editor. |
+| STD-8 | Two members edit the same thing | Single fields such as status, priority, the issue's set of assignees and its set of labels: the last save wins, replacing the whole set. Descriptions: if someone else saved since you opened the editor, nothing is saved. You see "This was changed by [name]. Copy your text and reload.", and your text stays in the editor. |
 | STD-9 | A form submission fails | For failures not tied to one field, such as a network or server error, a `403` (STD-2) or a failed invitation or reset email (STD-6), a toast appears for 5 seconds with no dismiss or pause control, and the form keeps everything typed (DEC-006). A network or server error reads "Couldn’t save. Try again." Field errors stay by their fields (STD-3) and the STD-8 conflict message in the editor. |
 
 **STD-9 examples**
@@ -535,7 +544,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 | Edit a project description | Yes | Yes |
 | Change a project key | No | No |
 | Archive, unarchive or delete a project | Yes | No |
-| Create and edit issues (status, assignee, priority, labels) | Yes | Yes |
+| Create and edit issues (status, assignees, priority, labels) | Yes | Yes |
 | Delete an issue | Yes | Only issues they created |
 | Create, rename, recolor or delete labels | Yes | Yes |
 | Comment | Yes | Yes |
@@ -554,7 +563,7 @@ There are no private projects. Nobody, including admins, can see or set another 
 | Session | Member, secret token, last active at | Ends 30 days after last activity (REQ-006). |
 | Project | Name, key, Markdown description, archived at, next issue number, created at, created by | The key is unique forever, including deleted projects (REQ-009). |
 | Label | Project, name, color | Name unique within its project, ignoring capitals. One of 8 preset colors (REQ-021). |
-| Issue | Project, number, title, Markdown description, status, priority, assignee, labels (0 to 10), board position, created by, created at, last updated, status changed at | Number unique within its project and never reused (REQ-016). Board position is per status column (REQ-027). "Status changed at" drives the 14-day window (REQ-028). |
+| Issue | Project, number, title, Markdown description, status, priority, assignees (any number of members), labels (0 to 10), board position, created by, created at, last updated, status changed at | Number unique within its project and never reused (REQ-016). Board position is per status column (REQ-027). "Status changed at" drives the 14-day window (REQ-028). |
 | Comment | Either an issue or a project, author, Markdown body, created at, edited at | Belongs to exactly one issue or one project. |
 | Mention | The text it's in (an issue description, a project description or a comment), the member mentioned | Lets an edit email only new mentions (REQ-044). |
 | Notification | Recipient, kind (Assigned or Mentioned), issue or project, who caused it, the issue ID or project key, its title or name, the text excerpt (up to 500 characters), send after, and per notification channel a delivery state (Pending, Sent, Dropped, Failed, Bounced), its number of attempts and when it reached that state | "Send after" is 2 minutes after the recipient's first pending notification about that issue or project (REQ-045). The ID, title and excerpt are fixed when it's created (section 9, Email content). Each channel is delivered, retried and failed on its own. Kept when its issue or project is deleted (REQ-045). |
@@ -741,6 +750,7 @@ Deploys, rollbacks, backups, log retention and uptime monitoring are part of the
 
 **Changelog**
 
+- **0.34 (2026-10-26):** Multiple assignees (owner decision, 2026-10-25; no maximum, owner decision, 2026-10-26). An issue has any number of assignees: REQ-019 (new REQ-019.3 to REQ-019.6), REQ-016 (New issue can set assignees, new REQ-016.6), REQ-025 (an avatar stack of up to 3 and "+N", new REQ-025.3), REQ-037 (the Assignee filter matches any assignee, new REQ-037.6), REQ-041 (new REQ-041.7), REQ-043 (each newly added assignee is emailed, new REQ-043.4), REQ-045 (dropped when the recipient is removed), REQ-007.2, REQ-008.2, STD-8 (the assignee set is one field) and section 8.
 - **0.33 (2026-10-25):** Editorial; no behaviour changes. Examples are automated unless marked, so `(Verify: auto)` is dropped. Empty "Exceptions to standard behaviors" lines, the section 4 table and changelog entries before 0.30 are condensed. Rule wording tightened.
 - **0.32 (2026-10-23):** From the design refresh (C2). Project details shows the open-issue count, the count per status and "Created {date} by {name}" (REQ-046, new REQ-046.3 and REQ-046.4). A project now records the admin who created it (section 8); projects created earlier show only the date.
 - **0.31 (2026-10-22):** From the design refresh. REQ-053 warns when the worker hasn't finished a pass in the last 2 minutes or has never run, using OPS-005's threshold (REQ-053.5 extended, new REQ-053.10). REQ-041.4's empty My issues copy names the next action: "Nothing assigned to you. Open a project to find or create issues." (STD-7). The "Couldn’t …" messages use a curly apostrophe: "Couldn’t load this.", "Couldn’t save. Try again.", "Couldn’t move WEB-42" and "We couldn’t send the email. Try again." (REQ-001, REQ-026.2, STD-6, STD-7, STD-9, API-002, DEC-006).
