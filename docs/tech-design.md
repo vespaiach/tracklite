@@ -630,7 +630,7 @@ An archived project's header shows an "Archived" badge, and no create or edit co
 
 The spec gives the copy for these pages; these are the layout choices it leaves open.
 
-- **Reset password:** the expired state has a **Request a new link** button that goes to `/forgot-password` (REQ-050.4).
+- **Reset password:** the expired state has a **Request a new link** link that goes to `/forgot-password` (REQ-050.4).
 - **Accept invitation:** the invited email is shown, not editable. The expired and revoked states show no form (REQ-002).
 - **Profile:** full name with **Save**; username and email read-only; a separate **Change password** form.
 - **Members** (admin): the invite field, the invitations table, then the members table sorted by name. Invitation rows have **Resend** and **Revoke** buttons; member row actions are in a **⋯** menu (REQ-051). Revoke and Deactivate ask for confirmation.

@@ -2804,7 +2804,7 @@ fieldset.tl-list-head {
 }
 .tl-signed-out__main {
   width: 360px;
-  max-width: calc(100% - 30px);
+  max-width: calc(100% - 40px);
   margin: 100px auto 0;
   padding-bottom: 60px;
 }
@@ -2851,6 +2851,13 @@ fieldset.tl-list-head {
 }
 .tl-signed-out__form-error {
   margin-top: -5px;
+}
+.tl-signed-out__value {
+  margin: 0;
+  font-size: 13px;
+}
+.tl-mono {
+  font-family: var(--font-mono);
 }
 .tl-signed-out__form-error .tl-field-error {
   margin: 0;
