@@ -1019,6 +1019,7 @@ a.tl-seg__opt {
   overflow: auto;
   padding: 4px 8px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-content: start;
 }
@@ -1037,6 +1038,7 @@ a.tl-seg__opt {
 }
 .tl-rail-group {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1px;
 }
 .tl-shell[data-collapsed] .tl-rail-group {
