@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { AppBar, AppBarTitle, SettingsEmpty, SettingsLayout, Table } from "../../components/ui/track-lite";
+import { AppBar, AppBarTitle, IssueEmpty, SettingsLayout, Table } from "../../components/ui/track-lite";
 import { useProjectsQuery } from "../api";
 import { formatDate } from "../dates";
 import { LoadFailed, Loading } from "../LoadStates";
@@ -25,7 +25,7 @@ function ArchivedList() {
   if (query.data.length === 0) {
     return (
       <SettingsLayout>
-        <SettingsEmpty>No archived projects.</SettingsEmpty>
+        <IssueEmpty>No archived projects.</IssueEmpty>
       </SettingsLayout>
     );
   }

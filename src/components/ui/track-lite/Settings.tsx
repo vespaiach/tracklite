@@ -3,8 +3,20 @@ import { cx } from "./cx";
 import { FieldError } from "./Field";
 import { Avatar } from "./Pill";
 
-export function SettingsLayout({ children, wide }: { children: ReactNode; wide?: boolean }) {
-  return <main className={cx("tl-settings", wide && "tl-settings--wide")}>{children}</main>;
+export function SettingsLayout({
+  children,
+  wide,
+  medium,
+}: {
+  children: ReactNode;
+  wide?: boolean;
+  medium?: boolean;
+}) {
+  return (
+    <main className={cx("tl-settings", wide && "tl-settings--wide", medium && "tl-settings--medium")}>
+      {children}
+    </main>
+  );
 }
 
 export function SettingsSection({
@@ -12,19 +24,21 @@ export function SettingsSection({
   count,
   status,
   action,
+  ruled,
   children,
 }: {
   title: string;
   count?: number;
   status?: ReactNode;
   action?: ReactNode;
+  ruled?: boolean;
   children: ReactNode;
 }) {
   const titleId = useId();
   return (
     <section
       aria-labelledby={titleId}
-      className="tl-settings__section">
+      className={cx("tl-settings__section", ruled && "tl-settings__section--ruled")}>
       <div className="tl-settings__section-head">
         <h2
           id={titleId}
@@ -139,14 +153,18 @@ export function FactList({
   children,
   note,
   split,
+  stacked,
 }: {
   children: ReactNode;
   note?: ReactNode;
   split?: boolean;
+  stacked?: boolean;
 }) {
   return (
     <div>
-      <dl className={cx("tl-facts", split && "tl-facts--split")}>{children}</dl>
+      <dl className={cx("tl-facts", split && "tl-facts--split", stacked && "tl-facts--stacked")}>
+        {children}
+      </dl>
       {note && <p className="tl-facts__note">{note}</p>}
     </div>
   );
