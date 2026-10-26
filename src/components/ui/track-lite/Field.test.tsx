@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { Field, Input } from "./Field";
+import { Field, FieldError, Input } from "./Field";
 
 afterEach(cleanup);
 
@@ -36,4 +36,12 @@ it("Field: help, then error, then neither, sets aria-invalid and aria-describedb
   rerender(<Field label="New password">{(props) => <Input {...props} />}</Field>);
   expect(input().hasAttribute("aria-invalid")).toBe(false);
   expect(input().hasAttribute("aria-describedby")).toBe(false);
+});
+
+it("STD-3: FieldError shows its round mark hidden from assistive tech", () => {
+  render(<FieldError>Name required</FieldError>);
+  const mark = screen.getByText("!");
+  expect(mark.getAttribute("aria-hidden")).toBe("true");
+  expect(mark.classList.contains("tl-field-error__mark")).toBe(true);
+  expect(mark.parentElement?.textContent).toBe("!Name required");
 });
