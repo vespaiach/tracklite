@@ -5,6 +5,7 @@ import {
   Button,
   Field,
   Input,
+  Mono,
   SignedOutForm,
   SignedOutFormError,
   SignedOutHeading,
@@ -59,7 +60,7 @@ export function ForgotPassword() {
       <SignedOutLayout>
         <SignedOutHeading title="Check your email">
           If {sentTo} belongs to a Tracklite member, a reset link is on its way. The link works once and
-          expires after 30 minutes.
+          expires after <Mono>30</Mono> minutes.
         </SignedOutHeading>
         {backToSignIn}
       </SignedOutLayout>

@@ -3,10 +3,9 @@ import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
 import {
   Button,
-  Fact,
-  FactList,
   Field,
   Input,
+  Mono,
   SignedOutAlert,
   SignedOutFields,
   SignedOutForm,
@@ -14,6 +13,7 @@ import {
   SignedOutLayout,
   SignedOutMessage,
   SignedOutStatus,
+  SignedOutValue,
 } from "../../components/ui/track-lite";
 import {
   type ApiFailure,
@@ -128,9 +128,7 @@ export function AcceptInvitation() {
           You're invited as {email}. Your username and email can't be changed later.
         </SignedOutHeading>
         <SignedOutFields>
-          <FactList>
-            <Fact label="Email">{email}</Fact>
-          </FactList>
+          <SignedOutValue label="Email">{email}</SignedOutValue>
           <Field
             label="Full name"
             error={fieldErrors.fullName}>
@@ -145,7 +143,11 @@ export function AcceptInvitation() {
           </Field>
           <Field
             label="Username"
-            help="2 to 20 lowercase letters, digits or hyphens. Used for @mentions."
+            help={
+              <>
+                <Mono>2</Mono> to <Mono>20</Mono> lowercase letters, digits or hyphens. Used for @mentions.
+              </>
+            }
             error={fieldErrors.username}>
             {(props) => (
               <Input
@@ -158,7 +160,11 @@ export function AcceptInvitation() {
           </Field>
           <Field
             label="Password"
-            help="12 to 128 characters. Spaces count."
+            help={
+              <>
+                <Mono>12</Mono> to <Mono>128</Mono> characters. Spaces count.
+              </>
+            }
             error={fieldErrors.password}>
             {(props) => (
               <Input

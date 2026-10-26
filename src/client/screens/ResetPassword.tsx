@@ -1,10 +1,11 @@
 import { type FormEvent, useState } from "react";
 import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import {
   Button,
   Field,
   Input,
+  Mono,
   SignedOutForm,
   SignedOutHeading,
   SignedOutAlert,
@@ -72,15 +73,15 @@ export function ResetPassword() {
   if (expiredOnSubmit || lookupFailure?.status === 410) {
     return (
       <SignedOutLayout>
-        <SignedOutHeading title="This link has expired">
-          Reset links work once and expire after 30 minutes.
-        </SignedOutHeading>
-        <Button
-          variant="primary"
-          block
-          onClick={() => navigate("/forgot-password")}>
-          Request a new link
-        </Button>
+        <SignedOutMessage
+          title="This link has expired"
+          text="Reset links work once and expire after 30 minutes.">
+          <Link
+            to="/forgot-password"
+            className="tl-signed-out__link">
+            Request a new link
+          </Link>
+        </SignedOutMessage>
       </SignedOutLayout>
     );
   }
@@ -113,7 +114,11 @@ export function ResetPassword() {
         <SignedOutHeading title="Set a new password" />
         <Field
           label="New password"
-          help="12 to 128 characters. Spaces count."
+          help={
+            <>
+              <Mono>12</Mono> to <Mono>128</Mono> characters. Spaces count.
+            </>
+          }
           error={passwordError}>
           {(props) => (
             <Input

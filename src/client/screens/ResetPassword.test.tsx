@@ -72,7 +72,7 @@ it('REQ-050.9: a link the lookup rejects (410) shows "This link has expired" wit
   expect(await screen.findByRole("heading", { name: "This link has expired" })).toBeTruthy();
   expect(screen.queryByLabelText("New password")).toBeNull();
 
-  fireEvent.click(screen.getByRole("button", { name: "Request a new link" }));
+  fireEvent.click(screen.getByRole("link", { name: "Request a new link" }));
 
   expect(await screen.findByRole("button", { name: "Send link" })).toBeTruthy();
   expect(window.location.pathname).toBe("/forgot-password");

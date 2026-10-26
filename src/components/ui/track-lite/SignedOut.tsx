@@ -84,3 +84,12 @@ export function SignedOutStatus({ children }: { children: ReactNode }) {
     </p>
   );
 }
+
+export function SignedOutValue({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <span className="tl-field__label">{label}</span>
+      <p className="tl-signed-out__value">{children}</p>
+    </div>
+  );
+}
