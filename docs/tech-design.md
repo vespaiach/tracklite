@@ -80,6 +80,7 @@ All email goes through one `sendEmail()` (5.2).
 - Both processes check them at startup and refuse to start if any are missing.
 - Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5). `MAILPIT_HOST` and `MAILPIT_PORT` are optional and default to `localhost` and `8025`.
 - `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.2).
+- A production build (`next build` with `NODE_ENV=production`) loads the route modules, which read the settings, so the build step needs the same settings as the running app, `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` included, or it fails with "Missing environment variables" (found by L03).
 - Tests run against `TEST_DATABASE_URL`, which must differ from `DATABASE_URL`. Before each run its schema is dropped and the migrations applied afresh.
 
 ### 1.7 Browser app (single-page app)
