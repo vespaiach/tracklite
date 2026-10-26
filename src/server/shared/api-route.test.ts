@@ -270,7 +270,7 @@ it("the handler receives the schema's output", async () => {
   const request = postWith(JSON.stringify({ name: "  Website ", key: "web", extra: "dropped" }));
   const response = await apiRoute("public", NewThing, handler)(request);
   expect(response.status).toBe(204);
-  expect(handler).toHaveBeenCalledWith(request, { name: "Website", key: "WEB" });
+  expect(handler).toHaveBeenCalledWith(request, { name: "Website", key: "WEB" }, expect.any(Function));
 });
 
 it("STD-1: a signed-out request with an invalid body gets 401", async () => {

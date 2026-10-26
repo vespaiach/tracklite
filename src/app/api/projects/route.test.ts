@@ -79,6 +79,24 @@ it("REQ-009.1, REQ-009.2, REQ-009.5, REQ-046.2, REQ-046.4: an admin creates a pr
   expect(listed).toContainEqual({ key: described.key, name: "Website", archivedAt: null });
 });
 
+it("REQ-015.1: projects Website, API and Mobile are listed as API, Mobile, Website", async () => {
+  const memberCookie = await signedIn("member");
+  const created = [
+    await createProject({ name: "Website" }),
+    await createProject({ name: "API" }),
+    await createProject({ name: "Mobile" }),
+  ];
+  const keys = new Set<string>(created.map((project) => project.key));
+
+  const listed = await listWith(memberCookie, false);
+
+  expect(listed.filter((project) => keys.has(project.key)).map((project) => project.name)).toEqual([
+    "API",
+    "Mobile",
+    "Website",
+  ]);
+});
+
 it("REQ-009.3: a key used by an active project, or one that has since been deleted, is refused", async () => {
   const adminCookie = await signedIn("admin");
   const active = await createProject();

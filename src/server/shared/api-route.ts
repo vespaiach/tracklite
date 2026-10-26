@@ -79,15 +79,16 @@ function withRequiredMessages(issues: ValidationIssues) {
 type ValidationIssues = [v.BaseIssue<unknown>, ...v.BaseIssue<unknown>[]];
 type Outcome = { response: Response; failure?: string };
 type Caller = { username?: string; renewedCookie?: string };
+type NameActor = (username: string) => void;
 type Handler<Args extends unknown[]> = (...args: Args) => Response | Promise<Response>;
 type AnyHandler = Handler<never[]>;
 type Route = (request: Request) => Promise<Response>;
 
-export function apiRoute(access: "public", handler: Handler<[Request]>): Route;
+export function apiRoute(access: "public", handler: Handler<[Request, NameActor]>): Route;
 export function apiRoute<Schema extends v.GenericSchema>(
   access: "public",
   schema: Schema,
-  handler: Handler<[Request, v.InferOutput<Schema>]>,
+  handler: Handler<[Request, v.InferOutput<Schema>, NameActor]>,
 ): Route;
 export function apiRoute(access: "member", handler: Handler<[Request, Member]>): Route;
 export function apiRoute<Schema extends v.GenericSchema>(
@@ -108,7 +109,12 @@ export function apiRoute(
   const respond = async (request: Request, caller: Caller) => {
     if (isCrossSiteWrite(request)) throw new ApiError(403, "You don't have permission to do that.");
 
-    if (access === "public") return handler(request, ...(await inputOf(request)));
+    if (access === "public") {
+      const nameActor: NameActor = (username) => {
+        caller.username = username;
+      };
+      return handler(request, ...(await inputOf(request)), nameActor);
+    }
 
     const session = await requireMember(request);
     caller.username = session.member.username;
