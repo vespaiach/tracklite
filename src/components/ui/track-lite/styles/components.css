@@ -1393,7 +1393,7 @@ a.tl-rail-item {
   cursor: pointer;
 }
 .tl-list-group__head:hover {
-  background: var(--bg-hover);
+  background: var(--bg-selected);
 }
 .tl-list-group__head:focus-visible {
   outline: none;
@@ -1427,19 +1427,21 @@ a.tl-rail-item {
   align-items: center;
   gap: 16px;
   flex-shrink: 0;
-  height: 32px;
+  height: 30px;
   padding: 0 16px;
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline-strong);
   font-family: var(--font-text);
-  font-size: var(--ui-sm-size);
+  font-size: var(--eyebrow-size);
   font-weight: 500;
+  letter-spacing: var(--eyebrow-ls);
+  text-transform: uppercase;
   color: var(--ink-subtle);
 }
 fieldset.tl-list-head {
   min-width: 0;
   margin: 0;
   border: 0;
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline-strong);
 }
 .tl-list-head > :last-child {
   justify-self: end;
