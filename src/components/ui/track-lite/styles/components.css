@@ -1885,8 +1885,10 @@ fieldset.tl-list-head {
 .tl-issue-layout__foot time {
   font-family: var(--font-mono);
 }
-.tl-issue-layout__foot .tl-btn--quiet {
-  margin-left: -10px;
+.tl-issue-layout__foot .tl-btn--secondary,
+.tl-issue-layout__foot .tl-btn--secondary:not(:disabled):hover {
+  color: var(--danger);
+  border-color: var(--danger);
 }
 @container (max-width: 859px) {
   .tl-issue-layout__grid {
@@ -1988,6 +1990,10 @@ fieldset.tl-list-head {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+.tl-meta__value > .react-aria-Select {
+  flex: 1;
+  min-width: 0;
 }
 .tl-pick {
   display: flex;
@@ -2302,9 +2308,8 @@ fieldset.tl-list-head {
 .tl-comment__head b {
   font-weight: 500;
 }
-.tl-comment__dot {
+.tl-comment__head .tl-feed-time {
   margin-left: auto;
-  color: var(--ink-tertiary);
 }
 .tl-comment__edited {
   font-family: var(--font-mono);

@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router";
 import {
@@ -548,10 +549,10 @@ function DeleteIssue({ issue, projectHref }: { issue: Issue; projectHref: string
   return (
     <div>
       <Button
-        variant="quiet"
         size="sm"
         aria-haspopup="dialog"
         onClick={() => setConfirming(true)}>
+        <Trash2 size={14} />
         Delete issue…
       </Button>
       {confirming && (

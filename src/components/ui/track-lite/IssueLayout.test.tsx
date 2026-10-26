@@ -4,7 +4,7 @@ import { Comment, EditorNotice, IssueEmpty, IssueLayout, IssueTitleInput } from 
 
 afterEach(cleanup);
 
-it("Comment shows “Name · time”, the edited mark and its actions in the head; IssueTitleInput is a wrapping text area that carries its error state", () => {
+it("Comment shows the name, time, the edited mark and its actions in the head; IssueTitleInput is a wrapping text area that carries its error state", () => {
   render(
     <>
       <Comment
@@ -27,7 +27,7 @@ it("Comment shows “Name · time”, the edited mark and its actions in the hea
 
   const comment = screen.getByRole("article");
   const head = comment.querySelector(".tl-comment__head") as HTMLElement;
-  expect(head.textContent).toBe("SLSam Lee·2 days ago(edited)Comment options");
+  expect(head.textContent).toBe("SLSam Lee2 days ago(edited)Comment options");
   expect(head.lastElementChild?.classList.contains("tl-comment__actions")).toBe(true);
   expect(comment.querySelector(".tl-prose")).toBeNull();
   expect(screen.getByText("Console output").tagName).toBe("P");
