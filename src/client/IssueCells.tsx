@@ -1,5 +1,5 @@
-import { Pill } from "../components/ui/track-lite";
-import type { IssueLabel } from "./api";
+import { Avatar, AvatarStack, Pill } from "../components/ui/track-lite";
+import type { IssueLabel, MemberSummary } from "./api";
 import { formatExact, formatUpdated } from "./dates";
 
 const labelsShown = 2;
@@ -40,5 +40,31 @@ export function UpdatedAt({ at }: { at: string }) {
       title={`Updated ${formatExact(at)}`}>
       {formatUpdated(at)}
     </time>
+  );
+}
+
+export function memberName(member: MemberSummary) {
+  return member.deactivated ? `${member.fullName} (deactivated)` : member.fullName;
+}
+
+export function assignedTo(assignees: MemberSummary[]) {
+  return assignees.length > 0 ? `assigned to ${assignees.map(memberName).join(", ")}` : "unassigned";
+}
+
+export function Assignees({ assignees, me }: { assignees: MemberSummary[]; me?: string }) {
+  return (
+    <span className="tl-list-row__end">
+      {assignees.length > 0 ? (
+        <AvatarStack
+          members={assignees}
+          me={me}
+        />
+      ) : (
+        <Avatar
+          empty
+          title="Unassigned"
+        />
+      )}
+    </span>
   );
 }

@@ -4,7 +4,7 @@
 |---|---|
 | Version | v1.0 |
 | Date | 2026-10-25 |
-| Inputs | [`tracklite-spec.md`](tracklite-spec.md) (v0.34) · [`tech-design.md`](tech-design.md) · [`design-system.md`](design-system.md) · Claude Design export "Tracklite project setup" (2026-10-25, Docket design system) |
+| Inputs | [`tracklite-spec.md`](tracklite-spec.md) (v0.35) · [`tech-design.md`](tech-design.md) · [`design-system.md`](design-system.md) · Claude Design export "Tracklite project setup" (2026-10-25, Docket design system) |
 | Checks | `npm run lint` → `npm run typecheck` → `npm test` |
 
 The backlog of open work. `/dooo` runs it top to bottom: it takes the first ⬜ row whose dependencies are ✅, does it in one PR, merges it and moves on until every row is ✅.

@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { apiError, mockApi, renderAppAt, requestsTo, sam } from "../../test/client-app";
+import { alex, apiError, memberOf, mockApi, renderAppAt, requestsTo, sam } from "../../test/client-app";
 import type { IssueLabel, MyIssue, MyIssueGroup } from "../api";
 import { formatExact } from "../dates";
 
@@ -25,7 +25,7 @@ function mine(id: string, title: string, overrides: Partial<MyIssue> = {}): MyIs
     title,
     projectName: id.startsWith("API") ? "API" : "Website",
     priority: "medium",
-    assignees: [],
+    assignees: [memberOf(sam)],
     labels: [],
     updatedAt: minutesAgo(5),
     ...overrides,
@@ -61,6 +61,7 @@ const defaultGroups = [
   group("in_progress", [
     mine("WEB-42", "Fix login button", {
       priority: "high",
+      assignees: [memberOf(alex), memberOf(sam)],
       labels: labels("bug", "frontend", "Safari"),
       updatedAt,
     }),
@@ -68,7 +69,7 @@ const defaultGroups = [
   ]),
 ];
 
-it("REQ-041.1, REQ-042, REQ-042.2: groups in status order with no empty groups and a total; a row shows its cells; clicking opens the issue", async () => {
+it("REQ-041.1, REQ-041.7, REQ-042, REQ-042.2: groups in status order with no empty groups and a total; a row shows its cells; clicking opens the issue", async () => {
   mockMyIssues(() => defaultGroups);
   renderAppAt("/my-issues");
 
@@ -84,13 +85,15 @@ it("REQ-041.1, REQ-042, REQ-042.2: groups in status order with no empty groups a
   expect(screen.getByText("Sorted by priority, then most recently updated.")).toBeTruthy();
 
   const link = screen.getByRole("link", {
-    name: `WEB-42, Fix login button, High, Website, updated ${formatExact(updatedAt)}`,
+    name: `WEB-42, Fix login button, High, Website, assigned to Alex Kim, Sam Lee, updated ${formatExact(updatedAt)}`,
   });
   expect(link.getAttribute("href")).toBe("/issue/WEB-42");
   const row = within(link);
   expect(row.getByText("Fix login button").getAttribute("title")).toBe("Fix login button");
   expect(row.getByText("Website").getAttribute("title")).toBe("Website");
   expect(row.getByTitle("High")).toBeTruthy();
+  expect(row.getByTitle("Alex Kim, Sam Lee").textContent).toBe("AKSL");
+  expect(row.getByText("SL").className).toBe("tl-avatar tl-avatar--md tl-avatar--accent");
   expect(row.getByText("bug")).toBeTruthy();
   expect(row.getByText("frontend")).toBeTruthy();
   expect(row.queryByText("Safari")).toBeNull();
