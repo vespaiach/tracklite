@@ -49,7 +49,7 @@ import { useShowLoading } from "../useShowLoading";
 const labelsShown = 3;
 const closedStatuses: IssueStatus[] = ["done", "canceled"];
 const issueType = "application/x-tracklite-issue";
-const cardLayout: ListLayoutOptions = { estimatedRowSize: 80, gap: 7, padding: 7, dropIndicatorThickness: 7 };
+const cardLayout: ListLayoutOptions = { estimatedRowSize: 80, gap: 8, padding: 4, dropIndicatorThickness: 8 };
 
 export function BoardView({ project }: { project: ProjectSummary }) {
   const query = useBoardQuery(project.key);
