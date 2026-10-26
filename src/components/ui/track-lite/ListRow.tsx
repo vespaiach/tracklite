@@ -260,6 +260,7 @@ export function BoardEmpty({ children, action, onAction }: BoardEmptyProps) {
 export type BoardCardProps = {
   id: string;
   title: string;
+  label?: string;
   href: string;
   onOpen?: (event: MouseEvent<HTMLAnchorElement>) => void;
   handle?: ReactNode;
@@ -274,6 +275,7 @@ export type BoardCardProps = {
 export function BoardCard({
   id,
   title,
+  label,
   href,
   onOpen,
   handle,
@@ -287,7 +289,8 @@ export function BoardCard({
   const titleId = useId();
   return (
     <article
-      aria-labelledby={titleId}
+      aria-label={label}
+      aria-labelledby={label ? undefined : titleId}
       className={cx(
         "tl-board-card",
         menu && "tl-board-card--menu",

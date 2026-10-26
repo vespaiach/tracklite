@@ -115,7 +115,7 @@ function column(name: string) {
 }
 
 function cardIn(columnName: string, title: string) {
-  return within(column(columnName)).getByRole("article", { name: title });
+  return within(column(columnName)).getByRole("article", { name: (name) => name.startsWith(`${title}, `) });
 }
 
 function titlesIn(columnName: string) {
@@ -208,6 +208,28 @@ it("REQ-024.1, REQ-025.1, REQ-025.2: columns in order with counts; a card shows 
   const web12Card = cardIn("Backlog", "Tidy up footer links");
   expect(within(web12Card).queryByRole("img", { name: /urgent|high|medium|med|low|none/ })).toBeNull();
   expect(web12Card.querySelector(".tl-avatar")).toBeNull();
+});
+
+const fiveAssignees = [
+  memberOf(alex),
+  { username: "jo", fullName: "Jo Park", initials: "JP", deactivated: true },
+  { username: "max", fullName: "Max Ito", initials: "MI", deactivated: false },
+  { username: "nina", fullName: "Nina Shah", initials: "NS", deactivated: false },
+  memberOf(sam),
+];
+
+it("REQ-025.3, REQ-025.2: a card with 5 assignees shows 3 avatars and +2 and its name reads every assignee; an unassigned card's name says so", async () => {
+  const web33 = card("WEB-33", "Rework the sign-up flow", { assignees: fiveAssignees });
+  mockBoard({ columns: board({ backlog: [web33, web12] }) });
+  renderAppAt("/project/WEB");
+
+  const web33Card = await screen.findByRole("article", {
+    name: "Rework the sign-up flow, assigned to Alex Kim, Jo Park (deactivated), Max Ito, Nina Shah, Sam Lee",
+  });
+  const avatars = [...web33Card.querySelectorAll(".tl-avatar")].map((avatar) => avatar.textContent);
+  expect(avatars).toEqual(["AK", "JP", "MI"]);
+  expect(within(web33Card).getByText("+2")).toBeTruthy();
+  expect(screen.getByRole("article", { name: "Tidy up footer links, unassigned" })).toBeTruthy();
 });
 
 it("REQ-029.1: + on In Review creates the issue in In Review and opens it", async () => {

@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.34"
+version: "0.35"
 release: "R1"
 status: Ready to build
 updated: "2026-10-26"
@@ -444,7 +444,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-041.5: Sam is assigned 300 open issues → all 300 are on the page, grouped.
   - REQ-041.6: Alex removes Sam from `WEB-42` and adds themselves while Sam has the page open → `WEB-42` stays listed until Sam reloads; opening it shows Alex as assignee. (Verify: manual)
   - REQ-041.7: `WEB-42` is assigned to Sam and Alex → it's in both Sam's and Alex's My issues.
-- **REQ-042** Each row shall show the issue ID, title, project name, priority, labels and last updated; a title or project name too long for one line is cut off with "…" and shown in full on hover. Rows in a group sort by priority from Urgent down, then most recently updated. R1 has no filtering, search or manual ordering here.
+- **REQ-042** Each row shall show the issue ID, title, project name, priority, labels, assignees (as REQ-025, so co-assignees are visible) and last updated; a title or project name too long for one line is cut off with "…" and shown in full on hover. Rows in a group sort by priority from Urgent down, then most recently updated. R1 has no filtering, search or manual ordering here.
   - REQ-042.1: In Progress holds `WEB-3` (Low) and `API-9` (Urgent) → `API-9` comes first.
   - REQ-042.2: Sam clicks `WEB-42` → the issue opens.
   - REQ-042.3: A 200-character title → one line ending in "…"; hovering shows the full title. (Verify: manual)
@@ -750,6 +750,7 @@ Deploys, rollbacks, backups, log retention and uptime monitoring are part of the
 
 **Changelog**
 
+- **0.35 (2026-10-26):** My issues rows show the assignee stack (REQ-042), so a member sees who shares an issue (REQ-041.7). Board cards, list rows and My issues rows name every assignee in their accessible name ("assigned to Alex Kim, Nina Shah", or "unassigned").
 - **0.34 (2026-10-26):** Multiple assignees (owner decision, 2026-10-25; no maximum, owner decision, 2026-10-26). An issue has any number of assignees: REQ-019 (new REQ-019.3 to REQ-019.6), REQ-016 (New issue can set assignees, new REQ-016.6), REQ-025 (an avatar stack of up to 3 and "+N", new REQ-025.3), REQ-037 (the Assignee filter matches any assignee, new REQ-037.6), REQ-041 (new REQ-041.7), REQ-043 (each newly added assignee is emailed, new REQ-043.4), REQ-045 (dropped when the recipient is removed), REQ-007.2, REQ-008.2, STD-8 (the assignee set is one field) and section 8.
 - **0.33 (2026-10-25):** Editorial; no behaviour changes. Examples are automated unless marked, so `(Verify: auto)` is dropped. Empty "Exceptions to standard behaviors" lines, the section 4 table and changelog entries before 0.30 are condensed. Rule wording tightened.
 - **0.32 (2026-10-23):** From the design refresh (C2). Project details shows the open-issue count, the count per status and "Created {date} by {name}" (REQ-046, new REQ-046.3 and REQ-046.4). A project now records the admin who created it (section 8); projects created earlier show only the date.

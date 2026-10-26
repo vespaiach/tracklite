@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { alex, memberOf, mockApi, project, renderAppAt, requestsTo, sam } from "../../test/client-app";
-import type { IssueLabel, IssueListPage, Label, ListIssue, Me, Project } from "../api";
+import type { IssueLabel, IssueListPage, Label, ListIssue, Me, MemberSummary, Project } from "../api";
 import { formatExact } from "../dates";
 
 afterEach(() => {
@@ -61,7 +61,10 @@ const web12 = row("WEB-12", "Tidy up footer links", {
   assignees: [],
   updatedAt: "2026-09-16T12:00:00.000Z",
 });
-const web7 = row("WEB-7", "Add password rules to the reset form", { assignees: [memberOf(jo)] });
+const nina: MemberSummary = { username: "nina", fullName: "Nina Shah", initials: "NS", deactivated: false };
+const web7 = row("WEB-7", "Add password rules to the reset form", {
+  assignees: [memberOf(alex), memberOf(jo), memberOf(kim), nina, memberOf(sam)],
+});
 
 function page(issues: ListIssue[], overrides: Partial<IssueListPage> = {}): IssueListPage {
   return { issues, hasMore: false, deactivatedAssignees: [memberOf(jo)], ...overrides };
@@ -254,7 +257,7 @@ it("REQ-037.4: nothing matches → Clear filters, which clears the filters and t
   await waitFor(() => expect(rowIds()).toEqual(["WEB-42", "WEB-12", "WEB-7"]));
 });
 
-it("REQ-039, REQ-036.4: default columns and row cells; newest-updated first; ID starts highest first, Status from Backlog", async () => {
+it("REQ-039, REQ-036.4, REQ-025.3: default columns and row cells; 5 assignees show 3 avatars and +2; newest-updated first; ID starts highest first, Status from Backlog", async () => {
   mockList();
   renderAppAt("/project/WEB/list");
 
@@ -263,7 +266,7 @@ it("REQ-039, REQ-036.4: default columns and row cells; newest-updated first; ID 
 
   const r42 = rowOf("WEB-42");
   expect(r42.getAttribute("aria-label")).toBe(
-    `WEB-42, Fix login button, In Progress, High, Sam Lee, updated ${formatExact(web42.updatedAt)}`,
+    `WEB-42, Fix login button, In Progress, High, assigned to Sam Lee, updated ${formatExact(web42.updatedAt)}`,
   );
   expect(r42.getAttribute("href")).toBe("/issue/WEB-42");
   expect(within(r42).getByText("Fix login button").getAttribute("title")).toBe("Fix login button");
@@ -279,9 +282,19 @@ it("REQ-039, REQ-036.4: default columns and row cells; newest-updated first; ID 
   const r12 = rowOf("WEB-12");
   expect(within(r12).getByText("No priority")).toBeTruthy();
   expect(within(r12).getByTitle("Unassigned").textContent).toBe("");
+  expect(r12.getAttribute("aria-label")).toContain(", No priority, unassigned, updated ");
   expect(within(r12).getByText(/^Sep 16/)).toBeTruthy();
 
-  expect(within(rowOf("WEB-7")).getByTitle("Jo Park (deactivated)")).toBeTruthy();
+  const r7 = rowOf("WEB-7");
+  const everyone = "Alex Kim, Jo Park (deactivated), Kim Wu (deactivated), Nina Shah, Sam Lee";
+  expect(r7.getAttribute("aria-label")).toContain(`, assigned to ${everyone}, `);
+  const stack = within(r7).getByTitle(everyone);
+  expect([...stack.querySelectorAll(".tl-avatar")].map((avatar) => avatar.textContent)).toEqual([
+    "AK",
+    "JP",
+    "KW",
+  ]);
+  expect(within(stack).getByText("+2")).toBeTruthy();
 
   sortBy("ID");
   await waitFor(() => expect(window.location.search).toBe("?sort=id&dir=desc"));
@@ -334,7 +347,7 @@ it("REQ-036.1: 120 issues → 100 rows, and the other 20 load on scrolling down"
   expect(screen.queryByText("Loading more…")).toBeNull();
 });
 
-it("REQ-037.2, REQ-037.5: the Assignee filter offers Unassigned, active members and Jo Park (deactivated)", async () => {
+it("REQ-037.2, REQ-037.5, REQ-037.6: the Assignee filter offers Unassigned, active members and Jo Park (deactivated), and sends every chosen member", async () => {
   const fetchMock = mockList();
   renderAppAt("/project/WEB/list");
   await screen.findByRole("main", { name: "Issues" });
@@ -351,6 +364,8 @@ it("REQ-037.2, REQ-037.5: the Assignee filter offers Unassigned, active members 
   await waitFor(() => expect(window.location.search).toBe("?assignee=-&assignee=jo"));
   expect(ruleText("Assignee")).toBe("Assigneeis any ofUnassigned, Jo Park (deactivated)×");
   await waitFor(() => expect(listQueries(fetchMock)).toContain("?assignee=-&assignee=jo"));
+  fireEvent.click(within(listbox).getByRole("option", { name: "Alex Kim" }));
+  await waitFor(() => expect(listQueries(fetchMock)).toContain("?assignee=-&assignee=jo&assignee=alex"));
 });
 
 it("List — empty project: “Create one.” opens New issue", async () => {

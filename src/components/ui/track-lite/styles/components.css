@@ -1676,6 +1676,15 @@ fieldset.tl-list-head {
 .tl-board-card--assignee {
   --tl-board-card-end: 36px;
 }
+.tl-board-card--assignee:has(.tl-avstack > .tl-avatar:nth-child(2)) {
+  --tl-board-card-end: 50px;
+}
+.tl-board-card--assignee:has(.tl-avstack > .tl-avatar:nth-child(3)) {
+  --tl-board-card-end: 64px;
+}
+.tl-board-card--assignee:has(.tl-avstack > .tl-avatar:nth-child(3) ~ .tl-avstack__more) {
+  --tl-board-card-end: 86px;
+}
 .tl-board-card__act {
   position: absolute;
   z-index: 1;

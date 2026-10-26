@@ -20,7 +20,6 @@ import {
 } from "../../components/ui/track-lite";
 import {
   type ListIssue,
-  type MemberSummary,
   type ProjectSummary,
   useIssueListInfiniteQuery,
   useLabelsQuery,
@@ -28,7 +27,7 @@ import {
   useMembersQuery,
 } from "../api";
 import { formatExact } from "../dates";
-import { LabelPills, UpdatedAt } from "../IssueCells";
+import { Assignees, assignedTo, LabelPills, memberName, UpdatedAt } from "../IssueCells";
 import { issuePriorities, issueStatuses } from "../../contract";
 import { priorities, statuses } from "../issue-fields";
 import { useRouterClick } from "../links";
@@ -49,7 +48,7 @@ const filterNames: Record<FilterParam, string> = {
   label: "Label",
 };
 const firstDir: Record<SortColumn, SortDir> = { id: "desc", status: "asc", priority: "asc", updated: "desc" };
-const columns = "64px minmax(240px, 1fr) 110px 100px minmax(0, 160px) 24px 110px";
+const columns = "64px minmax(240px, 1fr) 110px 100px minmax(0, 160px) 72px 110px";
 const unassigned = "-";
 const searchPause = 300;
 
@@ -59,10 +58,6 @@ function isSortColumn(value: string | null): value is SortColumn {
 
 function sameValue(a: string, b: string) {
   return a.toLowerCase() === b.toLowerCase();
-}
-
-function memberName(member: MemberSummary) {
-  return member.deactivated ? `${member.fullName} (deactivated)` : member.fullName;
 }
 
 function byName(a: { name: string }, b: { name: string }) {
@@ -286,7 +281,7 @@ export function ListView({ project }: { project: ProjectSummary }) {
               <IssueRow
                 key={issue.id}
                 issue={issue}
-                mine={me !== undefined && issue.assignees[0]?.username === me.username}
+                me={me?.username}
               />
             ))}
             {issues.length === 0 && (
@@ -359,17 +354,16 @@ function AssigneeAvatar({ initials }: { initials: string }) {
   );
 }
 
-function IssueRow({ issue, mine }: { issue: ListIssue; mine: boolean }) {
+function IssueRow({ issue, me }: { issue: ListIssue; me?: string }) {
   const href = `/issue/${issue.id}`;
   const open = useRouterClick(href);
   const { name: statusName, kind: statusKind } = statuses[issue.status];
   const { name: priorityName, kind: priorityKind } = priorities[issue.priority];
-  const assigneeName = issue.assignees[0] ? memberName(issue.assignees[0]) : "Unassigned";
   return (
     <ListRowLink
       columns={columns}
       href={href}
-      label={`${issue.id}, ${issue.title}, ${statusName}, ${priorityName}, ${assigneeName}, updated ${formatExact(issue.updatedAt)}`}
+      label={`${issue.id}, ${issue.title}, ${statusName}, ${priorityName}, ${assignedTo(issue.assignees)}, updated ${formatExact(issue.updatedAt)}`}
       onClick={open}>
       <span className="tl-list-row__id">{issue.id}</span>
       <span
@@ -395,12 +389,9 @@ function IssueRow({ issue, mine }: { issue: ListIssue; mine: boolean }) {
         labels={issue.labels}
         className="tl-list-row__labels"
       />
-      <Avatar
-        size="md"
-        empty={!issue.assignees[0]}
-        tone={mine ? "accent" : "neutral"}
-        initials={issue.assignees[0]?.initials}
-        title={assigneeName}
+      <Assignees
+        assignees={issue.assignees}
+        me={me}
       />
       <UpdatedAt at={issue.updatedAt} />
     </ListRowLink>

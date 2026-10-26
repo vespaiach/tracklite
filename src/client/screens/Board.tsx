@@ -15,7 +15,7 @@ import {
   Virtualizer,
 } from "react-aria-components";
 import {
-  Avatar,
+  AvatarStack,
   BoardCard,
   BoardColumn,
   BoardDrop,
@@ -40,6 +40,7 @@ import {
   useMoveIssueMutation,
 } from "../api";
 import { issueStatuses } from "../../contract";
+import { assignedTo } from "../IssueCells";
 import { priorities, statuses } from "../issue-fields";
 import { LoadFailed, Loading } from "../LoadStates";
 import { useRouterClick } from "../links";
@@ -218,6 +219,7 @@ function IssueCard({ card, status, first, last, archived, dragging }: IssueCardP
     <BoardCard
       id={card.id}
       title={card.title}
+      label={`${card.title}, ${assignedTo(card.assignees)}`}
       href={href}
       onOpen={open}
       closed={closedStatuses.includes(status)}
@@ -233,12 +235,10 @@ function IssueCard({ card, status, first, last, archived, dragging }: IssueCardP
       }
       priority={card.priority !== "none" && <Priority priority={priorityKind} />}
       assignee={
-        card.assignees[0] && (
-          <Avatar
-            size="md"
-            tone={card.assignees[0].username === me?.username ? "accent" : "neutral"}
-            initials={card.assignees[0].initials}
-            title={card.assignees[0].fullName}
+        card.assignees.length > 0 && (
+          <AvatarStack
+            members={card.assignees}
+            me={me?.username}
           />
         )
       }

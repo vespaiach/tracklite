@@ -11,15 +11,15 @@ import {
   SettingsLayout,
   Status,
 } from "../../components/ui/track-lite";
-import { type IssueStatus, type MyIssue, type MyIssueGroup, useMyIssuesQuery } from "../api";
+import { type IssueStatus, type MyIssue, type MyIssueGroup, useMeQuery, useMyIssuesQuery } from "../api";
 import { formatExact } from "../dates";
-import { LabelPills, UpdatedAt } from "../IssueCells";
+import { Assignees, assignedTo, LabelPills, UpdatedAt } from "../IssueCells";
 import { priorities, statuses } from "../issue-fields";
 import { useRouterClick } from "../links";
 import { LoadFailed, Loading } from "../LoadStates";
 import { useShowLoading } from "../useShowLoading";
 
-const columns = "14px 64px minmax(240px, 1fr) minmax(100px, 140px) minmax(0, 180px) 100px";
+const columns = "14px 64px minmax(240px, 1fr) minmax(100px, 140px) minmax(0, 180px) 72px 100px";
 
 const collapsedStatuses: IssueStatus[] = ["done", "canceled"];
 
@@ -72,6 +72,7 @@ function IssueGroups({ groups }: { groups: MyIssueGroup[] }) {
         <span>Title</span>
         <span>Project</span>
         <span>Labels</span>
+        <span />
         <span>Updated</span>
       </ListRowHead>
       <main
@@ -119,12 +120,13 @@ function IssueGroup({ group, next }: { group: MyIssueGroup; next?: IssueStatus }
 function IssueRow({ issue }: { issue: MyIssue }) {
   const href = `/issue/${issue.id}`;
   const open = useRouterClick(href);
+  const { data: me } = useMeQuery();
   const { name: priorityName, kind: priorityKind } = priorities[issue.priority];
   return (
     <ListRowLink
       columns={columns}
       href={href}
-      label={`${issue.id}, ${issue.title}, ${priorityName}, ${issue.projectName}, updated ${formatExact(issue.updatedAt)}`}
+      label={`${issue.id}, ${issue.title}, ${priorityName}, ${issue.projectName}, ${assignedTo(issue.assignees)}, updated ${formatExact(issue.updatedAt)}`}
       onClick={open}>
       <span
         className="tl-list-row__prio"
@@ -145,6 +147,10 @@ function IssueRow({ issue }: { issue: MyIssue }) {
       <LabelPills
         labels={issue.labels}
         className="tl-list-row__labels"
+      />
+      <Assignees
+        assignees={issue.assignees}
+        me={me?.username}
       />
       <UpdatedAt at={issue.updatedAt} />
     </ListRowLink>
