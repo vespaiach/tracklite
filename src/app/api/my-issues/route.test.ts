@@ -3,7 +3,7 @@ import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../server/shared/db";
 import { issues } from "../../../server/issues";
-import { createSession } from "../../../server/identity";
+import { createSession, memberSummary } from "../../../server/identity";
 import { createIssue, createLabel, createMember, createProject } from "../../../test/factories";
 import { jsonRequest } from "../../../test/reset-links";
 import { PATCH as patchProject } from "../projects/[key]/route";
@@ -15,6 +15,7 @@ type MyIssueRow = {
   title: string;
   projectName: string;
   priority: string;
+  assignees: unknown[];
   labels: unknown[];
   updatedAt: string;
 };
@@ -177,6 +178,7 @@ it("REQ-041: a row carries id, title, project name, priority, labels (sorted by 
       title: "Fix login button",
       projectName: "Website",
       priority: "high",
+      assignees: [memberSummary(sam)],
       labels: [
         { id: bug.id, name: "Bug", color: "red" },
         { id: frontend.id, name: "frontend", color: "blue" },

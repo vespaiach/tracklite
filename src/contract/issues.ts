@@ -40,7 +40,7 @@ export type ListIssue = Pick<
 
 export type IssueListPage = { issues: ListIssue[]; hasMore: boolean; deactivatedAssignees: MemberSummary[] };
 
-export type MyIssue = Pick<Issue, "id" | "title" | "priority" | "labels" | "updatedAt"> & {
+export type MyIssue = Pick<Issue, "id" | "title" | "priority" | "assignees" | "labels" | "updatedAt"> & {
   projectName: string;
 };
 

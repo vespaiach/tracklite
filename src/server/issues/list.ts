@@ -236,6 +236,11 @@ export async function getMyIssues(actor: Member): Promise<MyIssueGroup[]> {
 
   const labelRows = await labelsOf(rows.map((row) => row.issueId));
 
+  const assigneeRows = await assigneesOf(
+    db,
+    rows.map((row) => row.issueId),
+  );
+
   return issueStatuses.flatMap((status) => {
     const group = rows
       .filter((row) => row.status === status)
@@ -245,6 +250,7 @@ export async function getMyIssues(actor: Member): Promise<MyIssueGroup[]> {
           title: row.title,
           projectName: row.projectName,
           priority: row.priority,
+          assignees: assigneesFor(assigneeRows, row.issueId),
           labels: labelsFor(labelRows, row.issueId),
           updatedAt: row.updatedAt.toISOString(),
         }),
