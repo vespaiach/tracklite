@@ -589,3 +589,23 @@ it("STD-8: a description changed by someone else keeps your text with Save disab
     { description: "Merged text", descriptionVersion: 1 },
   ]);
 });
+
+it("NFR-007: Edit moves focus into the description editor; Escape and Save return it to Edit", async () => {
+  mockIssue();
+  renderAppAt("/issue/WEB-42");
+
+  const escaping = await editDescription();
+  await waitFor(() => expect(document.activeElement).toBe(escaping));
+  fireEvent.keyDown(escaping, { key: "Escape" });
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Edit description" })),
+  );
+
+  const saving = await editDescription();
+  await waitFor(() => expect(document.activeElement).toBe(saving));
+  fireEvent.change(saving, { target: { value: "New text" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Edit description" })),
+  );
+});

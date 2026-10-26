@@ -52,6 +52,7 @@ import { LoadFailed, Loading } from "../LoadStates";
 import { ProjectGate } from "../ProjectGate";
 import { ProjectHeader } from "../ProjectHeader";
 import { useShowLoading } from "../useShowLoading";
+import { useReturnFocus } from "../useReturnFocus";
 import { NotFound } from "./NotFound";
 
 export function IssuePage() {
@@ -375,6 +376,7 @@ function startDraft({ description, descriptionVersion }: Issue): DescriptionDraf
 
 function Description({ issue, editable }: { issue: Issue; editable: boolean }) {
   const [draft, setDraft] = useState<DescriptionDraft>();
+  const editButton = useReturnFocus<HTMLButtonElement>(draft !== undefined);
   const [updateIssue] = useUpdateIssueMutation();
   const [loadIssue] = useLazyIssueQuery();
 
@@ -389,6 +391,7 @@ function Description({ issue, editable }: { issue: Issue; editable: boolean }) {
         editable &&
         !draft && (
           <Button
+            ref={editButton}
             variant="quiet"
             size="sm"
             aria-label="Edit description"

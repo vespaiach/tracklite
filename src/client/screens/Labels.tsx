@@ -1,5 +1,5 @@
 import { Ellipsis, Plus } from "lucide-react";
-import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent, type Ref, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
 import type { Key } from "react-aria-components";
 import {
@@ -40,6 +40,7 @@ import { useFailureToast } from "../failure";
 import { ProjectGate } from "../ProjectGate";
 import { ProjectHeader } from "../ProjectHeader";
 import { useShowLoading } from "../useShowLoading";
+import { useReturnFocus } from "../useReturnFocus";
 
 type FieldErrors = { name?: string; color?: string };
 
@@ -112,12 +113,7 @@ function LabelsPage({ project }: { project: Project }) {
   const showLoading = useShowLoading(labels.isLoading);
   const canEdit = project.archivedAt === null;
   const [creating, setCreating] = useState(false);
-  const newLabel = useRef<HTMLButtonElement>(null);
-
-  function closeCreate() {
-    setCreating(false);
-    newLabel.current?.focus();
-  }
+  const newLabel = useReturnFocus<HTMLButtonElement>(creating);
 
   return (
     <SettingsLayout medium>
@@ -155,7 +151,7 @@ function LabelsPage({ project }: { project: Project }) {
             {creating && (
               <CreateForm
                 projectKey={project.key}
-                onClose={closeCreate}
+                onClose={() => setCreating(false)}
               />
             )}
             {labels.data.length === 0 ? (
@@ -265,6 +261,7 @@ function LabelRow({ label, canEdit }: { label: Label; canEdit: boolean }) {
   const toastFailure = useFailureToast();
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const actions = useReturnFocus<HTMLButtonElement>(renaming);
 
   async function recolor(color: LabelColor) {
     try {
@@ -295,6 +292,7 @@ function LabelRow({ label, canEdit }: { label: Label; canEdit: boolean }) {
       {canEdit && (
         <SettingsRowActions>
           <LabelActions
+            ref={actions}
             label={label}
             onRename={() => setRenaming(true)}
             onRecolor={recolor}
@@ -313,11 +311,13 @@ function LabelRow({ label, canEdit }: { label: Label; canEdit: boolean }) {
 }
 
 function LabelActions({
+  ref,
   label,
   onRename,
   onRecolor,
   onDelete,
 }: {
+  ref: Ref<HTMLButtonElement>;
   label: Label;
   onRename: () => void;
   onRecolor: (color: LabelColor) => void;
@@ -331,6 +331,7 @@ function LabelActions({
 
   return (
     <Menu
+      ref={ref}
       label={`Actions for ${label.name}`}
       icon={<Ellipsis size={15} />}
       onAction={act}>
@@ -362,6 +363,7 @@ function RenameForm({ label, onClose }: { label: Label; onClose: () => void }) {
   const [error, setError] = useState<string>();
 
   useEffect(() => {
+    nameInput.current?.focus();
     nameInput.current?.select();
   }, []);
 

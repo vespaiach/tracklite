@@ -312,3 +312,37 @@ it("REQ-013.6, STD-9: a refused rename shows the server's message as a toast and
   expect(await screen.findByText("That label no longer exists")).toBeTruthy();
   await waitFor(() => expect(requestsTo(fetchMock, "GET /api/projects/WEB/labels")).toHaveLength(2));
 });
+
+it("NFR-007: New label moves focus into the form; Escape and Create label return it to New label", async () => {
+  mockLabels();
+  renderAppAt("/project/WEB/labels");
+
+  const escaping = await openCreate();
+  await waitFor(() => expect(document.activeElement).toBe(within(escaping).getByLabelText("Name")));
+  fireEvent.keyDown(within(escaping).getByLabelText("Name"), { key: "Escape" });
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "New label" })));
+
+  const saving = await openCreate();
+  fireEvent.change(within(saving).getByLabelText("Name"), { target: { value: "performance" } });
+  fireEvent.click(within(saving).getByRole("button", { name: "Create label" }));
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "New label" })));
+});
+
+it("NFR-007: Rename moves focus into the form; Escape and Save return it to the label's actions", async () => {
+  mockLabels();
+  renderAppAt("/project/WEB/labels");
+
+  const escaping = await openRename("bug");
+  await waitFor(() => expect(document.activeElement).toBe(within(escaping).getByLabelText("Name")));
+  fireEvent.keyDown(within(escaping).getByLabelText("Name"), { key: "Escape" });
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Actions for bug" })),
+  );
+
+  const saving = await openRename("bug");
+  fireEvent.change(within(saving).getByLabelText("Name"), { target: { value: "defect" } });
+  fireEvent.click(within(saving).getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Actions for defect" })),
+  );
+});

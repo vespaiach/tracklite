@@ -1,5 +1,13 @@
 import { ChevronDown, ChevronRight, ChevronUp, Plus } from "lucide-react";
-import { type ComponentProps, type CSSProperties, createContext, type ReactNode, use, useState } from "react";
+import {
+  type ComponentProps,
+  type CSSProperties,
+  createContext,
+  type ReactNode,
+  type Ref,
+  use,
+  useState,
+} from "react";
 import {
   Button as AriaButton,
   Menu as AriaMenu,
@@ -94,6 +102,7 @@ export type MenuProps = {
   children: ReactNode;
   id?: string;
   "aria-describedby"?: string;
+  ref?: Ref<HTMLButtonElement>;
 };
 
 const MenuActionContext = createContext<(key: Key) => void>(() => {});
@@ -108,12 +117,14 @@ export function Menu({
   children,
   id,
   "aria-describedby": describedBy,
+  ref,
 }: MenuProps) {
   const rail = variant === "rail";
   return (
     <MenuActionContext value={onAction}>
       <MenuTrigger>
         <AriaButton
+          ref={ref}
           id={id}
           aria-label={label}
           aria-describedby={describedBy}
