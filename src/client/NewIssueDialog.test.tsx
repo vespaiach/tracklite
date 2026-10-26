@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import {
+  alex,
   apiError,
   issue,
   mockApi,
@@ -21,11 +22,12 @@ type Answer = (body: unknown) => Response | Promise<Response>;
 
 const web = project("WEB", "Website");
 const created = issue({ id: "WEB-1", status: "backlog", priority: "none", assignees: [] });
+const priya = { ...alex, username: "priya", fullName: "Priya Shah", initials: "PS", deactivated: true };
 
 function mockProject({ post }: { post?: Answer } = {}) {
   return mockApi({
     "GET /api/me": () => Response.json(sam),
-    "GET /api/members": () => Response.json([sam]),
+    "GET /api/members": () => Response.json([alex, priya, sam]),
     "GET /api/projects/WEB": () => Response.json(web),
     "POST /api/projects/WEB/issues": post ?? (() => Response.json(created, { status: 201 })),
     "GET /api/issues/WEB-1": () => Response.json(created),
@@ -55,13 +57,40 @@ it("REQ-016.1: creating an issue opens it as Backlog, No priority and unassigned
   const [body] = requestsTo(fetchMock, "POST /api/projects/WEB/issues") as {
     requestId: string;
     title: string;
+    assignees: string[];
   }[];
   expect(body.title).toBe("Fix login button");
+  expect(body.assignees).toEqual([]);
   expect(body.requestId).toMatch(/^[0-9a-f-]{36}$/);
   expect((await screen.findByRole("button", { name: /^Status/ })).textContent).toContain("Backlog");
   expect(screen.getByRole("button", { name: /^Priority/ }).textContent).toContain("No priority");
   expect((await screen.findByRole("button", { name: /^Assignee/ })).textContent).toContain("Unassigned");
   expect(screen.getByText(/Created by Sam Lee/)).toBeTruthy();
+});
+
+it("REQ-016.6: the chosen assignees, from active members only, are sent with the create", async () => {
+  const fetchMock = mockProject();
+  renderAppAt("/project/WEB");
+
+  const dialog = await openDialog();
+  typeTitle(dialog, "Fix login button");
+  fireEvent.click(within(dialog).getByRole("button", { name: /^Assignees/ }));
+  const listbox = await screen.findByRole("listbox", { name: "Assignees" });
+  expect(within(listbox).getAllByRole("option").map((option) => option.getAttribute("data-key"))).toEqual([
+    "alex",
+    "sam",
+  ]);
+  fireEvent.click(within(listbox).getByRole("option", { name: /^Sam Lee/ }));
+  fireEvent.click(within(listbox).getByRole("option", { name: /^Alex Kim/ }));
+  await waitFor(() =>
+    expect(within(dialog).getByRole("button", { name: /^Assignees/ }).textContent).toContain("Alex Kim, Sam Lee"),
+  );
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+
+  await waitFor(() => expect(window.location.pathname).toBe("/issue/WEB-1"));
+  const [body] = requestsTo(fetchMock, "POST /api/projects/WEB/issues") as { assignees: string[] }[];
+  expect(body.assignees).toEqual(["sam", "alex"]);
 });
 
 it("REQ-016.3: a title of only spaces gets Title required and keeps what was typed", async () => {

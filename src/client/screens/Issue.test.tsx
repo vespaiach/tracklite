@@ -240,36 +240,82 @@ it("REQ-018.1: setting the priority to Urgent shows Urgent", async () => {
   expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ priority: "urgent" }]);
 });
 
-it("REQ-019.1, REQ-019.2, REQ-019: assign Alex from Unassigned and active members, filter by name or username, then clear", async () => {
+function assigneesPick() {
+  return screen.findByRole("button", { name: /^Assignees/, hidden: true });
+}
+
+function memberOption(name: string) {
+  return within(screen.getByRole("listbox")).getByRole("option", { name: new RegExp(`^${name}`) });
+}
+
+it("REQ-019.1, REQ-019.2, REQ-019.3, REQ-019.4, REQ-019: each toggle saves the whole set; only active members are listed, filtered by name or username", async () => {
+  const fetchMock = mockIssue({ shown: issue({ assignees: [memberOf(jordan)] }) });
+  renderAppAt("/issue/WEB-42");
+
+  const listbox = await openPicker("Assignees");
+  expect(keysOf(listbox)).toEqual(["alex", "jordan", "sam"]);
+  expect(memberOption("Jordan Diaz").getAttribute("aria-selected")).toBe("true");
+
+  fireEvent.click(memberOption("Alex Kim"));
+  await waitFor(async () => expect((await assigneesPick()).textContent).toContain("Alex Kim, Jordan Diaz"));
+
+  fireEvent.click(memberOption("Alex Kim"));
+  await waitFor(async () => expect((await assigneesPick()).textContent).not.toContain("Alex Kim"));
+
+  const search = screen.getByRole("searchbox", { name: "Filter members" });
+  fireEvent.change(search, { target: { value: "Sam L" } });
+  expect(keysOf(screen.getByRole("listbox"))).toEqual(["sam"]);
+  fireEvent.change(search, { target: { value: "jor" } });
+  expect(keysOf(screen.getByRole("listbox"))).toEqual(["jordan"]);
+
+  fireEvent.click(memberOption("Jordan Diaz"));
+  await waitFor(async () => expect((await assigneesPick()).textContent).toContain("Unassigned"));
+  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([
+    { assignees: ["jordan", "alex"] },
+    { assignees: ["jordan"] },
+    { assignees: [] },
+  ]);
+});
+
+it("REQ-019: Enter in the filter adds the first matching member", async () => {
   const fetchMock = mockIssue({ shown: issue({ assignees: [] }) });
   renderAppAt("/issue/WEB-42");
 
-  const listbox = await openPicker("Assignee");
-  expect(keysOf(listbox)).toEqual(["_unassigned", "alex", "jordan", "sam"]);
-  fireEvent.click(within(listbox).getByRole("option", { name: "Alex Kim" }));
-
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: /^Assignee/ }).textContent).toContain("Alex Kim"),
-  );
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ assignees: ["alex"] }]);
-
-  await openPicker("Assignee");
+  await openPicker("Assignees");
   const search = screen.getByRole("searchbox", { name: "Filter members" });
-  fireEvent.change(search, { target: { value: "jor" } });
-  expect(keysOf(screen.getByRole("listbox"))).toEqual(["_unassigned", "jordan"]);
+  fireEvent.change(search, { target: { value: "jo" } });
+  fireEvent.keyDown(search, { key: "Enter" });
 
-  fireEvent.change(search, { target: { value: "Sam L" } });
-  expect(keysOf(screen.getByRole("listbox"))).toEqual(["_unassigned", "sam"]);
+  await waitFor(async () => expect((await assigneesPick()).textContent).toContain("Jordan Diaz"));
+  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ assignees: ["jordan"] }]);
+});
 
-  fireEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name: "Unassigned" }));
+it("REQ-019.6: a deactivated assignee is shown but not offered, and stays when another member is added", async () => {
+  const fetchMock = mockIssue({ shown: issue({ assignees: [memberOf(priya)] }) });
+  renderAppAt("/issue/WEB-42");
 
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: /^Assignee/ }).textContent).toContain("Unassigned"),
-  );
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([
-    { assignees: ["alex"] },
-    { assignees: [] },
-  ]);
+  expect((await assigneesPick()).textContent).toContain("Priya Shah (deactivated)");
+  const listbox = await openPicker("Assignees");
+  expect(keysOf(listbox)).toEqual(["alex", "jordan", "sam"]);
+  fireEvent.click(memberOption("Jordan Diaz"));
+
+  await waitFor(async () => expect((await assigneesPick()).textContent).toContain("Jordan Diaz"));
+  expect((await assigneesPick()).textContent).toContain("Priya Shah (deactivated)");
+  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ assignees: ["priya", "jordan"] }]);
+});
+
+it("REQ-019.5: a member deactivated meanwhile gets Choose an active member and the assignees are kept", async () => {
+  mockIssue({
+    patch: () => apiError(422, "Check the highlighted fields", { assignees: "Choose an active member" }),
+  });
+  renderAppAt("/issue/WEB-42");
+
+  await openPicker("Assignees");
+  fireEvent.click(memberOption("Jordan Diaz"));
+
+  expect(await screen.findByText("Choose an active member")).toBeTruthy();
+  expect((await assigneesPick()).textContent).toContain("Alex Kim");
+  expect((await assigneesPick()).textContent).not.toContain("Jordan Diaz");
 });
 
 it("STD-9: a failed picker save shows the toast and keeps the old value", async () => {
