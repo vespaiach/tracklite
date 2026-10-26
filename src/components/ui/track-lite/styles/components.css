@@ -1952,7 +1952,6 @@ fieldset.tl-list-head {
   color: inherit;
   resize: none;
   overflow: hidden;
-  field-sizing: content;
 }
 .tl-issue-title--input:hover {
   background: var(--bg-hover);

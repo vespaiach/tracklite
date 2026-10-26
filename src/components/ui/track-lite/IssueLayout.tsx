@@ -1,4 +1,4 @@
-import { type ComponentProps, type ReactNode, useId } from "react";
+import { type ComponentProps, type ReactNode, useId, useLayoutEffect, useRef } from "react";
 import { cx } from "./cx";
 
 export function IssueLayout({ title, main, side }: { title: ReactNode; main: ReactNode; side: ReactNode }) {
@@ -80,13 +80,32 @@ export function IssueTitle({ children }: { children: ReactNode }) {
 }
 
 export function IssueTitleInput({ className, ...rest }: ComponentProps<"textarea">) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    fitHeightToContent(ref.current);
+  });
+
+  useLayoutEffect(() => {
+    const refit = () => fitHeightToContent(ref.current);
+    window.addEventListener("resize", refit);
+    return () => window.removeEventListener("resize", refit);
+  }, []);
+
   return (
     <textarea
       rows={1}
       className={cx("tl-issue-title", "tl-issue-title--input", className)}
       {...rest}
+      ref={ref}
     />
   );
+}
+
+function fitHeightToContent(textarea: HTMLTextAreaElement | null) {
+  if (!textarea) return;
+  textarea.style.height = "auto";
+  textarea.style.height = `${textarea.scrollHeight}px`;
 }
 
 export function Meta({ label, children }: { label: string; children: ReactNode }) {
