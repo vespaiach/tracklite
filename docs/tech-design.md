@@ -586,7 +586,7 @@ Mail is sent from a subdomain, so the app's sending reputation is kept apart fro
 
 Behaviour and copy come from the spec; this section only adds the routes, layout and pages the spec doesn't describe. All components come from the Track Lite design system (`src/components/ui/track-lite/`). Complex widgets use React Aria Components; the kit's `Dialog` also takes `FocusScope` from the lower-level `react-aria` hooks package.
 
-Every R1 screen was designed in one Claude Design project, `claude.ai/design/p/6e969269-fc54-45da-a7fc-f0f764dbc20a`, read with the DesignSync tool. Each screen is a file in it: Signed-out screens, Profile, Accept invitation, Members, Project navigation, Project details, Labels, Issue page, Issue page - labels and description, Board, List, Comments, My issues and Notification status (each `<name>.dc.html`). A change to a screen starts from its file.
+Every R1 screen is designed in the Claude Design export "Tracklite project setup" (2026-10-25, on the Docket design system), kept in `docs/design/`: `Tracklite prototype.dc.html` (one `pg.*` block per screen), `Tracklite states.dc.html` (states you can't reach by clicking), one `Page - <screen>.dc.html` frame per screen, and `tracklite-app.css` (Tracklite markup on Docket tokens). `docs/design/implementation-plan.md` records the design-versus-spec decisions (C1–C21). A change to a screen starts from the export.
 
 ### 6.1 Routes
 
