@@ -69,6 +69,17 @@
 .tl-btn--secondary:not(:disabled):active {
   background: var(--bg-selected);
 }
+.tl-btn--danger-outline {
+  background: var(--surface-1);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.tl-btn--danger-outline:not(:disabled):hover {
+  background: var(--surface-2);
+}
+.tl-btn--danger-outline:not(:disabled):active {
+  background: var(--bg-selected);
+}
 .tl-btn--ghost {
   color: var(--primary);
   padding-left: 6px;
@@ -1887,11 +1898,6 @@ fieldset.tl-list-head {
 .tl-issue-layout__foot time {
   font-family: var(--font-mono);
 }
-.tl-issue-layout__foot .tl-btn--secondary,
-.tl-issue-layout__foot .tl-btn--secondary:not(:disabled):hover {
-  color: var(--danger);
-  border-color: var(--danger);
-}
 @container (max-width: 859px) {
   .tl-issue-layout__grid {
     grid-template-columns: minmax(0, 1fr);
@@ -2892,6 +2898,10 @@ fieldset.tl-list-head {
   width: 900px;
   padding-right: 40px;
 }
+.tl-settings--medium {
+  width: 640px;
+  padding-right: 40px;
+}
 .tl-settings__section {
   display: flex;
   flex-direction: column;
@@ -2899,6 +2909,16 @@ fieldset.tl-list-head {
 }
 .tl-settings__section + .tl-settings__section {
   margin-top: 40px;
+}
+.tl-settings__section.tl-settings__section--ruled {
+  margin-top: 30px;
+  padding-top: 30px;
+  border-top: 1px solid var(--hairline-strong);
+}
+.tl-settings__section--ruled > .tl-field__help {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
 }
 .tl-settings__section-head {
   display: flex;
@@ -3010,6 +3030,9 @@ fieldset.tl-list-head {
   padding-bottom: 0;
   border-top: 1px solid var(--hairline-strong);
 }
+.tl-settings--medium > .tl-settings__form {
+  padding-bottom: 20px;
+}
 .tl-settings__row > .tl-settings__form {
   padding: 7px 0;
 }
@@ -3047,6 +3070,27 @@ fieldset.tl-list-head {
 .tl-fact__value--mono {
   font-family: var(--font-mono);
   font-size: var(--ui-sm-size);
+}
+.tl-facts--stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border-top: 0;
+}
+.tl-facts--stacked .tl-fact {
+  display: block;
+  height: auto;
+  border-bottom: 0;
+}
+.tl-facts--stacked .tl-fact__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+.tl-facts--stacked .tl-fact__value {
+  font-size: 14px;
 }
 .tl-facts__note,
 .tl-form-status {
@@ -3278,6 +3322,9 @@ fieldset.tl-list-head {
 .tl-details__aside {
   font-size: 12px;
   color: var(--ink-subtle);
+}
+.tl-details__aside > .tl-btn--quiet {
+  color: var(--ink);
 }
 .tl-details__note {
   margin: 0;

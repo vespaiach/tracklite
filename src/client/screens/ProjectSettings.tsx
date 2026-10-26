@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router";
@@ -54,21 +55,17 @@ function SettingsPage({ project }: { project: Project }) {
         <Crumbs items={[{ label: full, href: projectHref, onClick: projectClick }, { label: "Settings" }]} />
         {archived && <Tag variant="neutral">Archived</Tag>}
       </AppBar>
-      <SettingsLayout>
-        {archived ? (
-          <FactList>
-            <Fact label="Name">{project.name}</Fact>
-          </FactList>
-        ) : (
-          <RenameForm project={project} />
-        )}
+      <SettingsLayout medium>
+        {!archived && <RenameForm project={project} />}
         <FactList
+          stacked
           note={
             <>
               Issue IDs start with the key, such as{" "}
               <span className="tl-table__mono">{`${project.key}-1`}</span>. It can’t be changed.
             </>
           }>
+          {archived && <Fact label="Name">{project.name}</Fact>}
           <Fact
             label="Key"
             mono>
@@ -153,7 +150,9 @@ function ArchiveSection({ project }: { project: Project }) {
   }
 
   return (
-    <SettingsSection title={action}>
+    <SettingsSection
+      title={action}
+      ruled>
       <p className="tl-field__help">
         {archived
           ? "The project returns to the sidebar and becomes editable again."
@@ -174,14 +173,18 @@ function ArchiveSection({ project }: { project: Project }) {
 function DeleteSection({ project }: { project: Project }) {
   const [confirming, setConfirming] = useState(false);
   return (
-    <SettingsSection title="Delete project">
+    <SettingsSection
+      title="Delete project"
+      ruled>
       <p className="tl-field__help">
         Permanently deletes the project with all its issues and comments. Nothing can be restored.
       </p>
       <SettingsActions>
         <Button
+          variant="danger-outline"
           aria-haspopup="dialog"
           onClick={() => setConfirming(true)}>
+          <Trash2 size={14} />
           Delete project…
         </Button>
       </SettingsActions>

@@ -9,13 +9,13 @@ import {
   FieldError,
   FormStatus,
   Input,
+  IssueEmpty,
   Menu,
   MenuItem,
   MenuSubmenu,
   Pill,
   SettingsActions,
   SettingsCell,
-  SettingsEmpty,
   SettingsForm,
   SettingsInline,
   SettingsLayout,
@@ -120,10 +120,10 @@ function LabelsPage({ project }: { project: Project }) {
   }
 
   return (
-    <SettingsLayout wide>
+    <SettingsLayout medium>
       <SettingsSection
         title="Labels"
-        status={
+        action={
           canEdit &&
           labels.data &&
           !creating && (
@@ -160,11 +160,11 @@ function LabelsPage({ project }: { project: Project }) {
             )}
             {labels.data.length === 0 ? (
               !creating && (
-                <SettingsEmpty
+                <IssueEmpty
                   action={canEdit ? "Create one." : undefined}
                   onAction={() => setCreating(true)}>
                   No labels yet.
-                </SettingsEmpty>
+                </IssueEmpty>
               )
             ) : (
               <SettingsList label="Labels">

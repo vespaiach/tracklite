@@ -191,9 +191,15 @@ export function Crumbs({ items }: { items: Crumb[] }) {
         <span
           key={crumb.label}
           className="tl-crumbs__item">
-          {index > 0 && <span className="tl-crumbs__sep">/</span>}
+          {index > 0 && (
+            <span
+              aria-hidden="true"
+              className="tl-crumbs__sep">
+              /
+            </span>
+          )}
           {index === items.length - 1 ? (
-            <b>{crumb.label}</b>
+            <h1 className="tl-appbar__title">{crumb.label}</h1>
           ) : (
             <a
               href={crumb.href ?? "#"}

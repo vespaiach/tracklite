@@ -549,6 +549,7 @@ function DeleteIssue({ issue, projectHref }: { issue: Issue; projectHref: string
   return (
     <div>
       <Button
+        variant="danger-outline"
         size="sm"
         aria-haspopup="dialog"
         onClick={() => setConfirming(true)}>

@@ -2,7 +2,7 @@ import type { ComponentProps } from "react";
 import { cx } from "./cx";
 
 export type ButtonProps = ComponentProps<"button"> & {
-  variant?: "primary" | "secondary" | "ghost" | "quiet" | "danger";
+  variant?: "primary" | "secondary" | "ghost" | "quiet" | "danger" | "danger-outline";
   size?: "md" | "sm";
   icon?: boolean;
   block?: boolean;
