@@ -58,7 +58,6 @@ export function useMentions({ value, onChange }: { value: string; onChange: (val
     onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
     onSelect: () => void;
     "aria-autocomplete": "list";
-    "aria-expanded": boolean;
     "aria-controls": string | undefined;
     "aria-activedescendant": string | undefined;
   };
@@ -143,7 +142,6 @@ export function useMentions({ value, onChange }: { value: string; onChange: (val
       onKeyDown,
       onSelect: trackCaret,
       "aria-autocomplete": "list",
-      "aria-expanded": open,
       "aria-controls": open ? listId : undefined,
       "aria-activedescendant":
         open && matches.length > 0 ? `${listId}-${matches[highlighted].username}` : undefined,

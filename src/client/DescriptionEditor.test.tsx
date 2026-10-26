@@ -89,13 +89,15 @@ it("DATA-001: Enter or a click on a suggestion inserts @username and keeps focus
   expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([]);
 });
 
-it("DATA-001: the arrow keys move the highlighted suggestion", async () => {
+it("DATA-001, NFR-007: the arrow keys move the highlighted suggestion, announced without aria-expanded on the textarea", async () => {
   mockIssuePage();
   renderAppAt("/issue/WEB-42");
 
   const editor = await openEditor();
   type(editor, "@");
   const options = within(suggestions() as HTMLElement).getAllByRole("option");
+  expect(editor.getAttribute("aria-controls")).toBe(suggestions()?.id);
+  expect(editor.hasAttribute("aria-expanded")).toBe(false);
   expect(editor.getAttribute("aria-activedescendant")).toBe(options[0].id);
 
   fireEvent.keyDown(editor, { key: "ArrowDown" });

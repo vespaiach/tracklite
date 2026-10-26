@@ -2115,7 +2115,8 @@ fieldset.tl-list-head {
   background: var(--canvas);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
-  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .tl-prose pre code {
   background: none;
@@ -2625,6 +2626,8 @@ fieldset.tl-list-head {
   background: var(--bg-selected);
 }
 .tl-filter-rule__remove {
+  justify-content: center;
+  min-width: 24px;
   padding: 0 5px;
   font-family: var(--font-mono);
   color: var(--ink-subtle);
@@ -3136,6 +3139,7 @@ fieldset.tl-list-head {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  min-height: 24px;
   padding: 0;
   border: 0;
   background: transparent;

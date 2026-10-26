@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.35"
+version: "0.36"
 release: "R1"
 status: Ready to build
 updated: "2026-10-26"
@@ -394,12 +394,12 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 **Rules and examples**
 
-- **REQ-031** A comment on an issue or project shall be Markdown of 1 to 10,000 characters, shown formatted (DEC-001, SEC-002) with the author's name and initials and when it was posted: relative for the past 7 days ("5 min ago"), then a date, with the exact date and time on hover. Content wider than the comment scrolls sideways inside it. @mentions follow DATA-001 and double submits follow STD-5.
+- **REQ-031** A comment on an issue or project shall be Markdown of 1 to 10,000 characters, shown formatted (DEC-001, SEC-002) with the author's name and initials and when it was posted: relative for the past 7 days ("5 min ago"), then a date, with the exact date and time on hover. Content wider than the comment scrolls sideways inside it, except code, whose long lines wrap so they can be read without scrolling. @mentions follow DATA-001 and double submits follow STD-5.
   - REQ-031.1: Sam posts "Looks good. @alex can you review?" on `WEB-42` → shown with "Sam Lee · just now", and `@alex` is highlighted as a mention.
   - REQ-031.2: The comment box is empty or only spaces → the Post button is disabled.
   - REQ-031.3: A comment of 10,001 characters → field error "Too long (max 10,000)".
   - REQ-031.4: A comment posted 9 days ago → shows its date, such as "Sep 20"; one from a previous year shows "Sep 20, 2025".
-  - REQ-031.5: A comment has a 300-character line of code → the code block scrolls sideways; the page doesn't. (Verify: manual)
+  - REQ-031.5: A comment has a 300-character line of code → the line wraps inside the code block; nothing scrolls sideways. (Verify: manual)
 - **REQ-032** The system shall show all of an issue's comments below its description, and all of a project's comments below its description on the project details page (REQ-046), with no paging. Each thread is flat (no replies), oldest first.
   - REQ-032.1: Comments posted on `WEB-42` at 09:00 and 09:05 → the 09:00 comment is above.
   - REQ-032.2: Alex comments on project `WEB` → shown on the `WEB` project details page, not on any issue.
@@ -750,6 +750,7 @@ Deploys, rollbacks, backups, log retention and uptime monitoring are part of the
 
 **Changelog**
 
+- **0.36 (2026-10-26):** Long lines in a code block wrap instead of scrolling sideways (REQ-031, REQ-031.5), because a sideways scroller that can't take keyboard focus (Safari) can't be read by keyboard (NFR-007, found by L02).
 - **0.35 (2026-10-26):** My issues rows show the assignee stack (REQ-042), so a member sees who shares an issue (REQ-041.7). Board cards, list rows and My issues rows name every assignee in their accessible name ("assigned to Alex Kim, Nina Shah", or "unassigned").
 - **0.34 (2026-10-26):** Multiple assignees (owner decision, 2026-10-25; no maximum, owner decision, 2026-10-26). An issue has any number of assignees: REQ-019 (new REQ-019.3 to REQ-019.6), REQ-016 (New issue can set assignees, new REQ-016.6), REQ-025 (an avatar stack of up to 3 and "+N", new REQ-025.3), REQ-037 (the Assignee filter matches any assignee, new REQ-037.6), REQ-041 (new REQ-041.7), REQ-043 (each newly added assignee is emailed, new REQ-043.4), REQ-045 (dropped when the recipient is removed), REQ-007.2, REQ-008.2, STD-8 (the assignee set is one field) and section 8.
 - **0.33 (2026-10-25):** Editorial; no behaviour changes. Examples are automated unless marked, so `(Verify: auto)` is dropped. Empty "Exceptions to standard behaviors" lines, the section 4 table and changelog entries before 0.30 are condensed. Rule wording tightened.
