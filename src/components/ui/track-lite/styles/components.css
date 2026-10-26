@@ -3361,3 +3361,29 @@ fieldset.tl-list-head {
 .tl-details__note time {
   font-family: var(--font-mono);
 }
+.tl-settings > .tl-settings__grid + .tl-settings__section {
+  margin-top: 40px;
+}
+.tl-settings--compact {
+  padding-top: 30px;
+  padding-right: 40px;
+}
+.tl-settings--compact .tl-settings__section-head {
+  margin-bottom: 5px;
+}
+.tl-settings--compact .tl-settings__section > .tl-settings__form {
+  padding-bottom: 10px;
+}
+.tl-settings--compact .tl-settings__form--section {
+  margin-top: 30px;
+}
+.tl-settings--compact .tl-settings__form--section .tl-input {
+  width: 360px;
+  max-width: 100%;
+}
+.tl-settings--wide .tl-settings__section:has(> .tl-settings__form) {
+  gap: 15px;
+}
+.tl-settings--wide .tl-settings__section > .tl-settings__form {
+  padding-bottom: 0;
+}

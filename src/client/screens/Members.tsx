@@ -13,6 +13,7 @@ import {
   Menu,
   MenuItem,
   MenuSep,
+  Mono,
   SettingsActions,
   SettingsEmpty,
   SettingsForm,
@@ -121,7 +122,11 @@ function InviteForm() {
       <SettingsInline>
         <Field
           label="Email"
-          help="The link works once and expires after 7 days."
+          help={
+            <>
+              The link works once and expires after <Mono>7</Mono> days.
+            </>
+          }
           error={error}>
           {(props) => (
             <Input

@@ -10,6 +10,7 @@ import {
   FormError,
   FormStatus,
   Input,
+  Mono,
   SettingsActions,
   SettingsForm,
   SettingsInline,
@@ -42,7 +43,7 @@ export function Profile() {
 
 function ProfileForms({ me }: { me: Me }) {
   return (
-    <SettingsLayout>
+    <SettingsLayout compact>
       <SettingsSection title="Account">
         <FullNameForm savedName={me.fullName} />
         <FactList note="Username and email can't be changed.">
@@ -166,7 +167,11 @@ function ChangePasswordForm() {
       </Field>
       <Field
         label="New password"
-        help="12 to 128 characters. Spaces count."
+        help={
+          <>
+            <Mono>12</Mono> to <Mono>128</Mono> characters. Spaces count.
+          </>
+        }
         error={fieldErrors.newPassword}>
         {(props) => (
           <Input

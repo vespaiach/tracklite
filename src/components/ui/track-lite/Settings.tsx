@@ -7,13 +7,21 @@ export function SettingsLayout({
   children,
   wide,
   medium,
+  compact,
 }: {
   children: ReactNode;
   wide?: boolean;
   medium?: boolean;
+  compact?: boolean;
 }) {
   return (
-    <main className={cx("tl-settings", wide && "tl-settings--wide", medium && "tl-settings--medium")}>
+    <main
+      className={cx(
+        "tl-settings",
+        wide && "tl-settings--wide",
+        medium && "tl-settings--medium",
+        compact && "tl-settings--compact",
+      )}>
       {children}
     </main>
   );
