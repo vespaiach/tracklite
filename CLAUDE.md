@@ -14,24 +14,17 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Project state
 
-Tracklite is a small issue tracker for one invite-only team. It is being **rebuilt from the docs**, one task at a time. Most of R1 is built, but not all of it. Done tasks are removed from `docs/build-plan.md`, so anything still listed there, ticked or not, may not exist yet.
+Tracklite is a small issue tracker for one invite-only team. It is being **rebuilt from the docs**, one task at a time. Most of R1 is built, but not all of it. Done tasks are removed from `docs/execution-plan.md`, so anything still listed there may not exist yet.
 
 - `docs/tracklite-spec.md`: what the product does. Rules are IDs such as `REQ-047`, `SEC-004`, `STD-5`, each with numbered examples (`REQ-047.2`). **The spec wins** over the design. If the spec is wrong or silent, fix the spec first (with a changelog line), then the code.
 - `docs/tech-design.md`: technical decisions, cited as `§1.7`, `§3.3` and so on.
-- `docs/build-plan.md`: milestones M0–M14 split into tasks (`M1.3`).
+- `docs/execution-plan.md`: the backlog of open tasks (`D01`), in run order.
 
 Look rules up by grep rather than reading whole docs: `grep -n "REQ-047" docs/tracklite-spec.md`.
 
-## Working a build-plan task
+## Working a task
 
-A prompt like "Do task M1.3 from docs/build-plan.md" means following the **Working a task** section of the build plan exactly. In short:
-- Read only the ground rules, that section, the task entry, and what its **Reads** lists.
-- Stop if any task in **Needs** isn't ticked. Tasks listed after "API description:" are the exception.
-- If the task builds or changes a screen and its **Reads** has no Claude Design link, read the related docs, fill in prompt 1 from **Tasks with a UI design**, give it to the owner and stop until they hand over the design link.
-- Write the **Done** tests first. Name each test after its example, e.g. `it("REQ-016.4: concurrent creates get distinct numbers")`.
-- Stop when Done passes and `npm test`, `npm run lint` and `npm run typecheck` are green. Don't start the next task.
-- Tick the box and commit as `M1.3: <task title>`.
-- If a task is too big, split it in the plan (M1.3a, M1.3b) and do only the first part.
+Tasks are rows of `docs/execution-plan.md`; follow its **Status tracking** rules. Name each test after the spec example it proves, e.g. `it("REQ-016.4: concurrent creates get distinct numbers")`.
 
 ## Commands
 

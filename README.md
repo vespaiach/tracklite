@@ -22,7 +22,7 @@ Tracklite is being rebuilt from its documents, one task at a time:
 |---|---|
 | [docs/tracklite-spec.md](docs/tracklite-spec.md) | What the product does. Rules have IDs such as `REQ-047`, `SEC-004`, `STD-5`, each with numbered examples (`REQ-047.2`). The spec wins over everything else. |
 | [docs/tech-design.md](docs/tech-design.md) | Technical decisions, cited by section (`§1.7`) and decision ID (`D-36`). |
-| [docs/build-plan.md](docs/build-plan.md) | Milestones M0–M12 split into small tasks, with what each one reads, needs and must pass. Ticked boxes show what is built. |
+| [docs/execution-plan.md](docs/execution-plan.md) | The backlog of open tasks in run order, each with its dependencies and what must pass. Done tasks are removed. |
 | [docs/design-system.md](docs/design-system.md) | Voice, colour roles, sizes and icons for the Track Lite UI kit. |
 
 Tests are named after the spec example they prove, e.g. `it("REQ-016.4: concurrent creates get distinct numbers")`, so `grep -rn REQ-016 src` shows how a rule is covered.
@@ -168,7 +168,7 @@ npx vitest run --project components
 
 ### Conventions
 
-- Work goes task by task from the [build plan](docs/build-plan.md), tests first. A task is done when its examples pass and `npm test`, `npm run lint` and `npm run typecheck` are green.
+- Work goes task by task from the [execution plan](docs/execution-plan.md), tests first. A task is done when its examples pass and `npm test`, `npm run lint` and `npm run typecheck` are green.
 - If the spec is wrong or silent, fix the spec first (with a changelog line), then the code.
 - No comments in code under `src/`. Names, types and test titles carry the meaning.
 - Build UI bottom-up from the Track Lite kit in `src/components/ui/track-lite/`. Never load fonts, icons or styles from a CDN; the Content Security Policy allows only `'self'`.
