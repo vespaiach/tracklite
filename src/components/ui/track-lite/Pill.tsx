@@ -172,19 +172,28 @@ export function Avatar({
   );
 }
 
-export function AvatarStack({
-  children,
-  more,
-  small,
-}: {
-  children: ReactNode;
-  more?: number;
-  small?: boolean;
-}) {
+export type StackMember = { username: string; fullName: string; initials: string; deactivated: boolean };
+
+const stackLimit = 3;
+
+function stackTitle(members: StackMember[]) {
+  return members.map((member) => member.fullName + (member.deactivated ? " (deactivated)" : "")).join(", ");
+}
+
+export function AvatarStack({ members, me }: { members: StackMember[]; me?: string }) {
+  const hidden = members.length - stackLimit;
   return (
-    <span className={cx("tl-avstack", small && "tl-avstack--sm")}>
-      {children}
-      {more ? <span className="tl-avstack__more">+{more}</span> : null}
+    <span
+      title={stackTitle(members)}
+      className="tl-avstack">
+      {members.slice(0, stackLimit).map((member) => (
+        <Avatar
+          key={member.username}
+          initials={member.initials}
+          tone={member.username === me ? "accent" : "neutral"}
+        />
+      ))}
+      {hidden > 0 && <span className="tl-avstack__more">+{hidden}</span>}
     </span>
   );
 }
