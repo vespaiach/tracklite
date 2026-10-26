@@ -1,8 +1,7 @@
-import { Archive, Inbox, Users } from "lucide-react";
+import { Archive, CircleUser, Folder, Inbox, LogOut, Plus, Users } from "lucide-react";
 import {
   Avatar,
   Button,
-  Glyph,
   Lbl,
   Logo,
   Menu,
@@ -10,7 +9,6 @@ import {
   Rail,
   RailGroup,
   RailLabel,
-  RailLabelAction,
   RailNote,
   TipTrigger,
 } from "../components/ui/track-lite";
@@ -66,11 +64,15 @@ export function Sidebar({
           action={
             admin && (
               <TipTrigger tip="New project">
-                <RailLabelAction
-                  label="New project"
+                <Button
+                  variant="quiet"
+                  size="sm"
+                  icon
+                  aria-label="New project"
                   aria-haspopup="dialog"
-                  onClick={onNewProject}
-                />
+                  onClick={onNewProject}>
+                  <Plus {...iconProps} />
+                </Button>
               </TipTrigger>
             )
           }>
@@ -85,7 +87,12 @@ export function Sidebar({
               tip={`${project.name} · ${project.key}`}>
               <RouterRailItem
                 href={href}
-                icon={<Glyph kind="sq" />}
+                icon={
+                  <Folder
+                    size={14}
+                    className="tl-rail-item__folder"
+                  />
+                }
                 label={project.name}
                 suffix={` · ${project.key}`}
                 title=""
@@ -147,8 +154,16 @@ function MemberMenu({ member, onProfile, onSignOut }: MemberMenuProps) {
         </>
       }
       onAction={(key) => (key === "profile" ? onProfile() : onSignOut())}>
-      <MenuItem id="profile">Profile</MenuItem>
-      <MenuItem id="sign-out">Sign out</MenuItem>
+      <MenuItem
+        id="profile"
+        icon={<CircleUser size={14} />}>
+        Profile
+      </MenuItem>
+      <MenuItem
+        id="sign-out"
+        icon={<LogOut size={14} />}>
+        Sign out
+      </MenuItem>
     </Menu>
   );
 }

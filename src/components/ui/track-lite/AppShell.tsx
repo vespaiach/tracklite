@@ -1,5 +1,4 @@
-import { Plus } from "lucide-react";
-import type { ComponentProps, CSSProperties, HTMLAttributes, MouseEvent, ReactNode, Ref } from "react";
+import type { CSSProperties, HTMLAttributes, MouseEvent, ReactNode, Ref } from "react";
 import { cx } from "./cx";
 
 export type AppShellProps = {
@@ -61,23 +60,6 @@ export function RailLabel({
       {count != null && <span className="tl-rail-label__count">{count}</span>}
       {action}
     </div>
-  );
-}
-
-export type RailLabelActionProps = Omit<ComponentProps<"button">, "children"> & {
-  label: string;
-  icon?: ReactNode;
-};
-
-export function RailLabelAction({ label, icon, className, ...rest }: RailLabelActionProps) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      className={cx("tl-rail-label__action", className)}
-      {...rest}>
-      {icon ?? <Plus size={12} />}
-    </button>
   );
 }
 
