@@ -1,0 +1,47 @@
+:root{
+  --font-display:'Geist',-apple-system,'SF Pro Display',system-ui,'Segoe UI',sans-serif;
+  --font-text:'Geist',-apple-system,'SF Pro Text',system-ui,'Segoe UI',sans-serif;
+  --font-mono:'Geist Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  --display-xl-size:80px;
+  --display-xl-lh:1.05; /* @kind other */
+  --display-xl-ls:-3px;
+  --display-lg-size:56px;
+  --display-lg-lh:1.10; /* @kind other */
+  --display-lg-ls:-1.8px;
+  --display-md-size:40px;
+  --display-md-lh:1.15; /* @kind other */
+  --display-md-ls:-1px;
+  --headline-size:28px;
+  --headline-lh:1.20; /* @kind other */
+  --headline-ls:-0.6px;
+  --card-title-size:22px;
+  --card-title-lh:1.25; /* @kind other */
+  --card-title-ls:-0.4px;
+  --subhead-size:20px;
+  --subhead-lh:1.40; /* @kind other */
+  --subhead-ls:-0.2px;
+  --body-lg-size:18px;
+  --body-lg-lh:1.50; /* @kind other */
+  --body-lg-ls:-0.1px;
+  --body-size:16px;
+  --body-lh:1.50; /* @kind other */
+  --body-ls:-0.05px;
+  --body-sm-size:14px;
+  --body-sm-lh:1.50; /* @kind other */
+  --caption-size:12px;
+  --caption-lh:1.40; /* @kind other */
+  --button-size:14px;
+  --button-lh:1.20; /* @kind other */
+  --eyebrow-size:13px;
+  --eyebrow-lh:1.30; /* @kind other */
+  --eyebrow-ls:0.4px;
+  --mono-size:13px;
+  --mono-lh:1.50; /* @kind other */
+  /* Product UI is denser than marketing */
+  --ui-size:13px;
+  --ui-lh:1.40; /* @kind other */
+  --ui-sm-size:12px;
+  --weight-regular:400; /* @kind other */
+  --weight-medium:500; /* @kind other */
+  --weight-semibold:600; /* @kind other */
+}

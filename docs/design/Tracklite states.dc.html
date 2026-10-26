@@ -9,298 +9,297 @@
 <x-dc>
 <helmet>
   <meta name="design_doc_mode" content="canvas">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/fonts.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/icons.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/colors.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/typography.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/spacing.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/base.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/components/components.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/styles.css">
-  <script src="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/base.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/styles.css">
+  <script src="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="tracklite-app.css">
   <style>
-    body{margin:0;background:var(--color-surface);font-family:var(--font-ui);color:var(--color-ink)}
-    a{color:var(--color-accent);text-decoration:none}
+    body{margin:0;background:var(--canvas);font-family:var(--font-text);color:var(--ink)}
+    a{color:var(--text-link);text-decoration:none}
     a:hover{text-decoration:underline}
   </style>
 </helmet>
 <section data-screen-label="About" style="padding:60px 60px 0;display:flex;flex-direction:column;gap:10px;max-width:760px">
-  <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:34px;letter-spacing:-0.02em">Tracklite R1 — other states</h1>
-  <p style="margin:0;font-size:14px;line-height:1.55;color:var(--color-ink-2);text-wrap:pretty">States you can’t reach by clicking in <a href="Tracklite prototype.dc.html">Tracklite prototype</a>: loading, load failures, server errors and changes made by someone else in the meantime. Each frame is the prototype held in that state. To see every save fail, turn on failSaves in the prototype’s Tweaks.</p>
+  <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:34px;letter-spacing:-0.02em">Tracklite R1 — other states</h1>
+  <p style="margin:0;font-size:14px;line-height:1.55;color:var(--ink-subtle);text-wrap:pretty">States you can’t reach by clicking in <a href="Tracklite prototype.dc.html">Tracklite prototype</a>: loading, load failures, server errors and changes made by someone else in the meantime. Each frame is the prototype held in that state. To see every save fail, turn on failSaves in the prototype’s Tweaks.</p>
 </section>
 <section data-screen-label="Signed out" style="padding:60px 60px 20px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Signed out</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Signed out</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
     <div id="signin-attempts" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Sign in — too many attempts <span style="color:var(--color-ink-2);font-weight:400">(server rate limit; email and password kept)</span></div>
-      <div data-screen-label="Sign in — too many attempts" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="signin-attempts" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Sign in — too many attempts <span style="color:var(--ink-subtle);font-weight:400">(server rate limit; email and password kept)</span></div>
+      <div data-screen-label="Sign in — too many attempts" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="signin-attempts" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="signin-network" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Sign in — network error <span style="color:var(--color-ink-2);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit; form keeps what was typed)</span></div>
-      <div data-screen-label="Sign in — network error" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="signin-network" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Sign in — network error <span style="color:var(--ink-subtle);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit; form keeps what was typed)</span></div>
+      <div data-screen-label="Sign in — network error" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="signin-network" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="forgot-attempts" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Forgot password — too many attempts</div>
-      <div data-screen-label="Forgot password — too many attempts" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="forgot-attempts" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="Forgot password — too many attempts" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="forgot-attempts" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="forgot-email" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Forgot password — email failed to send <span style="color:var(--color-ink-2);font-weight:400">(STD-6)</span></div>
-      <div data-screen-label="Forgot password — email failed to send" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="forgot-email" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Forgot password — email failed to send <span style="color:var(--ink-subtle);font-weight:400">(STD-6)</span></div>
+      <div data-screen-label="Forgot password — email failed to send" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="forgot-email" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="reset-checking" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Reset password — checking link <span style="color:var(--color-ink-2);font-weight:400">(text appears after 300 ms)</span></div>
-      <div data-screen-label="Reset password — checking link" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="reset-checking" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Reset password — checking link <span style="color:var(--ink-subtle);font-weight:400">(text appears after 300 ms)</span></div>
+      <div data-screen-label="Reset password — checking link" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="reset-checking" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="reset-expired" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Reset password — link expired</div>
-      <div data-screen-label="Reset password — link expired" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="reset-expired" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="Reset password — link expired" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="reset-expired" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="reset-other" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Reset password — signed in as someone else <span style="color:var(--color-ink-2);font-weight:400">(Alex opens Sam’s reset link)</span></div>
-      <div data-screen-label="Reset password — signed in as someone else" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="reset-other" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Reset password — signed in as someone else <span style="color:var(--ink-subtle);font-weight:400">(Alex opens Sam’s reset link)</span></div>
+      <div data-screen-label="Reset password — signed in as someone else" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="reset-other" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
   </div>
 </section>
 <section data-screen-label="Accept invitation" style="padding:60px 60px 20px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Accept invitation</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Accept invitation</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
     <div id="accept-loading" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Accept invitation — loading <span style="color:var(--color-ink-2);font-weight:400">(text appears after 300 ms)</span></div>
-      <div data-screen-label="Accept invitation — loading" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="accept-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Accept invitation — loading <span style="color:var(--ink-subtle);font-weight:400">(text appears after 300 ms)</span></div>
+      <div data-screen-label="Accept invitation — loading" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="accept-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="accept-error" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Accept invitation — lookup failed</div>
-      <div data-screen-label="Accept invitation — lookup failed" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="accept-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="Accept invitation — lookup failed" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="accept-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="accept-expired" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Accept invitation — expired on open</div>
-      <div data-screen-label="Accept invitation — expired on open" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="accept-expired" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="Accept invitation — expired on open" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="accept-expired" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="accept-invalid" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Accept invitation — no longer valid after submit <span style="color:var(--color-ink-2);font-weight:400">(revoked or used while the form was open)</span></div>
-      <div data-screen-label="Accept invitation — no longer valid after submit" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="accept-invalid" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Accept invitation — no longer valid after submit <span style="color:var(--ink-subtle);font-weight:400">(revoked or used while the form was open)</span></div>
+      <div data-screen-label="Accept invitation — no longer valid after submit" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="accept-invalid" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="accept-other" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Accept invitation — signed in as someone else</div>
-      <div data-screen-label="Accept invitation — signed in as someone else" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="accept-other" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="Accept invitation — signed in as someone else" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="accept-other" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="accept-network" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Accept invitation — network error on submit <span style="color:var(--color-ink-2);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit; fields kept)</span></div>
-      <div data-screen-label="Accept invitation — network error on submit" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="accept-network" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Accept invitation — network error on submit <span style="color:var(--ink-subtle);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit; fields kept)</span></div>
+      <div data-screen-label="Accept invitation — network error on submit" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="accept-network" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
   </div>
 </section>
 <section data-screen-label="Board" style="padding:60px 60px 20px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Board</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Board</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
     <div id="board-loading" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Board — loading <span style="color:var(--color-ink-2);font-weight:400">(text appears after 300 ms)</span></div>
-      <div data-screen-label="Board — loading" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="board-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Board — loading <span style="color:var(--ink-subtle);font-weight:400">(text appears after 300 ms)</span></div>
+      <div data-screen-label="Board — loading" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="board-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="board-error" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Board — load failure</div>
-      <div data-screen-label="Board — load failure" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="board-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="Board — load failure" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="board-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="board-empty" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Board — empty <span style="color:var(--color-ink-2);font-weight:400">(“Create one.” opens New issue with that column’s status)</span></div>
-      <div data-screen-label="Board — empty" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="board-empty" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Board — empty <span style="color:var(--ink-subtle);font-weight:400">(“Create one.” opens New issue with that column’s status)</span></div>
+      <div data-screen-label="Board — empty" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="board-empty" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="board-long" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Board — long Backlog <span style="color:var(--color-ink-2);font-weight:400">(Backlog scrolls on its own; header and count stay put)</span></div>
-      <div data-screen-label="Board — long Backlog" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="board-long" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Board — long Backlog <span style="color:var(--ink-subtle);font-weight:400">(Backlog scrolls on its own; header and count stay put)</span></div>
+      <div data-screen-label="Board — long Backlog" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="board-long" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="board-mouse" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Board — mouse drag <span style="color:var(--color-ink-2);font-weight:400">(WEB-7 over In Review; drop place at the top)</span></div>
-      <div data-screen-label="Board — mouse drag" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="board-mouse" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Board — mouse drag <span style="color:var(--ink-subtle);font-weight:400">(WEB-7 over In Review; drop place at the top)</span></div>
+      <div data-screen-label="Board — mouse drag" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="board-mouse" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="board-failed" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Board — move failed <span style="color:var(--color-ink-2);font-weight:400">(WEB-42 back where it was; toast, 5 s; a note stays beside the control until the next edit)</span></div>
-      <div data-screen-label="Board — move failed" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="board-failed" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Board — move failed <span style="color:var(--ink-subtle);font-weight:400">(WEB-42 back where it was; toast, 5 s; a note stays beside the control until the next edit)</span></div>
+      <div data-screen-label="Board — move failed" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="board-failed" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
   </div>
 </section>
 <section data-screen-label="Issue page" style="padding:60px 60px 20px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Issue page</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Issue page</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
     <div id="issue-loading" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Issue page — loading <span style="color:var(--color-ink-2);font-weight:400">(text appears after 300 ms)</span></div>
-      <div data-screen-label="Issue page — loading" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="issue-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Issue page — loading <span style="color:var(--ink-subtle);font-weight:400">(text appears after 300 ms)</span></div>
+      <div data-screen-label="Issue page — loading" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="issue-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="issue-error" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Issue page — load failure</div>
-      <div data-screen-label="Issue page — load failure" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="issue-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="Issue page — load failure" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="issue-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="notfound" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Not found <span style="color:var(--color-ink-2);font-weight:400">(deleted or unknown issue ID)</span></div>
-      <div data-screen-label="Not found" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="notfound" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Not found <span style="color:var(--ink-subtle);font-weight:400">(deleted or unknown issue ID)</span></div>
+      <div data-screen-label="Not found" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="notfound" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="issue-asg" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Issue page — assignee error <span style="color:var(--color-ink-2);font-weight:400">(member deactivated after the list loaded; old value kept)</span></div>
-      <div data-screen-label="Issue page — assignee error" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="issue-asg" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Issue page — assignee error <span style="color:var(--ink-subtle);font-weight:400">(member deactivated after the list loaded; old value kept)</span></div>
+      <div data-screen-label="Issue page — assignee error" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="issue-asg" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="issue-pickfail" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Issue page — picker save failed <span style="color:var(--color-ink-2);font-weight:400">(old value kept; toast, 5 s; a note stays beside the control until the next edit)</span></div>
-      <div data-screen-label="Issue page — picker save failed" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="issue-pickfail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Issue page — picker save failed <span style="color:var(--ink-subtle);font-weight:400">(old value kept; toast, 5 s; a note stays beside the control until the next edit)</span></div>
+      <div data-screen-label="Issue page — picker save failed" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="issue-pickfail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="issue-deleted" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Issue page — deleted while commenting <span style="color:var(--color-ink-2);font-weight:400">(Alex posts; Sam deleted WEB-42 meanwhile; text stays)</span></div>
-      <div data-screen-label="Issue page — deleted while commenting" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="issue-deleted" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Issue page — deleted while commenting <span style="color:var(--ink-subtle);font-weight:400">(Alex posts; Sam deleted WEB-42 meanwhile; text stays)</span></div>
+      <div data-screen-label="Issue page — deleted while commenting" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="issue-deleted" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="issue-lbl-max" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Label picker — maximum reached <span style="color:var(--color-ink-2);font-weight:400">(10 labels already; nothing saved)</span></div>
-      <div data-screen-label="Label picker — maximum reached" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="issue-lbl-max" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Label picker — maximum reached <span style="color:var(--ink-subtle);font-weight:400">(10 labels already; nothing saved)</span></div>
+      <div data-screen-label="Label picker — maximum reached" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="issue-lbl-max" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="issue-lbl-gone" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Label picker — label deleted meanwhile <span style="color:var(--color-ink-2);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit)</span></div>
-      <div data-screen-label="Label picker — label deleted meanwhile" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="issue-lbl-gone" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Label picker — label deleted meanwhile <span style="color:var(--ink-subtle);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit)</span></div>
+      <div data-screen-label="Label picker — label deleted meanwhile" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="issue-lbl-gone" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="issue-lbl-fail" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Label picker — server error <span style="color:var(--color-ink-2);font-weight:400">(old labels kept; toast, 5 s; a note stays beside the control until the next edit)</span></div>
-      <div data-screen-label="Label picker — server error" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="issue-lbl-fail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Label picker — server error <span style="color:var(--ink-subtle);font-weight:400">(old labels kept; toast, 5 s; a note stays beside the control until the next edit)</span></div>
+      <div data-screen-label="Label picker — server error" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="issue-lbl-fail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="issue-desc-conflict" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Description — changed by someone else <span style="color:var(--color-ink-2);font-weight:400">(Alex saved first; nothing saved; text kept)</span></div>
-      <div data-screen-label="Description — changed by someone else" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="issue-desc-conflict" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Description — changed by someone else <span style="color:var(--ink-subtle);font-weight:400">(Alex saved first; nothing saved; text kept)</span></div>
+      <div data-screen-label="Description — changed by someone else" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="issue-desc-conflict" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="issue-new-fail" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">New issue — server error <span style="color:var(--color-ink-2);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit; title kept)</span></div>
-      <div data-screen-label="New issue — server error" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="issue-new-fail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">New issue — server error <span style="color:var(--ink-subtle);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit; title kept)</span></div>
+      <div data-screen-label="New issue — server error" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="issue-new-fail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
   </div>
 </section>
 <section data-screen-label="Project details" style="padding:60px 60px 20px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Project details</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Project details</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
     <div id="details-saving" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Project details — saving description <span style="color:var(--color-ink-2);font-weight:400">(Save disabled while saving)</span></div>
-      <div data-screen-label="Project details — saving description" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="details-saving" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Project details — saving description <span style="color:var(--ink-subtle);font-weight:400">(Save disabled while saving)</span></div>
+      <div data-screen-label="Project details — saving description" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="details-saving" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="details-fail" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Project details — save failed <span style="color:var(--color-ink-2);font-weight:400">(toast, 5 s; text kept)</span></div>
-      <div data-screen-label="Project details — save failed" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="details-fail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Project details — save failed <span style="color:var(--ink-subtle);font-weight:400">(toast, 5 s; text kept)</span></div>
+      <div data-screen-label="Project details — save failed" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="details-fail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="details-archived" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Project details — archived project <span style="color:var(--color-ink-2);font-weight:400">(read-only; no Edit)</span></div>
-      <div data-screen-label="Project details — archived project" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="details-archived" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Project details — archived project <span style="color:var(--ink-subtle);font-weight:400">(read-only; no Edit)</span></div>
+      <div data-screen-label="Project details — archived project" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="details-archived" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
   </div>
 </section>
 <section data-screen-label="Labels" style="padding:60px 60px 20px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Project settings · labels</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Project settings · labels</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
     <div id="labels-loading" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Project settings — loading <span style="color:var(--color-ink-2);font-weight:400">(text appears after 300 ms)</span></div>
-      <div data-screen-label="Project settings — loading" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="labels-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Project settings — loading <span style="color:var(--ink-subtle);font-weight:400">(text appears after 300 ms)</span></div>
+      <div data-screen-label="Project settings — loading" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="labels-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="labels-error" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Project settings — load failure</div>
-      <div data-screen-label="Project settings — load failure" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="labels-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="Project settings — load failure" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="labels-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="labels-gone" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Project settings — label no longer exists <span style="color:var(--color-ink-2);font-weight:400">(Alex deleted docs first; toast, 5 s; a note stays beside the control until the next edit; text kept)</span></div>
-      <div data-screen-label="Project settings — label no longer exists" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="labels-gone" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Project settings — label no longer exists <span style="color:var(--ink-subtle);font-weight:400">(Alex deleted docs first; toast, 5 s; a note stays beside the control until the next edit; text kept)</span></div>
+      <div data-screen-label="Project settings — label no longer exists" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="labels-gone" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="labels-archived" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Project settings — project archived meanwhile <span style="color:var(--color-ink-2);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit; bug unchanged)</span></div>
-      <div data-screen-label="Project settings — project archived meanwhile" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="labels-archived" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Project settings — project archived meanwhile <span style="color:var(--ink-subtle);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit; bug unchanged)</span></div>
+      <div data-screen-label="Project settings — project archived meanwhile" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="labels-archived" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
   </div>
 </section>
 <section data-screen-label="Profile" style="padding:60px 60px 20px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Profile</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Profile</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
     <div id="profile-loading" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Profile — loading <span style="color:var(--color-ink-2);font-weight:400">(text appears after 300 ms)</span></div>
-      <div data-screen-label="Profile — loading" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="profile-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Profile — loading <span style="color:var(--ink-subtle);font-weight:400">(text appears after 300 ms)</span></div>
+      <div data-screen-label="Profile — loading" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="profile-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="profile-error" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Profile — load error</div>
-      <div data-screen-label="Profile — load error" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="profile-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="Profile — load error" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="profile-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="profile-attempts" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Profile — too many attempts <span style="color:var(--color-ink-2);font-weight:400">(password change rate-limited)</span></div>
-      <div data-screen-label="Profile — too many attempts" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="profile-attempts" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Profile — too many attempts <span style="color:var(--ink-subtle);font-weight:400">(password change rate-limited)</span></div>
+      <div data-screen-label="Profile — too many attempts" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="profile-attempts" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="profile-namefail" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Profile — name save failed <span style="color:var(--color-ink-2);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit; name kept)</span></div>
-      <div data-screen-label="Profile — name save failed" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="profile-namefail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Profile — name save failed <span style="color:var(--ink-subtle);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit; name kept)</span></div>
+      <div data-screen-label="Profile — name save failed" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="profile-namefail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="profile-pwfail" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Profile — password change failed <span style="color:var(--color-ink-2);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit)</span></div>
-      <div data-screen-label="Profile — password change failed" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="profile-pwfail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Profile — password change failed <span style="color:var(--ink-subtle);font-weight:400">(toast, 5 s; a note stays beside the control until the next edit)</span></div>
+      <div data-screen-label="Profile — password change failed" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="profile-pwfail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
   </div>
 </section>
 <section data-screen-label="Members" style="padding:60px 60px 20px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Members</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Members</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
     <div id="members-loading" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Members — loading <span style="color:var(--color-ink-2);font-weight:400">(shown after 300 ms; STD-7)</span></div>
-      <div data-screen-label="Members — loading" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="members-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Members — loading <span style="color:var(--ink-subtle);font-weight:400">(shown after 300 ms; STD-7)</span></div>
+      <div data-screen-label="Members — loading" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="members-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="members-error" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Members — load failed <span style="color:var(--color-ink-2);font-weight:400">(STD-7)</span></div>
-      <div data-screen-label="Members — load failed" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="members-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Members — load failed <span style="color:var(--ink-subtle);font-weight:400">(STD-7)</span></div>
+      <div data-screen-label="Members — load failed" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="members-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="members-sending" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Members — sending invitation <span style="color:var(--color-ink-2);font-weight:400">(button disabled while saving; STD-5)</span></div>
-      <div data-screen-label="Members — sending invitation" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="members-sending" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Members — sending invitation <span style="color:var(--ink-subtle);font-weight:400">(button disabled while saving; STD-5)</span></div>
+      <div data-screen-label="Members — sending invitation" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="members-sending" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="members-emailfail" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Members — email failed <span style="color:var(--color-ink-2);font-weight:400">(invitation email couldn’t be sent; STD-6, STD-9)</span></div>
-      <div data-screen-label="Members — email failed" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="members-emailfail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Members — email failed <span style="color:var(--ink-subtle);font-weight:400">(invitation email couldn’t be sent; STD-6, STD-9)</span></div>
+      <div data-screen-label="Members — email failed" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="members-emailfail" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="members-exists" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Members — already a member <span style="color:var(--color-ink-2);font-weight:400">(invalid input kept; STD-3)</span></div>
-      <div data-screen-label="Members — already a member" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="members-exists" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Members — already a member <span style="color:var(--ink-subtle);font-weight:400">(invalid input kept; STD-3)</span></div>
+      <div data-screen-label="Members — already a member" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="members-exists" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
   </div>
 </section>
 <section data-screen-label="Notification status" style="padding:60px 60px 20px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Notification status</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Notification status</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
     <div id="notifs-loading" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Notification status — loading <span style="color:var(--color-ink-2);font-weight:400">(first open; text appears after 300 ms)</span></div>
-      <div data-screen-label="Notification status — loading" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="notifs-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Notification status — loading <span style="color:var(--ink-subtle);font-weight:400">(first open; text appears after 300 ms)</span></div>
+      <div data-screen-label="Notification status — loading" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="notifs-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="notifs-error" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Notification status — load failed</div>
-      <div data-screen-label="Notification status — load failed" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="notifs-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="Notification status — load failed" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="notifs-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="notifs-never" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Notification status — worker never seen</div>
-      <div data-screen-label="Notification status — worker never seen" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="notifs-never" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="Notification status — worker never seen" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="notifs-never" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="notifs-down" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Notification status — worker down <span style="color:var(--color-ink-2);font-weight:400">(last pass 12 min ago; queue backing up)</span></div>
-      <div data-screen-label="Notification status — worker down" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="notifs-down" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Notification status — worker down <span style="color:var(--ink-subtle);font-weight:400">(last pass 12 min ago; queue backing up)</span></div>
+      <div data-screen-label="Notification status — worker down" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="notifs-down" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="notifs-clean" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Notification status — no recent problems</div>
-      <div data-screen-label="Notification status — no recent problems" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="notifs-clean" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="Notification status — no recent problems" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="notifs-clean" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="notifs-full" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Notification status — full recent list <span style="color:var(--color-ink-2);font-weight:400">(20 most recent shown, newest first)</span></div>
-      <div data-screen-label="Notification status — full recent list" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="notifs-full" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Notification status — full recent list <span style="color:var(--ink-subtle);font-weight:400">(20 most recent shown, newest first)</span></div>
+      <div data-screen-label="Notification status — full recent list" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="notifs-full" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
   </div>
 </section>
 <section data-screen-label="Not allowed" style="padding:60px 60px 20px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Not allowed</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Not allowed</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
     <div id="notifs-denied" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Notification status — not allowed <span style="color:var(--color-ink-2);font-weight:400">(Alex, a member, opens the URL; STD-2)</span></div>
-      <div data-screen-label="Notification status — not allowed" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="notifs-denied" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Notification status — not allowed <span style="color:var(--ink-subtle);font-weight:400">(Alex, a member, opens the URL; STD-2)</span></div>
+      <div data-screen-label="Notification status — not allowed" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="notifs-denied" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="settings-denied" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Project settings — not allowed <span style="color:var(--color-ink-2);font-weight:400">(Alex, a member, opens the URL; STD-2)</span></div>
-      <div data-screen-label="Project settings — not allowed" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="settings-denied" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">Project settings — not allowed <span style="color:var(--ink-subtle);font-weight:400">(Alex, a member, opens the URL; STD-2)</span></div>
+      <div data-screen-label="Project settings — not allowed" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="settings-denied" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
   </div>
 </section>
 <section data-screen-label="Notes" style="padding:40px 60px 80px;display:flex;flex-direction:column;gap:10px;max-width:760px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Missing from the kit</h2>
-  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--color-ink-2)">
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Missing from the kit</h2>
+  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--ink-subtle)">
     <li>Loading indicator and a busy state for Button. Drawn as “Loading…” text and disabled buttons with “…ing” labels.</li>
     <li>Toast with no dismiss control and a <span style="font-family:var(--font-mono)">5</span> s timeout. The kit’s Toasts always shows × and times out at <span style="font-family:var(--font-mono)">4</span> s.</li>
     <li>Overrides applied in the prototype until the kit changes: the urgent plate and the In Progress ring use accent-2-700 so they reach <span style="font-family:var(--font-mono)">3:1</span> on paper; the New issue title placeholder uses ink-2; board columns share the width instead of a fixed <span style="font-family:var(--font-mono)">268</span> px; card handle and ⋯ show on hover or focus; the current project page is underlined.</li>

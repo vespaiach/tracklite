@@ -9,18 +9,17 @@
 <x-dc>
 <helmet>
   <meta name="design_doc_mode" content="canvas">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/fonts.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/icons.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/colors.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/typography.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/spacing.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/base.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/components/components.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/styles.css">
-  <script src="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/base.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/styles.css">
+  <script src="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="tracklite-app.css">
   <style>
-    body{margin:0;background:var(--color-surface);font-family:var(--font-ui);color:var(--color-ink)}
-    a{color:var(--color-accent);text-decoration:none}
+    body{margin:0;background:var(--canvas);font-family:var(--font-text);color:var(--ink)}
+    a{color:var(--text-link);text-decoration:none}
     a:hover{text-decoration:underline}
     .tl-rail-item{color:inherit}
     .tl-field-error{align-items:center}
@@ -29,45 +28,45 @@
 </helmet>
 
 <section data-screen-label="Profile" style="padding:60px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Profile · /settings/profile</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Profile · /settings/profile</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px">
 <div style="display:flex;flex-direction:column;gap:10px">
   <div style="font-size:13px;font-weight:500">Profile — default</div>
-  <div data-screen-label="Profile — default" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--color-divider)">
+  <div data-screen-label="Profile — default" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
       <main style="width:480px;padding:40px 0 60px 40px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
+  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
   <form aria-label="Full name" style="display:flex;flex-direction:column;gap:15px;padding-bottom:30px">
-    <div><label class="tl-field__label" for="p1-name">Full name</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p1-name" autocomplete="name" default-value="Sam Lee" hint-size="100%,36px"></x-import></div>
-    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Save</x-import></div>
+    <div><label class="tl-field__label" for="p1-name">Full name</label><input class="tl-input" id="p1-name" autocomplete="name" default-value="Sam Lee"></div>
+    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Save</x-import></div>
   </form>
-  <dl style="margin:0;border-top:1px solid var(--color-divider)">
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
+  <dl style="margin:0;border-top:1px solid var(--hairline-strong)">
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
   </dl>
-  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
-  <form aria-labelledby="p1-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--color-divider)">
-    <h2 id="p1-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
-    <div><label class="tl-field__label" for="p1-cur">Current password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p1-cur" type="password" autocomplete="current-password" hint-size="100%,36px"></x-import></div>
-    <div><label class="tl-field__label" for="p1-new">New password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p1-new" type="password" autocomplete="new-password" aria-describedby="p1-new-help" hint-size="100%,36px"></x-import><p id="p1-new-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+  <p style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)">Username and email can’t be changed.</p>
+  <form aria-labelledby="p1-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--hairline-strong)">
+    <h2 id="p1-pwh" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+    <div><label class="tl-field__label" for="p1-cur">Current password</label><input class="tl-input" id="p1-cur" type="password" autocomplete="current-password"></div>
+    <div><label class="tl-field__label" for="p1-new">New password</label><input class="tl-input" id="p1-new" type="password" autocomplete="new-password" aria-describedby="p1-new-help"><p id="p1-new-help" style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
     
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Change password</x-import></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Change password</x-import></div>
   </form>
 </main>
       
@@ -75,42 +74,42 @@
   </div>
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
-  <div style="font-size:13px;font-weight:500">Profile — member menu open <span style="color:var(--color-ink-3);font-weight:400">(sidebar footer; Escape closes)</span></div>
-  <div data-screen-label="Profile — member menu open" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--color-divider)">
+  <div style="font-size:13px;font-weight:500">Profile — member menu open <span style="color:var(--ink-tertiary);font-weight:400">(sidebar footer; Escape closes)</span></div>
+  <div data-screen-label="Profile — member menu open" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     <div role="menu" aria-label="Sam Lee" class="tl-pop" style="position:absolute;left:10px;right:10px;bottom:52px;min-width:0"><button type="button" role="menuitem" class="tl-pop__item" aria-selected="true">Profile</button><div class="tl-pop__sep"></div><button type="button" role="menuitem" class="tl-pop__item">Sign out</button></div>
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="true"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="true"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
       <main style="width:480px;padding:40px 0 60px 40px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
+  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
   <form aria-label="Full name" style="display:flex;flex-direction:column;gap:15px;padding-bottom:30px">
-    <div><label class="tl-field__label" for="p2-name">Full name</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p2-name" autocomplete="name" default-value="Sam Lee" hint-size="100%,36px"></x-import></div>
-    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Save</x-import></div>
+    <div><label class="tl-field__label" for="p2-name">Full name</label><input class="tl-input" id="p2-name" autocomplete="name" default-value="Sam Lee"></div>
+    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Save</x-import></div>
   </form>
-  <dl style="margin:0;border-top:1px solid var(--color-divider)">
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
+  <dl style="margin:0;border-top:1px solid var(--hairline-strong)">
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
   </dl>
-  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
-  <form aria-labelledby="p2-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--color-divider)">
-    <h2 id="p2-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
-    <div><label class="tl-field__label" for="p2-cur">Current password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p2-cur" type="password" autocomplete="current-password" hint-size="100%,36px"></x-import></div>
-    <div><label class="tl-field__label" for="p2-new">New password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p2-new" type="password" autocomplete="new-password" aria-describedby="p2-new-help" hint-size="100%,36px"></x-import><p id="p2-new-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+  <p style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)">Username and email can’t be changed.</p>
+  <form aria-labelledby="p2-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--hairline-strong)">
+    <h2 id="p2-pwh" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+    <div><label class="tl-field__label" for="p2-cur">Current password</label><input class="tl-input" id="p2-cur" type="password" autocomplete="current-password"></div>
+    <div><label class="tl-field__label" for="p2-new">New password</label><input class="tl-input" id="p2-new" type="password" autocomplete="new-password" aria-describedby="p2-new-help"><p id="p2-new-help" style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
     
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Change password</x-import></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Change password</x-import></div>
   </form>
 </main>
       
@@ -118,92 +117,92 @@
   </div>
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
-  <div style="font-size:13px;font-weight:500">Profile — loading <span style="color:var(--color-ink-3);font-weight:400">(text appears after <span style="font-family:var(--font-mono)">300</span> ms)</span></div>
-  <div data-screen-label="Profile — loading" class="tl-shell" style="position:relative;width:1280px;height:520px;border:1px solid var(--color-divider)">
+  <div style="font-size:13px;font-weight:500">Profile — loading <span style="color:var(--ink-tertiary);font-weight:400">(text appears after <span style="font-family:var(--font-mono)">300</span> ms)</span></div>
+  <div data-screen-label="Profile — loading" class="tl-shell" style="position:relative;width:1280px;height:520px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
-      <main aria-busy="true" style="width:480px;padding:40px 0 0 40px"><p role="status" style="margin:0;font-size:13px;color:var(--color-ink-2)">Loading…</p></main>
+      <main aria-busy="true" style="width:480px;padding:40px 0 0 40px"><p role="status" style="margin:0;font-size:13px;color:var(--ink-subtle)">Loading…</p></main>
       
     </div>
   </div>
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
   <div style="font-size:13px;font-weight:500">Profile — load error</div>
-  <div data-screen-label="Profile — load error" class="tl-shell" style="position:relative;width:1280px;height:520px;border:1px solid var(--color-divider)">
+  <div data-screen-label="Profile — load error" class="tl-shell" style="position:relative;width:1280px;height:520px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
-      <main style="width:480px;padding:40px 0 0 40px"><div role="alert" style="display:flex;align-items:center;gap:15px"><p style="margin:0;font-size:13px">Couldn’t load this.</p><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" type="submit" hint-size="auto,38px">Retry</x-import></div></main>
+      <main style="width:480px;padding:40px 0 0 40px"><div role="alert" style="display:flex;align-items:center;gap:15px"><p style="margin:0;font-size:13px">Couldn’t load this.</p><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="secondary" size="sm" type="submit" hint-size="auto,36px">Retry</x-import></div></main>
       
     </div>
   </div>
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
-  <div style="font-size:13px;font-weight:500">Profile — saving <span style="color:var(--color-ink-3);font-weight:400">(each button disables only while its own request is in flight)</span></div>
-  <div data-screen-label="Profile — saving" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--color-divider)">
+  <div style="font-size:13px;font-weight:500">Profile — saving <span style="color:var(--ink-tertiary);font-weight:400">(each button disables only while its own request is in flight)</span></div>
+  <div data-screen-label="Profile — saving" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
       <main style="width:480px;padding:40px 0 60px 40px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
+  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
   <form aria-label="Full name" style="display:flex;flex-direction:column;gap:15px;padding-bottom:30px">
-    <div><label class="tl-field__label" for="p5-name">Full name</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p5-name" autocomplete="name" default-value="Samuel Lee" hint-size="100%,36px"></x-import></div>
-    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" disabled="{{ true }}" aria-busy="true" hint-size="auto,38px">Saving…</x-import></div>
+    <div><label class="tl-field__label" for="p5-name">Full name</label><input class="tl-input" id="p5-name" autocomplete="name" default-value="Samuel Lee"></div>
+    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" disabled="{{ true }}" aria-busy="true" hint-size="auto,36px">Saving…</x-import></div>
   </form>
-  <dl style="margin:0;border-top:1px solid var(--color-divider)">
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
+  <dl style="margin:0;border-top:1px solid var(--hairline-strong)">
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
   </dl>
-  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
-  <form aria-labelledby="p5-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--color-divider)">
-    <h2 id="p5-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
-    <div><label class="tl-field__label" for="p5-cur">Current password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p5-cur" type="password" autocomplete="current-password" default-value="correct-horse-battery" hint-size="100%,36px"></x-import></div>
-    <div><label class="tl-field__label" for="p5-new">New password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p5-new" type="password" autocomplete="new-password" default-value="staple-lantern-orbit" aria-describedby="p5-new-help" hint-size="100%,36px"></x-import><p id="p5-new-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+  <p style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)">Username and email can’t be changed.</p>
+  <form aria-labelledby="p5-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--hairline-strong)">
+    <h2 id="p5-pwh" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+    <div><label class="tl-field__label" for="p5-cur">Current password</label><input class="tl-input" id="p5-cur" type="password" autocomplete="current-password" default-value="correct-horse-battery"></div>
+    <div><label class="tl-field__label" for="p5-new">New password</label><input class="tl-input" id="p5-new" type="password" autocomplete="new-password" default-value="staple-lantern-orbit" aria-describedby="p5-new-help"><p id="p5-new-help" style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
     
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" disabled="{{ true }}" aria-busy="true" hint-size="auto,38px">Changing…</x-import></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" disabled="{{ true }}" aria-busy="true" hint-size="auto,36px">Changing…</x-import></div>
   </form>
 </main>
       
@@ -212,41 +211,41 @@
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
   <div style="font-size:13px;font-weight:500">Profile — name required</div>
-  <div data-screen-label="Profile — name required" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--color-divider)">
+  <div data-screen-label="Profile — name required" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
       <main style="width:480px;padding:40px 0 60px 40px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
+  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
   <form aria-label="Full name" style="display:flex;flex-direction:column;gap:15px;padding-bottom:30px">
-    <div><label class="tl-field__label" for="p6-name">Full name</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p6-name" autocomplete="name" default-value="   " aria-invalid="true" aria-describedby="p6-name-err" hint-size="100%,36px"></x-import><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="p6-name-err" hint-size="100%,16px">Name required</x-import></div>
-    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Save</x-import></div>
+    <div><label class="tl-field__label" for="p6-name">Full name</label><input class="tl-input" id="p6-name" autocomplete="name" default-value="   " aria-invalid="true" aria-describedby="p6-name-err"><p class="tl-field-error" id="p6-name-err"><span aria-hidden="true" class="tl-field-error__mark">!</span>Name required</p></div>
+    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Save</x-import></div>
   </form>
-  <dl style="margin:0;border-top:1px solid var(--color-divider)">
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
+  <dl style="margin:0;border-top:1px solid var(--hairline-strong)">
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
   </dl>
-  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
-  <form aria-labelledby="p6-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--color-divider)">
-    <h2 id="p6-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
-    <div><label class="tl-field__label" for="p6-cur">Current password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p6-cur" type="password" autocomplete="current-password" hint-size="100%,36px"></x-import></div>
-    <div><label class="tl-field__label" for="p6-new">New password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p6-new" type="password" autocomplete="new-password" aria-describedby="p6-new-help" hint-size="100%,36px"></x-import><p id="p6-new-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+  <p style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)">Username and email can’t be changed.</p>
+  <form aria-labelledby="p6-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--hairline-strong)">
+    <h2 id="p6-pwh" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+    <div><label class="tl-field__label" for="p6-cur">Current password</label><input class="tl-input" id="p6-cur" type="password" autocomplete="current-password"></div>
+    <div><label class="tl-field__label" for="p6-new">New password</label><input class="tl-input" id="p6-new" type="password" autocomplete="new-password" aria-describedby="p6-new-help"><p id="p6-new-help" style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
     
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Change password</x-import></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Change password</x-import></div>
   </form>
 </main>
       
@@ -255,41 +254,41 @@
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
   <div style="font-size:13px;font-weight:500">Profile — name too long</div>
-  <div data-screen-label="Profile — name too long" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--color-divider)">
+  <div data-screen-label="Profile — name too long" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
       <main style="width:480px;padding:40px 0 60px 40px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
+  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
   <form aria-label="Full name" style="display:flex;flex-direction:column;gap:15px;padding-bottom:30px">
-    <div><label class="tl-field__label" for="p7-name">Full name</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p7-name" autocomplete="name" default-value="Alexandria Catherine Montgomery-Fitzwilliam van der Bergholt Jr" aria-invalid="true" aria-describedby="p7-name-err" hint-size="100%,36px"></x-import><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="p7-name-err" hint-size="100%,16px">Too long (max 60)</x-import></div>
-    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Save</x-import></div>
+    <div><label class="tl-field__label" for="p7-name">Full name</label><input class="tl-input" id="p7-name" autocomplete="name" default-value="Alexandria Catherine Montgomery-Fitzwilliam van der Bergholt Jr" aria-invalid="true" aria-describedby="p7-name-err"><p class="tl-field-error" id="p7-name-err"><span aria-hidden="true" class="tl-field-error__mark">!</span>Too long (max 60)</p></div>
+    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Save</x-import></div>
   </form>
-  <dl style="margin:0;border-top:1px solid var(--color-divider)">
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
+  <dl style="margin:0;border-top:1px solid var(--hairline-strong)">
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
   </dl>
-  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
-  <form aria-labelledby="p7-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--color-divider)">
-    <h2 id="p7-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
-    <div><label class="tl-field__label" for="p7-cur">Current password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p7-cur" type="password" autocomplete="current-password" hint-size="100%,36px"></x-import></div>
-    <div><label class="tl-field__label" for="p7-new">New password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p7-new" type="password" autocomplete="new-password" aria-describedby="p7-new-help" hint-size="100%,36px"></x-import><p id="p7-new-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+  <p style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)">Username and email can’t be changed.</p>
+  <form aria-labelledby="p7-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--hairline-strong)">
+    <h2 id="p7-pwh" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+    <div><label class="tl-field__label" for="p7-cur">Current password</label><input class="tl-input" id="p7-cur" type="password" autocomplete="current-password"></div>
+    <div><label class="tl-field__label" for="p7-new">New password</label><input class="tl-input" id="p7-new" type="password" autocomplete="new-password" aria-describedby="p7-new-help"><p id="p7-new-help" style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
     
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Change password</x-import></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Change password</x-import></div>
   </form>
 </main>
       
@@ -298,41 +297,41 @@
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
   <div style="font-size:13px;font-weight:500">Profile — new password too short</div>
-  <div data-screen-label="Profile — new password too short" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--color-divider)">
+  <div data-screen-label="Profile — new password too short" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
       <main style="width:480px;padding:40px 0 60px 40px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
+  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
   <form aria-label="Full name" style="display:flex;flex-direction:column;gap:15px;padding-bottom:30px">
-    <div><label class="tl-field__label" for="p8-name">Full name</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p8-name" autocomplete="name" default-value="Sam Lee" hint-size="100%,36px"></x-import></div>
-    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Save</x-import></div>
+    <div><label class="tl-field__label" for="p8-name">Full name</label><input class="tl-input" id="p8-name" autocomplete="name" default-value="Sam Lee"></div>
+    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Save</x-import></div>
   </form>
-  <dl style="margin:0;border-top:1px solid var(--color-divider)">
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
+  <dl style="margin:0;border-top:1px solid var(--hairline-strong)">
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
   </dl>
-  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
-  <form aria-labelledby="p8-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--color-divider)">
-    <h2 id="p8-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
-    <div><label class="tl-field__label" for="p8-cur">Current password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p8-cur" type="password" autocomplete="current-password" default-value="correct-horse-battery" hint-size="100%,36px"></x-import></div>
-    <div><label class="tl-field__label" for="p8-new">New password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p8-new" type="password" autocomplete="new-password" default-value="tracklite1" aria-invalid="true" aria-describedby="p8-new-err" hint-size="100%,36px"></x-import><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="p8-new-err" hint-size="100%,16px">At least 12 characters</x-import></div>
+  <p style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)">Username and email can’t be changed.</p>
+  <form aria-labelledby="p8-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--hairline-strong)">
+    <h2 id="p8-pwh" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+    <div><label class="tl-field__label" for="p8-cur">Current password</label><input class="tl-input" id="p8-cur" type="password" autocomplete="current-password" default-value="correct-horse-battery"></div>
+    <div><label class="tl-field__label" for="p8-new">New password</label><input class="tl-input" id="p8-new" type="password" autocomplete="new-password" default-value="tracklite1" aria-invalid="true" aria-describedby="p8-new-err"><p class="tl-field-error" id="p8-new-err"><span aria-hidden="true" class="tl-field-error__mark">!</span>At least 12 characters</p></div>
     
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Change password</x-import></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Change password</x-import></div>
   </form>
 </main>
       
@@ -341,41 +340,41 @@
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
   <div style="font-size:13px;font-weight:500">Profile — new password too long</div>
-  <div data-screen-label="Profile — new password too long" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--color-divider)">
+  <div data-screen-label="Profile — new password too long" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
       <main style="width:480px;padding:40px 0 60px 40px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
+  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
   <form aria-label="Full name" style="display:flex;flex-direction:column;gap:15px;padding-bottom:30px">
-    <div><label class="tl-field__label" for="p9-name">Full name</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p9-name" autocomplete="name" default-value="Sam Lee" hint-size="100%,36px"></x-import></div>
-    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Save</x-import></div>
+    <div><label class="tl-field__label" for="p9-name">Full name</label><input class="tl-input" id="p9-name" autocomplete="name" default-value="Sam Lee"></div>
+    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Save</x-import></div>
   </form>
-  <dl style="margin:0;border-top:1px solid var(--color-divider)">
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
+  <dl style="margin:0;border-top:1px solid var(--hairline-strong)">
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
   </dl>
-  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
-  <form aria-labelledby="p9-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--color-divider)">
-    <h2 id="p9-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
-    <div><label class="tl-field__label" for="p9-cur">Current password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p9-cur" type="password" autocomplete="current-password" default-value="correct-horse-battery" hint-size="100%,36px"></x-import></div>
-    <div><label class="tl-field__label" for="p9-new">New password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p9-new" type="password" autocomplete="new-password" default-value="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" aria-invalid="true" aria-describedby="p9-new-err" hint-size="100%,36px"></x-import><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="p9-new-err" hint-size="100%,16px">Too long (max 128)</x-import></div>
+  <p style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)">Username and email can’t be changed.</p>
+  <form aria-labelledby="p9-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--hairline-strong)">
+    <h2 id="p9-pwh" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+    <div><label class="tl-field__label" for="p9-cur">Current password</label><input class="tl-input" id="p9-cur" type="password" autocomplete="current-password" default-value="correct-horse-battery"></div>
+    <div><label class="tl-field__label" for="p9-new">New password</label><input class="tl-input" id="p9-new" type="password" autocomplete="new-password" default-value="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" aria-invalid="true" aria-describedby="p9-new-err"><p class="tl-field-error" id="p9-new-err"><span aria-hidden="true" class="tl-field-error__mark">!</span>Too long (max 128)</p></div>
     
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Change password</x-import></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Change password</x-import></div>
   </form>
 </main>
       
@@ -384,41 +383,41 @@
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
   <div style="font-size:13px;font-weight:500">Profile — incorrect current password</div>
-  <div data-screen-label="Profile — incorrect current password" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--color-divider)">
+  <div data-screen-label="Profile — incorrect current password" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
       <main style="width:480px;padding:40px 0 60px 40px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
+  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
   <form aria-label="Full name" style="display:flex;flex-direction:column;gap:15px;padding-bottom:30px">
-    <div><label class="tl-field__label" for="p10-name">Full name</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p10-name" autocomplete="name" default-value="Sam Lee" hint-size="100%,36px"></x-import></div>
-    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Save</x-import></div>
+    <div><label class="tl-field__label" for="p10-name">Full name</label><input class="tl-input" id="p10-name" autocomplete="name" default-value="Sam Lee"></div>
+    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Save</x-import></div>
   </form>
-  <dl style="margin:0;border-top:1px solid var(--color-divider)">
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
+  <dl style="margin:0;border-top:1px solid var(--hairline-strong)">
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
   </dl>
-  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
-  <form aria-labelledby="p10-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--color-divider)">
-    <h2 id="p10-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
-    <div><label class="tl-field__label" for="p10-cur">Current password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p10-cur" type="password" autocomplete="current-password" default-value="wrong-horse-battery" aria-invalid="true" aria-describedby="p10-cur-err" hint-size="100%,36px"></x-import><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="p10-cur-err" hint-size="100%,16px">Incorrect password</x-import></div>
-    <div><label class="tl-field__label" for="p10-new">New password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p10-new" type="password" autocomplete="new-password" default-value="staple-lantern-orbit" aria-describedby="p10-new-help" hint-size="100%,36px"></x-import><p id="p10-new-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+  <p style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)">Username and email can’t be changed.</p>
+  <form aria-labelledby="p10-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--hairline-strong)">
+    <h2 id="p10-pwh" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+    <div><label class="tl-field__label" for="p10-cur">Current password</label><input class="tl-input" id="p10-cur" type="password" autocomplete="current-password" default-value="wrong-horse-battery" aria-invalid="true" aria-describedby="p10-cur-err"><p class="tl-field-error" id="p10-cur-err"><span aria-hidden="true" class="tl-field-error__mark">!</span>Incorrect password</p></div>
+    <div><label class="tl-field__label" for="p10-new">New password</label><input class="tl-input" id="p10-new" type="password" autocomplete="new-password" default-value="staple-lantern-orbit" aria-describedby="p10-new-help"><p id="p10-new-help" style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
     
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Change password</x-import></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Change password</x-import></div>
   </form>
 </main>
       
@@ -427,41 +426,41 @@
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
   <div style="font-size:13px;font-weight:500">Profile — too many attempts</div>
-  <div data-screen-label="Profile — too many attempts" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--color-divider)">
+  <div data-screen-label="Profile — too many attempts" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
       <main style="width:480px;padding:40px 0 60px 40px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
+  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
   <form aria-label="Full name" style="display:flex;flex-direction:column;gap:15px;padding-bottom:30px">
-    <div><label class="tl-field__label" for="p11-name">Full name</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p11-name" autocomplete="name" default-value="Sam Lee" hint-size="100%,36px"></x-import></div>
-    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Save</x-import></div>
+    <div><label class="tl-field__label" for="p11-name">Full name</label><input class="tl-input" id="p11-name" autocomplete="name" default-value="Sam Lee"></div>
+    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Save</x-import></div>
   </form>
-  <dl style="margin:0;border-top:1px solid var(--color-divider)">
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
+  <dl style="margin:0;border-top:1px solid var(--hairline-strong)">
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
   </dl>
-  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
-  <form aria-labelledby="p11-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--color-divider)">
-    <h2 id="p11-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
-    <div><label class="tl-field__label" for="p11-cur">Current password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p11-cur" type="password" autocomplete="current-password" default-value="correct-horse-battery" hint-size="100%,36px"></x-import></div>
-    <div><label class="tl-field__label" for="p11-new">New password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p11-new" type="password" autocomplete="new-password" default-value="staple-lantern-orbit" aria-describedby="p11-new-help" hint-size="100%,36px"></x-import><p id="p11-new-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
-    <div role="alert" style="margin-top:-5px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="p11-rate" hint-size="100%,16px">Too many attempts. Try again later.</x-import></div>
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Change password</x-import></div>
+  <p style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)">Username and email can’t be changed.</p>
+  <form aria-labelledby="p11-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--hairline-strong)">
+    <h2 id="p11-pwh" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+    <div><label class="tl-field__label" for="p11-cur">Current password</label><input class="tl-input" id="p11-cur" type="password" autocomplete="current-password" default-value="correct-horse-battery"></div>
+    <div><label class="tl-field__label" for="p11-new">New password</label><input class="tl-input" id="p11-new" type="password" autocomplete="new-password" default-value="staple-lantern-orbit" aria-describedby="p11-new-help"><p id="p11-new-help" style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+    <div role="alert" style="margin-top:-5px"><p class="tl-field-error" id="p11-rate"><span aria-hidden="true" class="tl-field-error__mark">!</span>Too many attempts. Try again later.</p></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Change password</x-import></div>
   </form>
 </main>
       
@@ -470,41 +469,41 @@
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
   <div style="font-size:13px;font-weight:500">Profile — password changed</div>
-  <div data-screen-label="Profile — password changed" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--color-divider)">
+  <div data-screen-label="Profile — password changed" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
       <main style="width:480px;padding:40px 0 60px 40px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
+  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
   <form aria-label="Full name" style="display:flex;flex-direction:column;gap:15px;padding-bottom:30px">
-    <div><label class="tl-field__label" for="p12-name">Full name</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p12-name" autocomplete="name" default-value="Sam Lee" hint-size="100%,36px"></x-import></div>
-    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Save</x-import></div>
+    <div><label class="tl-field__label" for="p12-name">Full name</label><input class="tl-input" id="p12-name" autocomplete="name" default-value="Sam Lee"></div>
+    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Save</x-import></div>
   </form>
-  <dl style="margin:0;border-top:1px solid var(--color-divider)">
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
+  <dl style="margin:0;border-top:1px solid var(--hairline-strong)">
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
   </dl>
-  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
-  <form aria-labelledby="p12-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--color-divider)">
-    <h2 id="p12-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
-    <div><label class="tl-field__label" for="p12-cur">Current password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p12-cur" type="password" autocomplete="current-password" hint-size="100%,36px"></x-import></div>
-    <div><label class="tl-field__label" for="p12-new">New password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p12-new" type="password" autocomplete="new-password" aria-describedby="p12-new-help" hint-size="100%,36px"></x-import><p id="p12-new-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+  <p style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)">Username and email can’t be changed.</p>
+  <form aria-labelledby="p12-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--hairline-strong)">
+    <h2 id="p12-pwh" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+    <div><label class="tl-field__label" for="p12-cur">Current password</label><input class="tl-input" id="p12-cur" type="password" autocomplete="current-password"></div>
+    <div><label class="tl-field__label" for="p12-new">New password</label><input class="tl-input" id="p12-new" type="password" autocomplete="new-password" aria-describedby="p12-new-help"><p id="p12-new-help" style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
     
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Change password</x-import><p role="status" style="margin:0;font-size:12px;color:var(--color-ink-2)">Password changed. You’ve been signed out everywhere else.</p></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Change password</x-import><p role="status" style="margin:0;font-size:12px;color:var(--ink-subtle)">Password changed. You’ve been signed out everywhere else.</p></div>
   </form>
 </main>
       
@@ -513,41 +512,41 @@
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
   <div style="font-size:13px;font-weight:500">Profile — name save failed</div>
-  <div data-screen-label="Profile — name save failed" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--color-divider)">
+  <div data-screen-label="Profile — name save failed" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
       <main style="width:480px;padding:40px 0 60px 40px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
+  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
   <form aria-label="Full name" style="display:flex;flex-direction:column;gap:15px;padding-bottom:30px">
-    <div><label class="tl-field__label" for="p13-name">Full name</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p13-name" autocomplete="name" default-value="Samuel Lee" hint-size="100%,36px"></x-import></div>
-    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Save</x-import></div>
+    <div><label class="tl-field__label" for="p13-name">Full name</label><input class="tl-input" id="p13-name" autocomplete="name" default-value="Samuel Lee"></div>
+    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Save</x-import></div>
   </form>
-  <dl style="margin:0;border-top:1px solid var(--color-divider)">
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
+  <dl style="margin:0;border-top:1px solid var(--hairline-strong)">
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
   </dl>
-  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
-  <form aria-labelledby="p13-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--color-divider)">
-    <h2 id="p13-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
-    <div><label class="tl-field__label" for="p13-cur">Current password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p13-cur" type="password" autocomplete="current-password" hint-size="100%,36px"></x-import></div>
-    <div><label class="tl-field__label" for="p13-new">New password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p13-new" type="password" autocomplete="new-password" aria-describedby="p13-new-help" hint-size="100%,36px"></x-import><p id="p13-new-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+  <p style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)">Username and email can’t be changed.</p>
+  <form aria-labelledby="p13-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--hairline-strong)">
+    <h2 id="p13-pwh" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+    <div><label class="tl-field__label" for="p13-cur">Current password</label><input class="tl-input" id="p13-cur" type="password" autocomplete="current-password"></div>
+    <div><label class="tl-field__label" for="p13-new">New password</label><input class="tl-input" id="p13-new" type="password" autocomplete="new-password" aria-describedby="p13-new-help"><p id="p13-new-help" style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
     
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Change password</x-import></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Change password</x-import></div>
   </form>
 </main>
       <div aria-live="polite" style="position:absolute;left:0;right:0;bottom:30px;display:flex;justify-content:center"><div role="status" class="tl-toast"><span class="tl-toast__stripe tl-toast__stripe--err"></span><span>Couldn’t save. Try again.</span></div></div>
@@ -556,41 +555,41 @@
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
   <div style="font-size:13px;font-weight:500">Profile — password change failed</div>
-  <div data-screen-label="Profile — password change failed" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--color-divider)">
+  <div data-screen-label="Profile — password change failed" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
       <main style="width:480px;padding:40px 0 60px 40px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
+  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Sam Lee</span></div>
   <form aria-label="Full name" style="display:flex;flex-direction:column;gap:15px;padding-bottom:30px">
-    <div><label class="tl-field__label" for="p14-name">Full name</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p14-name" autocomplete="name" default-value="Sam Lee" hint-size="100%,36px"></x-import></div>
-    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Save</x-import></div>
+    <div><label class="tl-field__label" for="p14-name">Full name</label><input class="tl-input" id="p14-name" autocomplete="name" default-value="Sam Lee"></div>
+    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Save</x-import></div>
   </form>
-  <dl style="margin:0;border-top:1px solid var(--color-divider)">
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
+  <dl style="margin:0;border-top:1px solid var(--hairline-strong)">
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
   </dl>
-  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
-  <form aria-labelledby="p14-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--color-divider)">
-    <h2 id="p14-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
-    <div><label class="tl-field__label" for="p14-cur">Current password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p14-cur" type="password" autocomplete="current-password" default-value="correct-horse-battery" hint-size="100%,36px"></x-import></div>
-    <div><label class="tl-field__label" for="p14-new">New password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p14-new" type="password" autocomplete="new-password" default-value="staple-lantern-orbit" aria-describedby="p14-new-help" hint-size="100%,36px"></x-import><p id="p14-new-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+  <p style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)">Username and email can’t be changed.</p>
+  <form aria-labelledby="p14-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--hairline-strong)">
+    <h2 id="p14-pwh" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+    <div><label class="tl-field__label" for="p14-cur">Current password</label><input class="tl-input" id="p14-cur" type="password" autocomplete="current-password" default-value="correct-horse-battery"></div>
+    <div><label class="tl-field__label" for="p14-new">New password</label><input class="tl-input" id="p14-new" type="password" autocomplete="new-password" default-value="staple-lantern-orbit" aria-describedby="p14-new-help"><p id="p14-new-help" style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
     
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Change password</x-import></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Change password</x-import></div>
   </form>
 </main>
       <div aria-live="polite" style="position:absolute;left:0;right:0;bottom:30px;display:flex;justify-content:center"><div role="status" class="tl-toast"><span class="tl-toast__stripe tl-toast__stripe--err"></span><span>Couldn’t save. Try again.</span></div></div>
@@ -598,42 +597,42 @@
   </div>
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
-  <div style="font-size:13px;font-weight:500">Profile — name saved <span style="color:var(--color-ink-3);font-weight:400">(“Name saved.” stays until the field is edited again)</span></div>
-  <div data-screen-label="Profile — name saved" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--color-divider)">
+  <div style="font-size:13px;font-weight:500">Profile — name saved <span style="color:var(--ink-tertiary);font-weight:400">(“Name saved.” stays until the field is edited again)</span></div>
+  <div data-screen-label="Profile — name saved" class="tl-shell" style="position:relative;width:1280px;height:820px;border:1px solid var(--hairline-strong)">
     <aside class="tl-rail" aria-label="Sidebar">
-  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+  <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
   <nav class="tl-rail__main">
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
     <div class="tl-rail-group">
-      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
-      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+      <div style="display:flex;align-items:center;justify-content:space-between"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+      <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
     </div>
-    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
+    <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a></div>
   </nav>
   <div class="tl-rail__foot" style="position:relative">
     
-    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">Samuel Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+    <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">Samuel Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
   </div>
 </aside>
     <div class="tl-shell__body" style="position:relative;overflow:hidden">
       <header class="tl-appbar"><h1 class="tl-appbar__title">Profile</h1></header>
       <main style="width:480px;padding:40px 0 60px 40px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="SL" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Samuel Lee</span></div>
+  <div style="display:flex;align-items:center;gap:15px;padding-bottom:30px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="SL" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Samuel Lee</span></div>
   <form aria-label="Full name" style="display:flex;flex-direction:column;gap:15px;padding-bottom:30px">
-    <div><label class="tl-field__label" for="p15-name">Full name</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p15-name" autocomplete="name" default-value="Samuel Lee" hint-size="100%,36px"></x-import></div>
-    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Save</x-import><p role="status" style="margin:0;font-size:12px;color:var(--color-ink-2)">Name saved.</p></div>
+    <div><label class="tl-field__label" for="p15-name">Full name</label><input class="tl-input" id="p15-name" autocomplete="name" default-value="Samuel Lee"></div>
+    <div style="display:flex;align-items:center;gap:15px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Save</x-import><p role="status" style="margin:0;font-size:12px;color:var(--ink-subtle)">Name saved.</p></div>
   </form>
-  <dl style="margin:0;border-top:1px solid var(--color-divider)">
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
-    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--color-hair)"><dt style="font-size:12px;color:var(--color-ink-2)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
+  <dl style="margin:0;border-top:1px solid var(--hairline-strong)">
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Username</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">sam</dd></div>
+    <div style="display:grid;grid-template-columns:120px 1fr;align-items:center;height:36px;border-bottom:1px solid var(--hairline)"><dt style="font-size:12px;color:var(--ink-subtle)">Email</dt><dd style="margin:0;font-size:13px">sam@acme.com</dd></div>
   </dl>
-  <p style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)">Username and email can’t be changed.</p>
-  <form aria-labelledby="p15-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--color-divider)">
-    <h2 id="p15-pwh" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
-    <div><label class="tl-field__label" for="p15-cur">Current password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p15-cur" type="password" autocomplete="current-password" hint-size="100%,36px"></x-import></div>
-    <div><label class="tl-field__label" for="p15-new">New password</label><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="p15-new" type="password" autocomplete="new-password" aria-describedby="p15-new-help" hint-size="100%,36px"></x-import><p id="p15-new-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
+  <p style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)">Username and email can’t be changed.</p>
+  <form aria-labelledby="p15-pwh" style="display:flex;flex-direction:column;gap:15px;margin-top:40px;padding-top:30px;border-top:1px solid var(--hairline-strong)">
+    <h2 id="p15-pwh" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Change password</h2>
+    <div><label class="tl-field__label" for="p15-cur">Current password</label><input class="tl-input" id="p15-cur" type="password" autocomplete="current-password"></div>
+    <div><label class="tl-field__label" for="p15-new">New password</label><input class="tl-input" id="p15-new" type="password" autocomplete="new-password" aria-describedby="p15-new-help"><p id="p15-new-help" style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p></div>
     
-    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" hint-size="auto,38px">Change password</x-import></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" hint-size="auto,36px">Change password</x-import></div>
   </form>
 </main>
       
@@ -644,19 +643,19 @@
 </section>
 
 <section data-screen-label="Initials" style="padding:0 60px 40px;display:flex;flex-direction:column;gap:15px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Initials · REQ-003.4</h2>
-  <div style="display:flex;flex-direction:column;max-width:640px;border-top:1px solid var(--color-divider)">
-    <div style="display:flex;align-items:center;gap:15px;height:44px;border-bottom:1px solid var(--color-hair)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="AB" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-size:13px">Alexandria Catherine Montgomery-Fitzwilliam van der Bergholt</span></div>
-    <div style="display:flex;align-items:center;gap:15px;height:44px;border-bottom:1px solid var(--color-hair)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="S" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-size:13px">Sam</span></div>
-    <div style="display:flex;align-items:center;gap:15px;height:44px;border-bottom:1px solid var(--color-hair)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="(L" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-size:13px">(Contractor) Lee</span></div>
-    <div style="display:flex;align-items:center;gap:15px;height:44px;border-bottom:1px solid var(--color-hair)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="3T" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-size:13px">3M Team</span></div>
-    <div style="display:flex;align-items:center;gap:15px;height:44px;border-bottom:1px solid var(--color-hair)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="李小" size="lg" tone="accent" hint-size="30px,30px"></x-import><span style="font-size:13px">李 小龙</span></div>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Initials · REQ-003.4</h2>
+  <div style="display:flex;flex-direction:column;max-width:640px;border-top:1px solid var(--hairline-strong)">
+    <div style="display:flex;align-items:center;gap:15px;height:44px;border-bottom:1px solid var(--hairline)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="AB" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-size:13px">Alexandria Catherine Montgomery-Fitzwilliam van der Bergholt</span></div>
+    <div style="display:flex;align-items:center;gap:15px;height:44px;border-bottom:1px solid var(--hairline)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="S" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-size:13px">Sam</span></div>
+    <div style="display:flex;align-items:center;gap:15px;height:44px;border-bottom:1px solid var(--hairline)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="(L" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-size:13px">(Contractor) Lee</span></div>
+    <div style="display:flex;align-items:center;gap:15px;height:44px;border-bottom:1px solid var(--hairline)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="3T" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-size:13px">3M Team</span></div>
+    <div style="display:flex;align-items:center;gap:15px;height:44px;border-bottom:1px solid var(--hairline)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="李小" size="{{ 20 }}" hint-size="20px,20px"></x-import><span style="font-size:13px">李 小龙</span></div>
   </div>
 </section>
 
 <section data-screen-label="Notes" style="padding:0 60px 80px;display:flex;flex-direction:column;gap:10px;max-width:760px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Notes and gaps</h2>
-  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--color-ink-2)">
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Notes and gaps</h2>
+  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--ink-subtle)">
         <li>Proposed name-saved confirmation: “Name saved.” beside Save, plus the heading and sidebar showing the new name. No toast, since toasts are for failures here.</li>
     <li>Inline success / status line. Not in the kit; drawn as <span style="font-family:var(--font-mono)">12</span>px ink-2 text with role=status for “Name saved.” and “Password changed…”.</li>
     <li>Read-only field (username, email). Not in the kit; drawn as a two-column list on hairline rules rather than a disabled input.</li>

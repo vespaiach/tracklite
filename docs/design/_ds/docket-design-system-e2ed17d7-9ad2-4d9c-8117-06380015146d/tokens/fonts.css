@@ -1,0 +1,7 @@
+/* Geist + Geist Mono (Google Fonts, OFL) — substitutes for a proprietary product sans */
+@font-face{font-family:'Geist';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/Geist-latin.woff2') format('woff2');}
+@font-face{font-family:'Geist';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/Geist-latin.woff2') format('woff2');}
+@font-face{font-family:'Geist';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/Geist-latin.woff2') format('woff2');}
+@font-face{font-family:'Geist';font-style:normal;font-weight:700;font-display:swap;src:url('../fonts/Geist-latin.woff2') format('woff2');}
+@font-face{font-family:'Geist Mono';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/GeistMono-latin.woff2') format('woff2');}
+@font-face{font-family:'Geist Mono';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/GeistMono-latin.woff2') format('woff2');}

@@ -1,8 +1,10 @@
 # Track Lite design system
 
-Ported from the Claude Design project "Track Lite Design System" (claude.ai/design/p/803a56b3-e94a-4a12-bb36-40e90e225931) into `src/components/ui/track-lite/`. This file keeps the project's usage rules, so screens can follow them without opening the project.
+The app's component kit lives in `src/components/ui/track-lite/` and keeps the name Track Lite. Its look follows the **Docket** design system from the Claude Design export "Tracklite project setup" (2026-10-25). The export is in `docs/design/`: Docket's tokens, fonts and component bundle in `_ds/docket-design-system-…/`, and Tracklite's own markup on Docket tokens in `tracklite-app.css`. This file keeps the usage rules, so screens can follow them without opening the export.
 
-The visual language is editorial: a warm paper ground, near-black ink, a serif for anything a person wrote, and a clay accent, applied to a dense, keyboard-first app.
+The visual language is quiet and dense: a cream canvas, the main area in a lighter inset panel, warm graphite ink, hairline rules, Geist for everything a person reads and Geist Mono for machine values, and one chromatic accent, eraser (`--primary`).
+
+The kit moves to Docket in execution plan rows D02–D07 (tokens and fonts, icons, controls, overlays, lists and board, shell). Until each lands, the code still uses the older Track Lite tokens (`--color-*`, `--font-ui`, `--font-serif`) and Phosphor icons that the rules below replace. Build new work to these rules.
 
 ## What's in the repo
 
@@ -14,7 +16,7 @@ The visual language is editorial: a warm paper ground, near-black ink, a serif f
 | `styles/components.css` | Every component's `tl-*` class rules |
 | `*.tsx` | `AppShell` (Rail, RailItem, RailLabel, RailLabelAction, RailNote, AppBar, Crumbs…), `Button`, `Card`, `CommandMenu` (Filters, FilterRule, Toasts), `Dialog` (AppDialog, TitleInput), `Field` (Input, Textarea, FieldError; `help` text under the control), `IssueLayout` (Meta, Pick, Prose, Editor, Feed, Comment…), `ListRow` (ListGroup, CollapsibleListGroup, ListRowLink, ListRowHead, Board, BoardColumn, BoardCard, BoardEmpty, Drawer…), `Nav`, `Pill` (Kbd, Tip, TipTrigger, Avatar…), `Pop` (PopItem, PopSearch, Menu, MenuItem, MenuSubmenu, MenuSep…), `Progress` (Ring, Metric, Spark, Workload, Timeline), `Segmented` (Radio, Checkbox, LinkTabs), `Settings` (SettingsLayout, SettingsIdentity, SettingsForm, SettingsSection, SettingsGrid, SettingsInline, SettingsEmpty, SettingsActions, FactList, Fact, FormStatus, WarningNote, FormError), `SignedOut` (SignedOutLayout, SignedOutForm, SignedOutHeading, SignedOutFields, SignedOutFormError, SignedOutMessage, SignedOutAlert, SignedOutStatus), `Status` (Priority, Glyph), `Table`, `Tag` |
 
-Differences from the Claude Design project:
+Differences from the Track Lite Claude Design project the kit was first ported from (claude.ai/design/p/803a56b3-e94a-4a12-bb36-40e90e225931). Rows D02–D07 update these as they restyle each component:
 - Fonts load through `next/font/google`, and icons through `@phosphor-icons/react`, instead of CDN links (the CSP allows only `'self'`). The project's `Icon` wrapper was dropped.
 - `useToasts` was dropped: toasts follow STD-9 through the Redux `toast` slice. `Toasts` shows a dismiss button only when given `onDismiss`.
 - `SignedOut` and `Field`'s `help` were added in the repo for the signed-out screens (M1.7) and aren't in the Claude Design project yet. Add them there before the next import, or keep them when importing.
@@ -41,10 +43,10 @@ Differences from the Claude Design project:
 
 ## Importing updates from Claude Design
 
-After changing the design system in Claude Design, give Claude Code this prompt (fill in or delete the last sentence):
+After changing the design in Claude Design, export it into `docs/design/` (rename its `CLAUDE.md` to `BRIEF.md`) and give Claude Code this prompt (fill in or delete the last sentence):
 
 ```text
-Pull the latest Track Lite design system from the Claude Design project linked in docs/design-system.md into src/components/ui/track-lite/. Port it the same way as before: TypeScript with no comments, fonts through next/font and icons through @phosphor-icons/react (no CDN files), and keep every item under "Differences from the Claude Design project". Write tests first for new or changed interactive components, run npm test, npm run lint and npm run typecheck, and update this file plus the spec and tech design if the change touches them. Ask me before resolving any conflict with components the app already uses. What changed: [e.g. new Avatar component, warmer accent colour].
+Pull the latest Docket design system and tracklite-app.css from docs/design/ into src/components/ui/track-lite/. Port it the same way as before: TypeScript with no comments, fonts through next/font and icons through lucide-react (no CDN files), and keep every item under "Differences from the Claude Design project". Write tests first for new or changed interactive components, run npm test, npm run lint and npm run typecheck, and update this file plus the spec and tech design if the change touches them. Ask me before resolving any conflict with components the app already uses. What changed: [e.g. new Avatar component, warmer accent colour].
 ```
 
 Don't use `/design-sync` for this. It uploads the repo to Claude Design, the opposite direction.
@@ -54,47 +56,52 @@ Don't use `/design-sync` for this. It uploads the repo to Claude Design, the opp
 - Plain, specific and matter-of-fact. Help text uses "you"; the product never says "I" or "we".
 - Sentence case everywhere. Uppercase is only a typographic treatment (eyebrows).
 - Actions are verbs ("Create issue", "Post"). Feedback is a past-tense fact ("WEB-42 moved to In Review").
-- Machine values are in mono: IDs, dates, estimates, counts, key caps, relative times.
+- Machine values are in mono: IDs, dates, counts, relative times.
 - Use the ellipsis character (…) and curly quotes. No exclamation marks and no emoji.
 
 ## Colour
 
-- Paper `--color-paper` is the ground, `--color-surface` is for filled things, and ink `--color-ink` is for text.
-- Clay (`--color-accent`) marks the interactive and the measured: primary buttons, selection, focus, done and review, progress.
-- Terracotta (`--color-accent-2`) marks the exception: urgent, in progress, overdue, destructive, the "today" line. Never use both accents in one small component.
-- `Button variant="danger"` (paper on `--color-accent-2-700`, 5.87:1) is only for the one confirming action in a destructive confirmation dialog, such as "Deactivate" or "Revoke invitation". Pair it with a secondary "Cancel" that takes focus first. Destructive menu items stay `PopItem danger` (terracotta text, no fill).
-- Neutral greys cover backlog, canceled, tracks and the dark surfaces. Process yellow appears only on the warn toast stripe.
-- Text and rules use ink at fixed alphas: `--color-ink-2` (secondary), `--color-ink-3` (muted), `--color-divider` (structural rules), `--color-hair` (between rows), `--color-tint-2` (hover), `--color-tint` (rail, board columns).
+Light theme only; Docket's dark theme isn't used.
+
+- The page is `--canvas` (cream `#F3EFE8`). The main area sits in an inset `--surface-1` panel. Surfaces step lighter toward white: `--surface-2` for raised or hovered things, `--surface-3` for menus, popovers and dialogs. Text is `--ink`, with `--ink-muted`, `--ink-subtle` (secondary text, deactivated members) and `--ink-tertiary` (placeholders, hints).
+- Eraser `--primary` (`#C97253`) is the one accent. It marks the interactive and the primary: primary buttons, the focus ring (`--focus-ring`, `--primary-ring`), selection, the current item, links (`--text-link`). Text on an eraser fill is `--on-primary` (near-black; white fails contrast).
+- `--danger` is only for exceptions: overdue and destructive (destructive buttons and menu items, field errors, the notification-status warnings). Urgent priority is Docket's `PriorityIcon` (circle-alert), not a red fill.
+- `--warning` is for warning-tone tags, such as a bounced invitation.
+- Status and label colours come from their tokens (`--status-backlog`, `-progress`, `-review`, `-done`, `-canceled`; `--label-*`), never hard-coded hex.
+- Hover is `--bg-hover`; selected is `--bg-selected`, or `--primary-tint` where the eraser marks the choice.
 
 ## Type
 
-- Source Serif 4 (`--font-serif`) is for titles, prose and headline figures. In the app, issue titles in rows and cards are the only serif.
-- Archivo (`--font-ui`) is for all chrome, at 10–13px.
-- JetBrains Mono (`--font-mono`) is for machine values.
-- Headings are weight 600 with −0.015em tracking. Eyebrows are Archivo 500, uppercase, 10–10.5px, 0.1em tracking.
+- Geist (`--font-display`, `--font-text`) for all text, from page titles to chrome. There is no serif.
+- Geist Mono (`--font-mono`) for machine values.
+- Product UI runs at 13px weight 500 for titles and 12px for meta. Headings are weight 600 with slight negative tracking. Eyebrows are weight 500, uppercase, with positive tracking.
+- Use the size tokens in `tokens/typography.css` (`--ui-size`, `--body-sm-size`, `--caption-size`, `--subhead-size`…), not raw pixel values.
 
 ## Space and shape
 
-- Spacing steps are 5px (5, 10, 15, 20, 30, 40). Fixed sizes are exact: 44px app bar, 36px list row and input, 32px rail item, 29px menu item, 26px small button, 19px pill. Odd values such as 7px are intentional.
-- Separate rows and panels with 1px rules, not boxes. Only things that sit on the page are filled: board cards, popovers, toasts, dialogs, `Card`.
-- Corners are nearly square: 1px for pills, 2px for buttons, inputs and cards, 4px for dialogs. Only avatars, status rings and presence dots are round.
-- Shadows come in three ink-tinted steps (`--shadow-sm`, `--shadow-md` for popovers and toasts, `--shadow-lg` for dialogs).
-- No gradients, textures, imagery, blur or motion beyond instant colour changes. A dragged card rotates −1.4° with `--shadow-md`.
+- Spacing is on a 4px base (`--space-xxs` 4 … `--space-xxl` 48).
+- Fixed sizes: 240px sidebar, 28px sidebar row, 40px list row, 48px page header, 36px input and md button, 28px sm button, 20px default avatar.
+- Separate rows and panels with 1px hairlines (`--hairline`; `--hairline-strong` for emphasis, such as a scrolled column head; `--hairline-tertiary` for control edges), not boxes.
+- Radii: 4px chips, 6px tags, icon buttons and sidebar rows, 8px buttons, inputs and board cards, 12px board columns, dialogs and the main panel. Pills only for segmented tabs and badges. Avatars are round.
+- Shadows only on floating layers: `--elev-menu` for menus and popovers, `--elev-dialog` for dialogs over the 60% scrim (`--overlay`). Cards use `--elev-1` (an inset top highlight), not a drop shadow.
+- No gradients, imagery or textures. Motion is colour and opacity only, 100ms for hover (`--dur-fast`), with no bounce or scale.
 
 ## States
 
-- Hover: `--color-tint-2` fill on chrome. Press goes one step further.
-- Selected: `--color-accent-100` fill with `--color-accent-800` text, plus ✓ in menus.
-- Focus: 2px clay outline with a 2px offset (inputs use offset 0 and a clay border).
+- Hover: `--bg-hover` fill or one surface step up; text goes from subtle to ink. Primary lightens to `--primary-hover`.
+- Press: primary darkens to `--primary-pressed`; others step one surface further.
+- Selected: `--bg-selected` fill, plus ✓ in menus.
+- Focus: the 2px eraser ring (`--focus-ring`). Inputs keep their border and add the ring.
+- Invalid: a `--danger` border, and the error line under the field with the round "!" mark (hidden from assistive tech).
 - Disabled: 45% opacity and a not-allowed cursor.
 
 ## Layout
 
-A full-height grid: a 232px rail (52px collapsed) and the body. The app bar and filter toolbar stay fixed while the list scrolls under sticky group heads. The issue drawer is 400px; board columns share the width, at least 248px each.
+A full-height grid: the 240px sidebar on the canvas, and the main area in an inset `--surface-1` panel with an 8px margin and 12px radius. Project pages have a 48px header (name, Board | List segmented tabs, settings, New issue). Lists use 40px rows under sticky group heads; board columns share the width.
 
 ## Icons
 
-- Phosphor through `@phosphor-icons/react`, duotone weight, 13–16px in chrome (15px by default). Import each icon from its own module (`@phosphor-icons/react/dist/csr/DotsThree`), not the package root, which loads every icon. Use bold for the small "+" in "New issue" and the board card's **⋯**, whose duotone dots are too faint at 15px.
-- Status, priority and the rail's saved-view marks are drawn in CSS (`Status`, `Priority`, `Glyph`), never with icons.
-- Unicode stands in for icons in a few places: ✓ for selected menu items, × for close and remove, / between breadcrumbs, ⌘ ↑ ↓ ↵ in key caps.
-- The logo is `Logo`: the "lifted card" mark (a board card tilted as if mid-drag, with the clay border) beside the product name, Tracklite, in the serif at weight 600. Size `rail` sits in the rail head, `signed-out` in the signed-out header. The mark is hidden from assistive tech; the wordmark names it.
+- [Lucide](https://lucide.dev) through `lucide-react`: outline, 14–16px, 1.75 stroke, `currentColor`. Never load icons from a CDN.
+- Status and priority use the Docket glyphs at 14px and 2 stroke, in their token colours: `StatusIcon` (circle-dashed backlog, circle-dot in progress and in review, circle-check done, circle-x canceled) and `PriorityIcon` (signal bars for low to high, circle-alert for urgent).
+- Unicode stands in for icons in a few places: ✓ for selected menu items, × for close and remove, / between breadcrumbs.
+- The logo is `Logo`: the "lifted card" mark (a board card tilted −9° over a faded outline card) in Docket ink, surface and eraser, beside the wordmark Tracklite in Geist 600. Size `rail` (22px mark, 17px wordmark) sits in the sidebar head, `signed-out` (26px, 20px) in the signed-out header. The mark is hidden from assistive tech; the wordmark names it.

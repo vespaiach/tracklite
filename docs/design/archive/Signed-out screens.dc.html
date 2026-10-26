@@ -9,18 +9,17 @@
 <x-dc>
 <helmet>
   <meta name="design_doc_mode" content="canvas">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/fonts.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/icons.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/colors.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/typography.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/spacing.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/base.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/components/components.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/styles.css">
-  <script src="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/base.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/styles.css">
+  <script src="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="tracklite-app.css">
   <style>
-    body{margin:0;background:var(--color-surface);font-family:var(--font-ui);color:var(--color-ink)}
-    a{color:var(--color-accent);text-decoration:none}
+    body{margin:0;background:var(--canvas);font-family:var(--font-text);color:var(--ink)}
+    a{color:var(--text-link);text-decoration:none}
     a:hover{text-decoration:underline}
     .tl-field-error{align-items:center}
     .tl-field-error__mark{margin-top:-2px}
@@ -28,30 +27,30 @@
 </helmet>
 
 <section data-screen-label="Brand header" style="padding:60px 60px 0;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Brand header — signed-out pages</h2>
-  <div style="width:1280px;background:var(--color-paper);border:1px solid var(--color-divider)">
-    <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)">
-      <span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Brand header — signed-out pages</h2>
+  <div style="width:1280px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+    <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)">
+      <span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span>
     </header>
   </div>
-  <p style="margin:0;font-size:13px;color:var(--color-ink-2);max-width:640px">The word Tracklite in Source Serif 4 at 600, 20px. 56px bar with a 1px divider rule below. Not a link on these pages. Used on every frame below.</p>
+  <p style="margin:0;font-size:13px;color:var(--ink-subtle);max-width:640px">The word Tracklite in Source Serif 4 at 600, 20px. 56px bar with a 1px divider rule below. Not a link on these pages. Used on every frame below.</p>
 </section>
 
 <section data-screen-label="Sign in" style="padding:60px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Sign in · /sign-in</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Sign in · /sign-in</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px">
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Sign in — default</div>
-      <div data-screen-label="Sign in — default" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Sign in — default" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
-          <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Sign in</h1>
+          <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">Sign in</h1>
           <div style="display:flex;flex-direction:column;gap:15px">
-            <div><label class="tl-field__label" for="si1-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="envelope-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="si1-email" type="email" autocomplete="email" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
-            <div><label class="tl-field__label" for="si1-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="si1-pw" type="password" autocomplete="current-password" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
+            <div><label class="tl-field__label" for="si1-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="send" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="si1-email" type="email" autocomplete="email" dc-props="{{ emailInputProps }}"></div></div>
+            <div><label class="tl-field__label" for="si1-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="lock" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="si1-pw" type="password" autocomplete="current-password" dc-props="{{ emailInputProps }}"></div></div>
           </div>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Sign in</x-import>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" fullWidth="{{ true }}" hint-size="100%,36px" style="margin-top:10px;">Sign in</x-import>
           <a href="#" style="font-size:12px;align-self:flex-start">Forgot password?</a>
         </main>
       </div>
@@ -59,15 +58,15 @@
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Sign in — submitting</div>
-      <div data-screen-label="Sign in — submitting" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Sign in — submitting" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
-          <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Sign in</h1>
+          <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">Sign in</h1>
           <div style="display:flex;flex-direction:column;gap:15px">
-            <div><label class="tl-field__label" for="si2-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="envelope-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="si2-email" type="email" default-value="sam@acme.com" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
-            <div><label class="tl-field__label" for="si2-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="si2-pw" type="password" default-value="correct-horse-battery" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
+            <div><label class="tl-field__label" for="si2-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="send" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="si2-email" type="email" default-value="sam@acme.com" dc-props="{{ emailInputProps }}"></div></div>
+            <div><label class="tl-field__label" for="si2-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="lock" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="si2-pw" type="password" default-value="correct-horse-battery" dc-props="{{ emailInputProps }}"></div></div>
           </div>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" disabled="{{ true }}" aria-busy="true" hint-size="100%,38px">Signing in…</x-import>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" fullWidth="{{ true }}" disabled="{{ true }}" aria-busy="true" hint-size="100%,36px" style="margin-top:10px;">Signing in…</x-import>
           <a href="#" style="font-size:12px;align-self:flex-start">Forgot password?</a>
         </main>
       </div>
@@ -75,16 +74,16 @@
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Sign in — incorrect email or password</div>
-      <div data-screen-label="Sign in — incorrect email or password" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Sign in — incorrect email or password" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
-          <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Sign in</h1>
+          <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">Sign in</h1>
           <div style="display:flex;flex-direction:column;gap:15px">
-            <div><label class="tl-field__label" for="si3-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="envelope-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="si3-email" type="email" default-value="sam@acme.com" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
-            <div><label class="tl-field__label" for="si3-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="si3-pw" type="password" aria-describedby="si3-err" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
+            <div><label class="tl-field__label" for="si3-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="send" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="si3-email" type="email" default-value="sam@acme.com" dc-props="{{ emailInputProps }}"></div></div>
+            <div><label class="tl-field__label" for="si3-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="lock" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="si3-pw" type="password" aria-describedby="si3-err" dc-props="{{ emailInputProps }}"></div></div>
           </div>
-          <div role="alert" style="margin-top:-5px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="si3-err" hint-size="100%,16px">Incorrect email or password.</x-import></div>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Sign in</x-import>
+          <div role="alert" style="margin-top:-5px"><p class="tl-field-error" id="si3-err"><span aria-hidden="true" class="tl-field-error__mark">!</span>Incorrect email or password.</p></div>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" fullWidth="{{ true }}" hint-size="100%,36px" style="margin-top:10px;">Sign in</x-import>
           <a href="#" style="font-size:12px;align-self:flex-start">Forgot password?</a>
         </main>
       </div>
@@ -92,16 +91,16 @@
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Sign in — too many attempts</div>
-      <div data-screen-label="Sign in — too many attempts" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Sign in — too many attempts" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
-          <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Sign in</h1>
+          <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">Sign in</h1>
           <div style="display:flex;flex-direction:column;gap:15px">
-            <div><label class="tl-field__label" for="si4-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="envelope-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="si4-email" type="email" default-value="sam@acme.com" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
-            <div><label class="tl-field__label" for="si4-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="si4-pw" type="password" aria-describedby="si4-err" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
+            <div><label class="tl-field__label" for="si4-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="send" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="si4-email" type="email" default-value="sam@acme.com" dc-props="{{ emailInputProps }}"></div></div>
+            <div><label class="tl-field__label" for="si4-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="lock" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="si4-pw" type="password" aria-describedby="si4-err" dc-props="{{ emailInputProps }}"></div></div>
           </div>
-          <div role="alert" style="margin-top:-5px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="si4-err" hint-size="100%,16px">Too many attempts. Try again later.</x-import></div>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Sign in</x-import>
+          <div role="alert" style="margin-top:-5px"><p class="tl-field-error" id="si4-err"><span aria-hidden="true" class="tl-field-error__mark">!</span>Too many attempts. Try again later.</p></div>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" fullWidth="{{ true }}" hint-size="100%,36px" style="margin-top:10px;">Sign in</x-import>
           <a href="#" style="font-size:12px;align-self:flex-start">Forgot password?</a>
         </main>
       </div>
@@ -109,15 +108,15 @@
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Sign in — network error toast</div>
-      <div data-screen-label="Sign in — network error toast" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Sign in — network error toast" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
-          <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Sign in</h1>
+          <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">Sign in</h1>
           <div style="display:flex;flex-direction:column;gap:15px">
-            <div><label class="tl-field__label" for="si5-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="envelope-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="si5-email" type="email" default-value="sam@acme.com" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
-            <div><label class="tl-field__label" for="si5-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="si5-pw" type="password" default-value="correct-horse-battery" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
+            <div><label class="tl-field__label" for="si5-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="send" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="si5-email" type="email" default-value="sam@acme.com" dc-props="{{ emailInputProps }}"></div></div>
+            <div><label class="tl-field__label" for="si5-pw">Password</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="lock" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="si5-pw" type="password" default-value="correct-horse-battery" dc-props="{{ emailInputProps }}"></div></div>
           </div>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Sign in</x-import>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" fullWidth="{{ true }}" hint-size="100%,36px" style="margin-top:10px;">Sign in</x-import>
           <a href="#" style="font-size:12px;align-self:flex-start">Forgot password?</a>
         </main>
         <div aria-live="polite" style="position:absolute;left:0;right:0;bottom:30px;display:flex;justify-content:center">
@@ -130,20 +129,20 @@
 </section>
 
 <section data-screen-label="Forgot password" style="padding:60px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Forgot password · /forgot-password</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Forgot password · /forgot-password</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px">
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Forgot password — default</div>
-      <div data-screen-label="Forgot password — default" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Forgot password — default" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
           <div style="display:flex;flex-direction:column;gap:5px">
-            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Reset your password</h1>
-            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">Enter the email you sign in with. You’ll get a link to set a new password.</p>
+            <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">Reset your password</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--ink-subtle);text-wrap:pretty">Enter the email you sign in with. You’ll get a link to set a new password.</p>
           </div>
-          <div><label class="tl-field__label" for="fp1-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="envelope-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="fp1-email" type="email" autocomplete="email" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Send link</x-import>
+          <div><label class="tl-field__label" for="fp1-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="send" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="fp1-email" type="email" autocomplete="email" dc-props="{{ emailInputProps }}"></div></div>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" fullWidth="{{ true }}" hint-size="100%,36px" style="margin-top:10px;">Send link</x-import>
           <a href="#" style="font-size:12px;align-self:flex-start">Back to sign in</a>
         </main>
       </div>
@@ -151,15 +150,15 @@
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Forgot password — submitting</div>
-      <div data-screen-label="Forgot password — submitting" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Forgot password — submitting" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
           <div style="display:flex;flex-direction:column;gap:5px">
-            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Reset your password</h1>
-            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">Enter the email you sign in with. You’ll get a link to set a new password.</p>
+            <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">Reset your password</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--ink-subtle);text-wrap:pretty">Enter the email you sign in with. You’ll get a link to set a new password.</p>
           </div>
-          <div><label class="tl-field__label" for="fp2-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="envelope-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="fp2-email" type="email" default-value="sam@acme.com" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" disabled="{{ true }}" aria-busy="true" hint-size="100%,38px">Sending…</x-import>
+          <div><label class="tl-field__label" for="fp2-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="send" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="fp2-email" type="email" default-value="sam@acme.com" dc-props="{{ emailInputProps }}"></div></div>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" fullWidth="{{ true }}" disabled="{{ true }}" aria-busy="true" hint-size="100%,36px" style="margin-top:10px;">Sending…</x-import>
           <a href="#" style="font-size:12px;align-self:flex-start">Back to sign in</a>
         </main>
       </div>
@@ -167,12 +166,12 @@
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Forgot password — check your email</div>
-      <div data-screen-label="Forgot password — check your email" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Forgot password — check your email" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
           <div style="display:flex;flex-direction:column;gap:5px">
-            <h1 role="status" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Check your email</h1>
-            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">If sam@acme.com belongs to a Tracklite member, a reset link is on its way. The link works once and expires after <span style="font-family:var(--font-mono)">30</span> minutes.</p>
+            <h1 role="status" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">Check your email</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--ink-subtle);text-wrap:pretty">If sam@acme.com belongs to a Tracklite member, a reset link is on its way. The link works once and expires after <span style="font-family:var(--font-mono)">30</span> minutes.</p>
           </div>
           <a href="#" style="font-size:12px;align-self:flex-start">Back to sign in</a>
         </main>
@@ -181,16 +180,16 @@
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Forgot password — too many attempts</div>
-      <div data-screen-label="Forgot password — too many attempts" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Forgot password — too many attempts" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
           <div style="display:flex;flex-direction:column;gap:5px">
-            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Reset your password</h1>
-            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">Enter the email you sign in with. You’ll get a link to set a new password.</p>
+            <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">Reset your password</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--ink-subtle);text-wrap:pretty">Enter the email you sign in with. You’ll get a link to set a new password.</p>
           </div>
-          <div><label class="tl-field__label" for="fp4-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="envelope-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="fp4-email" type="email" default-value="sam@acme.com" aria-describedby="fp4-err" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
-          <div role="alert" style="margin-top:-5px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="fp4-err" hint-size="100%,16px">Too many attempts. Try again later.</x-import></div>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Send link</x-import>
+          <div><label class="tl-field__label" for="fp4-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="send" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="fp4-email" type="email" default-value="sam@acme.com" aria-describedby="fp4-err" dc-props="{{ emailInputProps }}"></div></div>
+          <div role="alert" style="margin-top:-5px"><p class="tl-field-error" id="fp4-err"><span aria-hidden="true" class="tl-field-error__mark">!</span>Too many attempts. Try again later.</p></div>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" fullWidth="{{ true }}" hint-size="100%,36px" style="margin-top:10px;">Send link</x-import>
           <a href="#" style="font-size:12px;align-self:flex-start">Back to sign in</a>
         </main>
       </div>
@@ -198,16 +197,16 @@
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Forgot password — email failed to send</div>
-      <div data-screen-label="Forgot password — email failed to send" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Forgot password — email failed to send" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
           <div style="display:flex;flex-direction:column;gap:5px">
-            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Reset your password</h1>
-            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">Enter the email you sign in with. You’ll get a link to set a new password.</p>
+            <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">Reset your password</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--ink-subtle);text-wrap:pretty">Enter the email you sign in with. You’ll get a link to set a new password.</p>
           </div>
-          <div><label class="tl-field__label" for="fp5-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="envelope-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="fp5-email" type="email" default-value="sam@acme.com" aria-describedby="fp5-err" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div></div>
-          <div role="alert" style="margin-top:-5px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="fp5-err" hint-size="100%,16px">We couldn’t send the email. Try again.</x-import></div>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Send link</x-import>
+          <div><label class="tl-field__label" for="fp5-email">Email</label><div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="send" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="fp5-email" type="email" default-value="sam@acme.com" aria-describedby="fp5-err" dc-props="{{ emailInputProps }}"></div></div>
+          <div role="alert" style="margin-top:-5px"><p class="tl-field-error" id="fp5-err"><span aria-hidden="true" class="tl-field-error__mark">!</span>We couldn’t send the email. Try again.</p></div>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" fullWidth="{{ true }}" hint-size="100%,36px" style="margin-top:10px;">Send link</x-import>
           <a href="#" style="font-size:12px;align-self:flex-start">Back to sign in</a>
         </main>
       </div>
@@ -217,88 +216,88 @@
 </section>
 
 <section data-screen-label="Reset password" style="padding:60px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Reset password · /reset-password?token=…</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Reset password · /reset-password?token=…</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px">
 
     <div style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">Reset password — checking link <span style="color:var(--color-ink-3);font-weight:400">(text appears after <span style="font-family:var(--font-mono)">300</span> ms)</span></div>
-      <div data-screen-label="Reset password — checking link" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div style="font-size:13px;font-weight:500">Reset password — checking link <span style="color:var(--ink-tertiary);font-weight:400">(text appears after <span style="font-family:var(--font-mono)">300</span> ms)</span></div>
+      <div data-screen-label="Reset password — checking link" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main aria-busy="true" style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
-          <p role="status" style="margin:0;font-size:13px;color:var(--color-ink-2)">Checking your link…</p>
+          <p role="status" style="margin:0;font-size:13px;color:var(--ink-subtle)">Checking your link…</p>
         </main>
       </div>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Reset password — valid link</div>
-      <div data-screen-label="Reset password — valid link" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Reset password — valid link" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
-          <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Set a new password</h1>
+          <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">Set a new password</h1>
           <div>
             <label class="tl-field__label" for="rp2-pw">New password</label>
-            <div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="rp2-pw" type="password" autocomplete="new-password" aria-describedby="rp2-help" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div>
-            <p id="rp2-help" style="margin:5px 0 0;font-size:12px;color:var(--color-ink-2)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p>
+            <div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="lock" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="rp2-pw" type="password" autocomplete="new-password" aria-describedby="rp2-help" dc-props="{{ emailInputProps }}"></div>
+            <p id="rp2-help" style="margin:5px 0 0;font-size:12px;color:var(--ink-subtle)"><span style="font-family:var(--font-mono)">12</span> to <span style="font-family:var(--font-mono)">128</span> characters. Spaces count.</p>
           </div>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Set password</x-import>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" fullWidth="{{ true }}" hint-size="100%,36px" style="margin-top:10px;">Set password</x-import>
         </main>
       </div>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Reset password — too short</div>
-      <div data-screen-label="Reset password — too short" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Reset password — too short" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
-          <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Set a new password</h1>
+          <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">Set a new password</h1>
           <div>
             <label class="tl-field__label" for="rp3-pw">New password</label>
-            <div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="rp3-pw" type="password" default-value="tracklite1" aria-invalid="true" aria-describedby="rp3-err" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div>
-            <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="rp3-err" hint-size="100%,16px">At least 12 characters</x-import>
+            <div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="lock" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="rp3-pw" type="password" default-value="tracklite1" aria-invalid="true" aria-describedby="rp3-err" dc-props="{{ emailInputProps }}"></div>
+            <p class="tl-field-error" id="rp3-err"><span aria-hidden="true" class="tl-field-error__mark">!</span>At least 12 characters</p>
           </div>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Set password</x-import>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" fullWidth="{{ true }}" hint-size="100%,36px" style="margin-top:10px;">Set password</x-import>
         </main>
       </div>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Reset password — too long</div>
-      <div data-screen-label="Reset password — too long" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Reset password — too long" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
-          <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">Set a new password</h1>
+          <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">Set a new password</h1>
           <div>
             <label class="tl-field__label" for="rp4-pw">New password</label>
-            <div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--color-ink-3);pointer-events:none;z-index:1"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="lock-simple" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Input" id="rp4-pw" type="password" default-value="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" aria-invalid="true" aria-describedby="rp4-err" dc-props="{{ emailInputProps }}" hint-size="100%,36px"></x-import></div>
-            <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="rp4-err" hint-size="100%,16px">Too long (max 128)</x-import>
+            <div style="position:relative"><span aria-hidden="true" style="position:absolute;left:10px;top:0;bottom:0;display:flex;align-items:center;color:var(--ink-tertiary);pointer-events:none;z-index:1"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="lock" size="{{ 15 }}" hint-size="15px,15px"></x-import></span><input class="tl-input" id="rp4-pw" type="password" default-value="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" aria-invalid="true" aria-describedby="rp4-err" dc-props="{{ emailInputProps }}"></div>
+            <p class="tl-field-error" id="rp4-err"><span aria-hidden="true" class="tl-field-error__mark">!</span>Too long (max 128)</p>
           </div>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" type="submit" block="{{ true }}" hint-size="100%,38px">Set password</x-import>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" type="submit" fullWidth="{{ true }}" hint-size="100%,36px" style="margin-top:10px;">Set password</x-import>
         </main>
       </div>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Reset password — link expired</div>
-      <div data-screen-label="Reset password — link expired" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Reset password — link expired" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
           <div style="display:flex;flex-direction:column;gap:5px">
-            <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:-0.015em">This link has expired</h1>
-            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--color-ink-2);text-wrap:pretty">Reset links work once and expire after <span style="font-family:var(--font-mono)">30</span> minutes.</p>
+            <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.015em">This link has expired</h1>
+            <p style="margin:0;font-size:13px;line-height:1.45;color:var(--ink-subtle);text-wrap:pretty">Reset links work once and expire after <span style="font-family:var(--font-mono)">30</span> minutes.</p>
           </div>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" block="{{ true }}" hint-size="100%,38px">Request a new link</x-import>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" fullWidth="{{ true }}" hint-size="100%,36px" style="margin-top:10px;">Request a new link</x-import>
         </main>
       </div>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">Reset password — signed in as someone else</div>
-      <div data-screen-label="Reset password — signed in as someone else" style="position:relative;width:1280px;height:720px;background:var(--color-paper);border:1px solid var(--color-divider)">
-        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--color-divider)"><span style="font-family:var(--font-serif);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
+      <div data-screen-label="Reset password — signed in as someone else" style="position:relative;width:1280px;height:720px;background:var(--surface-1);border:1px solid var(--hairline-strong)">
+        <header style="height:56px;display:flex;align-items:center;padding:0 30px;border-bottom:1px solid var(--hairline-strong)"><span style="font-family:var(--font-display);font-weight:600;font-size:20px;letter-spacing:-0.015em">Tracklite</span></header>
         <main style="width:360px;margin:100px auto 0;display:flex;flex-direction:column;gap:20px">
-          <p style="margin:0;font-family:var(--font-serif);font-size:18px;line-height:1.4;text-wrap:pretty">You’re signed in as Alex Kim. Sign out to reset a password.</p>
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" block="{{ true }}" hint-size="100%,38px">Sign out</x-import>
+          <p style="margin:0;font-family:var(--font-display);font-size:18px;line-height:1.4;text-wrap:pretty">You’re signed in as Alex Kim. Sign out to reset a password.</p>
+          <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" fullWidth="{{ true }}" hint-size="100%,36px" style="margin-top:10px;">Sign out</x-import>
         </main>
       </div>
     </div>
@@ -307,8 +306,8 @@
 </section>
 
 <section data-screen-label="Missing components" style="padding:0 60px 80px;display:flex;flex-direction:column;gap:10px;max-width:760px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Not in the kit</h2>
-  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--color-ink-2)">
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Not in the kit</h2>
+  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--ink-subtle)">
     <li>Form-level message. Drawn here with FieldError placed above the submit button; the kit has no alert for errors not tied to one field.</li>
     <li>Toast without a dismiss control. The kit’s Toasts always renders ×, and useToasts times out at <span style="font-family:var(--font-mono)">4</span> s; STD-9 needs no × and <span style="font-family:var(--font-mono)">5</span> s. Drawn with the toast classes minus the button.</li>
     <li>Loading indicator / spinner and a busy state for Button. Drawn as disabled buttons with “Signing in…” / “Sending…” and a “Checking your link…” line.</li>
