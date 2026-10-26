@@ -1244,11 +1244,11 @@ a.tl-rail-item {
 .tl-appbar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
-  padding: 0 15px;
-  height: 44px;
-  border-bottom: 1px solid var(--hairline-strong);
+  padding: 0 16px;
+  height: 48px;
+  border-bottom: 1px solid var(--hairline);
 }
 .tl-appbar--sub {
   height: 36px;
@@ -1260,12 +1260,15 @@ a.tl-rail-item {
   gap: 6px;
   margin-left: auto;
 }
+.tl-appbar__end > .tl-btn--quiet {
+  color: inherit;
+}
 .tl-appbar__title {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 16px;
-  letter-spacing: -0.015em;
+  font-size: var(--body-sm-size);
+  letter-spacing: -0.1px;
   line-height: 1.25;
 }
 .tl-appbar__count {
@@ -1310,6 +1313,10 @@ a.tl-rail-item {
   align-items: center;
   gap: 4px;
   min-width: 0;
+}
+.tl-appbar__lead > .tl-btn--icon.tl-btn--sm {
+  width: 26px;
+  height: 26px;
 }
 .tl-appbar__views {
   margin-left: 10px;
@@ -1534,7 +1541,7 @@ fieldset.tl-list-head {
 }
 .tl-board {
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 12px;
   padding: 16px;
   overflow-x: auto;
@@ -1547,6 +1554,7 @@ fieldset.tl-list-head {
   flex: 1 0 248px;
   min-width: 0;
   min-height: 0;
+  max-height: 100%;
   padding: 8px;
   gap: 8px;
   border-radius: var(--radius-lg);
@@ -1572,18 +1580,20 @@ fieldset.tl-list-head {
   margin: 0;
   overflow: hidden;
   font: inherit;
+  font-size: var(--ui-sm-size);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .tl-board-col__count {
-  margin-left: auto;
   font-family: var(--font-mono);
   font-size: var(--ui-sm-size);
   color: var(--ink-subtle);
 }
 .tl-board-col__head .tl-btn--icon.tl-btn--sm {
   flex-shrink: 0;
-  margin-right: -4px;
+  width: 32px;
+  height: 32px;
+  margin: -4px -7px -4px -2px;
 }
 .tl-board-col__body {
   display: flex;
@@ -1703,6 +1713,7 @@ fieldset.tl-list-head {
   display: flex;
 }
 .tl-board-card--closed .tl-board-card__prio {
+  opacity: 0.45;
   filter: grayscale(1);
 }
 .tl-board-card__assignee {
