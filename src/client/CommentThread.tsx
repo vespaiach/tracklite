@@ -36,6 +36,7 @@ import { formatExact, formatUpdated } from "./dates";
 import { useFailureToast } from "./failure";
 import { LeaveGuard } from "./LeaveGuard";
 import { useMentions } from "./useMentions";
+import { useReturnFocus } from "./useReturnFocus";
 import { useShowLoading } from "./useShowLoading";
 
 export function CommentThread({ threadPath, editable }: { threadPath: string; editable: boolean }) {
@@ -109,6 +110,7 @@ function CommentItem({
   const { data: me } = useMeQuery();
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const options = useReturnFocus<HTMLButtonElement>(editing);
   const own = me?.username === comment.author.username;
   const canEdit = editable && own;
   const canDelete = editable && (own || me?.role === "admin");
@@ -145,6 +147,7 @@ function CommentItem({
       actions={
         canDelete && (
           <Menu
+            ref={options}
             label="Comment options"
             icon={<Ellipsis size={15} />}
             onAction={(key) => (key === "edit" ? setEditing(true) : setConfirming(true))}>
@@ -357,10 +360,16 @@ function CommentForm({
 }) {
   const errorId = useId();
   const mentions = useMentions({ value: text, onChange });
+  const textarea = mentions.textarea.ref;
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    if (autoFocus) textarea.current?.focus();
+  }, [autoFocus, textarea]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void onSubmit();
+    await onSubmit();
+    textarea.current?.focus();
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -385,7 +394,6 @@ function CommentForm({
           "aria-invalid": error ? true : undefined,
           "aria-describedby": error ? errorId : undefined,
           readOnly: saving,
-          autoFocus,
         }}
         tools={notice}
         submit={actions}

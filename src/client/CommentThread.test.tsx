@@ -479,3 +479,39 @@ it("§6.1: a #comment-{id} for a comment that's gone leaves the page at the top"
   expect(scrollIntoView).not.toHaveBeenCalled();
   expect(document.querySelector(".tl-comment--highlighted")).toBeNull();
 });
+
+it("NFR-007: Edit moves focus into the comment editor; Escape and Save return it to Comment options", async () => {
+  mockThread({ comments: [comment({ body: "Short note", author: memberOf(sam) })] });
+  openIssue();
+
+  const escaping = await startEditing("Short note");
+  await waitFor(() => expect(document.activeElement).toBe(escaping));
+  fireEvent.keyDown(escaping, { key: "Escape" });
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      within(screen.getByRole("article")).getByRole("button", { name: "Comment options" }),
+    ),
+  );
+
+  const saving = await editTo("Short note", "Longer note");
+  await waitFor(() => expect(document.activeElement).toBe(saving));
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      within(screen.getByRole("article")).getByRole("button", { name: "Comment options" }),
+    ),
+  );
+});
+
+it("NFR-007: focus stays in the comment box after Post", async () => {
+  mockThread();
+  openIssue();
+
+  await type("Ship it");
+  screen.getByRole("button", { name: "Post" }).focus();
+  post();
+
+  await commentWith("Ship it");
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Comment (Markdown)" })),
+  );
+});

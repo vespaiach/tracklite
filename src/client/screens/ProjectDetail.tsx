@@ -19,6 +19,7 @@ import { statuses } from "../issue-fields";
 import { useRouterClick } from "../links";
 import { ProjectGate } from "../ProjectGate";
 import { ProjectHeader } from "../ProjectHeader";
+import { useReturnFocus } from "../useReturnFocus";
 
 export function ProjectDetail() {
   const { key = "" } = useParams();
@@ -55,6 +56,7 @@ function startDraft({ description, descriptionVersion }: Project): DescriptionDr
 
 function Description({ project }: { project: Project }) {
   const [draft, setDraft] = useState<DescriptionDraft>();
+  const editButton = useReturnFocus<HTMLButtonElement>(draft !== undefined);
   const [updateProject] = useUpdateProjectMutation();
   const [loadProject] = useLazyProjectQuery();
   const editable = project.archivedAt === null;
@@ -70,6 +72,7 @@ function Description({ project }: { project: Project }) {
         editable &&
         !draft && (
           <Button
+            ref={editButton}
             variant="quiet"
             size="sm"
             aria-label="Edit project description"

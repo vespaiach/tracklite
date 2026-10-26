@@ -255,3 +255,22 @@ it("REQ-046.4: the details page shows Created {date} by its creator, or only the
 
   expect((await screen.findByText(/^Created\b/)).textContent).toBe("Created Sep 20, 2026");
 });
+
+it("NFR-007: Edit moves focus into the project description editor; Escape and Save return it to Edit", async () => {
+  mockDetail();
+  renderAppAt("/project/WEB/detail");
+
+  const escaping = await startEditing();
+  await waitFor(() => expect(document.activeElement).toBe(escaping));
+  fireEvent.keyDown(escaping, { key: "Escape" });
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Edit project description" })),
+  );
+
+  const saving = await editTo("New text");
+  await waitFor(() => expect(document.activeElement).toBe(saving));
+  save();
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Edit project description" })),
+  );
+});
