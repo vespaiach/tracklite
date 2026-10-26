@@ -31,16 +31,16 @@ function labels(...names: string[]): IssueLabel[] {
 }
 
 function card(id: string, title: string, overrides: Partial<BoardIssue> = {}): BoardIssue {
-  return { id, title, priority: "medium", assignee: memberOf(alex), labels: [], ...overrides };
+  return { id, title, priority: "medium", assignees: [memberOf(alex)], labels: [], ...overrides };
 }
 
 const web42 = card("WEB-42", "Fix login button", {
   priority: "high",
-  assignee: memberOf(sam),
+  assignees: [memberOf(sam)],
   labels: labels("backend", "bug", "Design", "docs", "frontend"),
 });
 const web7 = card("WEB-7", "Add password rules to the reset form", { labels: labels("frontend") });
-const web12 = card("WEB-12", "Tidy up footer links", { priority: "none", assignee: null });
+const web12 = card("WEB-12", "Tidy up footer links", { priority: "none", assignees: [] });
 const web5 = card("WEB-5", "Email digest sends twice on Mondays", { priority: "urgent" });
 const web9 = card("WEB-9", "Show the project key in the browser tab title");
 

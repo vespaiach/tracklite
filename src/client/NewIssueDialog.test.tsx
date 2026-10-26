@@ -20,7 +20,7 @@ afterEach(() => {
 type Answer = (body: unknown) => Response | Promise<Response>;
 
 const web = project("WEB", "Website");
-const created = issue({ id: "WEB-1", status: "backlog", priority: "none", assignee: null });
+const created = issue({ id: "WEB-1", status: "backlog", priority: "none", assignees: [] });
 
 function mockProject({ post }: { post?: Answer } = {}) {
   return mockApi({

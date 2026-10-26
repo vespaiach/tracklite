@@ -77,16 +77,17 @@ function mockIssue({
     [`PATCH /api/issues/${shown.id}`]:
       patch ??
       ((body) => {
-        const change = body as Partial<Omit<Issue, "assignee">> & {
-          assignee?: string | null;
+        const change = body as Partial<Omit<Issue, "assignees">> & {
+          assignees?: string[];
           labelIds?: string[];
         };
-        const { assignee, labelIds, ...rest } = change;
-        const member = team.find((candidate) => candidate.username === assignee);
+        const { assignees, labelIds, ...rest } = change;
         current = {
           ...(current as Issue),
           ...rest,
-          ...(assignee !== undefined && { assignee: member ? memberOf(member) : null }),
+          ...(assignees && {
+            assignees: team.filter(({ username }) => assignees.includes(username)).map(memberOf),
+          }),
           ...(labelIds && {
             labels: labelIds.map((labelId) => onIssue(known().find(({ id }) => id === labelId) as Label)),
           }),
@@ -240,7 +241,7 @@ it("REQ-018.1: setting the priority to Urgent shows Urgent", async () => {
 });
 
 it("REQ-019.1, REQ-019.2, REQ-019: assign Alex from Unassigned and active members, filter by name or username, then clear", async () => {
-  const fetchMock = mockIssue({ shown: issue({ assignee: null }) });
+  const fetchMock = mockIssue({ shown: issue({ assignees: [] }) });
   renderAppAt("/issue/WEB-42");
 
   const listbox = await openPicker("Assignee");
@@ -250,7 +251,7 @@ it("REQ-019.1, REQ-019.2, REQ-019: assign Alex from Unassigned and active member
   await waitFor(() =>
     expect(screen.getByRole("button", { name: /^Assignee/ }).textContent).toContain("Alex Kim"),
   );
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ assignee: "alex" }]);
+  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ assignees: ["alex"] }]);
 
   await openPicker("Assignee");
   const search = screen.getByRole("searchbox", { name: "Filter members" });
@@ -266,8 +267,8 @@ it("REQ-019.1, REQ-019.2, REQ-019: assign Alex from Unassigned and active member
     expect(screen.getByRole("button", { name: /^Assignee/ }).textContent).toContain("Unassigned"),
   );
   expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([
-    { assignee: "alex" },
-    { assignee: null },
+    { assignees: ["alex"] },
+    { assignees: [] },
   ]);
 });
 

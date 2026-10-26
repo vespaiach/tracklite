@@ -3,7 +3,7 @@ import type { PgInsertValue } from "drizzle-orm/pg-core";
 import { generateKeyBetween } from "fractional-indexing";
 import { db } from "../server/shared/db";
 import { comments } from "../server/comments";
-import { issueLabels, issues } from "../server/issues";
+import { issueAssignees, issueLabels, issues } from "../server/issues";
 import { labels, type ProjectKey, projectKeys, projects } from "../server/projects";
 import type { RequestId } from "../server/shared/schemas";
 import { members } from "../server/identity";
@@ -60,7 +60,7 @@ export async function createLabel(projectId: string, overrides: Partial<NewLabel
 let nextIssueNumber = 1;
 let lastPosition: string | null = null;
 
-export async function createIssue(projectId: string, labelIds: string[] = []) {
+export async function createIssue(projectId: string, labelIds: string[] = [], assigneeIds: string[] = []) {
   const creator = await createMember();
   const number = nextIssueNumber++;
   lastPosition = generateKeyBetween(lastPosition, null);
@@ -79,6 +79,9 @@ export async function createIssue(projectId: string, labelIds: string[] = []) {
     .returning();
   if (labelIds.length > 0) {
     await db.insert(issueLabels).values(labelIds.map((labelId) => ({ issueId: issue.id, labelId })));
+  }
+  if (assigneeIds.length > 0) {
+    await db.insert(issueAssignees).values(assigneeIds.map((memberId) => ({ issueId: issue.id, memberId })));
   }
   return issue;
 }

@@ -373,7 +373,7 @@ The domain functions declare the contract types (3.5) as their return types. The
 | `PATCH /api/issues/{ID}` | One field per request (3.1): title, status, priority, the full assignee set (`assignees`), the full label set, or a description save | Member | REQ-016…022, REQ-027.4 |
 | `PUT /api/issues/{ID}/position` | A status and a place: top, bottom, or after a named card (2.4) | Member | REQ-026, REQ-027, REQ-030 |
 | `DELETE /api/issues/{ID}` | | Creator or Admin | REQ-023 |
-| `GET /api/my-issues` | Issues in active projects that have the member among their assignees, grouped by status in order with empty groups left out, sorted by priority from Urgent down, then most recently updated. Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-041, REQ-042 |
+| `GET /api/my-issues` | Issues in active projects that have the member among their assignees, grouped by status in order with empty groups left out, sorted by priority from Urgent down, then most recently updated. Each row carries all its assignees, as board cards and list rows do. Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-041, REQ-042 |
 
 **Comments**
 

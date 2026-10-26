@@ -38,7 +38,7 @@ export type IssueChange =
   | { title: string }
   | { status: IssueStatus }
   | { priority: IssuePriority }
-  | { assignee: string | null }
+  | { assignees: string[] }
   | { labelIds: string[] }
   | { description: string; descriptionVersion: number };
 

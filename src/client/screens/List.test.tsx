@@ -43,7 +43,7 @@ function row(id: string, title: string, overrides: Partial<ListIssue> = {}): Lis
     title,
     status: "backlog",
     priority: "medium",
-    assignee: memberOf(alex),
+    assignees: [memberOf(alex)],
     labels: [],
     updatedAt: minutesAgo(5),
     ...overrides,
@@ -53,15 +53,15 @@ function row(id: string, title: string, overrides: Partial<ListIssue> = {}): Lis
 const web42 = row("WEB-42", "Fix login button", {
   status: "in_progress",
   priority: "high",
-  assignee: memberOf(sam),
+  assignees: [memberOf(sam)],
   labels: labels("bug", "frontend", "Safari"),
 });
 const web12 = row("WEB-12", "Tidy up footer links", {
   priority: "none",
-  assignee: null,
+  assignees: [],
   updatedAt: "2026-09-16T12:00:00.000Z",
 });
-const web7 = row("WEB-7", "Add password rules to the reset form", { assignee: memberOf(jo) });
+const web7 = row("WEB-7", "Add password rules to the reset form", { assignees: [memberOf(jo)] });
 
 function page(issues: ListIssue[], overrides: Partial<IssueListPage> = {}): IssueListPage {
   return { issues, hasMore: false, deactivatedAssignees: [memberOf(jo)], ...overrides };

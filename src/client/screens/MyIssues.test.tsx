@@ -25,6 +25,7 @@ function mine(id: string, title: string, overrides: Partial<MyIssue> = {}): MyIs
     title,
     projectName: id.startsWith("API") ? "API" : "Website",
     priority: "medium",
+    assignees: [],
     labels: [],
     updatedAt: minutesAgo(5),
     ...overrides,

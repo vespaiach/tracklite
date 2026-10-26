@@ -4,4 +4,4 @@ export { getIssue, getMyIssues, listIssues } from "./list";
 export { byIssueId as issueIdCondition, issueGone as issueGoneError } from "./rows";
 export { IssueChange, type IssueId, IssueMove, NewIssue, parseIssueId } from "./schemas";
 export { deleteIssue, updateIssue } from "./update";
-export { issueLabels, issues } from "./tables";
+export { issueAssignees, issueLabels, issues } from "./tables";

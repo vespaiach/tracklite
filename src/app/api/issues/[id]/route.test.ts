@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../../server/shared/db";
 import { createSession, memberSummary, members } from "../../../../server/identity";
 import { comments } from "../../../../server/comments";
-import { issueLabels, issues } from "../../../../server/issues";
+import { issueAssignees, issueLabels, issues } from "../../../../server/issues";
 import { labels, projects } from "../../../../server/projects";
 import {
   mentions,
@@ -48,14 +48,22 @@ function patchWith(cookie: string, id: string, body: unknown) {
   });
 }
 
-async function issueIn(project: { id: string; key: string }) {
-  const issue = await createIssue(project.id);
+async function issueIn(project: { id: string; key: string }, assigneeIds: string[] = []) {
+  const issue = await createIssue(project.id, [], assigneeIds);
   return { ...issue, displayId: `${project.key}-${issue.number}` };
 }
 
 async function stored(issueId: string) {
   const [issue] = await db.select().from(issues).where(eq(issues.id, issueId));
   return issue;
+}
+
+async function storedAssignees(issueId: string) {
+  const rows = await db
+    .select({ memberId: issueAssignees.memberId })
+    .from(issueAssignees)
+    .where(eq(issueAssignees.issueId, issueId));
+  return rows.map((row) => row.memberId);
 }
 
 async function ageTimestamps(issueId: string) {
@@ -198,23 +206,35 @@ it("REQ-018.1: Sam sets WEB-42 to Urgent → WEB-42 shows Urgent", async () => {
   expect((await stored(issue.id)).priority).toBe("urgent");
 });
 
-it("REQ-019.1, REQ-019.2: Sam assigns WEB-42 to Alex → shows Alex; Sam clears the assignee → shows Unassigned", async () => {
+it("REQ-019.1, REQ-019.2, REQ-019.3, REQ-019.4, REQ-019: Sam assigns, adds, removes and clears assignees, shown sorted by name, with no maximum", async () => {
   const cookie = await signedIn();
   const alex = await createMember({ fullName: "Alex Kim" });
+  const jo = await createMember({ fullName: "Jo Park" });
   const project = await createProject();
   const issue = await issueIn(project);
 
-  const assigned = await patchWith(cookie, issue.displayId, { assignee: alex.username.toUpperCase() });
-
+  const assigned = await patchWith(cookie, issue.displayId, { assignees: [jo.username.toUpperCase()] });
   expect(assigned.status).toBe(200);
-  expect((await assigned.json()).assignee).toEqual(memberSummary(alex));
-  expect((await stored(issue.id)).assigneeId).toBe(alex.id);
+  expect((await assigned.json()).assignees).toEqual([memberSummary(jo)]);
 
-  const cleared = await patchWith(cookie, issue.displayId, { assignee: null });
+  const added = await patchWith(cookie, issue.displayId, { assignees: [jo.username, alex.username] });
+  expect((await added.json()).assignees).toEqual([memberSummary(alex), memberSummary(jo)]);
 
+  const removed = await patchWith(cookie, issue.displayId, { assignees: [jo.username] });
+  expect((await removed.json()).assignees).toEqual([memberSummary(jo)]);
+  expect(await storedAssignees(issue.id)).toEqual([jo.id]);
+
+  const team = await Promise.all(Array.from({ length: 15 }, () => createMember()));
+  const everyone = await patchWith(cookie, issue.displayId, {
+    assignees: team.map((member) => member.username),
+  });
+  expect(everyone.status).toBe(200);
+  expect((await everyone.json()).assignees).toHaveLength(15);
+
+  const cleared = await patchWith(cookie, issue.displayId, { assignees: [] });
   expect(cleared.status).toBe(200);
-  expect((await cleared.json()).assignee).toBeNull();
-  expect((await stored(issue.id)).assigneeId).toBeNull();
+  expect((await cleared.json()).assignees).toEqual([]);
+  expect(await storedAssignees(issue.id)).toEqual([]);
 });
 
 it("REQ-020.1: Sam adds bug and frontend to WEB-42 → both shown", async () => {
@@ -322,35 +342,37 @@ it("§3.3: a save must change exactly one field", async () => {
   });
 });
 
-it("REQ-019, REQ-007.2, REQ-008.2: an unknown or deactivated assignee gets Choose an active member; deactivated Sam still shows (deactivated) until reactivated, then can be assigned again", async () => {
+it("REQ-019.5, REQ-019.6, REQ-007.2, REQ-008.2: adding an unknown or deactivated member gets Choose an active member and saves nothing; deactivated Sam stays when Jo is added, shown (deactivated) until reactivated", async () => {
   const cookie = await signedIn();
   const sam = await createMember({ fullName: "Sam Lee" });
+  const jo = await createMember({ fullName: "Jo Park" });
   const project = await createProject();
-  const issue = await issueIn(project);
-  const other = await issueIn(project);
-  await db.update(issues).set({ assigneeId: sam.id }).where(eq(issues.id, issue.id));
+  const issue = await issueIn(project, [sam.id]);
+  const other = await issueIn(project, [jo.id]);
   await deactivate(sam.id);
 
-  const unknown = await patchWith(cookie, other.displayId, { assignee: "nobody-here" });
-  expect(unknown.status).toBe(422);
-  expect(await unknown.json()).toEqual(fieldError({ assignee: "Choose an active member" }));
+  for (const assignees of [[jo.username, "nobody-here"], [jo.username, sam.username], "nobody", [42]]) {
+    const refused = await patchWith(cookie, other.displayId, { assignees });
+    expect(refused.status).toBe(422);
+    expect(await refused.json()).toEqual(fieldError({ assignees: "Choose an active member" }));
+  }
+  expect(await storedAssignees(other.id)).toEqual([jo.id]);
 
-  const shown = await getWith(cookie, issue.displayId);
-  expect((await shown.json()).assignee).toEqual({ ...memberSummary(sam), deactivated: true });
-
-  const refused = await patchWith(cookie, other.displayId, { assignee: sam.username });
-  expect(refused.status).toBe(422);
-  expect(await refused.json()).toEqual(fieldError({ assignee: "Choose an active member" }));
-  expect((await stored(other.id)).assigneeId).toBeNull();
+  const kept = await patchWith(cookie, issue.displayId, { assignees: [sam.username, jo.username] });
+  expect(kept.status).toBe(200);
+  expect((await kept.json()).assignees).toEqual([
+    memberSummary(jo),
+    { ...memberSummary(sam), deactivated: true },
+  ]);
 
   await db.update(members).set({ deactivatedAt: null }).where(eq(members.id, sam.id));
 
   const reshown = await getWith(cookie, issue.displayId);
-  expect((await reshown.json()).assignee).toEqual({ ...memberSummary(sam), deactivated: false });
+  expect((await reshown.json()).assignees).toContainEqual({ ...memberSummary(sam), deactivated: false });
 
-  const assigned = await patchWith(cookie, other.displayId, { assignee: sam.username });
+  const assigned = await patchWith(cookie, other.displayId, { assignees: [jo.username, sam.username] });
   expect(assigned.status).toBe(200);
-  expect((await stored(other.id)).assigneeId).toBe(sam.id);
+  expect(await storedAssignees(other.id)).toHaveLength(2);
 });
 
 it("REQ-013.4: on an archived project, a field save, a description save and a delete each get This project is archived", async () => {

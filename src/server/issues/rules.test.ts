@@ -1,6 +1,13 @@
 import { expect, it } from "vitest";
 import type { Username } from "../identity";
-import { descriptionSaveOf, editOf, mayDeleteIssue, positionBetween, sameLabels } from "./rules";
+import {
+  assigneeChange,
+  descriptionSaveOf,
+  editOf,
+  mayDeleteIssue,
+  positionBetween,
+  sameLabels,
+} from "./rules";
 
 const issue = { title: "Fix login", status: "backlog", priority: "none" } as const;
 
@@ -33,8 +40,11 @@ it("REQ-016.3, REQ-017, REQ-018.1: saving the title, status or priority an issue
 });
 
 it("REQ-019.1, REQ-019.2, REQ-020.1: an assignee or label save is passed on as an edit of that field", () => {
-  expect(editOf(issue, { assignee: "alex" as Username })).toEqual({ field: "assignee", assignee: "alex" });
-  expect(editOf(issue, { assignee: null })).toEqual({ field: "assignee", assignee: null });
+  expect(editOf(issue, { assignees: ["alex" as Username] })).toEqual({
+    field: "assignees",
+    assignees: ["alex"],
+  });
+  expect(editOf(issue, { assignees: [] })).toEqual({ field: "assignees", assignees: [] });
   expect(editOf(issue, { labelIds: ["l1"] })).toEqual({ field: "labels", labelIds: ["l1"] });
 });
 
@@ -48,4 +58,15 @@ it("REQ-023.1, REQ-023.2: the creator or an admin may delete an issue; another m
   expect(mayDeleteIssue({ id: "sam", role: "member" }, "sam")).toBe(true);
   expect(mayDeleteIssue({ id: "admin", role: "admin" }, "sam")).toBe(true);
   expect(mayDeleteIssue({ id: "alex", role: "member" }, "sam")).toBe(false);
+});
+
+it("REQ-019.3, REQ-019.4: a new assignee set adds the members not yet assigned and removes the ones left out", () => {
+  const current = [
+    { memberId: "jo-id", username: "jo" },
+    { memberId: "sam-id", username: "sam" },
+  ];
+  const next = ["alex", "jo"] as Username[];
+
+  expect(assigneeChange(current, next)).toEqual({ added: ["alex"], removedIds: ["sam-id"] });
+  expect(assigneeChange(current, ["jo", "sam"] as Username[])).toEqual({ added: [], removedIds: [] });
 });

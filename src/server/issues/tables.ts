@@ -17,7 +17,6 @@ export const issues = pgTable(
     descriptionEditedBy: uuid("description_edited_by").references(() => members.id),
     status: issueStatus("status").notNull(),
     priority: issuePriority("priority").notNull(),
-    assigneeId: uuid("assignee_id").references(() => members.id),
     position: byteOrderedText("position").notNull(),
     createdBy: uuid("created_by")
       .notNull()
@@ -31,7 +30,6 @@ export const issues = pgTable(
     uniqueIndex("issues_project_number_key").on(t.projectId, t.number),
     index("issues_board_idx").on(t.projectId, t.status, t.position),
     index("issues_updated_idx").on(t.projectId, t.updatedAt.desc()),
-    index("issues_assignee_idx").on(t.assigneeId, t.status),
     index("issues_title_trgm_idx").using("gin", t.title.op("gin_trgm_ops")),
     index("issues_description_trgm_idx").using("gin", t.description.op("gin_trgm_ops")),
   ],
@@ -48,4 +46,20 @@ export const issueLabels = pgTable(
       .references(() => labels.id, { onDelete: "cascade" }),
   },
   (t) => [primaryKey({ columns: [t.issueId, t.labelId] })],
+);
+
+export const issueAssignees = pgTable(
+  "issue_assignees",
+  {
+    issueId: uuid("issue_id")
+      .notNull()
+      .references(() => issues.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id),
+  },
+  (t) => [
+    primaryKey({ columns: [t.issueId, t.memberId] }),
+    index("issue_assignees_member_idx").on(t.memberId),
+  ],
 );

@@ -7,7 +7,7 @@ import type { Transaction } from "../shared/transaction";
 import { logNotificationError, logNotificationFailure, logWorkerMetrics } from "../shared/log";
 import { notificationSenders, type Recipient } from "./notification-channels";
 import { dueAt, queueCounts } from "./notification-queue";
-import { issues } from "../issues";
+import { issueAssignees, issues } from "../issues";
 import { members } from "../identity";
 import {
   mentions,
@@ -195,10 +195,11 @@ async function loadDropChecks(claimed: ClaimedDelivery[]) {
 
   const recipients = await db.select().from(members).where(inArray(members.id, recipientIds));
   const items = await itemsOf(unique(claimed.map((delivery) => delivery.batchId)));
-  const existingIssues = await db
-    .select({ id: issues.id, assigneeId: issues.assigneeId })
-    .from(issues)
-    .where(inArray(issues.id, issueIds));
+  const existingIssues = await db.select({ id: issues.id }).from(issues).where(inArray(issues.id, issueIds));
+  const assignments = await db
+    .select({ issueId: issueAssignees.issueId, memberId: issueAssignees.memberId })
+    .from(issueAssignees)
+    .where(and(inArray(issueAssignees.issueId, issueIds), inArray(issueAssignees.memberId, recipientIds)));
   const existingProjects = await db
     .select({ id: projects.id })
     .from(projects)
@@ -209,7 +210,10 @@ async function loadDropChecks(claimed: ClaimedDelivery[]) {
   return {
     recipients: new Map(recipients.map((recipient) => [recipient.id, recipient])),
     items,
-    assigneeOfIssue: new Map(existingIssues.map((issue) => [issue.id, issue.assigneeId])),
+    existingIssueIds: new Set(existingIssues.map((issue) => issue.id)),
+    assignmentKeys: new Set(
+      assignments.map((assignment) => assignmentKey(assignment.memberId, assignment.issueId)),
+    ),
     existingProjectIds: new Set(existingProjects.map((project) => project.id)),
     mentionKeys: new Set(
       mentioned.map((mention) =>
@@ -274,6 +278,10 @@ function mentionsOf(
     );
 }
 
+function assignmentKey(memberId: string, issueId: string) {
+  return `${memberId}:${issueId}`;
+}
+
 function mentionKey(memberId: string, sourceId: string | null) {
   return `${memberId}:${sourceId}`;
 }
@@ -311,9 +319,9 @@ function stillWanted(checks: DropChecks, delivery: DueDelivery, item: Item) {
   if (delivery.targetType === "project") {
     if (!checks.existingProjectIds.has(delivery.targetId)) return true;
   } else {
-    if (!checks.assigneeOfIssue.has(delivery.targetId)) return true;
+    if (!checks.existingIssueIds.has(delivery.targetId)) return true;
     if (item.kind === "assigned")
-      return checks.assigneeOfIssue.get(delivery.targetId) === delivery.recipientId;
+      return checks.assignmentKeys.has(assignmentKey(delivery.recipientId, delivery.targetId));
   }
   return checks.mentionKeys.has(mentionKey(delivery.recipientId, item.commentId ?? delivery.targetId));
 }

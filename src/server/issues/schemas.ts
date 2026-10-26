@@ -2,11 +2,11 @@ import "server-only";
 import * as v from "valibot";
 import { issuePriorities, issueStatuses } from "../../contract";
 import { descriptionText, descriptionVersion, maxCharacters, requestId } from "../shared/schemas";
-import { usernameFormat } from "../identity";
+import { parseUsername, type Username } from "../identity";
 
 const maxTitleLength = 200;
 const maxLabels = 10;
-const editableFields = ["title", "status", "priority", "assignee", "labelIds"];
+const editableFields = ["title", "status", "priority", "assignees", "labelIds"];
 const descriptionFields = ["description", "descriptionVersion"];
 
 const title = v.pipe(
@@ -16,6 +16,16 @@ const title = v.pipe(
   maxCharacters(maxTitleLength, `Too long (max ${maxTitleLength})`),
 );
 const status = v.picklist(issueStatuses, "Choose a status");
+
+const assignees = v.pipe(
+  v.custom<string[]>(
+    (input) =>
+      Array.isArray(input) &&
+      input.every((username) => typeof username === "string" && parseUsername(username) !== undefined),
+    "Choose an active member",
+  ),
+  v.transform((usernames) => [...new Set(usernames.map((username) => username.toLowerCase() as Username))]),
+);
 
 const issueId = v.pipe(
   v.string(),
@@ -35,6 +45,7 @@ export const NewIssue = v.object({
   requestId,
   title,
   status: v.optional(v.fallback(v.picklist(issueStatuses), "backlog"), "backlog"),
+  assignees: v.optional(assignees, []),
 });
 export type NewIssue = v.InferOutput<typeof NewIssue>;
 
@@ -55,7 +66,7 @@ export const IssueChange = v.pipe(
     title: v.optional(title),
     status: v.optional(status),
     priority: v.optional(v.picklist(issuePriorities, "Choose a priority")),
-    assignee: v.optional(v.nullable(usernameFormat("Choose an active member"))),
+    assignees: v.optional(assignees),
     labelIds: v.optional(
       v.pipe(
         v.custom<string[]>(
