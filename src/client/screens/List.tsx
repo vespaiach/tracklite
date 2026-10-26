@@ -48,7 +48,7 @@ const filterNames: Record<FilterParam, string> = {
   label: "Label",
 };
 const firstDir: Record<SortColumn, SortDir> = { id: "desc", status: "asc", priority: "asc", updated: "desc" };
-const columns = "64px minmax(240px, 1fr) 110px 100px minmax(0, 160px) 72px 110px";
+const columns = "64px minmax(160px, 1fr) 96px 76px minmax(0, 160px) 72px 112px";
 const unassigned = "-";
 const searchPause = 300;
 
