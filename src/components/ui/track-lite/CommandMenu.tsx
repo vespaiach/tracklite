@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Button as AriaButton, type Key, ListBox, Popover, Select } from "react-aria-components";
 import { cx } from "./cx";
@@ -316,7 +316,10 @@ export function Toasts({
               aria-label="Dismiss"
               onClick={() => onDismiss(toast.id)}
               className="tl-toast__dismiss">
-              ×
+              <X
+                aria-hidden="true"
+                size={14}
+              />
             </button>
           )}
         </div>

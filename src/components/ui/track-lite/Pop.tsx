@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, Plus } from "lucide-react";
 import { type ComponentProps, type CSSProperties, createContext, type ReactNode, use, useState } from "react";
 import {
   Button as AriaButton,
@@ -173,7 +173,13 @@ export function MenuItem({ id, danger, icon, checked, disabled, children }: Menu
       className={cx("tl-pop__item", danger && "tl-pop__item--danger")}>
       {({ isSelected }) => (
         <>
-          {icon}
+          {icon && (
+            <span
+              aria-hidden="true"
+              className="tl-pop__icon">
+              {icon}
+            </span>
+          )}
           {children}
           {(isSelected || checked) && <span className="tl-pop__check">✓</span>}
         </>
@@ -193,7 +199,7 @@ export function MenuSubmenu({ label, children }: { label: string; children: Reac
         <span
           aria-hidden="true"
           className="tl-pop__caret">
-          ▸
+          <ChevronRight size={14} />
         </span>
       </AriaMenuItem>
       <Popover placement="end top">
