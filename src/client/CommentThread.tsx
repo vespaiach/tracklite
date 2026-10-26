@@ -1,4 +1,4 @@
-import { DotsThree } from "@phosphor-icons/react/dist/csr/DotsThree";
+import { Ellipsis } from "lucide-react";
 import {
   type FormEvent,
   type KeyboardEvent,
@@ -146,12 +146,7 @@ function CommentItem({
         canDelete && (
           <Menu
             label="Comment options"
-            icon={
-              <DotsThree
-                size={15}
-                weight="bold"
-              />
-            }
+            icon={<Ellipsis size={15} />}
             onAction={(key) => (key === "edit" ? setEditing(true) : setConfirming(true))}>
             {canEdit && <MenuItem id="edit">Edit</MenuItem>}
             <MenuItem

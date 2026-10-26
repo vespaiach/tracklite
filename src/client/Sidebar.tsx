@@ -1,6 +1,4 @@
-import { Archive } from "@phosphor-icons/react/dist/csr/Archive";
-import { Tray } from "@phosphor-icons/react/dist/csr/Tray";
-import { Users } from "@phosphor-icons/react/dist/csr/Users";
+import { Archive, Inbox, Users } from "lucide-react";
 import {
   Avatar,
   Button,
@@ -30,7 +28,7 @@ export type SidebarProps = {
   onSignOut: () => void;
 };
 
-const iconProps = { size: 15, weight: "duotone" } as const;
+const iconProps = { size: 15 } as const;
 
 export function Sidebar({
   admin,
@@ -58,7 +56,7 @@ export function Sidebar({
       <RailGroup>
         <RouterRailItem
           href="/my-issues"
-          icon={<Tray {...iconProps} />}
+          icon={<Inbox {...iconProps} />}
           label="My issues"
           current={current === "/my-issues"}
         />

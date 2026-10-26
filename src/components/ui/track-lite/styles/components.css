@@ -507,92 +507,44 @@ a.tl-seg__opt[data-on]:focus-visible {
 .tl-navlink[aria-current="page"] {
   color: var(--primary);
 }
-.tl-status {
-  position: relative;
-  display: inline-block;
-  flex-shrink: 0;
-  border-radius: 9999px;
-  border: 1.5px solid currentColor;
-  width: 14px;
-  height: 14px;
-  box-sizing: border-box;
+.lucide {
+  stroke-width: 1.75;
 }
-.tl-status--lg {
-  width: 17px;
-  height: 17px;
-}
-.tl-status--backlog {
-  color: var(--ink-tertiary);
-  border-style: dashed;
-}
-.tl-status--todo {
-  color: var(--ink-subtle);
-}
-.tl-status--progress {
-  color: var(--danger);
-}
-.tl-status--review {
-  color: var(--primary);
-}
-.tl-status--done {
-  color: var(--primary);
-  background: currentColor;
-}
-.tl-status--canceled {
-  color: var(--ink-tertiary);
-}
-.tl-status__arc {
-  position: absolute;
-  inset: 1.5px;
-  border-radius: 9999px;
-}
-.tl-status__check {
-  position: absolute;
-  left: 0;
-  top: 0;
-  margin-left: 2.5px;
-  margin-top: 3.5px;
-  width: 6px;
-  height: 3.5px;
-  transform: rotate(-45deg);
-  border-left: 1.5px solid var(--surface-1);
-  border-bottom: 1.5px solid var(--surface-1);
-}
-.tl-status__strike {
-  position: absolute;
-  left: 2px;
-  right: 2px;
-  top: 50%;
-  height: 1.5px;
-  transform: translateY(-50%);
-  background: currentColor;
-}
-.tl-prio-urgent {
-  display: grid;
-  place-items: center;
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
-  border-radius: 1px;
-  background: var(--danger);
-  color: var(--on-primary);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 1;
-}
+.tl-status,
 .tl-prio {
   display: inline-flex;
-  align-items: flex-end;
-  gap: 1.5px;
-  height: 11px;
   flex-shrink: 0;
-  color: var(--ink-subtle);
 }
-.tl-prio i {
-  display: block;
-  width: 3px;
-  background: currentColor;
-  border-radius: 0.5px;
+.tl-status .lucide,
+.tl-prio .lucide {
+  stroke-width: 2;
+}
+.tl-status--backlog {
+  color: var(--status-backlog);
+}
+.tl-status--todo {
+  color: var(--status-todo);
+}
+.tl-status--progress {
+  color: var(--status-progress);
+}
+.tl-status--review {
+  color: var(--status-review);
+}
+.tl-status--done {
+  color: var(--status-done);
+}
+.tl-status--canceled {
+  color: var(--status-canceled);
+}
+.tl-prio {
+  color: var(--ink-muted);
+}
+.tl-prio--urgent {
+  color: var(--primary);
+}
+.tl-prio--none {
+  color: var(--ink-tertiary);
 }
 .tl-glyph {
   position: relative;

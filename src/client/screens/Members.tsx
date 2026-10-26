@@ -1,4 +1,4 @@
-import { DotsThree } from "@phosphor-icons/react/dist/csr/DotsThree";
+import { Ellipsis } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { Link } from "react-router";
 import {
@@ -269,12 +269,7 @@ function InvitationsSection({ invitations }: { invitations: Invitation[] }) {
 }
 
 function ActionsIcon() {
-  return (
-    <DotsThree
-      size={15}
-      weight="duotone"
-    />
-  );
+  return <Ellipsis size={15} />;
 }
 
 function MembersSection({ members, you }: { members: Me[]; you: string }) {

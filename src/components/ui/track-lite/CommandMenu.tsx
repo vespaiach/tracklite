@@ -1,4 +1,4 @@
-import { CaretDown } from "@phosphor-icons/react/dist/csr/CaretDown";
+import { ChevronDown } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Button as AriaButton, type Key, ListBox, Popover, Select } from "react-aria-components";
 import { cx } from "./cx";
@@ -100,7 +100,7 @@ export function FilterPicker({
           ) : (
             <>
               {field}
-              <CaretDown
+              <ChevronDown
                 aria-hidden="true"
                 size={11}
               />

@@ -1,5 +1,4 @@
-import { ArrowDown } from "@phosphor-icons/react/dist/csr/ArrowDown";
-import { ArrowUp } from "@phosphor-icons/react/dist/csr/ArrowUp";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { cx } from "./cx";
 

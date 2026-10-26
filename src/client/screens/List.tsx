@@ -1,4 +1,4 @@
-import { MagnifyingGlass } from "@phosphor-icons/react/dist/csr/MagnifyingGlass";
+import { Search } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { Key } from "react-aria-components";
 import { useSearchParams } from "react-router";
@@ -204,7 +204,7 @@ export function ListView({ project }: { project: ProjectSummary }) {
         <Input
           type="search"
           compact
-          icon={<MagnifyingGlass size={13} />}
+          icon={<Search size={13} />}
           aria-label="Search issues"
           placeholder="Search issues…"
           value={search.text}

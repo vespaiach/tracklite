@@ -1,4 +1,4 @@
-import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
+import { Plus } from "lucide-react";
 import type { ComponentProps, CSSProperties, HTMLAttributes, MouseEvent, ReactNode, Ref } from "react";
 import { cx } from "./cx";
 
@@ -76,12 +76,7 @@ export function RailLabelAction({ label, icon, className, ...rest }: RailLabelAc
       aria-label={label}
       className={cx("tl-rail-label__action", className)}
       {...rest}>
-      {icon ?? (
-        <Plus
-          size={12}
-          weight="bold"
-        />
-      )}
+      {icon ?? <Plus size={12} />}
     </button>
   );
 }

@@ -1,4 +1,4 @@
-import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
+import { Plus } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
 import { useNavigate } from "react-router";
 import { AppDialog, Button, FieldError, Status, TitleInput } from "../components/ui/track-lite";
@@ -15,10 +15,7 @@ export function NewIssueButton({ project }: { project: ProjectSummary }) {
         size="sm"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}>
-        <Plus
-          size={12}
-          weight="bold"
-        />
+        <Plus size={12} />
         New issue
       </Button>
       {open && (
