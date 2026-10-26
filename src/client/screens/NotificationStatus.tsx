@@ -5,6 +5,7 @@ import {
   Fact,
   FactList,
   FormStatus,
+  Mono,
   SettingsEmpty,
   SettingsGrid,
   SettingsLayout,
@@ -64,15 +65,17 @@ function NotificationStatusAdmin() {
 
   return (
     <>
-      <AppBar>
+      <AppBar
+        end={
+          <Button
+            size="sm"
+            disabled={isFetching}
+            aria-busy={refreshing || undefined}
+            onClick={refetch}>
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </Button>
+        }>
         <AppBarTitle>Notification status</AppBarTitle>
-        <Button
-          size="sm"
-          disabled={isFetching}
-          aria-busy={refreshing || undefined}
-          onClick={refetch}>
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </Button>
       </AppBar>
       {isError ? (
         <LoadFailed onRetry={refetch} />
@@ -133,7 +136,12 @@ function WorkerFacts({ stats }: { stats: NotificationStats }) {
 function workerWarning({ workerLastPassAt, workerStaleMinutes }: NotificationStats) {
   if (!workerLastPassAt) return "The worker has never run. No notifications are sent until it does.";
   if (workerStaleMinutes != null) {
-    return `No pass for ${workerStaleMinutes} min. Notifications wait in the queue until the worker runs.`;
+    return (
+      <>
+        No pass for <Mono>{workerStaleMinutes}</Mono> min. Notifications wait in the queue until the worker
+        runs.
+      </>
+    );
   }
   return undefined;
 }
