@@ -50,7 +50,7 @@
 }
 .tl-btn--danger {
   background: var(--danger);
-  color: var(--on-primary);
+  color: var(--surface-3);
 }
 .tl-btn--danger:not(:disabled):hover {
   background: color-mix(in srgb, var(--danger) 85%, var(--ink));
@@ -135,7 +135,7 @@
 }
 .tl-tag--accent {
   background: var(--primary-tint);
-  color: var(--primary-hover);
+  color: color-mix(in srgb, var(--primary-pressed) 85%, var(--ink));
 }
 .tl-tag--accent-2 {
   background: color-mix(in srgb, var(--warning) 14%, transparent);
@@ -222,7 +222,7 @@ textarea.tl-input {
   flex-shrink: 0;
   border-radius: 9999px;
   background: var(--danger);
-  color: var(--on-primary);
+  color: var(--surface-3);
   font-family: var(--font-text);
   font-size: 9px;
   font-weight: 600;
