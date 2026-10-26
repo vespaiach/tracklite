@@ -9,47 +9,46 @@
 <x-dc>
 <helmet>
   <meta name="design_doc_mode" content="canvas">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/fonts.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/icons.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/colors.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/typography.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/spacing.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/base.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/components/components.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/styles.css">
-  <script src="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/base.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/styles.css">
+  <script src="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="tracklite-app.css">
   <style>
-    body{margin:0;background:var(--color-surface);font-family:var(--font-ui);color:var(--color-ink)}
-    a{color:var(--color-accent);text-decoration:none}
+    body{margin:0;background:var(--canvas);font-family:var(--font-text);color:var(--ink)}
+    a{color:var(--text-link);text-decoration:none}
     a:hover{text-decoration:underline}
   </style>
 </helmet>
 <section data-screen-label="My issues (member)" style="padding:60px;display:flex;flex-direction:column;gap:30px">
-  <h1 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">My issues — member (Alex Kim)</h1>
+  <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">My issues — member (Alex Kim)</h1>
   <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
     <div id="my-default" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">My issues — default <span style="color:var(--color-ink-2);font-weight:400">(Done and Canceled start collapsed)</span></div>
-      <div data-screen-label="My issues — default" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="my-member" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">My issues — default <span style="color:var(--ink-subtle);font-weight:400">(Done and Canceled start collapsed)</span></div>
+      <div data-screen-label="My issues — default" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="my-member" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="my-narrow" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">My issues — 1024 px <span style="color:var(--color-ink-2);font-weight:400">(labels shrink first; titles keep at least 240 px)</span></div>
-      <div data-screen-label="My issues — 1024 px" style="width:1024px;height:800px;border:1px solid var(--color-divider);overflow:hidden;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="my-member" style="width:1024px;height:800px" hint-size="1024px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">My issues — 1024 px <span style="color:var(--ink-subtle);font-weight:400">(labels shrink first; titles keep at least 240 px)</span></div>
+      <div data-screen-label="My issues — 1024 px" style="width:1024px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="my-member" style="width:1024px;height:800px" hint-size="1024px,800px"></dc-import></div>
     </div>
     <div id="my-focus" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">My issues — row focused <span style="color:var(--color-ink-2);font-weight:400">(Tab moves through group heads, then rows; Enter opens the issue)</span></div>
-      <div data-screen-label="My issues — row focused" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="my-focus" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">My issues — row focused <span style="color:var(--ink-subtle);font-weight:400">(Tab moves through group heads, then rows; Enter opens the issue)</span></div>
+      <div data-screen-label="My issues — row focused" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="my-focus" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="my-empty" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">My issues — empty</div>
-      <div data-screen-label="My issues — empty" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="my-empty" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="My issues — empty" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="my-empty" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="my-loading" style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:500">My issues — loading <span style="color:var(--color-ink-2);font-weight:400">(shown only after 300 ms)</span></div>
-      <div data-screen-label="My issues — loading" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;pointer-events:none;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="my-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div style="font-size:13px;font-weight:500">My issues — loading <span style="color:var(--ink-subtle);font-weight:400">(shown only after 300 ms)</span></div>
+      <div data-screen-label="My issues — loading" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;pointer-events:none;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="my-loading" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
     <div id="my-error" style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:13px;font-weight:500">My issues — couldn’t load</div>
-      <div data-screen-label="My issues — couldn’t load" style="width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden;background:var(--color-paper)"><dc-import name="Tracklite prototype" scene="my-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
+      <div data-screen-label="My issues — couldn’t load" style="width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden;background:var(--surface-1)"><dc-import name="Tracklite prototype" scene="my-error" style="width:1280px;height:800px" hint-size="1280px,800px"></dc-import></div>
     </div>
   </div>
 </section>

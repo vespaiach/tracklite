@@ -1,6 +1,8 @@
 # Design refresh: implementation plan
 
-The Claude Design export "Tracklite project setup" (imported 2026-10-22) is a full redesign of every R1 screen. This plan compares it with the code on `main` at `4e3c85c` and splits the work into tasks in the build-plan format. Nothing here is built yet; the Step 0 decisions are made.
+The Claude Design export "Tracklite project setup" (imported 2026-10-22) is a full redesign of every R1 screen. This plan compared it with the code on `main` at `4e3c85c` and split the work into milestone M17, which is built. The Step 0 decisions are made.
+
+The export was replaced on 2026-10-25 by a new one of the same name that redraws every screen on the **Docket** design system. Layouts, states and copy are unchanged; C19–C21 below record what the new export changes. The work is tracked in `docs/execution-plan.md` (D, A, S and B rows), not in M17 below.
 
 ## What was imported
 
@@ -11,10 +13,11 @@ The Claude Design export "Tracklite project setup" (imported 2026-10-22) is a fu
 | `Page - *.dc.html` | One frame per screen, each embedding the prototype at a start screen. `Page - My issues - member.dc.html` has the 1024 px notes. |
 | `Tracklite logo.dc.html` | Logo options. The chosen one is 1e, the "lifted card". |
 | `BRIEF.md` | The project brief given to Claude Design (it was `CLAUDE.md` in the export; renamed so Claude Code doesn't load it as instructions). |
-| `_ds/` | The Track Lite kit snapshot the design used. Its tokens match `src/components/ui/track-lite/styles/` (only font loading differs). Its `components.css` is an older, shorter copy of ours. Use ours. |
+| `_ds/docket-design-system-…/` | The Docket design system the design uses: tokens, `styles.css`, the component bundle (`_ds_bundle.js`, which also holds `StatusIcon` and `PriorityIcon`) and the Geist fonts. |
+| `tracklite-app.css` | Tracklite's own markup the Docket kit has no component for (app shell, popover, field, dialog, toast, list, board, issue page), built on Docket tokens only. |
 | `archive/`, `screenshots/`, `uploads/` | Earlier iterations and audit screenshots. Reference only. |
 
-To view: `python3 -m http.server 8765 --directory docs/design`, then open `http://127.0.0.1:8765/Tracklite%20prototype.dc.html`. The files load fonts and icons from CDNs. That's fine for viewing, but the app itself must never do it (CSP).
+To view: `python3 -m http.server 8765 --directory docs/design`, then open `http://127.0.0.1:8765/Tracklite%20prototype.dc.html`. The files may load scripts and icons from CDNs. That's fine for viewing, but the app itself must never do it (CSP).
 
 ## Step 0: decide the spec conflicts (owner)
 
@@ -40,6 +43,9 @@ The spec wins over the design (ground rules). These parts of the design contradi
 | C16 | The notification-status warning shows after 5 min. | OPS-005 (2 min), REQ-053 (no warning) | **Design, with 2 min.** Add both warnings to REQ-053, using OPS-005's 2 min threshold rather than the design's 5. |
 | C17 | The empty My issues copy is "Nothing assigned to you. Open a project to find or create issues." | REQ-041.4 | **Design.** STD-7 favours naming the next action. |
 | C18 | Curly apostrophes in "Couldn’t load this.", "Couldn’t move WEB-42". | Straight in the spec and code | **Design.** Update the spec copy and the tests together. |
+| C19 | An issue can have several assignees: an avatar stack on cards and rows, a multi-select Assignees field. (2026-10-25 export) | REQ-019 and others (one assignee) | **Design** (owner, 2026-10-25). Execution plan A01 changes the spec first. |
+| C20 | Lucide icons. (2026-10-25 export) | Tech design and `CLAUDE.md` name Phosphor | **Design**, through the `lucide-react` package (owner, 2026-10-25). Execution plan D03. |
+| C21 | Docket tokens (cream canvas, eraser `--primary`, `--danger`) and Geist / Geist Mono. (2026-10-25 export) | Track Lite tokens, Archivo, Source Serif 4, JetBrains Mono | **Design.** Execution plan D02; fonts load through `next/font`, never a CDN. |
 
 The tasks below follow these decisions. Pages never invent styles (design-system rules), so every new visual goes into `src/components/ui/track-lite/` first (M17.1–M17.5), with its own test of the behaviour we add.
 

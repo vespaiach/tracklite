@@ -9,18 +9,17 @@
 <x-dc>
 <helmet>
   <meta name="design_doc_mode" content="canvas">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/fonts.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/icons.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/colors.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/typography.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/spacing.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/base.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/components/components.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/styles.css">
-  <script src="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/base.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/styles.css">
+  <script src="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="tracklite-app.css">
   <style>
-    body{margin:0;background:var(--color-surface);font-family:var(--font-ui);color:var(--color-ink)}
-    a{color:var(--color-accent);text-decoration:none}
+    body{margin:0;background:var(--canvas);font-family:var(--font-text);color:var(--ink)}
+    a{color:var(--text-link);text-decoration:none}
     a:hover{text-decoration:underline}
     .tl-rail-item{color:inherit}
     .tl-rail-item:hover{text-decoration:none}
@@ -30,19 +29,19 @@
 </helmet>
 
 <section data-screen-label="Mention suggestions" style="padding:60px 60px 20px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Mention suggestions</h2>
-  <p style="margin:0;font-size:13px;color:var(--color-ink-2);max-width:640px">Standalone list, shared by the description editor and the comment box. Active members only, filtered by username or name. Focus stays in the text area; ↑ and ↓ move the highlight, Enter inserts @username, Escape closes.</p>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Mention suggestions</h2>
+  <p style="margin:0;font-size:13px;color:var(--ink-subtle);max-width:640px">Standalone list, shared by the description editor and the comment box. Active members only, filtered by username or name. Focus stays in the text area; ↑ and ↓ move the highlight, Enter inserts @username, Escape closes.</p>
   <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
     <sc-for list="{{ sugPieces }}" as="p" hint-placeholder-count="3">
       <div style="display:flex;flex-direction:column;gap:10px">
         <div style="font-size:13px;font-weight:500">{{ p.label }}</div>
         <div style="width:260px">
-          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" id="{{ p.id }}-sl" aria-label="Mention a member" hint-size="260px,120px">
+          <div class="tl-pop" role="listbox" id="{{ p.id }}-sl" aria-label="Mention a member">
             <sc-for list="{{ p.opts }}" as="o" hint-placeholder-count="2">
-              <div style="{{ o.ring }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" id="{{ o.id }}" aria-selected="{{ o.hl }}" hint-size="100%,29px"><span class="tl-avatar tl-avatar--sm {{ o.tone }}">{{ o.ini }}</span><span style="white-space:nowrap">{{ o.name }}</span><span style="margin-left:auto;white-space:nowrap;font-family:var(--font-mono);font-size:11px;color:inherit;opacity:.8">{{ o.user }}</span></x-import></div>
+              <div style="{{ o.ring }}"><button type="button" class="tl-pop__item" role="option" id="{{ o.id }}" aria-selected="{{ o.hl }}"><span class="tl-avatar tl-avatar--sm {{ o.tone }}">{{ o.ini }}</span><span style="white-space:nowrap">{{ o.name }}</span><span style="margin-left:auto;white-space:nowrap;font-family:var(--font-mono);font-size:11px;color:inherit;opacity:.8">{{ o.user }}</span></button></div>
             </sc-for>
-            <sc-if value="{{ p.none }}" hint-placeholder-val="{{ false }}"><div role="status" class="tl-pop__item" style="color:var(--color-ink-2);cursor:default;white-space:nowrap">{{ p.none }}</div></sc-if>
-          </x-import>
+            <sc-if value="{{ p.none }}" hint-placeholder-val="{{ false }}"><div role="status" class="tl-pop__item" style="color:var(--ink-subtle);cursor:default;white-space:nowrap">{{ p.none }}</div></sc-if>
+          </div>
         </div>
       </div>
     </sc-for>
@@ -51,29 +50,29 @@
 
 <sc-for list="{{ sections }}" as="s" hint-placeholder-count="2">
 <section data-screen-label="{{ s.title }}" style="padding:60px 60px 20px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">{{ s.title }}</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">{{ s.title }}</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px">
     <sc-for list="{{ s.frames }}" as="f" hint-placeholder-count="4">
       <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="font-size:13px;font-weight:500">{{ f.label }} <span style="color:var(--color-ink-3);font-weight:400">{{ f.note }}</span></div>
-        <div data-screen-label="{{ f.label }}" class="tl-shell" style="position:relative;width:1280px;height:800px;border:1px solid var(--color-divider);overflow:hidden">
+        <div style="font-size:13px;font-weight:500">{{ f.label }} <span style="color:var(--ink-tertiary);font-weight:400">{{ f.note }}</span></div>
+        <div data-screen-label="{{ f.label }}" class="tl-shell" style="position:relative;width:1280px;height:800px;border:1px solid var(--hairline-strong);overflow:hidden">
           <aside class="tl-rail" aria-label="Sidebar">
-            <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+            <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
             <nav class="tl-rail__main" style="grid-template-columns:minmax(0,1fr);min-width:0">
-              <div class="tl-rail-group" style="grid-template-columns:minmax(0,1fr);min-width:0"><a href="#" class="tl-rail-item"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+              <div class="tl-rail-group" style="grid-template-columns:minmax(0,1fr);min-width:0"><a href="#" class="tl-rail-item"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
               <div class="tl-rail-group" style="grid-template-columns:minmax(0,1fr);min-width:0">
-                <div style="display:flex;align-items:center;justify-content:space-between;min-height:22px"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" aria-haspopup="dialog" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;min-height:22px"><div class="tl-rail-label">Projects</div><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" aria-haspopup="dialog" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></div>
                 <sc-for list="{{ f.projects }}" as="p" hint-placeholder-count="3">
-                  <a href="#" class="tl-rail-item" aria-current="{{ p.cur }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">{{ p.full }}</span></a>
+                  <a href="#" class="tl-rail-item" aria-current="{{ p.cur }}"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">{{ p.full }}</span></a>
                 </sc-for>
               </div>
               <div class="tl-rail-group" style="grid-template-columns:minmax(0,1fr);min-width:0">
-                <a href="#" class="tl-rail-item" aria-current="{{ f.arcCur }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a>
-                <a href="#" class="tl-rail-item"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a>
+                <a href="#" class="tl-rail-item" aria-current="{{ f.arcCur }}"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a>
+                <a href="#" class="tl-rail-item"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a>
               </div>
             </nav>
             <div class="tl-rail__foot">
-              <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><span class="tl-avatar tl-avatar--md tl-avatar--accent">SL</span><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+              <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><span class="tl-avatar tl-avatar--md tl-avatar--accent">SL</span><span class="tl-lbl">Sam Lee</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
             </div>
           </aside>
 
@@ -83,7 +82,7 @@
                 <span class="tl-crumbs__item"><a href="#">Website · WEB</a></span>
                 <span class="tl-crumbs__item"><span class="tl-crumbs__sep" aria-hidden="true">/</span><b aria-current="page" style="font-family:var(--font-mono);font-weight:500">WEB-42</b></span>
               </nav>
-              <sc-if value="{{ f.archived }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Tag" variant="neutral" hint-size="auto,20px">Archived</x-import></sc-if>
+              <sc-if value="{{ f.archived }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Badge" tone="neutral" hint-size="auto,20px">Archived</x-import></sc-if>
             </header>
 
             <div class="tl-issue-layout" style="flex:1;min-height:0">
@@ -91,9 +90,9 @@
                 <h1 class="tl-issue-title" style="margin:0;max-width:none">Fix login button</h1>
 
                 <section aria-labelledby="{{ f.id }}-dh" style="display:flex;flex-direction:column;gap:10px">
-                  <div style="display:flex;align-items:center;justify-content:space-between;min-height:26px;border-bottom:1px solid var(--color-hair);padding-bottom:5px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;min-height:26px;border-bottom:1px solid var(--hairline);padding-bottom:5px">
                     <h2 id="{{ f.id }}-dh" class="tl-meta__label" style="margin:0">Description</h2>
-                    <sc-if value="{{ f.showEdit }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="quiet" size="sm" aria-label="Edit description" hint-size="auto,26px">Edit</x-import></sc-if>
+                    <sc-if value="{{ f.showEdit }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="tertiary" size="sm" aria-label="Edit description" hint-size="auto,28px">Edit</x-import></sc-if>
                   </div>
 
                   <sc-if value="{{ f.d.view }}" hint-placeholder-val="{{ true }}">
@@ -101,14 +100,14 @@
                       <p>The Sign in button on <code>/login</code> does nothing on the first click in Safari 17.</p>
                       <ul aria-label="Checklist" style="list-style:none;padding-left:0">
                         <sc-for list="{{ checklist }}" as="c" hint-placeholder-count="3">
-                          <li><label class="tl-check" style="font-family:var(--font-serif);font-size:15px;gap:10px;cursor:default"><input type="checkbox" class="sr-only" checked="{{ c.done }}" disabled="{{ true }}" readOnly="{{ true }}"><span class="tl-check__box"></span><span>{{ c.text }}</span></label></li>
+                          <li><label class="tl-check" style="font-family:var(--font-display);font-size:15px;gap:10px;cursor:default"><input type="checkbox" class="sr-only" checked="{{ c.done }}" disabled="{{ true }}" readOnly="{{ true }}"><span class="tl-check__box"></span><span>{{ c.text }}</span></label></li>
                         </sc-for>
                       </ul>
                       <pre><code>{{ code }}</code></pre>
                       <p><span class="tl-tipwrap"><span class="tl-mention">@sam</span><sc-if value="{{ f.tipOn }}" hint-placeholder-val="{{ false }}"><span role="tooltip" class="tl-tip tl-tipwrap__tip">Sam Lee</span></sc-if></span> to confirm the fix in Safari 17. First reported by @nobody in support.</p>
                     </div>
                   </sc-if>
-                  <sc-if value="{{ f.d.empty }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font-size:13px;color:var(--color-ink-2)">No description yet.</p></sc-if>
+                  <sc-if value="{{ f.d.empty }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font-size:13px;color:var(--ink-subtle)">No description yet.</p></sc-if>
 
                   <sc-if value="{{ f.d.edit }}" hint-placeholder-val="{{ false }}">
                     <div style="position:relative">
@@ -116,23 +115,23 @@
                         <label for="{{ f.id }}-md" class="sr-only">Description (Markdown)</label>
                         <textarea id="{{ f.id }}-md" rows="20" defaultValue="{{ f.d.md }}" readOnly="{{ f.d.busy }}" aria-invalid="{{ f.d.invalid }}" aria-describedby="{{ f.id }}-de" aria-autocomplete="list" aria-expanded="{{ f.d.sugOpen }}" aria-controls="{{ f.id }}-sl" aria-activedescendant="{{ f.d.active }}" style="font-family:var(--font-mono);font-size:12.5px;line-height:1.7"></textarea>
                         <div class="tl-editor__bar">
-                          <sc-if value="{{ f.d.conflict }}" hint-placeholder-val="{{ false }}"><div role="alert" style="margin-top:-5px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="{{ f.id }}-de" hint-size="auto,16px">This was changed by Alex Kim. Copy your text and reload.</x-import></div></sc-if>
+                          <sc-if value="{{ f.d.conflict }}" hint-placeholder-val="{{ false }}"><div role="alert" style="margin-top:-5px"><p class="tl-field-error" id="{{ f.id }}-de"><span aria-hidden="true" class="tl-field-error__mark">!</span>This was changed by Alex Kim. Copy your text and reload.</p></div></sc-if>
                           <div class="tl-editor__submit" style="display:flex;gap:6px">
-                            <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" type="button" hint-size="auto,26px">Cancel</x-import>
-                            <sc-if value="{{ f.d.busy }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" size="sm" type="submit" disabled="{{ true }}" aria-busy="true" hint-size="auto,26px">Saving…</x-import></sc-if>
-                            <sc-if value="{{ f.d.notBusy }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="primary" size="sm" type="submit" hint-size="auto,26px">Save</x-import></sc-if>
+                            <x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="secondary" size="sm" type="button" hint-size="auto,28px">Cancel</x-import>
+                            <sc-if value="{{ f.d.busy }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" size="sm" type="submit" disabled="{{ true }}" aria-busy="true" hint-size="auto,28px">Saving…</x-import></sc-if>
+                            <sc-if value="{{ f.d.notBusy }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="primary" size="sm" type="submit" hint-size="auto,28px">Save</x-import></sc-if>
                           </div>
                         </div>
                       </form>
-                      <sc-if value="{{ f.d.err }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="{{ f.id }}-de" hint-size="100%,16px">{{ f.d.err }}</x-import></sc-if>
+                      <sc-if value="{{ f.d.err }}" hint-placeholder-val="{{ false }}"><p class="tl-field-error" id="{{ f.id }}-de"><span aria-hidden="true" class="tl-field-error__mark">!</span>{{ f.d.err }}</p></sc-if>
                       <sc-if value="{{ f.d.sugOpen }}" hint-placeholder-val="{{ false }}">
                         <div style="position:absolute;left:110px;top:380px;width:260px;z-index:5">
-                          <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" id="{{ f.id }}-sl" aria-label="Mention a member" hint-size="260px,40px">
+                          <div class="tl-pop" role="listbox" id="{{ f.id }}-sl" aria-label="Mention a member">
                             <sc-for list="{{ f.d.sugOpts }}" as="o" hint-placeholder-count="1">
-                              <div style="{{ o.ring }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" id="{{ o.id }}" aria-selected="{{ o.hl }}" hint-size="100%,29px"><span class="tl-avatar tl-avatar--sm {{ o.tone }}">{{ o.ini }}</span><span style="white-space:nowrap">{{ o.name }}</span><span style="margin-left:auto;white-space:nowrap;font-family:var(--font-mono);font-size:11px;color:inherit;opacity:.8">{{ o.user }}</span></x-import></div>
+                              <div style="{{ o.ring }}"><button type="button" class="tl-pop__item" role="option" id="{{ o.id }}" aria-selected="{{ o.hl }}"><span class="tl-avatar tl-avatar--sm {{ o.tone }}">{{ o.ini }}</span><span style="white-space:nowrap">{{ o.name }}</span><span style="margin-left:auto;white-space:nowrap;font-family:var(--font-mono);font-size:11px;color:inherit;opacity:.8">{{ o.user }}</span></button></div>
                             </sc-for>
-                            <sc-if value="{{ f.d.sugNone }}" hint-placeholder-val="{{ false }}"><div role="status" class="tl-pop__item" style="color:var(--color-ink-2);cursor:default;white-space:nowrap">{{ f.d.sugNone }}</div></sc-if>
-                          </x-import>
+                            <sc-if value="{{ f.d.sugNone }}" hint-placeholder-val="{{ false }}"><div role="status" class="tl-pop__item" style="color:var(--ink-subtle);cursor:default;white-space:nowrap">{{ f.d.sugNone }}</div></sc-if>
+                          </div>
                         </div>
                       </sc-if>
                     </div>
@@ -140,7 +139,7 @@
                 </section>
 
                 <section aria-labelledby="{{ f.id }}-ch" style="display:flex;flex-direction:column;gap:10px">
-                  <div style="display:flex;align-items:center;min-height:26px;border-bottom:1px solid var(--color-hair);padding-bottom:5px">
+                  <div style="display:flex;align-items:center;min-height:26px;border-bottom:1px solid var(--hairline);padding-bottom:5px">
                     <h2 id="{{ f.id }}-ch" class="tl-meta__label" style="margin:0">Comments</h2>
                   </div>
                   <article class="tl-comment">
@@ -153,11 +152,11 @@
               <aside class="tl-issue-layout__side" aria-label="Issue fields">
                 <div class="tl-meta">
                   <div class="tl-meta__label">Status</div>
-                  <div class="tl-meta__value"><div class="{{ f.pickCls }}" style="display:flex;align-items:center;gap:7px;height:28px;padding:0 6px;font-size:12.5px;width:100%"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Status" status="progress" hint-size="14px,14px"></x-import>In Progress</div></div>
+                  <div class="tl-meta__value"><div class="{{ f.pickCls }}" style="display:flex;align-items:center;gap:7px;height:28px;padding:0 6px;font-size:12.5px;width:100%"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.StatusIcon" status="progress" hint-size="14px,14px"></x-import>In Progress</div></div>
                 </div>
                 <div class="tl-meta">
                   <div class="tl-meta__label">Priority</div>
-                  <div class="tl-meta__value"><div class="{{ f.pickCls }}" style="display:flex;align-items:center;gap:7px;height:28px;padding:0 6px;font-size:12.5px;width:100%"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Priority" priority="high" hint-size="13px,11px"></x-import>High</div></div>
+                  <div class="tl-meta__value"><div class="{{ f.pickCls }}" style="display:flex;align-items:center;gap:7px;height:28px;padding:0 6px;font-size:12.5px;width:100%"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.PriorityIcon" priority="high" hint-size="14px,14px"></x-import>High</div></div>
                 </div>
                 <div class="tl-meta">
                   <div class="tl-meta__label">Assignee</div>
@@ -167,27 +166,27 @@
                 <div class="tl-meta" style="position:relative">
                   <div id="{{ f.id }}-ll" class="tl-meta__label">Labels</div>
                   <div class="tl-meta__value">
-                    <sc-if value="{{ f.canEdit }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-pick {{ f.lblCls }}" aria-haspopup="listbox" aria-expanded="{{ f.lblOpen }}" aria-labelledby="{{ f.id }}-ll {{ f.id }}-lv" aria-describedby="{{ f.id }}-le" style="{{ f.lblBtn }}"><span id="{{ f.id }}-lv" style="display:flex;flex-wrap:wrap;gap:4px"><sc-for list="{{ f.labels }}" as="l" hint-placeholder-count="2"><span class="tl-pill tl-pill--label" style="color:var(--color-neutral-800)">{{ l }}</span></sc-for>{{ f.noLabels }}</span></button></sc-if>
-                    <sc-if value="{{ f.archived }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px;align-items:center;padding:0 6px"><sc-for list="{{ f.labels }}" as="l" hint-placeholder-count="2"><span class="tl-pill tl-pill--label" style="color:var(--color-neutral-800)">{{ l }}</span></sc-for></div></sc-if>
+                    <sc-if value="{{ f.canEdit }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-pick {{ f.lblCls }}" aria-haspopup="listbox" aria-expanded="{{ f.lblOpen }}" aria-labelledby="{{ f.id }}-ll {{ f.id }}-lv" aria-describedby="{{ f.id }}-le" style="{{ f.lblBtn }}"><span id="{{ f.id }}-lv" style="display:flex;flex-wrap:wrap;gap:4px"><sc-for list="{{ f.labels }}" as="l" hint-placeholder-count="2"><span class="tl-pill tl-pill--label" style="color:var(--ink-muted)">{{ l }}</span></sc-for>{{ f.noLabels }}</span></button></sc-if>
+                    <sc-if value="{{ f.archived }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px;align-items:center;padding:0 6px"><sc-for list="{{ f.labels }}" as="l" hint-placeholder-count="2"><span class="tl-pill tl-pill--label" style="color:var(--ink-muted)">{{ l }}</span></sc-for></div></sc-if>
                   </div>
-                  <sc-if value="{{ f.lblErr }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.FieldError" id="{{ f.id }}-le" hint-size="100%,16px">Maximum 10 labels</x-import></sc-if>
+                  <sc-if value="{{ f.lblErr }}" hint-placeholder-val="{{ false }}"><p class="tl-field-error" id="{{ f.id }}-le"><span aria-hidden="true" class="tl-field-error__mark">!</span>Maximum 10 labels</p></sc-if>
                   <sc-if value="{{ f.popLbl }}" hint-placeholder-val="{{ false }}">
                     <div style="position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5">
-                      <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Pop" aria-label="Labels" aria-multiselectable="true" hint-size="222px,170px">
-                        <x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopSearch" aria-label="Filter or create labels" placeholder="Filter or create…" defaultValue="{{ f.q }}" hint-size="100%,30px"></x-import>
+                      <div class="tl-pop" role="listbox" aria-label="Labels" aria-multiselectable="true">
+                        <div class="tl-pop__search"><input aria-label="Filter or create labels" placeholder="Filter or create…" defaultValue="{{ f.q }}"></div>
                         <sc-for list="{{ f.lblOpts }}" as="o" hint-placeholder-count="5">
-                          <div style="{{ o.ring }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" selected="{{ o.sel }}" hint-size="100%,29px">{{ o.name }}</x-import></div>
+                          <div style="{{ o.ring }}"><button type="button" class="tl-pop__item" role="option" aria-selected="{{ o.sel }}">{{ o.name }}<sc-if value="{{ o.sel }}" hint-placeholder-val="{{ false }}"><span class="tl-pop__check" aria-hidden="true">✓</span></sc-if></button></div>
                         </sc-for>
                         <sc-if value="{{ f.create }}" hint-placeholder-val="{{ false }}">
-                          <div style="{{ focusRing }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.PopItem" hint-size="100%,29px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import><span style="white-space:nowrap">{{ f.create }}</span></x-import></div>
+                          <div style="{{ focusRing }}"><button type="button" class="tl-pop__item" role="option"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import><span style="white-space:nowrap">{{ f.create }}</span></button></div>
                         </sc-if>
-                      </x-import>
+                      </div>
                     </div>
                   </sc-if>
                 </div>
 
-                <div style="display:flex;flex-direction:column;gap:10px;padding-top:15px;border-top:1px solid var(--color-hair)">
-                  <p style="margin:0;font-size:12px;color:var(--color-ink-2)">Created by Sam Lee, <time title="Sep 20, 2026, 10:42 AM" style="font-family:var(--font-mono);font-size:11.5px">Sep 20</time></p>
+                <div style="display:flex;flex-direction:column;gap:10px;padding-top:15px;border-top:1px solid var(--hairline)">
+                  <p style="margin:0;font-size:12px;color:var(--ink-subtle)">Created by Sam Lee, <time title="Sep 20, 2026, 10:42 AM" style="font-family:var(--font-mono);font-size:11.5px">Sep 20</time></p>
                 </div>
               </aside>
             </div>
@@ -204,9 +203,9 @@
 </sc-for>
 
 <section data-screen-label="Notes" style="padding:40px 60px 80px;display:flex;flex-direction:column;gap:10px;max-width:760px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Notes and gaps</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Notes and gaps</h2>
   <h3 style="margin:10px 0 0;font-size:13px;font-weight:600">Behaviour</h3>
-  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--color-ink-2)">
+  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--ink-subtle)">
     <li>Label picker: Enter or Space on the Labels row opens it with focus in the filter field. ↑ and ↓ move the highlight; Enter toggles the highlighted label and saves straight away; the picker stays open for more changes. Escape closes it and returns focus to the Labels row. Each toggle is its own save, so last save wins (STD-8).</li>
     <li>Labels are listed alphabetically, ignoring capitals. The Labels row shows a change only after the server accepts it; on a failure it keeps the old labels and the toast shows for <span style="font-family:var(--font-mono)">5</span> s.</li>
     <li>“Create label …” appears only when the filter matches no label, ignoring capitals. Enter on it creates the label as Gray and adds it. Typing “design” finds Design, so nothing is created (REQ-020.5).</li>
@@ -217,7 +216,7 @@
     <li>Rendering (SEC-002, DATA-001): raw HTML shows as text; links are http, https or mailto only and open in a new tab. Only <span style="font-family:var(--font-mono)">@username</span> of an active member outside code becomes a mention; @nobody, deactivated members, <span style="font-family:var(--font-mono)">sam@acme.com</span> and <span style="font-family:var(--font-mono)">foo@sam</span> stay plain. Mentions inside <span style="font-family:var(--font-mono)">(@sam)</span> or before a comma still count.</li>
   </ul>
   <h3 style="margin:10px 0 0;font-size:13px;font-weight:600">Missing from the kit</h3>
-  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--color-ink-2)">
+  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--ink-subtle)">
     <li>A multi-select picker. Composed here from Pick, Pop, PopSearch and PopItem; the ✓ on PopItem means “on this issue”. Pick’s open state (tint-2 fill) is improvised, as on the Issue page.</li>
     <li>Label colour tokens for the eight spec colours. Every label is the neutral label pill.</li>
     <li>A task-list style in Prose. Drawn with the Checkbox box, read-only, in the serif.</li>
@@ -230,11 +229,25 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
+  dkPatch() {
+    const K = window.DocketDesignSystem_e2ed17;
+    if (!K || K.__tl) return;
+    K.__tl = true;
+    K.STATUS.progress = { ...K.STATUS.in_progress, label: 'In Progress' };
+    K.STATUS.review = { ...K.STATUS.in_review, label: 'In Review' };
+    K.PRIORITY.med = K.PRIORITY.medium;
+    Object.assign(K.ICONS, {
+      'book-open': '<path d="M12 7v14" /><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />',
+      'grip-vertical': '<circle cx="9" cy="12" r="1" /><circle cx="9" cy="5" r="1" /><circle cx="9" cy="19" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="5" r="1" /><circle cx="15" cy="19" r="1" />',
+      'chevron-up': '<path d="m18 15-6-6-6 6" />'
+    });
+  }
   renderVals() {
+    this.dkPatch();
     const PROJECTS = [['API', 'API'], ['Mobile', 'MOB'], ['Website', 'WEB']];
-    const FOCUS = { outline: '2px solid var(--color-accent)', outlineOffset: '-2px', borderRadius: '1px' };
-    const ACTIVE = { outline: '2px solid var(--color-accent)', outlineOffset: '0', borderColor: 'var(--color-accent)' };
-    const INVALID = { outline: '2px solid var(--color-accent-2-700)', outlineOffset: '0', borderColor: 'var(--color-accent-2-700)' };
+    const FOCUS = { outline: '2px solid var(--primary)', outlineOffset: '-2px', borderRadius: '1px' };
+    const ACTIVE = { outline: '2px solid var(--primary)', outlineOffset: '0', borderColor: 'var(--primary)' };
+    const INVALID = { outline: '2px solid var(--danger)', outlineOffset: '0', borderColor: 'var(--danger)' };
     const BTN = { height: 'auto', minHeight: '28px', flexWrap: 'wrap', gap: '4px', paddingTop: '4px', paddingBottom: '4px' };
     const WEB = ['backend', 'bug', 'Design', 'docs', 'frontend'];
     const WEB_BIG = ['a11y', 'api', 'auth', 'backend', 'bug', 'copy', 'Design', 'docs', 'frontend', 'mobile', 'regression', 'security', 'ux'];
@@ -269,7 +282,7 @@ class Component extends DCLogic {
         arcCur: archived ? 'page' : undefined,
         pickCls: archived ? '' : 'tl-pick',
         labels, noLabels: labels.length ? '' : 'None', lblCls: labels.length ? '' : 'tl-pick--empty',
-        popLbl: !!o.pop, lblOpen: o.pop ? 'true' : 'false', lblBtn: o.pop ? { ...BTN, background: 'var(--color-tint-2)' } : BTN,
+        popLbl: !!o.pop, lblOpen: o.pop ? 'true' : 'false', lblBtn: o.pop ? { ...BTN, background: 'var(--bg-selected)' } : BTN,
         q, lblOpts: o.pop ? opts.map(n => ({ name: n, sel: labels.includes(n), ring: n === focusName && !o.create ? FOCUS : {} })) : [],
         create: o.create ? 'Create label “' + q + '”' : '', lblErr: !!o.lblErr,
         showEdit: !archived && !edit, tipOn: !!o.tip,

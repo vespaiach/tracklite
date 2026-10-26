@@ -1,0 +1,7 @@
+*,*::before,*::after{box-sizing:border-box}
+[data-theme]{background:var(--canvas);color:var(--ink)}
+html,body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--font-text);font-size:var(--body-size);line-height:var(--body-lh);letter-spacing:var(--body-ls);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+a{color:var(--text-link);text-decoration:none}
+a:hover{color:var(--ink)}
+::selection{background:var(--primary-tint)}
+:focus-visible{outline:2px solid var(--primary-ring);outline-offset:1px}

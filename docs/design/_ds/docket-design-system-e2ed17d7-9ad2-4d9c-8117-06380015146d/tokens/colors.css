@@ -1,0 +1,155 @@
+/* Docket colors — Pencil Box palette. Light is the default (:root); dark via data-theme="dark".
+   Pencil Box source hexes: #D2CEC2 putty · #E0D5C1 cream · #7A7570 graphite · #C97253 eraser · #BC804E ochre */
+:root,[data-theme="light"],[data-theme="paper"]{
+  color-scheme:light;
+  /* Pencil Box base */
+  --pb-putty:#D2CEC2;
+  --pb-cream:#E0D5C1;
+  --pb-graphite:#7A7570;
+  --pb-eraser:#C97253;
+  --pb-ochre:#BC804E;
+
+  --primary:#C97253;
+  --primary-hover:#B86446;
+  --primary-pressed:#A9573A;
+  --on-primary:#170E0A;
+  --primary-tint:rgba(201,114,83,.12);
+  --primary-ring:rgba(201,114,83,.45);
+  --secondary:#A86C3C;
+  --secondary-tint:rgba(168,108,60,.12);
+
+  --canvas:#F3EFE8;
+  --surface-1:#FAF8F4;
+  --surface-2:#FDFCFA;
+  --surface-3:#FFFFFF;
+  --surface-4:#FFFFFF;
+  --hairline:#E4DED3;
+  --hairline-strong:#D2CBBE;
+  --hairline-tertiary:#BDB5A7;
+  --edge-highlight:rgba(255,255,255,.7);
+
+  --ink:#1A1816;
+  --ink-muted:#3D3934;
+  --ink-subtle:#5F5A53;
+  --ink-tertiary:#8A847C;
+
+  --inverse-canvas:#0B0A09;
+  --inverse-surface-1:#131210;
+  --inverse-surface-2:#22211E;
+  --inverse-ink:#F2EEE6;
+
+  --success:#5E8A4A;
+  --warning:#B08326;
+  --danger:#B8603F;
+  --info:#637A99;
+  --overlay:rgba(26,24,22,.32);
+  --success-tint:rgba(94,138,74,.12);
+  --nav-bg:rgba(243,239,232,.8);
+  --shadow-menu:rgba(40,30,20,.10);
+  --shadow-dialog:rgba(40,30,20,.18);
+
+  --status-backlog:#A39D94;
+  --status-todo:#6B665F;
+  --status-progress:#B08326;
+  --status-review:#A86C3C;
+  --status-done:#5E8A4A;
+  --status-canceled:#A39D94;
+
+  --label-eraser:#B8603F;
+  --label-ochre:#A86C3C;
+  --label-mustard:#B08326;
+  --label-sage:#6E8A58;
+  --label-slate:#637A99;
+  --label-plum:#8E6680;
+  --label-putty:#8A847C;
+}
+
+/* Semantic aliases — re-declared on every theme scope so they resolve against that scope's values */
+:root,[data-theme]{
+  --bg-page:var(--canvas);
+  --bg-panel:var(--surface-1);
+  --bg-raised:var(--surface-2);
+  --bg-menu:var(--surface-3);
+  --bg-hover:rgba(26,24,22,.04);
+  --bg-selected:rgba(26,24,22,.07);
+  --border-default:var(--hairline);
+  --border-strong:var(--hairline-strong);
+  --text-primary:var(--ink);
+  --text-secondary:var(--ink-muted);
+  --text-tertiary:var(--ink-subtle);
+  --text-disabled:var(--ink-tertiary);
+  --text-link:#A3502F;
+  --focus-ring:0 0 0 2px var(--primary-ring);
+}
+
+/* Light mode — apply data-theme="light" on <html> (or any subtree). "paper" is a legacy alias. */
+/* Dark mode — apply data-theme="dark" on <html> (or any subtree) */
+[data-theme="dark"]{
+  color-scheme:dark;
+  /* Accent (eraser) */
+  --primary:#C97253;
+  --primary-hover:#D88A6D;
+  --primary-pressed:#B86446;
+  --on-primary:#170E0A;
+  --primary-tint:rgba(201,114,83,.14);
+  --primary-ring:rgba(201,114,83,.5);
+  --secondary:#BC804E;
+  --secondary-tint:rgba(188,128,78,.14);
+
+  /* Dark canvas + surface ladder (warm graphite tint) */
+  --canvas:#0B0A09;
+  --surface-1:#131210;
+  --surface-2:#181715;
+  --surface-3:#1D1C19;
+  --surface-4:#22211E;
+  --hairline:#2A2825;
+  --hairline-strong:#3A3733;
+  --hairline-tertiary:#47433E;
+  --edge-highlight:rgba(224,213,193,.06);
+
+  /* Ink */
+  --ink:#F2EEE6;
+  --ink-muted:#D2CEC2;
+  --ink-subtle:#A39D94;
+  --ink-tertiary:#7A7570;
+
+  /* Inverse */
+  --inverse-canvas:#F6F2EA;
+  --inverse-surface-1:#EFE9DD;
+  --inverse-surface-2:#E0D5C1;
+  --inverse-ink:#1A1816;
+
+  /* Semantic */
+  --success:#7FA66A;
+  --warning:#D6A94A;
+  --danger:#C97253;
+  --info:#8597B0;
+  --overlay:rgba(0,0,0,.6);
+  --success-tint:rgba(127,166,106,.14);
+  --nav-bg:rgba(11,10,9,.8);
+  --shadow-menu:rgba(0,0,0,.45);
+  --shadow-dialog:rgba(0,0,0,.6);
+
+  /* Workflow status (product) */
+  --status-backlog:#7A7570;
+  --status-todo:#D2CEC2;
+  --status-progress:#D6A94A;
+  --status-review:#BC804E;
+  --status-done:#7FA66A;
+  --status-canceled:#7A7570;
+
+  /* Label palette (product) — muted, harmonised with Pencil Box */
+  --label-eraser:#C97253;
+  --label-ochre:#BC804E;
+  --label-mustard:#D6A94A;
+  --label-sage:#8FA27A;
+  --label-slate:#8597B0;
+  --label-plum:#A88497;
+  --label-putty:#D2CEC2;
+
+}
+[data-theme="dark"]{
+  --bg-hover:rgba(224,213,193,.05);
+  --bg-selected:rgba(224,213,193,.08);
+  --text-link:var(--primary-hover);
+}

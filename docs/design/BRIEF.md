@@ -10,11 +10,11 @@ Not in R1, so never draw these: keyboard shortcuts, shortcut hints or key caps f
 "Keyboard-first" means every screen works from the keyboard alone: sensible tab order, visible focus, Enter submits forms, Escape closes dialogs and menus. It doesn't mean shortcuts.
 
 ## Design system
-Use only the Track Lite design system attached to this project. Don't invent components, colours, spacing or one-off styles. If a screen needs something the kit lacks, list it at the end of the answer instead of drawing it.
+Use only the Docket design system attached to this project (bundle and tokens in `_ds/docket-design-system-…`). App-shell, popover, field, dialog and toast markup the kit has no component for lives in `tracklite-app.css`, built on Docket tokens only. Don't invent components, colours, spacing or one-off styles. If a screen needs something the kit lacks, list it at the end of the answer instead of drawing it.
 - Voice: plain, specific, matter-of-fact. Help text uses "you"; the product never says "I" or "we". Sentence case everywhere. Buttons are verbs ("Sign in", "Send link"). Feedback is a past-tense fact. Use the ellipsis character (…) and curly quotes. No exclamation marks, no emoji.
 - Machine values in mono: issue IDs, dates, counts, relative times.
-- Logo: the "lifted card" mark (option 1e in Tracklite logo.dc.html): a board card tilted −9° with a clay border over a faded ink outline card, followed by the word Tracklite in the serif at weight 600. Copy the SVG from that file; don't redraw or recolour it. Sidebar head: 22px mark, 17px wordmark. Signed-out header: 26px mark, 20px wordmark.
-- Clay accent for interactive and primary. Terracotta only for exceptions: urgent, overdue, destructive. Never both accents in one small component.
+- Logo: the "lifted card" mark (option 1e in Tracklite logo.dc.html): a board card tilted −9° with a clay border over a faded ink outline card, in Docket ink, surface and eraser, followed by the word Tracklite in Geist at weight 600. Copy the SVG from that file; don't redraw or recolour it. Sidebar head: 22px mark, 17px wordmark. Signed-out header: 26px mark, 20px wordmark.
+- Eraser (`--primary`) for interactive and primary. `--danger` only for exceptions: overdue, destructive. Urgent priority uses the Docket PriorityIcon.
 - Separate rows and panels with 1px rules, not boxes. No gradients, imagery, illustrations or motion.
 - Use the exact copy given in quotes. Server messages appear exactly as written.
 

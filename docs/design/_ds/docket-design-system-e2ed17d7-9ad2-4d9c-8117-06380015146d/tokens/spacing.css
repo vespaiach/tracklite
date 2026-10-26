@@ -1,0 +1,22 @@
+:root{
+  --space-xxs:4px;--space-xs:8px;--space-sm:12px;--space-md:16px;--space-lg:24px;--space-xl:32px;--space-xxl:48px;--space-section:96px;
+
+  --radius-xs:4px;--radius-sm:6px;--radius-md:8px;--radius-lg:12px;--radius-xl:16px;--radius-xxl:24px;--radius-pill:9999px;--radius-full:9999px;
+
+  --container-max:1280px;
+  --nav-height:56px;
+  --sidebar-width:240px;
+  --row-height:40px;
+
+
+  --ease-out:cubic-bezier(.2,.7,.2,1); /* @kind other */
+  --dur-fast:100ms; /* @kind other */
+  --dur-base:160ms; /* @kind other */
+  --dur-slow:240ms; /* @kind other */
+}
+/* Elevation: surface ladder + hairline; drop shadow only on menus/dialogs. Re-resolved per theme scope. */
+:root,[data-theme]{
+  --elev-1:inset 0 1px 0 var(--edge-highlight);
+  --elev-menu:0 0 0 1px var(--hairline-strong),0 8px 24px var(--shadow-menu);
+  --elev-dialog:0 0 0 1px var(--hairline-strong),0 24px 64px var(--shadow-dialog);
+}

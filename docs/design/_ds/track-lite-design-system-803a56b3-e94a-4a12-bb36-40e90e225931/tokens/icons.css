@@ -1,5 +1,0 @@
-/* Phosphor icons (the source uses @phosphor-icons/react, duotone weight). Web font build from CDN.
-   Usage: <i class="ph-duotone ph-tray"></i>  ·  bold for small "+" marks: <i class="ph-bold ph-plus"></i> */
-@import url("https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css");
-@import url("https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css");
-@import url("https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css");

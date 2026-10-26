@@ -9,49 +9,48 @@
 <x-dc>
 <helmet>
   <meta name="design_doc_mode" content="canvas">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/fonts.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/icons.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/colors.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/typography.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/spacing.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/tokens/base.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/components/components.css">
-  <link rel="stylesheet" href="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/styles.css">
-  <script src="_ds/track-lite-design-system-803a56b3-e94a-4a12-bb36-40e90e225931/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/tokens/base.css">
+  <link rel="stylesheet" href="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/styles.css">
+  <script src="_ds/docket-design-system-e2ed17d7-9ad2-4d9c-8117-06380015146d/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="tracklite-app.css">
   <style>
-    body{margin:0;background:var(--color-surface);font-family:var(--font-ui);color:var(--color-ink)}
-    a{color:var(--color-accent);text-decoration:none}
+    body{margin:0;background:var(--canvas);font-family:var(--font-text);color:var(--ink)}
+    a{color:var(--text-link);text-decoration:none}
     a:hover{text-decoration:underline}
     .tl-rail-item{color:inherit}
   </style>
 </helmet>
 
 <section data-screen-label="Notification status" style="padding:60px;display:flex;flex-direction:column;gap:20px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Notification status · /settings/notifications</h2>
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Notification status · /settings/notifications</h2>
   <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
     <sc-for list="{{ frames }}" as="f" hint-placeholder-count="3">
       <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="font-size:13px;font-weight:500">{{ f.label }} <span style="color:var(--color-ink-3);font-weight:400">{{ f.note }}</span></div>
-        <div data-screen-label="{{ f.label }}" class="tl-shell" style="position:relative;width:1280px;height:{{ f.frameH }}px;border:1px solid var(--color-divider);overflow:hidden">
+        <div style="font-size:13px;font-weight:500">{{ f.label }} <span style="color:var(--ink-tertiary);font-weight:400">{{ f.note }}</span></div>
+        <div data-screen-label="{{ f.label }}" class="tl-shell" style="position:relative;width:1280px;height:{{ f.frameH }}px;border:1px solid var(--hairline-strong);overflow:hidden">
           <aside class="tl-rail" aria-label="Sidebar">
-            <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
+            <div class="tl-rail__head"><div style="height:34px;display:flex;align-items:center;padding:0 7px"><span style="font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Tracklite</span></div></div>
             <nav class="tl-rail__main">
-              <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="tray" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
+              <div class="tl-rail-group"><a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="inbox" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">My issues</span></a></div>
               <div class="tl-rail-group">
-                <div style="display:flex;align-items:center;justify-content:space-between;min-height:22px"><div class="tl-rail-label">Projects</div><sc-if value="{{ f.isAdmin }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></sc-if></div>
-                <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a>
-                <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="stack" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
+                <div style="display:flex;align-items:center;justify-content:space-between;min-height:22px"><div class="tl-rail-label">Projects</div><sc-if value="{{ f.isAdmin }}" hint-placeholder-val="{{ true }}"><button type="button" class="tl-btn tl-btn--quiet tl-btn--sm tl-btn--icon" aria-label="New project" style="width:22px;height:22px"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="plus" size="{{ 12 }}" hint-size="12px,12px"></x-import></button></sc-if></div>
+                <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Website · WEB</span></a>
+                <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="layers" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Mobile app · APP</span></a>
               </div>
               <div class="tl-rail-group">
-                <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a>
+                <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="archive" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Archived projects</span></a>
                 <sc-if value="{{ f.isAdmin }}" hint-placeholder-val="{{ true }}">
-                  <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a>
-                  <a href="#" class="tl-rail-item" aria-current="page" style="text-decoration:none"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="bell" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Notifications</span></a>
+                  <a href="#" class="tl-rail-item" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="users" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Members</span></a>
+                  <a href="#" class="tl-rail-item" aria-current="page" style="text-decoration:none"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="bell" size="{{ 15 }}" hint-size="15px,15px"></x-import><span class="tl-lbl">Notifications</span></a>
                 </sc-if>
               </div>
             </nav>
             <div class="tl-rail__foot" style="position:relative">
-              <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Avatar" initials="{{ f.me.initials }}" size="md" tone="accent" hint-size="22px,22px"></x-import><span class="tl-lbl">{{ f.me.name }}</span><span class="tl-rail-item__end" style="color:var(--color-ink-3)"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Icon" name="caret-up-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
+              <button type="button" class="tl-rail-item" aria-haspopup="menu" aria-expanded="false"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Avatar" name="{{ f.me.initials }}" size="{{ 20 }}" hint-size="20px,20px"></x-import><span class="tl-lbl">{{ f.me.name }}</span><span class="tl-rail-item__end" style="color:var(--ink-tertiary)"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Icon" name="chevron-down" size="{{ 12 }}" hint-size="12px,12px"></x-import></span></button>
             </div>
           </aside>
 
@@ -59,16 +58,16 @@
             <header class="tl-appbar" style="display:flex;align-items:center;gap:15px">
               <h1 class="tl-appbar__title">Notification status</h1>
               <sc-if value="{{ f.showRefresh }}" hint-placeholder-val="{{ true }}">
-                <sc-if value="{{ f.refreshing }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" disabled="{{ true }}" aria-busy="true" hint-size="auto,26px">Refreshing…</x-import></sc-if>
-                <sc-if value="{{ f.notRefreshing }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" disabled="{{ f.loading }}" hint-size="auto,26px">Refresh</x-import></sc-if>
+                <sc-if value="{{ f.refreshing }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="secondary" size="sm" disabled="{{ true }}" aria-busy="true" hint-size="auto,28px">Refreshing…</x-import></sc-if>
+                <sc-if value="{{ f.notRefreshing }}" hint-placeholder-val="{{ true }}"><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="secondary" size="sm" disabled="{{ f.loading }}" hint-size="auto,28px">Refresh</x-import></sc-if>
               </sc-if>
             </header>
 
             <sc-if value="{{ f.isLoading }}" hint-placeholder-val="{{ false }}">
-              <main aria-busy="true" style="padding:40px 40px 0"><p role="status" style="margin:0;font-size:13px;color:var(--color-ink-2)">Loading…</p></main>
+              <main aria-busy="true" style="padding:40px 40px 0"><p role="status" style="margin:0;font-size:13px;color:var(--ink-subtle)">Loading…</p></main>
             </sc-if>
             <sc-if value="{{ f.isError }}" hint-placeholder-val="{{ false }}">
-              <main style="padding:40px 40px 0"><div role="alert" style="display:flex;align-items:center;gap:15px"><p style="margin:0;font-size:13px">Couldn’t load this.</p><x-import component-from-global-scope="TrackLiteDesignSystem_803a56.Button" variant="secondary" size="sm" hint-size="auto,26px">Retry</x-import></div></main>
+              <main style="padding:40px 40px 0"><div role="alert" style="display:flex;align-items:center;gap:15px"><p style="margin:0;font-size:13px">Couldn’t load this.</p><x-import component-from-global-scope="DocketDesignSystem_e2ed17.Button" variant="secondary" size="sm" hint-size="auto,28px">Retry</x-import></div></main>
             </sc-if>
             <sc-if value="{{ f.isDenied }}" hint-placeholder-val="{{ false }}">
               <main style="padding:40px 40px 0"><p role="alert" style="margin:0;font-size:13px">You don’t have permission to do that.</p></main>
@@ -79,31 +78,31 @@
 
                 <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px">
                   <div style="display:flex;flex-direction:column;gap:10px">
-                    <h2 id="{{ f.id }}-w" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Worker</h2>
-                    <dl aria-labelledby="{{ f.id }}-w" style="margin:0;border-top:1px solid var(--color-divider)">
-                      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px">
-                        <dt style="color:var(--color-ink-2)">Last seen</dt>
+                    <h2 id="{{ f.id }}-w" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Worker</h2>
+                    <dl aria-labelledby="{{ f.id }}-w" style="margin:0;border-top:1px solid var(--hairline-strong)">
+                      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--hairline-strong);font-size:13px">
+                        <dt style="color:var(--ink-subtle)">Last seen</dt>
                         <dd style="margin:0;font-family:var(--font-mono);font-size:12.5px"><time datetime="{{ f.worker.iso }}" title="{{ f.worker.full }}">{{ f.worker.rel }}</time></dd>
                       </div>
                     </dl>
                   </div>
                   <div style="display:flex;flex-direction:column;gap:10px">
-                    <h2 id="{{ f.id }}-q" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Queue</h2>
-                    <dl aria-labelledby="{{ f.id }}-q" style="margin:0;border-top:1px solid var(--color-divider)">
-                      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px"><dt style="color:var(--color-ink-2)">Pending</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">{{ f.q.pending }}</dd></div>
-                      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px"><dt style="color:var(--color-ink-2)">Due</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">{{ f.q.due }}</dd></div>
-                      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:13px"><dt style="color:var(--color-ink-2)">Oldest due has waited</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">{{ f.q.wait }}</dd></div>
+                    <h2 id="{{ f.id }}-q" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Queue</h2>
+                    <dl aria-labelledby="{{ f.id }}-q" style="margin:0;border-top:1px solid var(--hairline-strong)">
+                      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--hairline-strong);font-size:13px"><dt style="color:var(--ink-subtle)">Pending</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">{{ f.q.pending }}</dd></div>
+                      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--hairline-strong);font-size:13px"><dt style="color:var(--ink-subtle)">Due</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">{{ f.q.due }}</dd></div>
+                      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:15px;padding:10px 0;border-bottom:1px solid var(--hairline-strong);font-size:13px"><dt style="color:var(--ink-subtle)">Oldest due has waited</dt><dd style="margin:0;font-family:var(--font-mono);font-size:12.5px">{{ f.q.wait }}</dd></div>
                     </dl>
                   </div>
                 </div>
 
                 <div style="display:flex;flex-direction:column;gap:10px">
-                  <h2 id="{{ f.id }}-d" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Last 24 hours</h2>
+                  <h2 id="{{ f.id }}-d" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Last 24 hours</h2>
                   <table class="tl-table" aria-labelledby="{{ f.id }}-d">
                     <thead><tr><th scope="col">Channel</th><th scope="col" style="text-align:right;width:110px">Sent</th><th scope="col" style="text-align:right;width:110px">Dropped</th><th scope="col" style="text-align:right;width:110px">Failed</th><th scope="col" style="text-align:right;width:110px">Bounced</th></tr></thead>
                     <tbody>
                       <tr>
-                        <th scope="row" style="font-weight:400;text-align:left;text-transform:none;font-size:13px;letter-spacing:normal;color:var(--color-ink)">Email</th>
+                        <th scope="row" style="font-weight:400;text-align:left;text-transform:none;font-size:13px;letter-spacing:normal;color:var(--ink)">Email</th>
                         <td style="text-align:right;font-family:var(--font-mono);font-size:12.5px">{{ f.day.sent }}</td>
                         <td style="text-align:right;font-family:var(--font-mono);font-size:12.5px">{{ f.day.dropped }}</td>
                         <td style="text-align:right;font-family:var(--font-mono);font-size:12.5px">{{ f.day.failed }}</td>
@@ -114,9 +113,9 @@
                 </div>
 
                 <div style="display:flex;flex-direction:column;gap:10px">
-                  <h2 id="{{ f.id }}-r" style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:17px;letter-spacing:-0.015em">Recent problems</h2>
+                  <h2 id="{{ f.id }}-r" style="margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:-0.015em">Recent problems</h2>
                   <sc-if value="{{ f.noProblems }}" hint-placeholder-val="{{ false }}">
-                    <p style="margin:0;padding:10px 0;border-top:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);font-size:13px;color:var(--color-ink-2)">No failed or bounced notifications.</p>
+                    <p style="margin:0;padding:10px 0;border-top:1px solid var(--hairline-strong);border-bottom:1px solid var(--hairline-strong);font-size:13px;color:var(--ink-subtle)">No failed or bounced notifications.</p>
                   </sc-if>
                   <sc-if value="{{ f.hasProblems }}" hint-placeholder-val="{{ true }}">
                     <table class="tl-table" aria-labelledby="{{ f.id }}-r">
@@ -145,8 +144,8 @@
 </section>
 
 <section data-screen-label="Notes" style="padding:0 60px 80px;display:flex;flex-direction:column;gap:10px;max-width:760px">
-  <h2 style="margin:0;font-family:var(--font-serif);font-weight:600;font-size:28px;letter-spacing:-0.015em">Notes and gaps</h2>
-  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--color-ink-2)">
+  <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-0.015em">Notes and gaps</h2>
+  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--ink-subtle)">
     <li>Hover shows the full date and time through the native title on each time. The kit has no tooltip component; a keyboard-reachable tooltip is needed so focus users get the same detail.</li>
     <li>Worker down: the spec gives no threshold for “down”, so “12 min ago” is shown plainly. If a threshold is defined, a terracotta Tag (accent-2) beside the time is the kit’s exception treatment.</li>
     <li>Recent problems has no state column (failed or bounced), per the listed columns. Add one if admins need to tell them apart.</li>
