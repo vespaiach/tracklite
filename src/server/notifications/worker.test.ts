@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { PostgresJsPreparedQuery } from "drizzle-orm/postgres-js/session";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createIssue, createMember, createProject, newRequestId } from "../../test/factories";
+import { spyOnLoggedErrors } from "../../test/log";
 import { deleteComment, editComment, postIssueComment } from "../comments";
 import { db } from "../shared/db";
 import { parseUuid } from "../shared/ids";
@@ -376,14 +377,14 @@ it("REQ-045: a notification already dropped isn't sent by a later delivery", asy
   ]);
 });
 
-it("STD-6, REQ-053: a failed send is retried after 1, then 4, then 10 minutes; after the third retry fails it is failed, logged once without the address, its time recorded, and nothing more is sent", async () => {
+it("STD-6, REQ-053: a failed send is retried after 1, then 4, then 10 minutes; after the third retry fails it is failed, its time recorded, and nothing more is sent; each failed attempt logs one delivery-failed line without the address", async () => {
   const alex = await createMember();
   const sam = await createMember();
   const { issueRef } = await website();
   await assign(issueRef, alex, sam);
   await waitIsOver(sam);
   outbox.failing = true;
-  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  const loggedErrors = spyOnLoggedErrors();
 
   await sendAllDue();
   expect(await emailsOf(sam)).toEqual([
@@ -408,10 +409,10 @@ it("STD-6, REQ-053: a failed send is retried after 1, then 4, then 10 minutes; a
   const [email] = await emailsOf(sam);
   expect(email).toEqual(expect.objectContaining({ state: "failed", attempts: 4 }));
   expect(await stateChangesOf(sam)).toEqual([{ state: "failed", changedJustNow: true }]);
-  const failures = logLines(log).filter(
-    (line) => line.event === "notification" && line.deliveryId === email.id,
+  const failures = loggedErrors().filter((line) => line.deliveryId === email.id);
+  expect(failures).toEqual(
+    Array(4).fill(expect.objectContaining({ source: "worker", event: "delivery-failed", channel: "email" })),
   );
-  expect(failures).toEqual([expect.objectContaining({ level: "error", deliveryId: email.id })]);
   expect(JSON.stringify(failures)).not.toContain(sam.email);
 
   outbox.failing = false;
@@ -475,7 +476,7 @@ it("§1.4: a delivery whose lease has expired is claimed again; one leased by an
   expect((await emailsOf(jo)).map((email) => email.state)).toEqual(["pending"]);
 });
 
-it("§1.4: an unexpected error in one delivery doesn't stop the others, and that delivery gets a retry", async () => {
+it("OPS-007.6, §1.4: an unexpected error in one delivery logs one delivery-failed line with its id and no recipient, the pass goes on with the others, and that delivery gets a retry", async () => {
   const alex = await createMember();
   const sam = await createMember();
   const jo = await createMember();
@@ -485,7 +486,7 @@ it("§1.4: an unexpected error in one delivery doesn't stop the others, and that
   await waitIsOver(sam);
   await waitIsOver(jo);
   const [samEmail] = await emailsOf(sam);
-  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  const loggedErrors = spyOnLoggedErrors();
 
   await recordingSentFails(samEmail.id);
   try {
@@ -498,11 +499,17 @@ it("§1.4: an unexpected error in one delivery doesn't stop the others, and that
   expect(await emailsOf(sam)).toEqual([
     expect.objectContaining({ state: "pending", attempts: 1, retryInSeconds: 60 }),
   ]);
-  const samLines = logLines(log).filter((line) => line.deliveryId === samEmail.id);
-  expect(samLines).toEqual([
-    expect.objectContaining({ level: "error", event: "notification", errorName: "PostgresError" }),
+  const lines = loggedErrors();
+  expect(lines).toEqual([
+    expect.objectContaining({
+      source: "worker",
+      event: "delivery-failed",
+      deliveryId: samEmail.id,
+      channel: "email",
+      error: expect.objectContaining({ cause: expect.objectContaining({ name: "PostgresError" }) }),
+    }),
   ]);
-  expect(JSON.stringify(samLines)).not.toContain(sam.email);
+  expect(JSON.stringify(lines)).not.toContain(sam.email);
 });
 
 it("§1.4: a full batch is followed at once by another pass", async () => {
@@ -583,12 +590,12 @@ it("§1.4: on SIGTERM the worker finishes the deliveries it claimed and claims n
   expect(states.filter((state) => state === "pending")).toHaveLength(1);
 });
 
-it("§1.4: an error outside any delivery is logged and the worker keeps running", async () => {
+it("§1.4: an error outside any delivery logs pass-failed and the worker keeps running", async () => {
   const connectionRefused = Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:5432"), {
     code: "ECONNREFUSED",
   });
   const claim = vi.spyOn(db, "transaction").mockRejectedValueOnce(connectionRefused);
-  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  const loggedErrors = spyOnLoggedErrors();
   const stop = new AbortController();
 
   const outcome = runWorker({ signal: stop.signal }).then(
@@ -599,9 +606,13 @@ it("§1.4: an error outside any delivery is logged and the worker keeps running"
   stop.abort();
 
   expect(await outcome).toBe("stopped");
-  expect(logLines(log)).toEqual(
+  expect(loggedErrors()).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ level: "error", event: "notification", errorName: "Error" }),
+      expect.objectContaining({
+        source: "worker",
+        event: "pass-failed",
+        error: expect.objectContaining({ code: "ECONNREFUSED" }),
+      }),
     ]),
   );
 });

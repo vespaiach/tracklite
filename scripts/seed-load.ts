@@ -1,4 +1,5 @@
 import { seedLoadData } from "../src/test/seed-load";
+import { logError } from "../src/server/shared/log";
 
 try {
   const { seeded } = await seedLoadData();
@@ -9,6 +10,6 @@ try {
   );
   process.exit(0);
 } catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
+  logError("boot", "start-failed", error, { script: "seed-load" });
   process.exit(1);
 }

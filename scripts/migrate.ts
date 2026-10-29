@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
+import { logError } from "../src/server/shared/log";
 
 const url = process.env.DATABASE_URL;
 
@@ -14,7 +15,7 @@ try {
   await migrate(drizzle(client), { migrationsFolder: "migrations" });
   console.log("Migrations applied.");
 } catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
+  logError("boot", "start-failed", error, { script: "migrate" });
   process.exitCode = 1;
 } finally {
   await client.end();

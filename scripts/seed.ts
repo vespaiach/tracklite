@@ -1,4 +1,5 @@
 import { seededMembers, seedMembers } from "../src/server/identity";
+import { logError } from "../src/server/shared/log";
 
 try {
   await seedMembers();
@@ -8,6 +9,6 @@ try {
   }
   process.exit(0);
 } catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
+  logError("boot", "start-failed", error, { script: "seed" });
   process.exit(1);
 }
