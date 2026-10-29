@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { spyOnLoggedErrors } from "../../../test/log";
 import { outbox } from "./outbox";
 import { sendEmail } from "./send";
 
@@ -34,7 +35,7 @@ it("§5.2: production sends through Resend's HTTP API", async () => {
 
   const result = await sendEmail({ ...email, idempotencyKey: "42" });
 
-  expect(result).toEqual({ providerMessageId: "resend-id-1" });
+  expect(result).toEqual({ ok: true, value: { providerMessageId: "resend-id-1" } });
   const [url, init] = fetch.mock.calls[0];
   expect(url).toBe("https://api.resend.com/emails");
   expect(init.method).toBe("POST");
@@ -50,29 +51,58 @@ it("§5.2: production sends through Resend's HTTP API", async () => {
   expect(init.signal).toBeInstanceOf(AbortSignal);
 });
 
-it("SEC-007: a Resend failure logs only the status and error name", async () => {
+it("OPS-007.7, SEC-007: Resend answering 503 logs one bad-status line with host and status, and no URL, key, recipient or text", async () => {
   stubProduction();
-  stubFetch(429, {
-    statusCode: 429,
-    name: "daily_quota_exceeded",
-    message: "You have reached your daily quota",
-  });
-  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  stubFetch(503, { statusCode: 503, name: "internal_server_error", message: `Could not send to ${email.to}` });
+  const loggedErrors = spyOnLoggedErrors();
 
-  await expect(sendEmail(email)).rejects.toThrow();
+  const result = await sendEmail(email);
 
-  expect(log).toHaveBeenCalledTimes(1);
-  const line = JSON.parse(log.mock.calls[0][0] as string);
-  expect(line).toMatchObject({
-    level: "error",
-    event: "email",
-    status: 429,
-    errorName: "daily_quota_exceeded",
-  });
-  const written = log.mock.calls[0][0] as string;
-  for (const secret of [email.to, email.subject, email.text]) {
+  expect(result).toEqual({ ok: false, error: "email-failed" });
+  expect(loggedErrors()).toEqual([
+    expect.objectContaining({ source: "mail", event: "bad-status", host: "api.resend.com", status: 503 }),
+  ]);
+  const written = JSON.stringify(loggedErrors());
+  for (const secret of ["https://", "re_test_key", email.to, email.subject, email.text]) {
     expect(written).not.toContain(secret);
   }
+});
+
+it("OPS-007.8: Resend not answering in time logs one fetch-failed line", async () => {
+  stubProduction();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+    }),
+  );
+  const loggedErrors = spyOnLoggedErrors();
+
+  const result = await sendEmail(email);
+
+  expect(result).toEqual({ ok: false, error: "email-failed" });
+  expect(loggedErrors()).toEqual([
+    expect.objectContaining({
+      source: "mail",
+      event: "fetch-failed",
+      host: "api.resend.com",
+      error: expect.objectContaining({ name: "TimeoutError" }),
+    }),
+  ]);
+});
+
+it("§4.8: a 200 from Resend without a message id logs one bad-response line naming only the field", async () => {
+  stubProduction();
+  stubFetch(200, { message: `queued for ${email.to}` });
+  const loggedErrors = spyOnLoggedErrors();
+
+  const result = await sendEmail(email);
+
+  expect(result).toEqual({ ok: false, error: "email-failed" });
+  expect(loggedErrors()).toEqual([
+    expect.objectContaining({ source: "mail", event: "bad-response", host: "api.resend.com", fields: ["id"] }),
+  ]);
+  expect(JSON.stringify(loggedErrors())).not.toContain(email.to);
 });
 
 it("§5.6: development sends through Mailpit's send API", async () => {
@@ -82,7 +112,7 @@ it("§5.6: development sends through Mailpit's send API", async () => {
 
   const result = await sendEmail(email);
 
-  expect(result).toEqual({ providerMessageId: "mailpit-id-1" });
+  expect(result).toEqual({ ok: true, value: { providerMessageId: "mailpit-id-1" } });
   const [url, init] = fetch.mock.calls[0];
   expect(url).toBe("http://localhost:8025/api/v1/send");
   expect(init.method).toBe("POST");

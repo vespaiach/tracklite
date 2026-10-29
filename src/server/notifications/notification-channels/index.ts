@@ -1,6 +1,7 @@
 import "server-only";
 import type { NotificationItem } from "../../shared/email/templates";
 import type { members } from "../../identity";
+import type { Result } from "../../shared/result";
 import type { notificationChannel } from "../../shared/schema";
 import { sendNotificationEmail } from "./email";
 
@@ -10,7 +11,7 @@ type NotificationSender = (
   recipient: Recipient,
   items: NotificationItem[],
   deliveryId: string,
-) => Promise<{ providerMessageId: string }>;
+) => Promise<Result<{ providerMessageId: string }, "email-failed">>;
 
 export const notificationSenders: Record<NotificationChannel, NotificationSender> = {
   email: sendNotificationEmail,
