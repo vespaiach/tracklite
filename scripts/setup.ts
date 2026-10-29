@@ -1,6 +1,7 @@
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { createFirstAdmin } from "../src/server/identity";
+import { logError } from "../src/server/shared/log";
 
 async function ask(question: string) {
   const prompt = createInterface({ input: stdin, output: stdout });
@@ -53,6 +54,6 @@ try {
   console.log(`Created the admin ${email}. Sign in with that email and password.`);
   process.exit(0);
 } catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
+  logError("boot", "start-failed", error, { script: "setup" });
   process.exit(1);
 }

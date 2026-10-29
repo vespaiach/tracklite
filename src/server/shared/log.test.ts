@@ -77,7 +77,7 @@ it("SEC-007.5: an error's 2,000-character message is cut to its first 500, in th
 
   const [line] = loggedErrors();
   expect(line.error.message).toBe("a".repeat(500));
-  expect(line.error.stack).not.toContain("ab");
+  expect(line.error.stack).toContain(`Error: ${"a".repeat(500)}\n`);
 });
 
 it("SEC-007.6: an error's extra properties are left out; only name, message, code, stack and causes, 2 levels deep", () => {

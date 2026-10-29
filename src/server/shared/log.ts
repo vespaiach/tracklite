@@ -122,24 +122,3 @@ function maskEmails(text: string) {
 export function logEmailFailure(line: { status: number; errorName?: string }) {
   writeLine({ time: new Date().toISOString(), level: "error", event: "email", ...line });
 }
-
-export function logNotificationFailure({ channel, deliveryId }: { channel: string; deliveryId: string }) {
-  writeLine({
-    time: new Date().toISOString(),
-    level: "error",
-    event: "notification",
-    message: `${channel} failed`,
-    deliveryId,
-  });
-}
-
-export function logNotificationError({ deliveryId, errorName }: { deliveryId?: string; errorName: string }) {
-  writeLine({
-    time: new Date().toISOString(),
-    level: "error",
-    event: "notification",
-    message: "unexpected error",
-    deliveryId,
-    errorName,
-  });
-}

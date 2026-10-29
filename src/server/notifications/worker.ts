@@ -4,7 +4,7 @@ import { and, asc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { deleteExpiredRows } from "./cleanup";
 import { db } from "../shared/db";
 import type { Transaction } from "../shared/transaction";
-import { logInfo, logNotificationError, logNotificationFailure } from "../shared/log";
+import { logError, logInfo } from "../shared/log";
 import { notificationSenders, type Recipient } from "./notification-channels";
 import { dueAt, queueCounts } from "./notification-queue";
 import { issueAssignees, issues } from "../issues";
@@ -39,12 +39,12 @@ export async function runWorker({ signal }: { signal: AbortSignal }) {
     const claimed = await runPass(tally);
 
     if (performance.now() >= nextMetricsAt) {
-      await logMetrics(tally).catch(logWorkerError);
+      await logMetrics(tally).catch((error) => logError("worker", "metrics-failed", error));
       nextMetricsAt = performance.now() + metricsIntervalMs;
     }
 
     if (performance.now() >= nextCleanupAt) {
-      await deleteExpiredRows().catch(logWorkerError);
+      await deleteExpiredRows().catch((error) => logError("worker", "cleanup-failed", error));
       nextCleanupAt = performance.now() + cleanupIntervalMs;
     }
 
@@ -73,7 +73,7 @@ async function runPass(tally: Tally) {
     await recordHeartbeat();
     return await sendDueDeliveries(tally);
   } catch (error) {
-    logWorkerError(error);
+    logError("worker", "pass-failed", error);
     return 0;
   }
 }
@@ -89,15 +89,6 @@ async function logMetrics(tally: Tally) {
   const queue = await queueCounts();
   logInfo("worker", "metrics", { ...queue, ...tally });
   Object.assign(tally, emptyTally());
-}
-
-function logWorkerError(error: unknown) {
-  logNotificationError({ errorName: errorNameOf(error) });
-}
-
-function errorNameOf(error: unknown) {
-  const cause = error instanceof Error && error.cause instanceof Error ? error.cause : error;
-  return cause instanceof Error ? cause.name : typeof cause;
 }
 
 function claimDueDeliveries() {
@@ -159,7 +150,7 @@ async function deliver(delivery: ClaimedDelivery, checks: DropChecks) {
   try {
     return await sendAndRecord(delivery, checks);
   } catch (error) {
-    logNotificationError({ deliveryId: delivery.id, errorName: errorNameOf(error) });
+    logError("worker", "delivery-failed", error, { deliveryId: delivery.id, channel: delivery.channel });
     return await recordFailure(delivery).catch(() => null);
   }
 }
@@ -169,7 +160,6 @@ async function sendAndRecord(delivery: ClaimedDelivery, checks: DropChecks): Pro
   if (message === null || message === "dropped") return message;
 
   const sent = await send(delivery, message);
-  if (!sent) return recordFailure(delivery);
 
   const recorded = await db
     .update(notificationDeliveries)
@@ -185,7 +175,7 @@ async function sendAndRecord(delivery: ClaimedDelivery, checks: DropChecks): Pro
 }
 
 function send(delivery: ClaimedDelivery, { recipient, kept }: { recipient: Recipient; kept: Item[] }) {
-  return notificationSenders[delivery.channel](recipient, kept, delivery.id).catch(() => null);
+  return notificationSenders[delivery.channel](recipient, kept, delivery.id);
 }
 
 async function loadDropChecks(claimed: ClaimedDelivery[]) {
@@ -361,8 +351,5 @@ async function markFailed(delivery: ClaimedDelivery) {
     .set({ state: "failed", attempts: delivery.attempts + 1, stateChangedAt: sql`now()` })
     .where(heldBy(delivery))
     .returning({ id: notificationDeliveries.id });
-  if (failed.length === 0) return null;
-
-  logNotificationFailure({ channel: delivery.channel, deliveryId: delivery.id });
-  return "failed" as const;
+  return failed.length > 0 ? ("failed" as const) : null;
 }
