@@ -30,9 +30,8 @@ export async function requestResetLink(normalizedEmail: string, ip: string) {
       tokenHash: hashToken(token),
       expiresAt: sql`now() + interval '30 minutes'`,
     });
-    await sendEmail({ to: member.email, ...passwordResetEmail({ email: member.email, token }) }).catch(() => {
-      throw new ApiError(503, "We couldn’t send the email. Try again.");
-    });
+    const sent = await sendEmail({ to: member.email, ...passwordResetEmail({ email: member.email, token }) });
+    if (!sent.ok) throw new ApiError(503, "We couldn’t send the email. Try again.");
   });
 }
 

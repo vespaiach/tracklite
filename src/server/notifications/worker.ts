@@ -160,12 +160,13 @@ async function sendAndRecord(delivery: ClaimedDelivery, checks: DropChecks): Pro
   if (message === null || message === "dropped") return message;
 
   const sent = await send(delivery, message);
+  if (!sent.ok) return recordFailure(delivery);
 
   const recorded = await db
     .update(notificationDeliveries)
     .set({
       state: "sent",
-      providerMessageId: sent.providerMessageId,
+      providerMessageId: sent.value.providerMessageId,
       sentAt: sql`now()`,
       stateChangedAt: sql`now()`,
     })
