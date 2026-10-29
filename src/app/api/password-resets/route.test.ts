@@ -14,7 +14,7 @@ const newPassword = "a brand new password";
 let oldPasswordHash: string;
 
 beforeEach(async () => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
   outbox.sent = [];
   outbox.failing = false;
   oldPasswordHash ??= await hashPassword(oldPassword);

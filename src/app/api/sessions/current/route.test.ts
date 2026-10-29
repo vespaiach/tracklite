@@ -5,7 +5,7 @@ import { GET as getMe } from "../../me/route";
 import { DELETE } from "./route";
 
 beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {

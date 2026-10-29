@@ -14,7 +14,7 @@ type IssueStatus = (typeof issueStatus.enumValues)[number];
 type BoardColumn = { status: string; cards: { id: string }[] };
 
 beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {

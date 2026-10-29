@@ -57,7 +57,7 @@ it("SEC-007: a Resend failure logs only the status and error name", async () => 
     name: "daily_quota_exceeded",
     message: "You have reached your daily quota",
   });
-  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
 
   await expect(sendEmail(email)).rejects.toThrow();
 

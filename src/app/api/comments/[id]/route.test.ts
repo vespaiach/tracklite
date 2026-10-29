@@ -12,7 +12,7 @@ import { GET as listIssueComments } from "../../issues/[id]/comments/route";
 import { DELETE, PATCH } from "./route";
 
 beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {

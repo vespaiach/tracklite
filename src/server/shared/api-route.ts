@@ -1,8 +1,7 @@
-import { DrizzleQueryError } from "drizzle-orm";
 import * as v from "valibot";
 import { ApiError } from "./api-error";
 import { readConfig } from "./config";
-import { logRequest } from "./log";
+import { logError, logInfo } from "./log";
 import { type Member, requireMember } from "../identity";
 import "../notifications";
 
@@ -25,18 +24,8 @@ function errorOutcome(error: unknown): Outcome {
   }
   return {
     response: errorResponse(500, "Something went wrong."),
-    failure: failureName(error),
+    failure: { error },
   };
-}
-
-function failureName(error: unknown) {
-  if (error instanceof DrizzleQueryError) return `DrizzleQueryError (${queryCauseName(error.cause)})`;
-  return error instanceof Error ? error.name : typeof error;
-}
-
-function queryCauseName(cause: unknown) {
-  if (!(cause instanceof Error)) return typeof cause;
-  return "code" in cause ? `${cause.name} ${cause.code}` : cause.name;
 }
 
 function unreadableRequest() {
@@ -77,7 +66,7 @@ function withRequiredMessages(issues: ValidationIssues) {
 }
 
 type ValidationIssues = [v.BaseIssue<unknown>, ...v.BaseIssue<unknown>[]];
-type Outcome = { response: Response; failure?: string };
+type Outcome = { response: Response; failure?: { error: unknown } };
 type Caller = { username?: string; renewedCookie?: string };
 type NameActor = (username: string) => void;
 type Handler<Args extends unknown[]> = (...args: Args) => Response | Promise<Response>;
@@ -134,14 +123,16 @@ export function apiRoute(
 
     if (caller.renewedCookie) response.headers.append("set-cookie", caller.renewedCookie);
 
-    logRequest({
-      level: failure ? "error" : "info",
-      method: request.method,
-      path: new URL(request.url).pathname,
+    const method = request.method;
+    const path = new URL(request.url).pathname;
+    const actor = caller.username;
+    if (failure) logError("route", "request-failed", failure.error, { method, path, actor });
+    logInfo("route", "request", {
+      method,
+      path,
       status: response.status,
       durationMs: Math.round(performance.now() - started),
-      error: failure,
-      actor: caller.username,
+      actor,
     });
     return response;
   };

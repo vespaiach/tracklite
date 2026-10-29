@@ -15,7 +15,7 @@ const password = "correct horse battery";
 let passwordHash: string;
 
 beforeEach(async () => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
   outbox.sent = [];
   outbox.failing = false;
   passwordHash ??= await hashPassword(password);

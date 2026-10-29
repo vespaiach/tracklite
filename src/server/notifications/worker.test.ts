@@ -164,7 +164,7 @@ function logLines(log: { mock: { calls: unknown[][] } }) {
 }
 
 function workerLines(log: { mock: { calls: unknown[][] } }) {
-  return logLines(log).filter((line) => line.event === "worker");
+  return logLines(log).filter((line) => line.event === "metrics");
 }
 
 async function emptyQueue() {
@@ -383,7 +383,7 @@ it("STD-6, REQ-053: a failed send is retried after 1, then 4, then 10 minutes; a
   await assign(issueRef, alex, sam);
   await waitIsOver(sam);
   outbox.failing = true;
-  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
 
   await sendAllDue();
   expect(await emailsOf(sam)).toEqual([
@@ -427,7 +427,7 @@ it("STD-6: a retry that succeeds sends the email", async () => {
   await assign(issueRef, alex, sam);
   await waitIsOver(sam);
   outbox.failing = true;
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
   await sendAllDue();
 
   outbox.failing = false;
@@ -485,7 +485,7 @@ it("§1.4: an unexpected error in one delivery doesn't stop the others, and that
   await waitIsOver(sam);
   await waitIsOver(jo);
   const [samEmail] = await emailsOf(sam);
-  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
 
   await recordingSentFails(samEmail.id);
   try {
@@ -588,7 +588,7 @@ it("§1.4: an error outside any delivery is logged and the worker keeps running"
     code: "ECONNREFUSED",
   });
   const claim = vi.spyOn(db, "transaction").mockRejectedValueOnce(connectionRefused);
-  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
   const stop = new AbortController();
 
   const outcome = runWorker({ signal: stop.signal }).then(
@@ -655,16 +655,17 @@ it("§1.4: the metrics line holds the queue and delivery counts, and no recipien
     .set({ sendAfter: sql`now() - interval '3 minutes'` })
     .where(eq(notificationBatches.recipientId, mia.id));
   await leaseEndsIn(mia, "1 minute");
-  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
 
   await onePass();
 
   const lines = workerLines(log);
   expect(lines).toEqual([
     {
-      time: expect.any(String),
       level: "info",
-      event: "worker",
+      time: expect.any(String),
+      source: "worker",
+      event: "metrics",
       pending: 2,
       due: 1,
       oldestDueSeconds: expect.any(Number),
@@ -693,7 +694,7 @@ it("§1.4: the metrics line is written at most once a minute", async () => {
     if (++sends === 25) stop.abort();
     return send(...args);
   });
-  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
 
   await runWorker({ signal: stop.signal });
 

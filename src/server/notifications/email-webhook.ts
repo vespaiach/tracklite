@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { readConfig } from "../shared/config";
 import { db } from "../shared/db";
-import { logEmailEvent } from "../shared/log";
+import { logInfo } from "../shared/log";
 import { markInvitationBounced } from "../identity";
 import { notificationDeliveries } from "./tables";
 
@@ -46,12 +46,12 @@ async function markBounced(providerMessageId: string) {
       ),
     )
     .returning({ id: notificationDeliveries.id });
-  if (notification) return logEmailEvent(`email bounced, notification ${notification.id}`);
+  if (notification) return logInfo("mail", "bounced", { kind: "notification", id: notification.id });
 
   const invitation = await markInvitationBounced(providerMessageId);
-  if (invitation) return logEmailEvent(`email bounced, invitation ${invitation.id}`);
+  if (invitation) return logInfo("mail", "bounced", { kind: "invitation", id: invitation.id });
 
-  logEmailEvent("email bounced, untracked");
+  logInfo("mail", "bounced", { kind: "untracked" });
 }
 
 function parseJson(body: string): unknown {
@@ -73,11 +73,11 @@ function bouncedMessageId(event: Record<string, unknown>) {
 }
 
 async function handleEvent(event: unknown) {
-  if (!isRecord(event)) return logEmailEvent("email event ignored");
+  if (!isRecord(event)) return logInfo("mail", "ignored", {});
   if (event.type !== "email.bounced") return;
 
   const messageId = bouncedMessageId(event);
-  if (!messageId) return logEmailEvent("email event ignored");
+  if (!messageId) return logInfo("mail", "ignored", {});
 
   await markBounced(messageId);
 }

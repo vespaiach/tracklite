@@ -22,7 +22,7 @@ type MyIssueRow = {
 type MyIssueGroup = { status: string; count: number; issues: MyIssueRow[] };
 
 beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {

@@ -19,7 +19,7 @@ let logLines: Record<string, unknown>[];
 beforeEach(() => {
   vi.stubEnv("RESEND_WEBHOOK_SECRET", secret);
   logLines = [];
-  vi.spyOn(console, "log").mockImplementation((line: string) => {
+  vi.spyOn(console, "error").mockImplementation((line: string) => {
     logLines.push(JSON.parse(line));
   });
   outbox.sent = [];
@@ -110,7 +110,7 @@ it("API-003.1, REQ-053: a bounce for a notification email marks it Bounced, reco
   expect(response.status).toBe(200);
   expect(await stateOf(email.id)).toBe("bounced");
   expect(logLines).toContainEqual(
-    expect.objectContaining({ event: "email", message: `email bounced, notification ${email.id}` }),
+    expect.objectContaining({ source: "mail", event: "bounced", kind: "notification", id: email.id }),
   );
   const [bounced] = await db
     .select({
@@ -138,7 +138,7 @@ it("API-003.2: a bounce for an invitation email shows it as Bounced in the list 
   expect(response.status).toBe(200);
   expect(await listedInvitation(cookie, email)).toEqual(expect.objectContaining({ state: "bounced" }));
   expect(logLines).toContainEqual(
-    expect.objectContaining({ event: "email", message: `email bounced, invitation ${invitation.id}` }),
+    expect.objectContaining({ source: "mail", event: "bounced", kind: "invitation", id: invitation.id }),
   );
 });
 
@@ -189,7 +189,7 @@ it("API-003.6: a signed bounce for an untracked email → 200; logged as untrack
 
   expect(response.status).toBe(200);
   expect(logLines).toContainEqual(
-    expect.objectContaining({ event: "email", message: "email bounced, untracked" }),
+    expect.objectContaining({ source: "mail", event: "bounced", kind: "untracked" }),
   );
 });
 
@@ -228,6 +228,8 @@ it("§5.4: a signed body that isn't JSON, isn't an object, or is an email.bounce
 
   expect(responses.map((response) => response.status)).toEqual(bodies.map(() => 200));
   expect(await stateOf(email.id)).toBe("sent");
-  expect(logLines.filter((line) => line.message === "email event ignored")).toHaveLength(bodies.length);
+  expect(logLines.filter((line) => line.source === "mail" && line.event === "ignored")).toHaveLength(
+    bodies.length,
+  );
   expect(JSON.stringify(logLines)).not.toContain(email.providerMessageId);
 });

@@ -8,7 +8,7 @@ import { createMember } from "../../../test/factories";
 import { requestResetLink, uniqueIp } from "../../../test/reset-links";
 
 beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
   outbox.sent = [];
   outbox.failing = false;
 });

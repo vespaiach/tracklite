@@ -12,7 +12,7 @@ type BoardCard = { id: string; title: string; priority: string; assignees: unkno
 type BoardColumn = { status: string; count: number; cards: BoardCard[] };
 
 beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {
