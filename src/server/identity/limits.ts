@@ -1,14 +1,15 @@
 import "server-only";
 import { isIP } from "node:net";
-import { and, eq, gt, or, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { ApiError } from "../shared/api-error";
 import { db } from "../shared/db";
-import { passwordResetRequests, signInAttempts } from "./tables";
+import { clientErrorReports, passwordResetRequests, signInAttempts } from "./tables";
 
 const failedSignInsPerEmail = 10;
 const failedSignInsPerIp = 30;
 const resetRequestsPerEmail = 5;
 const resetRequestsPerIp = 20;
+const clientErrorReportsPerWindow = 30;
 
 export function clientIp(request: Request) {
   const rightmost = request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
@@ -52,4 +53,25 @@ export async function resetRequestLimitReached(email: string, ip: string) {
 
 export async function recordResetRequest(email: string, ip: string) {
   await db.insert(passwordResetRequests).values({ email, ip });
+}
+
+type ClientErrorReporter = { username: string | null; ip: string };
+
+export async function clientErrorLimitReached({ username, ip }: ClientErrorReporter) {
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(clientErrorReports)
+    .where(
+      and(
+        gt(clientErrorReports.createdAt, sql`now() - interval '10 minutes'`),
+        username === null
+          ? and(isNull(clientErrorReports.username), eq(clientErrorReports.ip, ip))
+          : eq(clientErrorReports.username, username),
+      ),
+    );
+  return count >= clientErrorReportsPerWindow;
+}
+
+export async function recordClientErrorReport(reporter: ClientErrorReporter) {
+  await db.insert(clientErrorReports).values(reporter);
 }

@@ -122,6 +122,6 @@ it("M15: context dependencies follow the context map", () => {
 it("M16: a context writes only its own tables", () => {
   const owners = tableOwners();
 
-  expect(owners.size).toBe(18);
+  expect(owners.size).toBe(19);
   expect(foreignTableWrites(owners)).toEqual([]);
 });

@@ -7,12 +7,14 @@ export {
   resendInvitation,
   revokeInvitation,
 } from "./invitations";
+export { reportClientError } from "./client-errors";
 export { deleteExpiredAccountRows } from "./cleanup";
 export { clientIp } from "./limits";
 export { editConflict, listMembers, memberSummary, profileResponse, updateMember } from "./members";
 export { checkResetLink, requestResetLink, resetPassword } from "./password-resets";
 export { changePassword, updateProfile } from "./profile";
 export {
+  ClientErrorReport,
   InvitationAcceptance,
   InvitationLinkLookup,
   MemberChanges,
@@ -42,6 +44,7 @@ export { createFirstAdmin } from "./setup";
 export { seededMembers, seedMembers, seedPassword } from "./seed";
 export { signIn } from "./sign-in";
 export {
+  clientErrorReports,
   invitations,
   members,
   passwordResetRequests,
