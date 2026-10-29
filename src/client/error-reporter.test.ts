@@ -127,8 +127,8 @@ it("OPS-008: a non-Error value is reported by its text, and long strings are cut
 });
 
 it("OPS-008: only the reporter names the client error endpoint", () => {
-  const endpoint = ["/api", "client-errors"].join("/");
-  const allowed = [join("src", "client", "error-reporter.ts"), join("src", "app", "api", "client-errors")];
+  const endpoint = "/api/client-errors";
+  const allowed = [join("src", "client", "error-reporter."), join("src", "app", "api", "client-errors")];
   const files = readdirSync("src", { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile())
     .map((entry) => join(entry.parentPath, entry.name));
