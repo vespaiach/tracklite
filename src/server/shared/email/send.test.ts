@@ -53,7 +53,11 @@ it("§5.2: production sends through Resend's HTTP API", async () => {
 
 it("OPS-007.7, SEC-007: Resend answering 503 logs one bad-status line with host and status, and no URL, key, recipient or text", async () => {
   stubProduction();
-  stubFetch(503, { statusCode: 503, name: "internal_server_error", message: `Could not send to ${email.to}` });
+  stubFetch(503, {
+    statusCode: 503,
+    name: "internal_server_error",
+    message: `Could not send to ${email.to}`,
+  });
   const loggedErrors = spyOnLoggedErrors();
 
   const result = await sendEmail(email);
@@ -100,7 +104,12 @@ it("§4.8: a 200 from Resend without a message id logs one bad-response line nam
 
   expect(result).toEqual({ ok: false, error: "email-failed" });
   expect(loggedErrors()).toEqual([
-    expect.objectContaining({ source: "mail", event: "bad-response", host: "api.resend.com", fields: ["id"] }),
+    expect.objectContaining({
+      source: "mail",
+      event: "bad-response",
+      host: "api.resend.com",
+      fields: ["id"],
+    }),
   ]);
   expect(JSON.stringify(loggedErrors())).not.toContain(email.to);
 });
