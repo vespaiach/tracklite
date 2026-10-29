@@ -18,7 +18,8 @@ function setup({ online = true } = {}) {
     now: () => state.now,
     timeZone: "Europe/Berlin",
   });
-  const sent = () => fetch.mock.calls.map(([, init]: unknown[]) => JSON.parse((init as RequestInit).body as string));
+  const sent = () =>
+    fetch.mock.calls.map(([, init]: unknown[]) => JSON.parse((init as RequestInit).body as string));
   return { fetch, events, state, report, sent };
 }
 
