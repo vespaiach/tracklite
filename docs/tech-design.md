@@ -36,8 +36,8 @@ Deployment (servers, the reverse proxy, process supervision, deploys, rollbacks,
 2. Validate the session with `requireMember`. This step only says who is asking; it checks no role. A route declared `"public"` (sign-in, password resets, invitation lookups and acceptance, sign-out) skips it.
 3. If the route declares a body schema, parse the JSON body and validate it with Valibot (D-42), failing fast with `422`. The schema checks shape and format only, with the spec's own messages, and passes the parsed, trimmed values on.
 4. Call one domain function in its context's `index.ts` under `src/server/` (1.8), passing the signed-in member as its first argument, `actor`. `apiRoute` opens no transaction; the domain function opens its own with `db.transaction`. The domain function checks permissions (4.10), then the rules that need the database (a key already used, the last admin), and writes. The action and any notification rows it creates commit together (spec §12).
-5. Map a thrown `ApiError` to `401`/`403`/`404`/`409`/`410`/`422`/`429`/`503` with `{ error: { message, fields? } }`. Map anything else to `500`.
-6. Write one JSON log line per request, without bodies or tokens (SEC-007). A signed-in request's line names the member as `actor` by username. `/health`, `/health/worker` and `/webhooks/email` don't go through `apiRoute`, so they write no line; the reverse proxy's access log records them.
+5. Map a thrown `ApiError` to `401`/`403`/`404`/`409`/`410`/`422`/`429`/`503` with `{ error: { message, fields? } }`. Map anything else to `500` and log it as `route/request-failed` (4.8).
+6. Write one JSON `route/request` line per request, without bodies or tokens (SEC-007, 4.8). A signed-in request's line names the member as `actor` by username. `/health`, `/health/worker` and `/webhooks/email` don't go through `apiRoute`, so they write no line; the reverse proxy's access log records them.
 
 ### 1.3 Time
 
@@ -484,12 +484,73 @@ One module, `src/lib/markdown/`, used for both **rendering** in the browser and 
   - On the server, the matches become the `mentions` rows: active members only (2.5).
   - In the browser, a match is shown highlighted, with the full name on hover, only if the username is in the `mentions` list the API returns with the text, so the browser never looks members up itself. Mentions aren't links (DATA-001).
 
-### 4.8 Logs (SEC-007)
+### 4.8 Error logging (SEC-007, OPS-007, OPS-008)
 
-- The logger takes a fixed set of fields: time, level, event, method, path (without the query string), status, `durationMs`, `actor` (the member's username), and `error` (the error's class name only, since a message can quote request data; a failed query adds the database error's class and SQLSTATE code, such as `DrizzleQueryError (PostgresError 23505)`). The worker's lines (1.4) add `deliveryId`, `errorName` and the metrics counts; email-failure lines add the provider's `status` and `errorName`.
-- It never logs request or response bodies, headers or cookies.
-- Besides the request line, only email events, as short phrases such as `email bounced, invitation {id}`, and the worker's `notification` and `worker` lines (1.4) are logged.
-- Errors from the email provider are logged without the message content.
+Built by the E batch (E02–E08); until those rows merge, `src/server/shared/log.ts` still writes the older lines.
+
+**The boundary rule.** An error is logged once, by the code that turns it into an answer: a status code, a retry, an exit code, a crash screen. Code below that boundary throws or returns and never logs. An `ApiError` is an expected outcome, not a fault: `apiRoute` maps it to its status and logs no error line (D-47).
+
+**Catch points.** These are the only places that log an error:
+
+| Where | Catches | Logs |
+|---|---|---|
+| `apiRoute`'s catch (`shared/api-route.ts`) | Anything but an `ApiError` thrown by a handler; answers `500` | `route/request-failed` |
+| `onRequestError` in `src/instrumentation.ts` | Errors Next.js sees outside `apiRoute`: the page shell, `/health`, `/webhooks/email` | `route/request-failed` |
+| The worker's per-delivery `try` (1.4 step 4) | One delivery's unexpected error or failed send; counts as a failed attempt | `worker/delivery-failed` |
+| The worker's per-pass, metrics and cleanup catches | Heartbeat, claim, drop-check loading; metrics; cleanup | `worker/pass-failed`, `metrics-failed`, `cleanup-failed` |
+| The `main().catch` of each script in `scripts/` | A script that can't start or finish; exits `1` | `boot/start-failed` |
+| `sendEmail` (`shared/email/send.ts`), the one outbound wrapper | A failed call to Resend or Mailpit; returns `err("email-failed")` | `mail/fetch-failed`, `bad-status`, `bad-response` |
+| `POST /api/client-errors` | A report from the browser's catch points: `window` `error` and `unhandledrejection`, the router's root `errorElement` and `global-error.tsx`, each zone's error boundary (STD-11) | `client/uncaught`, `page-crashed`, `zone-crashed` |
+
+There's no database pool listener: postgres.js reconnects on its own and emits no pool `error` event, and a failed query reaches one of the catch points above (D-52).
+
+**The line.** One writer, `logError(source, event, error, context?)` in `shared/log.ts`, writes one JSON line to standard error. The info lines (the request line, email events, worker metrics) go through the same writer with `level: "info"` and no `error`. Keys come in this order:
+
+| Key | Value |
+|---|---|
+| `level` | `"error"` or `"info"` |
+| `time` | ISO 8601, from the app clock (a log time isn't an expiry check, 1.3) |
+| `source` | Where: `route`, `worker`, `boot`, `mail`, `client` |
+| `event` | What failed, from the table below |
+| context | The event's fields from the table below, in that order; nothing else |
+| `error` | `{ name, message, code?, stack?, cause? }`, copied field by field: `message` cut at 500 characters, `code` only if a string or number, `cause` the same shape, 2 levels deep. A thrown non-object becomes `{ name: "Error", message: String(value) }`. Email addresses in `message` and `stack` become `[email]`. A `DrizzleQueryError`'s message (which holds the SQL and its parameters) is replaced by `"query failed"`, keeping its PostgreSQL cause's `code` (SQLSTATE) |
+
+**Sources and events.** `source`, `event` and the context type are closed unions in `shared/log.ts`, holding every row below.
+
+| `source` | `event` | Level | Context |
+|---|---|---|---|
+| `route` | `request` | info | `method`, `path`, `status`, `durationMs`, `actor?` (one per `apiRoute` request, 1.2) |
+| `route` | `request-failed` | error | `method`, `path` (from `apiRoute`) or `route` (the pattern, from `onRequestError`), `actor?`, `digest?` |
+| `worker` | `metrics` | info | `pending`, `due`, `oldestDueSeconds`, `sent`, `failed`, `dropped` (1.4 step 6) |
+| `worker` | `delivery-failed` | error | `deliveryId`, `channel` |
+| `worker` | `pass-failed`, `metrics-failed`, `cleanup-failed` | error | none |
+| `boot` | `start-failed` | error | `script` (such as `worker`, `setup`) |
+| `mail` | `bounced`, `ignored` | info | `kind?` (`notification`, `invitation`, `untracked`), `id?` (5.4) |
+| `mail` | `fetch-failed` | error | `host` |
+| `mail` | `bad-status` | error | `host`, `status` |
+| `mail` | `bad-response` | error | `host`, `fields` (the failing field paths only, never their values) |
+| `client` | `uncaught`, `page-crashed`, `zone-crashed` | error | `actor?`, `ip`, `browser`, `device`, `userAgent`, `page`, `build?`, `component?`, `digest?`, `timeZone?`, `occurredAt` |
+
+**Never logged** (SEC-007): passwords, tokens and links that carry them; request and response bodies, headers and cookies; query strings; email addresses and recipients; description, comment and email text; SQL and query parameters; full IP addresses; an error's own properties beyond the whitelisted fields; the email API key or Resend's URLs. `actor` is a username, never an email.
+
+**Client reports (OPS-008).**
+
+1. **Catch.** `window` `error` and `unhandledrejection` report `uncaught`. The router's root `errorElement` and `src/app/global-error.tsx` render the crash screen (STD-10), which reports `page-crashed` once on mount with Next's `digest` if there is one; `global-error.tsx` calls the reporter directly because it sits outside the app's providers. Each zone's error boundary reports `zone-crashed` with the first component name of React's `componentStack` (STD-11).
+2. **Send.** `createErrorReporter` in `src/client/` is the only code that names `/api/client-errors`. It cuts each string to the server's cap, de-dupes by message and first stack frame, sends at most 20 an hour (both reset hourly), queues while `navigator.onLine` is false and flushes on `online`, posts with `keepalive: true` so a report survives a reload, and drops a failed send. It never throws. `occurredAt` is taken when the error is caught. `build` is the build ID baked into the bundle.
+3. **Accept.** `apiRoute("public", …)` checks the origin (4.4) and parses a Valibot schema that caps every string: `event` one of the three client events, `name` 100, `message` 500, `stack` 4,000, `page` 200 and starting with `/` (the browser sends `location.pathname`), `component` 200, `digest` 100, `build` 100, `timeZone` 64, `occurredAt` an ISO time. Fields added later are optional, so an old tab's report still parses.
+4. **Log.** The domain function takes `actor` from the session only, if there is one (OPS-008.2). It masks the IP from `clientIp` (IPv4 last octet → `0`; IPv6 keeps the first 3 groups, `2001:db8:85a3::`; a v4-mapped IPv6 address is masked as IPv4), parses the `User-Agent` header into `browser` and `device` (`desktop`, `mobile`, `tablet`) and cuts it to 300 characters as `userAgent`, then writes one `client` line. Nothing is stored except the limit's attempt row.
+5. **Limit.** At most 30 reports in 10 minutes per member, or per masked IP when signed out, counted in a `client_error_reports` table like `sign_in_attempts` (4.5), with `now()` in SQL and the same hourly cleanup. Logged or limited, the answer is `204`, so the browser can't tell and has nothing to retry.
+
+**Reading the logs.** Lines are on the process's standard error, mixed with Next.js's own output; `fromjson?` skips lines that aren't JSON. Where the deployment keeps the logs is outside this repository; these read from standard input.
+
+```bash
+jq -cR 'fromjson? | select(.level == "error")'                                   # one line per error
+tail -F web.log worker.log | jq -cR 'fromjson? | select(.level == "error")'      # follow live
+jq -cR 'fromjson? | select(.source == "worker")'                                  # one source
+jq -sR '[split("\n")[] | fromjson? | select(.level == "error")] | group_by([.source, .event]) | map({source: .[0].source, event: .[0].event, count: length})'   # count by source and event
+jq -cR 'fromjson? | select(.level == "error" and .actor == "sam")'                # one member's errors
+jq -cR 'fromjson? | select(.source == "client") | {time, event, page, build, component, message: .error.message}'   # client errors
+```
 
 ### 4.9 Response headers
 
@@ -521,7 +582,7 @@ The route says who you are; the domain says what you may do (D-43). SEC-006's si
   - Ownership checks run once the row is loaded: `deleteIssue` (creator or admin), `editComment` (author only), `deleteComment` (author or admin).
 - **Order of checks:** cross-site (`403`), session (`401`), body schema (`422`), the domain's role check (`403`), lookups (`404`) and ownership (`403`), database rules, then the write. The role check precedes any lookup, so a member gets `403`, not `404`, for an admin-only action on a missing target and learns nothing about it. A member's invalid body on an admin-only route gets `422`, not `403` (D-42).
 - **Tests are the guard.** Typecheck can't force an admin-only function to call `assertAdmin`, so each has a `403` test calling the domain function directly with a plain member.
-- **Logging.** Domain functions don't log; `apiRoute` names the actor by username (4.8), which SEC-007 allows (SEC-007.1 itself logs "member sam").
+- **Logging.** Domain functions don't log, except the client-report function, whose job is to write the line (4.8); `apiRoute` names the actor by username (4.8), which SEC-007 allows (SEC-007.1 itself logs "member sam").
 
 ## 5. Notifications and email
 
@@ -689,3 +750,9 @@ Only decisions with an alternative worth recording. Where the reason is already 
 | D-44 | Response types and enum values in a shared `src/contract/`; mapping functions in each context under `src/server/` (1.8) return them | Types owned by the client and checked with `satisfies` in each route; one model shared by database, domain and API | A declared return type catches extra fields, which `satisfies` on a function call can't. One enum source keeps client lists complete. Rows and responses really differ (uuid vs `WEB-42`, `Date` vs ISO string, internal columns), so they stay separate types with a mapping between them. |
 | D-45 | Notifications in batches with one delivery per channel; senders in `src/server/notifications/notification-channels/`, mapped by the `notification_channel` enum | One `notification_emails` table; one deliveries table with the notification rows copied per channel | Keeps notifications independent of email so a channel (SMS) can be added with a new sender, an enum value and a profile setting. Batching and drop checks stay shared; state and retries are per channel, so one channel failing doesn't touch another. |
 | D-46 | The worker claims deliveries with a 2-minute lease (`locked_until`) in a short transaction, then sends outside any transaction and records the result only if the lease is still its own (1.4) | Holding the row lock in one transaction for the whole pass, so "locked" meant "being sent"; a `sending` state | Holding the lock kept a transaction and pooled connection open across up to 10 provider calls, and one bad row rolled back the pass and crash-looped the worker. A `sending` state would need its own recovery and leak into the webhook, cleanup and stats. |
+| D-47 | Domain functions keep throwing `ApiError` for expected failures, caught only by `apiRoute`; `Result` only for the outbound email wrapper (4.8) | Glance's `Result<T, E>` returned from every domain function | 41 throw sites already have one catch point that maps them to a status and the spec's message, and an `ApiError` is never logged. `Result` pays off only where a caller must handle the failure, which is `sendEmail` (invitations turn it into `503`, the worker into a retry). |
+| D-48 | Error body stays `{ error: { message, fields? } }` with the server's copy (3.2) | Glance's `{ "error": "<code>" }` with copy in the browser | All user-facing copy for server outcomes lives on the server (1.2), and STD-3 needs per-field messages. |
+| D-49 | Route steps stay origin → session → schema → domain → map (1.2), with no `426` build check | Glance's build check that answers `426 outdated` | There's no offline client or stored writes to replay against a newer server; a stale tab picks up the new build on its next page load. |
+| D-50 | No offline outbox or sync rules | Glance's queued offline writes | Writes go straight to the API, and a failed board move is undone (REQ-026). Only error reports are held while offline (4.8). |
+| D-51 | No multi-tenant error tests | Glance's per-tenant isolation tests | One invite-only team, no tenants. |
+| D-52 | No database pool error listener, and no `worker-crashed` or `sw-crashed` client events | Glance's pool listener and web or service worker crash events | postgres.js reconnects on its own and emits no pool `error` event, and a failed query surfaces at a catch point (4.8); the browser app has no web or service worker. |

@@ -1,9 +1,9 @@
 ---
 product: "Tracklite"
-version: "0.36"
+version: "0.37"
 release: "R1"
 status: Ready to build
-updated: "2026-10-26"
+updated: "2026-10-29"
 ---
 
 # Tracklite: Spec
@@ -519,9 +519,37 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 | STD-4 | Item not found | A "Not found" page with a link to My issues. This also covers a project key or issue ID that doesn't exist, such as `WEB-999`. API: `404`. |
 | STD-5 | Same action sent twice | The submit button is disabled while saving. Creating an issue or comment carries a request ID, so a retry or double-click never creates two. |
 | STD-6 | A service we depend on fails | The only outside service is email. If an invitation or password reset email fails, nothing is saved and the person sees "We couldn’t send the email. Try again." If a notification email fails, the app retries 3 times over about 15 minutes, then logs the failure; the action that caused it still succeeds. |
-| STD-7 | Every screen | A loading indicator shows if loading takes more than 300 ms. Empty states name the next action ("No issues yet. Create one."). An error state shows "Couldn’t load this." beside a Retry button (DEC-006). Speed targets are in section 11. |
+| STD-7 | Every screen | A loading indicator shows if loading takes more than 300 ms. Empty states name the next action ("No issues yet. Create one."). A region that fails to load shows STD-11's failed state. Speed targets are in section 11. |
 | STD-8 | Two members edit the same thing | Single fields such as status, priority, the issue's set of assignees and its set of labels: the last save wins, replacing the whole set. Descriptions: if someone else saved since you opened the editor, nothing is saved. You see "This was changed by [name]. Copy your text and reload.", and your text stays in the editor. |
 | STD-9 | A form submission fails | For failures not tied to one field, such as a network or server error, a `403` (STD-2) or a failed invitation or reset email (STD-6), a toast appears for 5 seconds with no dismiss or pause control, and the form keeps everything typed (DEC-006). A network or server error reads "Couldn’t save. Try again." Field errors stay by their fields (STD-3) and the STD-8 conflict message in the editor. |
+| STD-10 | The page crashes | A fault in the browser app that leaves nothing usable on the page shows a crash screen in its place: "Something went wrong", "Reloading in {N} s." counting down from 60, and a **Reload** button. At 0 the page reloads by itself. The crash is reported to the server (OPS-008). If this is the 3rd crash in the same browser tab within 10 minutes, the screen shows "Reload to try again." instead of the countdown, and only the button reloads. Anything typed but not saved is lost. |
+| STD-11 | Part of a page fails | Each data region of a page loads and fails on its own. A region whose data can't be loaded, or whose display crashes, shows "Couldn’t load {what}." beside a **Try again** button, which loads it again (DEC-006); the rest of the page keeps working. A region that already shows data keeps showing it if a later refresh fails. A region's display crashing is reported to the server (OPS-008). {what} names the region: |
+
+**STD-10 examples**
+  - STD-10.1: The issue page crashes while Sam reads `WEB-42` → the crash screen shows "Something went wrong" and "Reloading in 60 s.", and the crash is reported once, however long the screen stays.
+  - STD-10.2: Sam waits 60 seconds on the crash screen → the page reloads.
+  - STD-10.3: Sam clicks **Reload** before the countdown ends → the page reloads at once.
+  - STD-10.4: The page crashes for the 3rd time in the same tab within 10 minutes → the screen shows "Reload to try again." with no countdown, and the page reloads only when Sam clicks **Reload**.
+  - STD-10.5: A crash while the server renders the page shell → the same crash screen, and the report carries the server's error reference so the two log lines can be matched.
+
+**STD-11 regions**
+
+| Region | {what} |
+|---|---|
+| Sidebar projects | projects |
+| Board | the board |
+| List view | issues |
+| My issues | your issues |
+| Issue page fields, project details | this issue, this project |
+| Comments (issue or project) | comments |
+| Labels, project settings, archived projects | labels, this project, archived projects |
+| Profile, members, notification status | your profile, members, notification status |
+
+**STD-11 examples**
+  - STD-11.1: The comments on `WEB-42` fail to load → the comments region shows "Couldn’t load comments." with **Try again**, while the title, status and other fields show and can be edited.
+  - STD-11.2: Sam clicks **Try again** and the comments load → they replace the failed state.
+  - STD-11.3: The comments region crashes while showing a comment → only that region shows "Couldn’t load comments.", and the crash is reported once, naming the component that failed.
+  - STD-11.4: The board shows its cards and a later reload of its data fails → the cards stay, with no failed state.
 
 **STD-9 examples**
   - STD-9.1: Sam's save fails → one error toast shows, and 5 seconds later it's gone; it has no dismiss or pause control.
@@ -665,6 +693,13 @@ All emails are plain text. `{…}` are filled in when the email is sent, `{APP_U
 - **SEC-007** The system shall never write passwords, tokens, invitation or password reset links, or the text of descriptions and comments into logs. This includes the web server's and reverse proxy's access logs, which leave out the query string of `/invite` and `/reset-password`.
   - SEC-007.1: Sam signs in → the log records "sign-in, member sam", with no password or token.
   - SEC-007.2: Sam opens a password reset link → the access log shows `/reset-password` with no token. (Verify: ops)
+
+  Error lines (OPS-007) and client error reports (OPS-008) follow the same rule, and also leave out request and response bodies, headers, cookies, query strings, full IP addresses and email addresses. An error is logged only by its name, message (cut at 500 characters), code, stack trace and causes; any other property it carries is left out.
+  - SEC-007.3: A database query fails while saving Sam's comment → the error line keeps the PostgreSQL error code but not the SQL, its parameters or the comment text.
+  - SEC-007.4: An error message contains `sam@example.com` → the line shows `[email]` in its place.
+  - SEC-007.5: An error's message is 2,000 characters → the line keeps the first 500.
+  - SEC-007.6: An error carries extra properties, such as the request it was sending → the line holds only its name, message, code, stack and causes.
+  - SEC-007.7: A client report comes from `203.0.113.57` → the line shows `203.0.113.0`; from `::ffff:203.0.113.57` → `203.0.113.0`; from `2001:db8:85a3:8d3:1319:8a2e:370:7348` → `2001:db8:85a3::`.
 - **SEC-008** The system shall store each password only as a salted hash from a slow, memory-hard algorithm: Argon2id with at least 19 MiB of memory, 2 iterations and a parallelism of 1 (the OWASP baseline). A password is never logged, emailed, returned by the API or put in a URL. Password fields hide what's typed and work with password managers.
   - SEC-008.1: Sam and Alex choose the same password → their stored hashes differ, and neither contains the password.
   - SEC-008.2: Any API response about a member → no password or password hash in it.
@@ -737,6 +772,25 @@ Deploys, rollbacks, backups, log retention and uptime monitoring are part of the
   - OPS-005.5: The worker finished a pass 10 seconds ago, and the oldest due pending delivery has waited 1 minute, or nothing is due → `/health/worker` returns `200`. A delivery waiting for a retry isn't due yet, so it doesn't count.
 - **OPS-006** Secrets, such as the email API key and the database password, shall live in server config, never in the repository.
   - OPS-006.1: A search of the repository for the email API key → no match.
+- **OPS-007** The system shall log each unexpected server error once, as one JSON line on the process's standard error, at the place that turns the fault into an answer: a failed API request, a failed worker step, a script that can't start, or a failed email send. Each line names where it happened (`source`) and what failed (`event`), and follows SEC-007. The tech design (4.8) lists every source and event. Expected outcomes, such as a `404` or a wrong password, aren't errors and get no error line.
+  - OPS-007.1: Any error line → one line of JSON whose keys start `level`, `time`, `source`, `event`, and end with `error`.
+  - OPS-007.2: Code throws a string or a plain object instead of an error → the line still has an `error` with a name and message.
+  - OPS-007.3: An error has a cause, which has a cause, which has a cause → the line keeps the first 2 levels of causes.
+  - OPS-007.4: An API request fails unexpectedly → one `request-failed` line with the method, path (no query string) and the member's username, and the API answers `500`.
+  - OPS-007.5: Rendering a page, `/health` or `/webhooks/email` fails unexpectedly → one `request-failed` line with the method, the route and the error reference.
+  - OPS-007.6: One notification delivery fails unexpectedly → one `delivery-failed` line with the delivery's id and no recipient or text, and the worker goes on with the next delivery.
+  - OPS-007.7: The email service answers `503` → one `bad-status` line with its host and status, and no address, key or email text; an invitation then answers `503` with nothing saved (STD-6).
+  - OPS-007.8: The email service doesn't answer within 10 seconds → one `fetch-failed` line.
+  - OPS-007.9: The worker or another script fails to start → one `start-failed` line, and it exits with status 1.
+- **OPS-008** The browser app shall report its own errors to the server, which logs each report as one error line (OPS-007) with source `client`. It reports uncaught errors, page crashes (STD-10) and region crashes (STD-11). A report is accepted from the app's own pages whether or not someone is signed in; another site's report is refused (SEC-004). The line holds the error, the page path without its query string, the app build, the failing component, the browser and device type, the time zone, the time of the error, the masked IP address (SEC-007.7), and the member's username, taken only from the session. Nothing is stored in the database. The server always answers `204` for a well-formed report, even past the limit: at most 30 reports in 10 minutes per member, or per IP address when signed out, are logged, and later ones are dropped. The browser sends each distinct error once and at most 20 reports an hour per tab, holds reports while offline and sends them when back online, and never shows the member anything about a report or its failure.
+  - OPS-008.1: Sam's page throws an uncaught error → one `client` line, event `uncaught`, naming member `sam`, the page path, browser and device, and the server answers `204`.
+  - OPS-008.2: A report names another member in its body → the line names the member from the session, or nobody when signed out.
+  - OPS-008.3: A report's browser identification is 1,000 characters → the line keeps the browser and device names and at most 300 characters of it.
+  - OPS-008.4: A 31st report arrives from Sam within 10 minutes → `204`, and nothing is logged.
+  - OPS-008.5: A report with a missing or over-long field → `422`; one sent by another site → `403`.
+  - OPS-008.6: The same error is thrown 50 times on one page → one report; 25 different errors in an hour → 20 reports, and the count starts again an hour later.
+  - OPS-008.7: An error happens while the browser is offline → the report is sent when it's back online, and its time is when the error happened, not when it was sent.
+  - OPS-008.8: The report itself fails to send → nothing is shown, retried or thrown.
 
 ## Appendix: Decisions and changes
 
@@ -746,10 +800,11 @@ Deploys, rollbacks, backups, log retention and uptime monitoring are part of the
 |---|---|---|
 | DEC-001 | R1 descriptions and comments use GitHub-flavoured Markdown (tables, task lists, strikethrough and autolinks), shown formatted. Task-list checkboxes are shown but can't be ticked in the formatted view; members edit the text instead. | It's normal for the team and gives a clean path to rich text (F-010). |
 | DEC-005 | Test tools: Vitest with React Testing Library on jsdom, run through npm scripts, for every example not marked manual or ops. Server tests run against a real test PostgreSQL database. There are no browser end-to-end tests; shared screen states are checked by component tests. | The owner chose one fast test setup with no browser end-to-end tool. |
-| DEC-006 | Generic error copy: a network or server error toast reads "Couldn’t save. Try again." (STD-9), and an error state reads "Couldn’t load this." beside Retry (STD-7). The STD-9 toast keeps its fixed 5 seconds with no dismiss or pause control. | The owner chose short, plain copy, and kept the fixed toast timing deliberately despite WCAG 2.2 timing guidance. |
+| DEC-006 | Generic error copy: a network or server error toast reads "Couldn’t save. Try again." (STD-9), and a region that fails to load reads "Couldn’t load {what}." beside **Try again** (STD-11). The STD-9 toast keeps its fixed 5 seconds with no dismiss or pause control. | The owner chose short, plain copy, and kept the fixed toast timing deliberately despite WCAG 2.2 timing guidance. |
 
 **Changelog**
 
+- **0.37 (2026-10-29):** Error handling (owner's Glance error-handling rules, 2026-10-29). SEC-007 extends to error lines and client reports (new SEC-007.3 to SEC-007.7). New OPS-007 (one JSON error line per fault, at the boundary that answers it) and OPS-008 (the browser reports its errors to the server). New STD-10 (crash screen with a 60-second reload) and STD-11 (each data region fails on its own); STD-7 and DEC-006 now point to STD-11, whose button reads **Try again** and whose message names the region instead of "Couldn’t load this." beside Retry.
 - **0.36 (2026-10-26):** Long lines in a code block wrap instead of scrolling sideways (REQ-031, REQ-031.5), because a sideways scroller that can't take keyboard focus (Safari) can't be read by keyboard (NFR-007, found by L02).
 - **0.35 (2026-10-26):** My issues rows show the assignee stack (REQ-042), so a member sees who shares an issue (REQ-041.7). Board cards, list rows and My issues rows name every assignee in their accessible name ("assigned to Alex Kim, Nina Shah", or "unassigned").
 - **0.34 (2026-10-26):** Multiple assignees (owner decision, 2026-10-25; no maximum, owner decision, 2026-10-26). An issue has any number of assignees: REQ-019 (new REQ-019.3 to REQ-019.6), REQ-016 (New issue can set assignees, new REQ-016.6), REQ-025 (an avatar stack of up to 3 and "+N", new REQ-025.3), REQ-037 (the Assignee filter matches any assignee, new REQ-037.6), REQ-041 (new REQ-041.7), REQ-043 (each newly added assignee is emailed, new REQ-043.4), REQ-045 (dropped when the recipient is removed), REQ-007.2, REQ-008.2, STD-8 (the assignee set is one field) and section 8.
