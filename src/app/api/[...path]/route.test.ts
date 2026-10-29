@@ -8,7 +8,7 @@ import { moveIntoPast } from "../../../test/time";
 import { DELETE, GET, POST } from "./route";
 
 beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {

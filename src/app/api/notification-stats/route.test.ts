@@ -14,7 +14,7 @@ type Target = { type: "issue" | "project"; issueRef: string | null; projectKey: 
 const webIssue: Target = { type: "issue", issueRef: "WEB-42", projectKey: "WEB" };
 
 beforeEach(async () => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
   await db.delete(notificationDeliveries);
   await db.delete(workerHeartbeats);
 });

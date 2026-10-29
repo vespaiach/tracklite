@@ -12,7 +12,7 @@ import { jsonRequest } from "../../../../test/reset-links";
 import { DELETE, GET, PATCH } from "./route";
 
 beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {

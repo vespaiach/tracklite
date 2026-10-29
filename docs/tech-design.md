@@ -486,7 +486,7 @@ One module, `src/lib/markdown/`, used for both **rendering** in the browser and 
 
 ### 4.8 Error logging (SEC-007, OPS-007, OPS-008)
 
-Built by the E batch (E02–E08); until those rows merge, `src/server/shared/log.ts` still writes the older lines.
+Built by the E batch (E02–E08). E02 built the writer, the info lines and `apiRoute`'s `request-failed` line; until E03 and E04 merge, the worker's catches and `sendEmail` still write their older `event: "notification"` and `event: "email"` error lines, through the same writer to standard error.
 
 **The boundary rule.** An error is logged once, by the code that turns it into an answer: a status code, a retry, an exit code, a crash screen. Code below that boundary throws or returns and never logs. An `ApiError` is an expected outcome, not a fault: `apiRoute` maps it to its status and logs no error line (D-47).
 
@@ -504,7 +504,7 @@ Built by the E batch (E02–E08); until those rows merge, `src/server/shared/log
 
 There's no database pool listener: postgres.js reconnects on its own and emits no pool `error` event, and a failed query reaches one of the catch points above (D-52).
 
-**The line.** One writer, `logError(source, event, error, context?)` in `shared/log.ts`, writes one JSON line to standard error. The info lines (the request line, email events, worker metrics) go through the same writer with `level: "info"` and no `error`. Keys come in this order:
+**The line.** One writer, `logError(source, event, error, context?)` in `shared/log.ts`, writes one JSON line to standard error. The info lines (the request line, email events, worker metrics) go through the same writer, as `logInfo(source, event, context)`, with `level: "info"` and no `error`. Biome's `suspicious/noConsole` rule allows `console` only in `shared/log.ts` and `scripts/` (CLI output), so nothing else writes a line. Tests read error lines with `spyOnLoggedErrors()` from `src/test/log.ts`. Keys come in this order:
 
 | Key | Value |
 |---|---|
@@ -635,11 +635,11 @@ The wording of every email the app sends is in the spec (§9, "Email content"). 
    About 20 lines of `node:crypto`, with no `svix` dependency; tests sign with a known secret.
 3. Handle the event:
    - `email.bounced` → look up `provider_message_id`:
-     - in `notification_deliveries` (channel `email`): set `bounced`, log `email bounced, notification {id}` with the delivery's id (REQ-045.6);
-     - in `invitations`: set `bounced_at` so the members page shows Bounced (REQ-051), log `email bounced, invitation {id}`;
-     - in neither (a reset email): log `email bounced, untracked`.
+     - in `notification_deliveries` (channel `email`): set `bounced`, log `mail/bounced` with `kind: "notification"` and the delivery's `id` (REQ-045.6);
+     - in `invitations`: set `bounced_at` so the members page shows Bounced (REQ-051), log `mail/bounced` with `kind: "invitation"` and its `id`;
+     - in neither (a reset email): log `mail/bounced` with `kind: "untracked"`.
    - any other event type → ignore.
-   - a body that isn't JSON or an object, or an `email.bounced` without `data.email_id` → ignore and log `email event ignored`, without the body.
+   - a body that isn't JSON or an object, or an `email.bounced` without `data.email_id` → ignore and log `mail/ignored`, without the body.
 4. Answer `200` whenever the signature is valid, even for ignored events, or Resend keeps retrying.
 
 ### 5.5 Domain setup (one-time, before launch)

@@ -8,10 +8,10 @@ import { db } from "./db";
 import { createSession, members } from "../identity";
 
 const appOrigin = "http://localhost:3000";
-let log: MockInstance<typeof console.log>;
+let log: MockInstance<typeof console.error>;
 
 beforeEach(() => {
-  log = vi.spyOn(console, "log").mockImplementation(() => {});
+  log = vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -100,17 +100,24 @@ it("an ApiError maps to its status and { error: { message, fields } }, with no f
   expect(await withoutFields.json()).toEqual({ error: { message: "Not found" } });
 });
 
-it("SEC-007: any other thrown error maps to 500 with a generic message, logged at error level with the error class only", async () => {
+it("§4.8: any other thrown error maps to 500 with a generic message, logged once as route/request-failed and once as the info request line", async () => {
   const response = await apiRoute("public", () => {
-    throw new TypeError("column secret_stuff does not exist");
+    throw new TypeError("column does not exist");
   })(new Request(`${appOrigin}/api/issues`));
 
   expect(response.status).toBe(500);
   expect(await response.json()).toEqual({ error: { message: "Something went wrong." } });
   expect(loggedLines()).toEqual([
-    expect.objectContaining({ level: "error", status: 500, error: "TypeError" }),
+    expect.objectContaining({
+      level: "error",
+      source: "route",
+      event: "request-failed",
+      method: "GET",
+      path: "/api/issues",
+      error: expect.objectContaining({ name: "TypeError", message: "column does not exist" }),
+    }),
+    expect.objectContaining({ level: "info", event: "request", status: 500 }),
   ]);
-  expect(JSON.stringify(loggedLines())).not.toContain("secret_stuff");
 });
 
 it("SEC-007: each request writes one log line of exactly method, path, status, duration and time, leaving out the query string, body, headers and cookies", async () => {
@@ -144,9 +151,16 @@ it("SEC-007: each request writes one log line of exactly method, path, status, d
   for (const secret of ["query-secret", "cookie-secret", "header-secret", "body-secret", "correct horse"]) {
     expect(line).not.toContain(secret);
   }
-  expect(Object.keys(JSON.parse(line)).sort()).toEqual(
-    ["durationMs", "event", "level", "method", "path", "status", "time"].sort(),
-  );
+  expect(Object.keys(JSON.parse(line))).toEqual([
+    "level",
+    "time",
+    "source",
+    "event",
+    "method",
+    "path",
+    "status",
+    "durationMs",
+  ]);
 });
 
 it("SEC-007: a failed database query's 500 log line has no query values", async () => {
@@ -158,11 +172,9 @@ it("SEC-007: a failed database query's 500 log line has no query values", async 
     return ok();
   })(new Request(`${appOrigin}/api/issues`));
 
-  const [line] = log.mock.calls.map(([raw]) => raw as string);
-  expect(line).not.toContain(secret);
-  expect(JSON.parse(line)).toEqual(
-    expect.objectContaining({ status: 500, error: "DrizzleQueryError (PostgresError 23505)" }),
-  );
+  const lines = log.mock.calls.map(([raw]) => raw as string);
+  expect(lines.join("\n")).not.toContain(secret);
+  expect(JSON.parse(lines[0]).error).toMatchObject({ message: "query failed", cause: { code: "23505" } });
 });
 
 async function signedInRequest(role: "admin" | "member", body?: unknown) {

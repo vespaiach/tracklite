@@ -20,7 +20,7 @@ import { GET as getMe } from "../me/route";
 import { GET, POST } from "./route";
 
 beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
   outbox.sent = [];
   outbox.failing = false;
 });

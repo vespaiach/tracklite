@@ -27,9 +27,13 @@
   "linter": {
     "enabled": true,
     "domains": { "next": "recommended", "react": "recommended" },
-    "rules": { "preset": "recommended" }
+    "rules": { "preset": "recommended", "suspicious": { "noConsole": "error" } }
   },
   "overrides": [
+    {
+      "includes": ["src/server/shared/log.ts", "scripts/**"],
+      "linter": { "rules": { "suspicious": { "noConsole": "off" } } }
+    },
     {
       "includes": ["**/*.test.ts", "**/*.test.tsx"],
       "linter": { "rules": { "performance": { "noDynamicNamespaceImportAccess": "off" } } }

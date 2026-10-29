@@ -4,7 +4,7 @@ import { and, asc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { deleteExpiredRows } from "./cleanup";
 import { db } from "../shared/db";
 import type { Transaction } from "../shared/transaction";
-import { logNotificationError, logNotificationFailure, logWorkerMetrics } from "../shared/log";
+import { logInfo, logNotificationError, logNotificationFailure } from "../shared/log";
 import { notificationSenders, type Recipient } from "./notification-channels";
 import { dueAt, queueCounts } from "./notification-queue";
 import { issueAssignees, issues } from "../issues";
@@ -87,7 +87,7 @@ function recordHeartbeat() {
 
 async function logMetrics(tally: Tally) {
   const queue = await queueCounts();
-  logWorkerMetrics({ ...queue, ...tally });
+  logInfo("worker", "metrics", { ...queue, ...tally });
   Object.assign(tally, emptyTally());
 }
 

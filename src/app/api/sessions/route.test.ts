@@ -1,7 +1,7 @@
 import { randomInt } from "node:crypto";
 import { hash } from "@node-rs/argon2";
 import { eq, sql } from "drizzle-orm";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, type MockInstance, vi } from "vitest";
 import { hashPassword, verifyPassword } from "../../../server/shared/passwords";
 import { members, signInAttempts } from "../../../server/identity";
 import { db } from "../../../server/shared/db";
@@ -13,8 +13,10 @@ import { POST } from "./route";
 const password = "correct horse battery";
 let passwordHash: string;
 
+let log: MockInstance<typeof console.error>;
+
 beforeEach(async () => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  log = vi.spyOn(console, "error").mockImplementation(() => {});
   passwordHash ??= await hashPassword(password);
 });
 
@@ -93,7 +95,7 @@ it("SEC-007.1: Sam signs in → the log line names member sam, with no password 
 
   const response = await signIn({ email: sam.email, password });
 
-  const lines = vi.mocked(console.log).mock.calls.map(([raw]) => raw as string);
+  const lines = log.mock.calls.map(([raw]) => raw as string);
   const [line] = lines.filter((raw) => JSON.parse(raw).event === "request");
   expect(JSON.parse(line)).toMatchObject({ method: "POST", path: "/api/sessions", actor: sam.username });
   for (const secret of [password, cookieFrom(response)?.split("=")[1] ?? "", sam.email]) {

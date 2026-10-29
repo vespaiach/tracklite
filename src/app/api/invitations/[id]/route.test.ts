@@ -10,7 +10,7 @@ import {
 } from "../../../../test/invitations";
 
 beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
   outbox.sent = [];
   outbox.failing = false;
 });

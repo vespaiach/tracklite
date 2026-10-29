@@ -8,7 +8,7 @@ import { DELETE as signOut } from "../sessions/current/route";
 import { POST } from "./route";
 
 beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
   outbox.sent = [];
   outbox.failing = false;
 });

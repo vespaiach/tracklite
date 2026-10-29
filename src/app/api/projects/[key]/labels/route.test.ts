@@ -9,7 +9,7 @@ import { PATCH } from "../../../labels/[id]/route";
 import { GET, POST } from "./route";
 
 beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {
