@@ -92,3 +92,16 @@ export const passwordResetRequests = pgTable(
     index("password_reset_requests_ip_idx").on(t.ip, t.createdAt),
   ],
 );
+
+export const clientErrorReports = pgTable(
+  "client_error_reports",
+  {
+    username: text("username"),
+    ip: inet("ip").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("client_error_reports_username_idx").on(t.username, t.createdAt),
+    index("client_error_reports_ip_idx").on(t.ip, t.createdAt),
+  ],
+);

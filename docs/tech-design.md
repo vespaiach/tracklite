@@ -129,7 +129,7 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 
 | Context | Holds |
 |---|---|
-| `src/server/identity/` | sessions, members, sign-in, profile, setup, invitations, password resets, sign-in and reset limits, the dev seed, expired account rows; the account, invitation, member, password and profile schemas |
+| `src/server/identity/` | sessions, members, sign-in, profile, setup, invitations, password resets, sign-in and reset limits, client error reports and their limit (`client-errors.ts`), the dev seed, expired account rows; the account, invitation, member, password and profile schemas |
 | `src/server/notifications/` | notifications, the notification queue, notification stats, `notification-channels/`, the worker, expired-row cleanup, the email webhook, mentions (`descriptions.ts`), the domain-event subscriber |
 | `src/server/projects/` | projects, labels; their schemas |
 | `src/server/issues/` | issues (`create.ts`, `update.ts`, `board.ts`, `list.ts`, `rows.ts`); its schema |
@@ -142,7 +142,7 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 
 | Context | Tables it owns |
 |---|---|
-| `identity` | `members`, `invitations`, `password_reset_tokens`, `sessions`, `sign_in_attempts`, `password_reset_requests` |
+| `identity` | `members`, `invitations`, `password_reset_tokens`, `sessions`, `sign_in_attempts`, `password_reset_requests`, `client_error_reports` |
 | `projects` | `project_keys`, `projects`, `labels` |
 | `issues` | `issues`, `issue_labels`, `issue_assignees` |
 | `comments` | `comments` |
@@ -210,6 +210,8 @@ Postgres sorts an enum by its declared order, so the order is the sort order. `i
 - Valid while `last_active_at > now() - 30 days` (REQ-006). To avoid a write per request, `last_active_at` is only rewritten when over 1 hour old, losing at most 1 hour of the 30 days.
 
 **`sign_in_attempts`** (failed sign-ins and wrong current passwords, REQ-049.3) and **`password_reset_requests`** have no `id`. SEC-001 counts the last hour's rows, so each is indexed on `(email, created_at)` and `(ip, created_at)`.
+
+**`client_error_reports`** (OPS-008) has no `id`: `username` (null when signed out), the masked `ip` and `created_at`, indexed on `(username, created_at)` and `(ip, created_at)` for the 10-minute count (4.8). The hourly cleanup deletes rows older than 10 minutes.
 
 ### 2.3 Projects and labels
 
@@ -337,6 +339,7 @@ The domain functions declare the contract types (3.5) as their return types. The
 | `GET /api/me` | The profile, including email and role | Member | REQ-003.3 |
 | `PATCH /api/me` | Full name only | Member | REQ-003 |
 | `PUT /api/me/password` | `204`; ends the member's other sessions. A wrong current password counts toward the sign-in limit (4.5) | Member | REQ-049, SEC-001 |
+| `POST /api/client-errors` | `204` whether logged or past the limit; the member, if any, comes from the session only (4.8) | Anyone | OPS-008 |
 
 **Members and invitations**
 
@@ -537,9 +540,9 @@ There's no database pool listener: postgres.js reconnects on its own and emits n
 
 1. **Catch.** `window` `error` and `unhandledrejection` report `uncaught`. The router's root `errorElement` and `src/app/global-error.tsx` render the crash screen (STD-10), which reports `page-crashed` once on mount with Next's `digest` if there is one; `global-error.tsx` calls the reporter directly because it sits outside the app's providers. Each zone's error boundary reports `zone-crashed` with the first component name of React's `componentStack` (STD-11).
 2. **Send.** `createErrorReporter` in `src/client/` is the only code that names `/api/client-errors`. It cuts each string to the server's cap, de-dupes by message and first stack frame, sends at most 20 an hour (both reset hourly), queues while `navigator.onLine` is false and flushes on `online`, posts with `keepalive: true` so a report survives a reload, and drops a failed send. It never throws. `occurredAt` is taken when the error is caught. `build` is the build ID baked into the bundle.
-3. **Accept.** `apiRoute("public", …)` checks the origin (4.4) and parses a Valibot schema that caps every string: `event` one of the three client events, `name` 100, `message` 500, `stack` 4,000, `page` 200 and starting with `/` (the browser sends `location.pathname`), `component` 200, `digest` 100, `build` 100, `timeZone` 64, `occurredAt` an ISO time. Fields added later are optional, so an old tab's report still parses.
-4. **Log.** The domain function takes `actor` from the session only, if there is one (OPS-008.2). It masks the IP from `clientIp` (IPv4 last octet → `0`; IPv6 keeps the first 3 groups, `2001:db8:85a3::`; a v4-mapped IPv6 address is masked as IPv4), parses the `User-Agent` header into `browser` and `device` (`desktop`, `mobile`, `tablet`) and cuts it to 300 characters as `userAgent`, then writes one `client` line. Nothing is stored except the limit's attempt row.
-5. **Limit.** At most 30 reports in 10 minutes per member, or per masked IP when signed out, counted in a `client_error_reports` table like `sign_in_attempts` (4.5), with `now()` in SQL and the same hourly cleanup. Logged or limited, the answer is `204`, so the browser can't tell and has nothing to retry.
+3. **Accept.** `apiRoute("public", …)` checks the origin (4.4) and parses a Valibot schema that caps every string: `event` one of the three client events, `name` 100, `message` 500, `stack` 4,000, `page` 200 and starting with `/` (the browser sends `location.pathname`), `component` 200, `digest` 100, `build` 100, `timeZone` 64, `occurredAt` an ISO time. `event`, `name`, `message`, `page` and `occurredAt` are required, the rest optional; unknown fields are dropped. Fields added later are optional, so an old tab's report still parses.
+4. **Log.** The domain function, `reportClientError` in `identity/client-errors.ts`, takes `actor` from the session only, if there is one (OPS-008.2). It masks the IP from `clientIp` (IPv4 last octet → `0`; IPv6 keeps the first 3 groups, `2001:db8:85a3::`; a v4-mapped IPv6 address is masked as IPv4), parses the `User-Agent` header into `browser` and `device` (`desktop`, `mobile`, `tablet`) and cuts it to 300 characters as `userAgent`, then writes one `client` line. Nothing is stored except the limit's attempt row.
+5. **Limit.** At most 30 reports in 10 minutes per member, or per masked IP when signed out, counted in a `client_error_reports` table like `sign_in_attempts` (4.5), with `now()` in SQL and the same hourly cleanup (2.2). A limited report inserts no row. Logged or limited, the answer is `204`, so the browser can't tell and has nothing to retry.
 
 **Reading the logs.** Lines are on the process's standard error, mixed with Next.js's own output; `fromjson?` skips lines that aren't JSON. Where the deployment keeps the logs is outside this repository; these read from standard input.
 

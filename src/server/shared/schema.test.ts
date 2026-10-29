@@ -32,6 +32,7 @@ it("§2.6: the migration applies to an empty database, with every table, the enu
       select table_name as name from information_schema.tables
       where table_schema = 'public' order by table_name`;
     expect(tables.map((t) => t.name)).toEqual([
+      "client_error_reports",
       "comments",
       "invitations",
       "issue_assignees",

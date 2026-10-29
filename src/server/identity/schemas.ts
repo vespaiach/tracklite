@@ -84,3 +84,23 @@ export const MemberChanges = v.object({
 export type MemberChanges = v.InferOutput<typeof MemberChanges>;
 
 export const FirstAdmin = v.object({ email: emailAddress, fullName, username, password: newPassword });
+
+const clientErrorEvents = ["uncaught", "page-crashed", "zone-crashed"] as const;
+
+function cappedText(max: number) {
+  return v.pipe(v.string("Required"), maxCharacters(max, `Too long (max ${max})`));
+}
+
+export const ClientErrorReport = v.object({
+  event: v.picklist(clientErrorEvents, "Unknown event"),
+  name: cappedText(100),
+  message: cappedText(500),
+  stack: v.optional(cappedText(4000)),
+  page: v.pipe(cappedText(200), v.startsWith("/", "Must start with /")),
+  component: v.optional(cappedText(200)),
+  digest: v.optional(cappedText(100)),
+  build: v.optional(cappedText(100)),
+  timeZone: v.optional(cappedText(64)),
+  occurredAt: v.pipe(v.string("Required"), v.isoTimestamp("Invalid time")),
+});
+export type ClientErrorReport = v.InferOutput<typeof ClientErrorReport>;
