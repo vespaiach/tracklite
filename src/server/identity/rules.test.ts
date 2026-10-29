@@ -63,9 +63,9 @@ it("OPS-008.3: a browser identification is named by browser and device and cut t
   expect(describeUserAgent(iphone)).toEqual({ browser: "Safari", device: "mobile", userAgent: iphone });
   expect(describeUserAgent(ipad)).toMatchObject({ browser: "Safari", device: "tablet" });
   expect(describeUserAgent(androidTablet)).toMatchObject({ browser: "Chrome", device: "tablet" });
-  expect(describeUserAgent("Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0")).toMatchObject(
-    { browser: "Firefox", device: "desktop" },
-  );
+  expect(
+    describeUserAgent("Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0"),
+  ).toMatchObject({ browser: "Firefox", device: "desktop" });
   expect(describeUserAgent("")).toEqual({ browser: "Other", device: "desktop", userAgent: "" });
 
   const described = describeUserAgent(edge);

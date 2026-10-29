@@ -7,7 +7,11 @@ import type { Member } from "./sessions";
 
 type Sender = { ip: string; userAgent: string };
 
-export async function reportClientError(actor: Member | undefined, report: ClientErrorReport, sender: Sender) {
+export async function reportClientError(
+  actor: Member | undefined,
+  report: ClientErrorReport,
+  sender: Sender,
+) {
   const reporter = { username: actor?.username ?? null, ip: maskIp(sender.ip) };
 
   if (await clientErrorLimitReached(reporter)) return;
