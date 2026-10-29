@@ -410,11 +410,8 @@ it("STD-6, REQ-053: a failed send is retried after 1, then 4, then 10 minutes; a
   expect(email).toEqual(expect.objectContaining({ state: "failed", attempts: 4 }));
   expect(await stateChangesOf(sam)).toEqual([{ state: "failed", changedJustNow: true }]);
   const failures = loggedErrors().filter((line) => line.deliveryId === email.id);
-  expect(failures).toHaveLength(4);
   expect(failures).toEqual(
-    Array(4).fill(
-      expect.objectContaining({ source: "worker", event: "delivery-failed", channel: "email" }),
-    ),
+    Array(4).fill(expect.objectContaining({ source: "worker", event: "delivery-failed", channel: "email" })),
   );
   expect(JSON.stringify(failures)).not.toContain(sam.email);
 
