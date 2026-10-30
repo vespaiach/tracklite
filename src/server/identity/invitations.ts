@@ -71,14 +71,16 @@ async function sendLink(executor: Executor, inviter: Member, invitation: { id: s
     })
     .where(eq(invitations.id, invitation.id));
 
-  const { providerMessageId } = await sendEmail({
+  const sent = await sendEmail({
     to: invitation.email,
     ...invitationEmail({ inviterName: inviter.fullName, token }),
-  }).catch(() => {
-    throw new ApiError(503, "We couldn’t send the email. Try again.");
   });
+  if (!sent.ok) throw new ApiError(503, "We couldn’t send the email. Try again.");
 
-  await executor.update(invitations).set({ providerMessageId }).where(eq(invitations.id, invitation.id));
+  await executor
+    .update(invitations)
+    .set({ providerMessageId: sent.value.providerMessageId })
+    .where(eq(invitations.id, invitation.id));
 }
 
 export async function createInvitation(actor: Member, email: string) {

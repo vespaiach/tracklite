@@ -377,7 +377,7 @@ it("REQ-045: a notification already dropped isn't sent by a later delivery", asy
   ]);
 });
 
-it("STD-6, REQ-053: a failed send is retried after 1, then 4, then 10 minutes; after the third retry fails it is failed, its time recorded, and nothing more is sent; each failed attempt logs one delivery-failed line without the address", async () => {
+it("STD-6, REQ-053: a failed send is retried after 1, then 4, then 10 minutes; after the third retry fails it is failed, its time recorded, and nothing more is sent; a failed send is sendEmail's to log, so the worker logs no delivery-failed line", async () => {
   const alex = await createMember();
   const sam = await createMember();
   const { issueRef } = await website();
@@ -409,11 +409,7 @@ it("STD-6, REQ-053: a failed send is retried after 1, then 4, then 10 minutes; a
   const [email] = await emailsOf(sam);
   expect(email).toEqual(expect.objectContaining({ state: "failed", attempts: 4 }));
   expect(await stateChangesOf(sam)).toEqual([{ state: "failed", changedJustNow: true }]);
-  const failures = loggedErrors().filter((line) => line.deliveryId === email.id);
-  expect(failures).toEqual(
-    Array(4).fill(expect.objectContaining({ source: "worker", event: "delivery-failed", channel: "email" })),
-  );
-  expect(JSON.stringify(failures)).not.toContain(sam.email);
+  expect(loggedErrors().filter((line) => line.deliveryId === email.id)).toEqual([]);
 
   outbox.failing = false;
   await retryIsDue(sam);

@@ -53,7 +53,7 @@ Every expiry and time-window check uses the database's `now()` inside the query 
    - **Drop checks** (2.6) in one short transaction: mark unwanted notifications dropped and, if none is left, record `dropped`. Their data is loaded once per pass, before the first delivery (2.6).
    - **Send** outside any transaction: the delivery's channel gets the kept notifications and the delivery's `id` (2.6).
    - **Record** in one statement: `sent` (with `provider_message_id` and `sent_at`), a retry (`attempts + 1`, `next_attempt_at`, `locked_until = null`), or `failed`. This write and the drop step's apply only while the delivery is `pending` with `locked_until = <the pass's lease>` (the drop step locks the delivery row first to check), so a pass whose lease ran out and was taken over can't overwrite the newer pass's result. The lease is compared in SQL as the exact database value, never as a JavaScript `Date`, which loses microseconds.
-4. **Errors stay with their delivery.** Step 3 runs inside one `try` per delivery. A failed send (the channel's sender throws) or an unexpected error (a drop-check bug, a dropped connection) counts as a failed attempt with the usual retries (2.6: 1, 4 and 10 minutes, then `failed`), logs one `worker/delivery-failed` line (4.8) with the delivery's `id` and channel, never the recipient or text (SEC-007), and the pass moves on. Each failed attempt logs its own line; giving up after the last retry adds none. If recording the failure fails too, the lease runs out and a later pass retries. An error outside any delivery (heartbeat, claim, loading drop-check data), such as during a PostgreSQL restart, logs `worker/pass-failed` and ends the pass; claimed deliveries return when their lease runs out, and the worker waits 5 seconds. A metrics or cleanup error logs `worker/metrics-failed` or `worker/cleanup-failed` and the worker carries on. If `runWorker` itself throws, `scripts/worker.ts` logs `boot/start-failed` and exits `1`.
+4. **Errors stay with their delivery.** Step 3 runs inside one `try` per delivery. A failed send (the channel's sender returns `err`) or an unexpected error (a drop-check bug, a dropped connection) counts as a failed attempt with the usual retries (2.6: 1, 4 and 10 minutes, then `failed`), and the pass moves on. An unexpected error logs one `worker/delivery-failed` line (4.8) with the delivery's `id` and channel, never the recipient or text (SEC-007), on each failed attempt; a failed send adds no worker line, because `sendEmail` already logged its `mail/*` line (one line per fault, OPS-007). Giving up after the last retry adds no line either. If recording the failure fails too, the lease runs out and a later pass retries. An error outside any delivery (heartbeat, claim, loading drop-check data), such as during a PostgreSQL restart, logs `worker/pass-failed` and ends the pass; claimed deliveries return when their lease runs out, and the worker waits 5 seconds. A metrics or cleanup error logs `worker/metrics-failed` or `worker/cleanup-failed` and the worker carries on. If `runWorker` itself throws, `scripts/worker.ts` logs `boot/start-failed` and exits `1`.
 5. **Next pass.** After a full claim of 10, the next pass starts at once, so a backlog drains at the provider's pace; otherwise the worker sleeps 5 seconds.
 6. **Metrics.** At most once a minute, after a pass, one `worker/metrics` info line (4.8): `pending`, `due`, `oldestDueSeconds` (both counted in SQL against `now()`), and the `sent`, `failed` and `dropped` counts since the previous line. No recipients, no text.
 7. **Cleanup (DATA-004)** runs hourly between passes, in chunks (2.7).
@@ -257,7 +257,7 @@ Notifications don't know how they're delivered. Three tables keep the *what*, th
 
 **`worker_heartbeats`**: one row per worker process name (`name text primary key`, `last_pass_at timestamptz not null`), upserted at the start of every pass (1.4).
 
-**Channels.** `src/server/notifications/notification-channels/` has one module per channel; its index maps every `notification_channel` enum value to a sender: `send(recipient, notifications, deliveryId) → { providerMessageId }`. The email sender builds the message from the templates (5.3) and calls `sendEmail()` (5.2). Because the map is typed by the enum, a new channel doesn't compile until its sender exists, and nothing in `notify()` or the worker changes.
+**Channels.** `src/server/notifications/notification-channels/` has one module per channel; its index maps every `notification_channel` enum value to a sender: `send(recipient, notifications, deliveryId) → Result<{ providerMessageId }, "email-failed">`. The email sender builds the message from the templates (5.3) and calls `sendEmail()` (5.2). Because the map is typed by the enum, a new channel doesn't compile until its sender exists, and nothing in `notify()` or the worker changes.
 
 These lookups and cascades have no index on purpose: `provider_message_id` (here or on `invitations`), `notifications.batch_id`, `notification_batches` by recipient and target, `notification_deliveries.state_changed_at`, `sessions.member_id`, `issue_labels.label_id`, and `mentions` by issue, project or comment (its unique indexes start with `member_id`). At one team's volume they scan small tables; add an index if one shows up in NFR-003 timings.
 
@@ -489,7 +489,7 @@ One module, `src/lib/markdown/`, used for both **rendering** in the browser and 
 
 ### 4.8 Error logging (SEC-007, OPS-007, OPS-008)
 
-Built by the E batch (E02–E08). E02 built the writer, the info lines and `apiRoute`'s `request-failed` line; E03 the `onRequestError`, worker and script catch points. Until E04 merges, `sendEmail` still writes its older `event: "email"` error line, through the same writer to standard error.
+Built by the E batch (E02–E08). E02 built the writer, the info lines and `apiRoute`'s `request-failed` line; E03 the `onRequestError`, worker and script catch points; E04 the `mail/*` lines and `Result` (`ok`, `err` in `shared/result.ts`) for `sendEmail`.
 
 **The boundary rule.** An error is logged once, by the code that turns it into an answer: a status code, a retry, an exit code, a crash screen. Code below that boundary throws or returns and never logs. An `ApiError` is an expected outcome, not a fault: `apiRoute` maps it to its status and logs no error line (D-47).
 
@@ -499,10 +499,10 @@ Built by the E batch (E02–E08). E02 built the writer, the info lines and `apiR
 |---|---|---|
 | `apiRoute`'s catch (`shared/api-route.ts`) | Anything but an `ApiError` thrown by a handler; answers `500` | `route/request-failed` |
 | `onRequestError` in `src/instrumentation.ts` | Errors Next.js sees outside `apiRoute`: the page shell, `/health`, `/webhooks/email` | `route/request-failed` |
-| The worker's per-delivery `try` (1.4 step 4) | One delivery's unexpected error or failed send; counts as a failed attempt | `worker/delivery-failed` |
+| The worker's per-delivery `try` (1.4 step 4) | One delivery's unexpected error; counts as a failed attempt. A failed send (`err` from the sender) also counts as one but logs nothing here, since `sendEmail` logged it | `worker/delivery-failed` |
 | The worker's per-pass, metrics and cleanup catches | Heartbeat, claim, drop-check loading; metrics; cleanup | `worker/pass-failed`, `metrics-failed`, `cleanup-failed` |
 | The top-level `catch` of each script in `scripts/` | A script that can't start or finish; exits `1`. A script's own usage message (a missing `DATABASE_URL`, `setup` outside a terminal) is CLI output, not an error line | `boot/start-failed` |
-| `sendEmail` (`shared/email/send.ts`), the one outbound wrapper | A failed call to Resend or Mailpit; returns `err("email-failed")` | `mail/fetch-failed`, `bad-status`, `bad-response` |
+| `sendEmail` (`shared/email/send.ts`), the one outbound wrapper | A failed call to Resend or Mailpit: a thrown `fetch` or the 10-second timeout, a non-2xx status (the error is named after Resend's error `name`), or a 2xx without the message id; returns `err("email-failed")`, never throws. Invitations and password resets turn it into `ApiError(503)`, so the transaction rolls back (1.5); the worker records a failed attempt | `mail/fetch-failed`, `bad-status`, `bad-response` |
 | `POST /api/client-errors` | A report from the browser's catch points: `window` `error` and `unhandledrejection`, the router's root `errorElement` and `global-error.tsx`, each zone's error boundary (STD-11) | `client/uncaught`, `page-crashed`, `zone-crashed` |
 
 There's no database pool listener: postgres.js reconnects on its own and emits no pool `error` event, and a failed query reaches one of the catch points above (D-52).
@@ -609,6 +609,8 @@ Also useful: Resend accepts an `Idempotency-Key` header, which closes the duplic
 - **production:** Resend's HTTP API (5.1);
 - **development** (any other `NODE_ENV`): Mailpit's send API (`/api/v1/send` on `MAILPIT_HOST`:`MAILPIT_PORT`, 1.6), so every email shows in Mailpit's inbox with no Resend key;
 - **tests:** an in-memory outbox that tests can inspect, and make fail on demand (REQ-001.7, REQ-050 with the service down, the STD-6 retries).
+
+It returns `Result<{ providerMessageId }, "email-failed">` and never throws; a failed Resend or Mailpit call logs its own `mail/*` line first (4.8). A failing outbox returns `err` without a line.
 
 - **Plain text only.** No HTML templates. REQ-044 already asks for the excerpt "as plain text", text emails deliver well, and it's one template per email instead of two.
 - **From:** `EMAIL_FROM`, a bare address such as `notify@mail.example.com`.
@@ -759,3 +761,4 @@ Only decisions with an alternative worth recording. Where the reason is already 
 | D-50 | No offline outbox or sync rules | Glance's queued offline writes | Writes go straight to the API, and a failed board move is undone (REQ-026). Only error reports are held while offline (4.8). |
 | D-51 | No multi-tenant error tests | Glance's per-tenant isolation tests | One invite-only team, no tenants. |
 | D-52 | No database pool error listener, and no `worker-crashed` or `sw-crashed` client events | Glance's pool listener and web or service worker crash events | postgres.js reconnects on its own and emits no pool `error` event, and a failed query surfaces at a catch point (4.8); the browser app has no web or service worker. |
+| D-53 | A failed notification send logs only `sendEmail`'s `mail/*` line; the worker adds no `delivery-failed` line for it | Both lines, the mail line for why and the worker line for which delivery | OPS-007 logs each fault once. The status page (REQ-053) already shows which delivery failed and how often, and `delivery-failed` keeps meaning an unexpected error. |

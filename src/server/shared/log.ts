@@ -118,7 +118,3 @@ function shownMessage(message: string) {
 function maskEmails(text: string) {
   return text.replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "[email]");
 }
-
-export function logEmailFailure(line: { status: number; errorName?: string }) {
-  writeLine({ time: new Date().toISOString(), level: "error", event: "email", ...line });
-}
