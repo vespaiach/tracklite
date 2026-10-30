@@ -48,3 +48,20 @@ it("M0.4: / redirects to /my-issues", async () => {
   expect(await screen.findByRole("heading", { name: "My issues" })).toBeTruthy();
   expect(window.location.pathname).toBe("/my-issues");
 });
+
+it("OPS-008.1: an uncaught error or unhandled rejection on the page is reported as uncaught", async () => {
+  renderAt("/my-issues");
+  await screen.findByRole("heading", { name: "My issues" });
+
+  window.dispatchEvent(new ErrorEvent("error", { error: new Error("boom"), message: "boom" }));
+  window.dispatchEvent(Object.assign(new Event("unhandledrejection"), { reason: "nope" }));
+
+  const reports = vi
+    .mocked(fetch)
+    .mock.calls.filter(([, init]) => init?.method === "POST")
+    .map(([, init]) => JSON.parse(init?.body as string));
+  expect(reports).toMatchObject([
+    { event: "uncaught", message: "boom", page: "/my-issues" },
+    { event: "uncaught", message: "nope", page: "/my-issues" },
+  ]);
+});
