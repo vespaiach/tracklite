@@ -123,6 +123,8 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
 
 **Loading states (STD-7).** One shared hook shows the loading indicator only after a request has been pending for 300 ms.
 
+**Zones (STD-11).** Each data region renders through `<Zone what state retry page?>{(data) => …}</Zone>` in `src/client/Zone.tsx`. `zoneState(result)` is a pure function of an RTK Query result: any data → `ready` (data wins over a failed refetch, STD-11.4); no data and an error → `failed`; otherwise `loading`, whose "Loading…" shows after the 300 ms delay above. The failed view reads "Couldn’t load {what}." with **Try again**, which calls `retry` (the query's `refetch`). The ready view sits in an error boundary that shows the same failed view on a render crash, reports `zone-crashed` with the first component name of React's `componentStack`, and resets when the data changes or **Try again** is clicked. `page` wraps the loading and failed views in `SettingsLayout` for zones that fill the page. Zones: sidebar projects, project (`ProjectGate`), board, list, My issues, issue fields, comments, labels, archived projects, profile, members (members and invitations together), notification status. Empty states stay in each zone's render function, since each has its own copy.
+
 ### 1.8 Bounded contexts
 
 `src/server/` is split into bounded contexts. Each context is a folder with a public `index.ts`, and other contexts, routes (`src/app/`) and `scripts/` import it only through that file. Domain functions keep the style of 1.2 and 4.10: `actor` first, their own transaction, Drizzle inside. A context's request schemas live in its `schemas.ts` (D-42), and each test sits next to its source. The client is out of scope.
