@@ -78,7 +78,7 @@ All email goes through one `sendEmail()` (5.2).
 
 - Settings come from environment variables: `.env.local` in development, and the deployment's server config in production (OPS-006).
 - Both processes check them at startup and refuse to start if any are missing.
-- Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5). `MAILPIT_HOST` and `MAILPIT_PORT` are optional and default to `localhost` and `8025`.
+- Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5). `MAILPIT_HOST` and `MAILPIT_PORT` are optional and default to `localhost` and `8025`. `SETUP_SECRET` is optional; when set it must be at least 32 characters (OPS-001.6), and without it the welcome screen can't create the first admin (4.6).
 - `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.2).
 - A production build (`next build` with `NODE_ENV=production`) loads the route modules, which read the settings, so the build step needs the same settings as the running app, `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` included, or it fails with "Missing environment variables" (found by L03).
 - Tests run against `TEST_DATABASE_URL`, which must differ from `DATABASE_URL`. Before each run its schema is dropped and the migrations applied afresh.
@@ -102,8 +102,9 @@ Strict single-page app, as the Next.js docs define it: the app is served by one 
   - `401` → go to `/sign-in?next={current address}`;
   - success → the member is kept in the RTK Query cache and the requested route renders.
 - `/sign-in` and `/` send a signed-in member to `/my-issues`.
+- **First admin (OPS-001).** `/sign-in` calls `GET /api/setup` and goes to `/welcome` while `needed` is true. Every signed-out visitor reaches `/sign-in` through the `401` redirect, so a blank install always lands on the welcome screen. `/welcome` goes to `/sign-in` once setup is no longer needed.
 - **Return after sign-in (SEC-009).** `next` is used only if it starts with `/` but not `//` or `/\`; anything else goes to `/my-issues`. So `?next=https://evil.example` can't send anyone off-site.
-- Any `401` later, such as an expired session or a deactivated member mid-edit (REQ-007.4), does the same redirect from the shared `baseQuery`, except on the signed-out pages (`/sign-in`, `/forgot-password`, `/reset-password`, `/invite`).
+- Any `401` later, such as an expired session or a deactivated member mid-edit (REQ-007.4), does the same redirect from the shared `baseQuery`, except on the signed-out pages (`/sign-in`, `/forgot-password`, `/reset-password`, `/invite`, `/welcome`).
 
 **Redux Toolkit.** One store, created once in `ClientApp` and provided through `react-redux`.
 
@@ -342,6 +343,9 @@ The domain functions declare the contract types (3.5) as their return types. The
 | `PATCH /api/me` | Full name only | Member | REQ-003 |
 | `PUT /api/me/password` | `204`; ends the member's other sessions. A wrong current password counts toward the sign-in limit (4.5) | Member | REQ-049, SEC-001 |
 | `POST /api/client-errors` | `204` whether logged or past the limit; the member, if any, comes from the session only (4.8) | Anyone | OPS-008 |
+| `GET /api/setup` | `{ needed: boolean }`, true while no members exist | Anyone | OPS-001 |
+| `POST /api/setup-checks` | Body `{ secret }`. `204` for the right secret; `403` "Wrong setup secret", `410` "Setup already done", `503` when `SETUP_SECRET` isn't set (4.6) | Anyone | OPS-001 |
+| `POST /api/setup` | Body `{ secret, email, fullName, username, password }`; same refusals as the check. `201` and the new admin's profile (`Me`), sets the cookie | Anyone | OPS-001, REQ-003, REQ-048 |
 
 **Members and invitations**
 
@@ -478,6 +482,11 @@ Accepting an invitation (`POST /api/members`) and resetting a password (`POST /a
 
 **Opening a link.** The invitation page calls `POST /api/invitation-lookups` with the token in the body as it opens, so it can show "expired" straight away (REQ-002.2) and greet the person by email. The reset page checks its token with `POST /api/password-reset-lookups` the same way, and shows the form only for a usable link (REQ-050.9). Neither lookup uses up the link, so a mail scanner opening it changes nothing (REQ-050.5).
 
+**First-admin setup (OPS-001).** `src/server/identity/setup.ts` holds `setupNeeded`, `checkSetupSecret` and `createFirstAdmin`. They are public like accepting an invitation, so they take no `actor`.
+- **Secret check:** a member exists → `410`; `SETUP_SECRET` unset → `503`; otherwise the sha256 of the given and configured secrets are compared with `crypto.timingSafeEqual`, and a mismatch gets `403`.
+- **Creating the admin:** `createFirstAdmin` runs the same check, then in one transaction takes `lock table members in exclusive mode`, re-checks that no member exists (OPS-001.7), inserts the admin and creates the session with `createSession(member.id, tx)`. It returns `{ member, sessionToken }`, like `acceptInvitation`.
+- **No guess limit (D-54):** a secret of at least 32 characters can't be guessed, and the endpoints stop working once the admin exists.
+
 ### 4.7 Markdown (SEC-002, DATA-001)
 
 One module, `src/lib/markdown/`, used for both **rendering** in the browser and **finding mentions** on the server. Because both use the same parser, `@sam` inside code is skipped the same way in both places (DATA-001.4).
@@ -503,7 +512,7 @@ Built by the E batch (E02–E08). E02 built the writer, the info lines and `apiR
 | `onRequestError` in `src/instrumentation.ts` | Errors Next.js sees outside `apiRoute`: the page shell, `/health`, `/webhooks/email` | `route/request-failed` |
 | The worker's per-delivery `try` (1.4 step 4) | One delivery's unexpected error; counts as a failed attempt. A failed send (`err` from the sender) also counts as one but logs nothing here, since `sendEmail` logged it | `worker/delivery-failed` |
 | The worker's per-pass, metrics and cleanup catches | Heartbeat, claim, drop-check loading; metrics; cleanup | `worker/pass-failed`, `metrics-failed`, `cleanup-failed` |
-| The top-level `catch` of each script in `scripts/` | A script that can't start or finish; exits `1`. A script's own usage message (a missing `DATABASE_URL`, `setup` outside a terminal) is CLI output, not an error line | `boot/start-failed` |
+| The top-level `catch` of each script in `scripts/` | A script that can't start or finish; exits `1`. A script's own usage message (a missing `DATABASE_URL`) is CLI output, not an error line | `boot/start-failed` |
 | `sendEmail` (`shared/email/send.ts`), the one outbound wrapper | A failed call to Resend or Mailpit: a thrown `fetch` or the 10-second timeout, a non-2xx status (the error is named after Resend's error `name`), or a 2xx without the message id; returns `err("email-failed")`, never throws. Invitations and password resets turn it into `ApiError(503)`, so the transaction rolls back (1.5); the worker records a failed attempt | `mail/fetch-failed`, `bad-status`, `bad-response` |
 | `POST /api/client-errors` | A report from the browser's catch points: `window` `error` and `unhandledrejection`, the router's root `errorElement` and `global-error.tsx`, each zone's error boundary (STD-11) | `client/uncaught`, `page-crashed`, `zone-crashed` |
 
@@ -529,7 +538,7 @@ There's no database pool listener: postgres.js reconnects on its own and emits n
 | `worker` | `metrics` | info | `pending`, `due`, `oldestDueSeconds`, `sent`, `failed`, `dropped` (1.4 step 6) |
 | `worker` | `delivery-failed` | error | `deliveryId`, `channel` |
 | `worker` | `pass-failed`, `metrics-failed`, `cleanup-failed` | error | none |
-| `boot` | `start-failed` | error | `script` (such as `worker`, `setup`) |
+| `boot` | `start-failed` | error | `script` (such as `worker`, `migrate`) |
 | `mail` | `bounced`, `ignored` | info | `kind?` (`notification`, `invitation`, `untracked`), `id?` (5.4) |
 | `mail` | `fetch-failed` | error | `host` |
 | `mail` | `bad-status` | error | `host`, `status` |
@@ -664,6 +673,7 @@ Every R1 screen is designed in the Claude Design export "Tracklite project setup
 The routes are API-004's addresses (`src/client/routes.tsx`).
 - `/forgot-password` sends a signed-in member to `/my-issues`, as `/sign-in` and `/` do (1.7).
 - `/reset-password` and `/invite` show a signed-in member a sign-out prompt (REQ-050.8, REQ-002.3).
+- `/welcome` is reached only while setup is needed, and goes to `/sign-in` otherwise (1.7, OPS-001). The welcome screen has no design export yet, so it's built from the signed-out kit pieces that `/invite` uses: the secret step, then the same profile and password fields.
 - `/project/{KEY}/settings`, `/settings/members` and `/settings/notifications` are admin-only.
 - Any other address shows Not found (STD-4).
 
@@ -764,3 +774,4 @@ Only decisions with an alternative worth recording. Where the reason is already 
 | D-51 | No multi-tenant error tests | Glance's per-tenant isolation tests | One invite-only team, no tenants. |
 | D-52 | No database pool error listener, and no `worker-crashed` or `sw-crashed` client events | Glance's pool listener and web or service worker crash events | postgres.js reconnects on its own and emits no pool `error` event, and a failed query surfaces at a catch point (4.8); the browser app has no web or service worker. |
 | D-53 | A failed notification send logs only `sendEmail`'s `mail/*` line; the worker adds no `delivery-failed` line for it | Both lines, the mail line for why and the worker line for which delivery | OPS-007 logs each fault once. The status page (REQ-053) already shows which delivery failed and how often, and `delivery-failed` keeps meaning an unexpected error. |
+| D-54 | The first admin is created on a welcome screen guarded by `SETUP_SECRET` from server config, with no guess limit (OPS-001, 4.6) | The `npm run setup` command; a secret generated at boot and printed to the log; counting wrong secrets in `sign_in_attempts` | The owner wanted setup in the browser, without shell access to the host. A config secret is set once and survives restarts, while a generated one would change on every restart and land in log storage. With at least 32 characters, guessing is hopeless, and a limit would only lock out the owner. |

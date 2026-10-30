@@ -1,9 +1,9 @@
 ---
 product: "Tracklite"
-version: "0.37"
+version: "0.38"
 release: "R1"
 status: Ready to build
-updated: "2026-10-29"
+updated: "2026-10-30"
 ---
 
 # Tracklite: Spec
@@ -579,13 +579,13 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 | Edit a comment | Own only | Own only |
 | Delete a comment | Any | Own only |
 
-There are no private projects. Nobody, including admins, can see or set another member's password. The first admin is created by the setup command (OPS-001).
+There are no private projects. Nobody, including admins, can see or set another member's password. The first admin is created on the welcome screen (OPS-001).
 
 ### 8. Data
 
 | Entity | What it holds | Notes |
 |---|---|---|
-| Member | Email, full name, username, password hash, role (Admin or Member), active or deactivated, notification channels, created at | Created by accepting an invitation (REQ-002) or by the setup command (OPS-001). Email and username are unique, ignoring capitals. Never deleted, only deactivated. Notification channels (at least one) are where F-008 notifications go; in R1 every member has Email, the only channel. |
+| Member | Email, full name, username, password hash, role (Admin or Member), active or deactivated, notification channels, created at | Created by accepting an invitation (REQ-002) or on the welcome screen (OPS-001). Email and username are unique, ignoring capitals. Never deleted, only deactivated. Notification channels (at least one) are where F-008 notifications go; in R1 every member has Email, the only channel. |
 | Invitation | Email, invited by, secret token, expires at, state (Pending, Accepted, Revoked, Expired, Bounced) | Expires 7 days after sending (REQ-001). At most one pending invitation per email. |
 | Password reset link | Member, secret token, expires at, used at | Expires 30 minutes after sending (REQ-050). |
 | Session | Member, secret token, last active at | Ends 30 days after last activity (REQ-006). |
@@ -620,7 +620,7 @@ There are no private projects. Nobody, including admins, can see or set another 
 | API-001 | The app's own HTTP API, under `/api/…`, used only by its own web front end | Every feature. It isn't public or documented for outside use. Errors follow STD-1 to STD-4 (`401`, `403`, `422`, `404`) and STD-8 (`409`); an expired, used or revoked invitation or reset link gets `410` (REQ-002, REQ-050). The exact list of endpoints is the agent's choice (DEC-002). |
 | API-002 | Outgoing email service (a transactional email provider, DEC-003) | Invitations (REQ-001), password reset links (REQ-050) and notifications (F-008). If it fails, see STD-6: a password reset request shows "We couldn’t send the email", and notifications are retried 3 times. |
 | API-003 | `POST /webhooks/email` (bounce reports from the email service) | Marking notifications as Bounced (REQ-045.6). It accepts only requests signed by the email service; anything else gets `401`. |
-| API-004 | Page addresses: `/sign-in`, `/forgot-password`, `/reset-password?token=…`, `/invite?token=…`, `/my-issues`, `/project/{KEY}` (board), `/project/{KEY}/list`, `/project/{KEY}/detail`, `/project/{KEY}/labels`, `/project/{KEY}/settings`, `/projects/archived`, `/issue/{ID}`, `/settings/profile`, `/settings/members`, `/settings/notifications` | Links in emails and between members. Keys and IDs are matched ignoring capitals (REQ-016.5). The list view's filters go in the query string (REQ-040). |
+| API-004 | Page addresses: `/sign-in`, `/forgot-password`, `/reset-password?token=…`, `/invite?token=…`, `/welcome`, `/my-issues`, `/project/{KEY}` (board), `/project/{KEY}/list`, `/project/{KEY}/detail`, `/project/{KEY}/labels`, `/project/{KEY}/settings`, `/projects/archived`, `/issue/{ID}`, `/settings/profile`, `/settings/members`, `/settings/notifications` | Links in emails and between members. Keys and IDs are matched ignoring capitals (REQ-016.5). The list view's filters go in the query string (REQ-040). |
 
 API-003 examples:
   - API-003.1: The email service reports a bounce for a notification email sent to Sam → that email shows as Bounced and the bounce is logged; the webhook answers `200`.
@@ -753,7 +753,7 @@ There's no uptime target. Hosting, backups and redundancy belong to the deployme
   - There are no real-time updates; pages show current data when they load.
   - There are two environments: local development and production. No feature flags.
 - **Agent's choices:**
-  - DEC-002 (API endpoints): JSON over HTTPS, resource-style paths such as `/api/issues/WEB-42`, the STD-1 to STD-4 status codes, and a request ID on creates (STD-5). Also: `429` from sign-in (`POST /api/sessions` with email and password) and reset-link requests past a SEC-001 limit, and `503` from reset-link requests and sending or resending an invitation when the email couldn't be sent (STD-6). Every endpoint needs a session except sign-in, sign-out (which succeeds either way), requesting and using a reset link, looking up and accepting an invitation, the webhook (API-003) and the health checks (OPS-005). Reset-link requests and sending or resending an invitation are exempt from NFR-003's 500 ms write limit, since STD-6 needs the email service's result before answering.
+  - DEC-002 (API endpoints): JSON over HTTPS, resource-style paths such as `/api/issues/WEB-42`, the STD-1 to STD-4 status codes, and a request ID on creates (STD-5). Also: `429` from sign-in (`POST /api/sessions` with email and password) and reset-link requests past a SEC-001 limit, and `503` from reset-link requests and sending or resending an invitation when the email couldn't be sent (STD-6). Every endpoint needs a session except sign-in, sign-out (which succeeds either way), requesting and using a reset link, looking up and accepting an invitation, the first-admin setup (OPS-001), the webhook (API-003) and the health checks (OPS-005). Reset-link requests and sending or resending an invitation are exempt from NFR-003's 500 ms write limit, since STD-6 needs the email service's result before answering.
   - DEC-003 (email provider): it must have an HTTP API and bounce webhooks (API-003), fit within NFR-009's budget, send from the team's domain with SPF and DKIM, and keep its API key only in server config (OPS-006). If no provider fits, stop and ask.
   - DEC-004 (background jobs): run alongside the app with no paid queue service, and survive a restart without losing pending notifications.
 
@@ -761,9 +761,14 @@ There's no uptime target. Hosting, backups and redundancy belong to the deployme
 
 Deploys, rollbacks, backups, log retention and uptime monitoring are part of the deployment, which is maintained outside this repository. This section covers only what the app itself provides.
 
-- **OPS-001** The system shall provide a setup command that creates the first admin from an email, full name, username and password, only when no members exist. The command asks for the password twice without showing it (REQ-048) and never takes it as an argument, so it doesn't end up in shell history.
-  - OPS-001.1: Run on a fresh install → admin created, who can then sign in with that email and password. (Verify: ops)
-  - OPS-001.2: Run when members already exist → refuses with "Setup already done", nothing changed. (Verify: ops)
+- **OPS-001** While no members exist, the system shall show a welcome screen to anyone who opens the app signed out, which creates the first admin. The welcome screen first asks for the setup secret, which the site owner sets as `SETUP_SECRET` in server config (OPS-006). Only after the right secret does it ask for an email, full name, username (REQ-003) and the password twice (REQ-048). Creating the admin signs them in and opens My issues. There is no email check for this account. The secret must be at least 32 characters, or the app refuses to start, and it's compared in constant time. Once any member exists, the welcome screen and its endpoints refuse.
+  - OPS-001.1: Fresh install, the right secret, then `owner@x.com`, "Sam Lee", `Sam` and a valid password twice → admin `sam` created, signed in, My issues opens; signing out and back in with that email and password works.
+  - OPS-001.2: Members already exist → opening `/welcome` goes to sign-in, and a setup request is refused with "Setup already done"; nothing changes.
+  - OPS-001.3: A wrong secret → "Wrong setup secret"; the profile fields stay hidden, and nothing is saved.
+  - OPS-001.4: `SETUP_SECRET` isn't set → the welcome screen says "Setup isn't enabled. Set SETUP_SECRET on the server and restart."; nothing is saved.
+  - OPS-001.5: Fresh install, someone opens `/projects` → the welcome screen is shown instead of sign-in.
+  - OPS-001.6: `SETUP_SECRET` is 20 characters → the app refuses to start, naming `SETUP_SECRET`.
+  - OPS-001.7: Two setup requests with the right secret arrive at the same moment → one admin is created; the other gets "Setup already done".
 - **OPS-005** The app shall provide `/health` and `/health/worker` for an external uptime check. `/health` answers `200` only when the database responds. `/health/worker` answers `503` when the background worker hasn't finished a pass in the last 2 minutes (or never has), or when the oldest due pending notification delivery has waited more than 10 minutes; otherwise it answers `200`. Neither shows anything about members or notifications.
   - OPS-005.1: The database stops → `/health` returns `503`.
   - OPS-005.2: The worker's last pass was 3 minutes ago → `/health/worker` returns `503`.
@@ -804,6 +809,7 @@ Deploys, rollbacks, backups, log retention and uptime monitoring are part of the
 
 **Changelog**
 
+- **0.38 (2026-10-30):** First-admin setup moves from a command to a welcome screen (owner decision, 2026-10-30). OPS-001 is rewritten: while no members exist, signed-out visitors see a welcome screen that asks for the `SETUP_SECRET` from server config, then the profile and password, and signs the new admin in (new OPS-001.1 to OPS-001.7, now automated instead of `(Verify: ops)`). The setup command is removed. DEC-002 lists the setup endpoints as needing no session; API-004 adds `/welcome`; section 7 and the Member entity now name the welcome screen.
 - **0.37 (2026-10-29):** Error handling (owner's Glance error-handling rules, 2026-10-29). SEC-007 extends to error lines and client reports (new SEC-007.3 to SEC-007.7). New OPS-007 (one JSON error line per fault, at the boundary that answers it) and OPS-008 (the browser reports its errors to the server). New STD-10 (crash screen with a 60-second reload) and STD-11 (each data region fails on its own); STD-7 and DEC-006 now point to STD-11, whose button reads **Try again** and whose message names the region instead of "Couldn’t load this." beside Retry.
 - **0.36 (2026-10-26):** Long lines in a code block wrap instead of scrolling sideways (REQ-031, REQ-031.5), because a sideways scroller that can't take keyboard focus (Safari) can't be read by keyboard (NFR-007, found by L02).
 - **0.35 (2026-10-26):** My issues rows show the assignee stack (REQ-042), so a member sees who shares an issue (REQ-041.7). Board cards, list rows and My issues rows name every assignee in their accessible name ("assigned to Alex Kim, Nina Shah", or "unassigned").
