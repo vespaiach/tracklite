@@ -1,7 +1,11 @@
 import { Navigate, type RouteObject } from "react-router";
+import { RouteCrashScreen } from "./CrashScreen";
 import { Shell } from "./Shell";
 
 export const routes: RouteObject[] = [
+  {
+    errorElement: <RouteCrashScreen />,
+    children: [
   { path: "sign-in", lazy: async () => ({ Component: (await import("./screens/SignIn")).SignIn }) },
   {
     path: "forgot-password",
@@ -71,6 +75,8 @@ export const routes: RouteObject[] = [
         lazy: async () => ({ Component: (await import("./screens/ArchivedProjects")).ArchivedProjects }),
       },
       { path: "*", lazy: async () => ({ Component: (await import("./screens/NotFound")).NotFound }) },
+    ],
+  },
     ],
   },
 ];
