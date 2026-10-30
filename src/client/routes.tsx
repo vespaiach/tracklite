@@ -20,6 +20,10 @@ export const routes: RouteObject[] = [
         lazy: async () => ({ Component: (await import("./screens/AcceptInvitation")).AcceptInvitation }),
       },
       {
+        path: "welcome",
+        lazy: async () => ({ Component: (await import("./screens/Welcome")).Welcome }),
+      },
+      {
         Component: Shell,
         children: [
           {

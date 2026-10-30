@@ -11,12 +11,13 @@ import {
   SignedOutHeading,
   SignedOutLayout,
 } from "../../components/ui/track-lite";
-import { type ApiFailure, useMeQuery, useSignInMutation } from "../api";
+import { type ApiFailure, useMeQuery, useSetupStatusQuery, useSignInMutation } from "../api";
 import { returnTarget } from "../return-to";
 import { showToast } from "../toast";
 
 export function SignIn() {
   const me = useMeQuery();
+  const setup = useSetupStatusQuery(undefined, { skip: !me.isError });
   const [signIn, { isLoading: signingIn }] = useSignInMutation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -29,6 +30,15 @@ export function SignIn() {
     return (
       <Navigate
         to="/my-issues"
+        replace
+      />
+    );
+  }
+
+  if (setup.data?.needed) {
+    return (
+      <Navigate
+        to="/welcome"
         replace
       />
     );
@@ -53,7 +63,7 @@ export function SignIn() {
 
   return (
     <SignedOutLayout>
-      {me.isError && (
+      {me.isError && !setup.isLoading && (
         <SignedOutForm onSubmit={submit}>
           <SignedOutHeading title="Sign in" />
           <SignedOutFields>
