@@ -2,6 +2,12 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import ClientApp from "./ClientApp";
 
+vi.mock("./screens/ArchivedProjects", () => ({
+  ArchivedProjects: () => {
+    throw new Error("render failed");
+  },
+}));
+
 const sam = {
   username: "sam",
   fullName: "Sam Lee",
@@ -63,5 +69,18 @@ it("OPS-008.1: an uncaught error or unhandled rejection on the page is reported 
   expect(reports).toMatchObject([
     { event: "uncaught", message: "boom", page: "/my-issues" },
     { event: "uncaught", message: "nope", page: "/my-issues" },
+  ]);
+});
+
+it("STD-10.1: a page that crashes while rendering shows the crash screen and reports page-crashed", async () => {
+  renderAt("/projects/archived");
+
+  expect(await screen.findByRole("heading", { name: "Something went wrong" })).toBeTruthy();
+  const reports = vi
+    .mocked(fetch)
+    .mock.calls.filter(([, init]) => init?.method === "POST")
+    .map(([, init]) => JSON.parse(init?.body as string));
+  expect(reports).toMatchObject([
+    { event: "page-crashed", message: "render failed", page: "/projects/archived" },
   ]);
 });
