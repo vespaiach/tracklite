@@ -384,15 +384,27 @@ it("REQ-032.4: all 200 comments are shown", async () => {
   expect(await shownComments()).toHaveLength(200);
 });
 
-it("STD-7: a failed load shows “Couldn’t load this.” with Retry and no comment box", async () => {
-  mockThread({ list: () => apiError(500, "Internal error") });
+it("STD-11.1, STD-11.2: failed comments show “Couldn’t load comments.” while the fields stay editable, and Try again loads them", async () => {
+  let failing = true;
+  mockThread({
+    comments: [comment()],
+    list: () => (failing ? apiError(500, "Internal error") : Response.json([comment()])),
+  });
   openIssue();
 
   const section = await thread();
 
-  expect(await within(section).findByText("Couldn’t load this.")).toBeTruthy();
-  expect(within(section).getByRole("button", { name: "Retry" })).toBeTruthy();
+  expect(await within(section).findByText("Couldn’t load comments.")).toBeTruthy();
   expect(screen.queryByRole("textbox", { name: "Comment (Markdown)" })).toBeNull();
+  expect(((await screen.findByRole("textbox", { name: "Title" })) as HTMLTextAreaElement).value).toBe(
+    "Fix login button",
+  );
+
+  failing = false;
+  fireEvent.click(within(section).getByRole("button", { name: "Try again" }));
+
+  expect(await within(section).findByText("Reproduced on Safari 17.4.")).toBeTruthy();
+  expect(within(section).queryByText("Couldn’t load comments.")).toBeNull();
 });
 
 it("REQ-035.1: leaving with an unsent comment asks first; Cancel keeps the text", async () => {
