@@ -673,7 +673,7 @@ Every R1 screen is designed in the Claude Design export "Tracklite project setup
 The routes are API-004's addresses (`src/client/routes.tsx`).
 - `/forgot-password` sends a signed-in member to `/my-issues`, as `/sign-in` and `/` do (1.7).
 - `/reset-password` and `/invite` show a signed-in member a sign-out prompt (REQ-050.8, REQ-002.3).
-- `/welcome` is reached only while setup is needed, and goes to `/sign-in` otherwise (1.7, OPS-001). The welcome screen has no design export yet, so it's built from the signed-out kit pieces that `/invite` uses: the secret step, then the same profile and password fields.
+- `/welcome` is reached only while setup is needed, and goes to `/sign-in` otherwise (1.7, OPS-001). The welcome screen has no design export yet, so it's built from the signed-out kit pieces that `/invite` uses: the secret step (the server's refusal shown under the field), then email and the same profile and password fields, plus **Confirm password**, which the browser checks before sending ("Passwords don’t match").
 - `/project/{KEY}/settings`, `/settings/members` and `/settings/notifications` are admin-only.
 - Any other address shows Not found (STD-4).
 

@@ -14,6 +14,7 @@ import type {
   NotificationStats,
   Project,
   ProjectSummary,
+  SetupStatus,
   ThreadComment,
 } from "../contract";
 import type { StoreExtra } from "./store";
@@ -65,7 +66,7 @@ function projectKeyOf(id: string) {
   return id.slice(0, id.lastIndexOf("-"));
 }
 
-const signedOutPaths = ["/sign-in", "/forgot-password", "/reset-password", "/invite"];
+const signedOutPaths = ["/sign-in", "/forgot-password", "/reset-password", "/invite", "/welcome"];
 
 function fetchApi(request: ApiRequest, signal: AbortSignal) {
   if (typeof request === "string") return fetch(`/api/${request}`, { signal });
@@ -135,6 +136,17 @@ export const api = createApi({
       { token: string; fullName: string; username: string; password: string }
     >({
       query: (body) => ({ path: "members", method: "POST", body }),
+      invalidatesTags: ["Me"],
+    }),
+    setupStatus: build.query<SetupStatus, void>({ query: () => "setup" }),
+    checkSetupSecret: build.mutation<null, { secret: string }>({
+      query: (body) => ({ path: "setup-checks", method: "POST", body }),
+    }),
+    createFirstAdmin: build.mutation<
+      Me,
+      { secret: string; email: string; fullName: string; username: string; password: string }
+    >({
+      query: (body) => ({ path: "setup", method: "POST", body }),
       invalidatesTags: ["Me"],
     }),
     updateProfile: build.mutation<Me, { fullName: string }>({
@@ -276,6 +288,9 @@ export const {
   useResetPasswordMutation,
   useLookUpInvitationQuery,
   useAcceptInvitationMutation,
+  useSetupStatusQuery,
+  useCheckSetupSecretMutation,
+  useCreateFirstAdminMutation,
   useUpdateProfileMutation,
   useChangePasswordMutation,
   useMembersQuery,

@@ -106,3 +106,15 @@ it("§6.1: a signed-in member opening /sign-in goes to /my-issues", async () => 
   expect(await screen.findByRole("heading", { name: "My issues" })).toBeTruthy();
   expect(window.location.pathname).toBe("/my-issues");
 });
+
+it("OPS-001.5: on a fresh install, opening /projects signed out shows the welcome screen instead of sign-in", async () => {
+  mockApi({
+    "GET /api/me": signedOut,
+    "GET /api/setup": () => Response.json({ needed: true }),
+  });
+  renderAppAt("/projects");
+
+  expect(await screen.findByRole("heading", { name: "Welcome to Tracklite" })).toBeTruthy();
+  expect(window.location.pathname).toBe("/welcome");
+  expect(screen.queryByRole("heading", { name: "Sign in" })).toBeNull();
+});

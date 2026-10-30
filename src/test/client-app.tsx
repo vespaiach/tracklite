@@ -26,7 +26,10 @@ export const alex: Me = {
 export function mockApi(routes: Record<string, Handler>) {
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     const key = `${init?.method ?? "GET"} ${url}`;
-    const defaults: Record<string, Handler> = { "GET /api/projects?archived=false": () => Response.json([]) };
+    const defaults: Record<string, Handler> = {
+      "GET /api/projects?archived=false": () => Response.json([]),
+      "GET /api/setup": () => Response.json({ needed: false }),
+    };
     const handler = { ...defaults, ...routes }[key];
     if (!handler) throw new Error(`Unmocked request ${key}`);
     return handler(init?.body ? JSON.parse(String(init.body)) : undefined);
