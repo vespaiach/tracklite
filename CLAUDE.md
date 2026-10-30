@@ -41,7 +41,6 @@ npm run db:studio
 npm run db:seed        # dev members and admins (password in src/server/identity/seed.ts)
 npm run db:seed:load   # NFR-001 load data: 50 projects, 10,000 issues, 50,000 comments
 npm run db:reset       # drop the local dev database's schemas, re-run migrations, then db:seed
-npm run setup          # create the first admin (OPS-001)
 npm run worker         # run the notification worker
 npm run email:dev      # send one sample email to Mailpit
 ```

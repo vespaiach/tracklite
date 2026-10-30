@@ -79,7 +79,7 @@ src/
   server/         domain functions, database schema, email, worker
   lib/markdown/   Markdown rendering and mention parsing
   test/           test harness and data factories
-scripts/          worker, migrations, seed and setup commands
+scripts/          worker, migrations and seed commands
 migrations/       drizzle-kit migrations
 ```
 
@@ -147,7 +147,6 @@ npm run worker
 | `npm run db:seed` | Add dev members and admins |
 | `npm run db:seed:load` | Add load-test data: 50 projects, 10,000 issues, 50,000 comments |
 | `npm run db:reset` | Drop the dev database, re-run migrations, then seed |
-| `npm run setup` | Create the first admin (used once on a new server) |
 | `npm run email:dev` | Send a sample email to Mailpit |
 
 Run drizzle-kit only through these scripts; they set the `react-server` condition that `server-only` imports need.
