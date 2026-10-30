@@ -1,6 +1,6 @@
 ---
 product: "Tracklite"
-version: "0.38"
+version: "0.39"
 release: "R1"
 status: Ready to build
 updated: "2026-10-30"
@@ -761,7 +761,7 @@ There's no uptime target. Hosting, backups and redundancy belong to the deployme
 
 Deploys, rollbacks, backups, log retention and uptime monitoring are part of the deployment, which is maintained outside this repository. This section covers only what the app itself provides.
 
-- **OPS-001** While no members exist, the system shall show a welcome screen to anyone who opens the app signed out, which creates the first admin. The welcome screen first asks for the setup secret, which the site owner sets as `SETUP_SECRET` in server config (OPS-006). Only after the right secret does it ask for an email, full name, username (REQ-003) and the password twice (REQ-048). Creating the admin signs them in and opens My issues. There is no email check for this account. The secret must be at least 32 characters, or the app refuses to start, and it's compared in constant time. Once any member exists, the welcome screen and its endpoints refuse.
+- **OPS-001** While no members exist, the system shall show a welcome screen to anyone who opens the app signed out, which creates the first admin. The welcome screen first asks for the setup secret, which the site owner sets as `SETUP_SECRET` in server config (OPS-006). Only after the right secret does it ask for an email, full name, username (REQ-003) and the password twice (REQ-048); a second password that differs gets the field error "Passwords don’t match" and nothing is sent. Creating the admin signs them in and opens My issues. There is no email check for this account. The secret must be at least 32 characters, or the app refuses to start, and it's compared in constant time. Once any member exists, the welcome screen and its endpoints refuse.
   - OPS-001.1: Fresh install, the right secret, then `owner@x.com`, "Sam Lee", `Sam` and a valid password twice → admin `sam` created, signed in, My issues opens; signing out and back in with that email and password works.
   - OPS-001.2: Members already exist → opening `/welcome` goes to sign-in, and a setup request is refused with "Setup already done"; nothing changes.
   - OPS-001.3: A wrong secret → "Wrong setup secret"; the profile fields stay hidden, and nothing is saved.
@@ -809,6 +809,7 @@ Deploys, rollbacks, backups, log retention and uptime monitoring are part of the
 
 **Changelog**
 
+- **0.39 (2026-10-30):** OPS-001 names the welcome screen's copy for a mismatched second password: the field error "Passwords don’t match", checked in the browser before anything is sent (W02).
 - **0.38 (2026-10-30):** First-admin setup moves from a command to a welcome screen (owner decision, 2026-10-30). OPS-001 is rewritten: while no members exist, signed-out visitors see a welcome screen that asks for the `SETUP_SECRET` from server config, then the profile and password, and signs the new admin in (new OPS-001.1 to OPS-001.7, now automated instead of `(Verify: ops)`). The setup command is removed. DEC-002 lists the setup endpoints as needing no session; API-004 adds `/welcome`; section 7 and the Member entity now name the welcome screen.
 - **0.37 (2026-10-29):** Error handling (owner's Glance error-handling rules, 2026-10-29). SEC-007 extends to error lines and client reports (new SEC-007.3 to SEC-007.7). New OPS-007 (one JSON error line per fault, at the boundary that answers it) and OPS-008 (the browser reports its errors to the server). New STD-10 (crash screen with a 60-second reload) and STD-11 (each data region fails on its own); STD-7 and DEC-006 now point to STD-11, whose button reads **Try again** and whose message names the region instead of "Couldn’t load this." beside Retry.
 - **0.36 (2026-10-26):** Long lines in a code block wrap instead of scrolling sideways (REQ-031, REQ-031.5), because a sideways scroller that can't take keyboard focus (Safari) can't be read by keyboard (NFR-007, found by L02).
