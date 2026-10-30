@@ -31,9 +31,8 @@ import { Assignees, assignedTo, LabelPills, memberName, UpdatedAt } from "../Iss
 import { issuePriorities, issueStatuses } from "../../contract";
 import { priorities, statuses } from "../issue-fields";
 import { useRouterClick } from "../links";
-import { LoadFailed, Loading } from "../LoadStates";
 import { NewIssueDialog } from "../NewIssueDialog";
-import { useShowLoading } from "../useShowLoading";
+import { Zone, zoneState } from "../Zone";
 
 type SortColumn = "id" | "status" | "priority" | "updated";
 type SortDir = "asc" | "desc";
@@ -74,7 +73,6 @@ export function ListView({ project }: { project: ProjectSummary }) {
   const { data: me } = useMeQuery();
   const { data: members = [] } = useMembersQuery();
   const { data: projectLabels = [] } = useLabelsQuery(project.key);
-  const showLoading = useShowLoading(list.isLoading);
   const [creating, setCreating] = useState(false);
 
   const pages = list.data?.pages ?? [];
@@ -229,80 +227,84 @@ export function ListView({ project }: { project: ProjectSummary }) {
           );
         })}
       </Filters>
-      {list.isError && !list.data ? (
-        <LoadFailed onRetry={list.refetch} />
-      ) : !list.data ? (
-        <Loading show={showLoading} />
-      ) : issues.length === 0 && !filtering ? (
-        <SettingsLayout>
-          {archived ? (
-            <BoardEmpty>No issues.</BoardEmpty>
+      <Zone
+        what="issues"
+        state={zoneState(list)}
+        retry={list.refetch}
+        page>
+        {() =>
+          issues.length === 0 && !filtering ? (
+            <SettingsLayout>
+              {archived ? (
+                <BoardEmpty>No issues.</BoardEmpty>
+              ) : (
+                <BoardEmpty
+                  action="Create one."
+                  onAction={() => setCreating(true)}>
+                  No issues yet.
+                </BoardEmpty>
+              )}
+            </SettingsLayout>
           ) : (
-            <BoardEmpty
-              action="Create one."
-              onAction={() => setCreating(true)}>
-              No issues yet.
-            </BoardEmpty>
-          )}
-        </SettingsLayout>
-      ) : (
-        <>
-          <ListRowHead
-            columns={columns}
-            label="Sort issues">
-            <ListSortButton
-              sort={sortOf("id")}
-              onSort={() => sortBy("id")}>
-              ID
-            </ListSortButton>
-            <span aria-hidden="true">Title</span>
-            <ListSortButton
-              sort={sortOf("status")}
-              onSort={() => sortBy("status")}>
-              Status
-            </ListSortButton>
-            <ListSortButton
-              sort={sortOf("priority")}
-              onSort={() => sortBy("priority")}>
-              Priority
-            </ListSortButton>
-            <span aria-hidden="true">Labels</span>
-            <span />
-            <ListSortButton
-              sort={sortOf("updated")}
-              onSort={() => sortBy("updated")}>
-              Last updated
-            </ListSortButton>
-          </ListRowHead>
-          <main
-            aria-label="Issues"
-            className="tl-table-scroll">
-            {issues.map((issue) => (
-              <IssueRow
-                key={issue.id}
-                issue={issue}
-                me={me?.username}
-              />
-            ))}
-            {issues.length === 0 && (
-              <div className="tl-list-message">
-                No issues match these filters
-                <Button
-                  size="sm"
-                  onClick={clearAll}>
-                  Clear filters
-                </Button>
-              </div>
-            )}
-            {list.hasNextPage && (
-              <MoreRows
-                loading={list.isFetchingNextPage}
-                onVisible={() => void list.fetchNextPage()}
-              />
-            )}
-          </main>
-        </>
-      )}
+            <>
+              <ListRowHead
+                columns={columns}
+                label="Sort issues">
+                <ListSortButton
+                  sort={sortOf("id")}
+                  onSort={() => sortBy("id")}>
+                  ID
+                </ListSortButton>
+                <span aria-hidden="true">Title</span>
+                <ListSortButton
+                  sort={sortOf("status")}
+                  onSort={() => sortBy("status")}>
+                  Status
+                </ListSortButton>
+                <ListSortButton
+                  sort={sortOf("priority")}
+                  onSort={() => sortBy("priority")}>
+                  Priority
+                </ListSortButton>
+                <span aria-hidden="true">Labels</span>
+                <span />
+                <ListSortButton
+                  sort={sortOf("updated")}
+                  onSort={() => sortBy("updated")}>
+                  Last updated
+                </ListSortButton>
+              </ListRowHead>
+              <main
+                aria-label="Issues"
+                className="tl-table-scroll">
+                {issues.map((issue) => (
+                  <IssueRow
+                    key={issue.id}
+                    issue={issue}
+                    me={me?.username}
+                  />
+                ))}
+                {issues.length === 0 && (
+                  <div className="tl-list-message">
+                    No issues match these filters
+                    <Button
+                      size="sm"
+                      onClick={clearAll}>
+                      Clear filters
+                    </Button>
+                  </div>
+                )}
+                {list.hasNextPage && (
+                  <MoreRows
+                    loading={list.isFetchingNextPage}
+                    onVisible={() => void list.fetchNextPage()}
+                  />
+                )}
+              </main>
+            </>
+          )
+        }
+      </Zone>
       {creating && (
         <NewIssueDialog
           project={project}

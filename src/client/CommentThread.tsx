@@ -37,40 +37,33 @@ import { useFailureToast } from "./failure";
 import { LeaveGuard } from "./LeaveGuard";
 import { useMentions } from "./useMentions";
 import { useReturnFocus } from "./useReturnFocus";
-import { useShowLoading } from "./useShowLoading";
+import { Zone, zoneState } from "./Zone";
 
 export function CommentThread({ threadPath, editable }: { threadPath: string; editable: boolean }) {
   const query = useCommentsQuery(threadPath);
   const linked = useLinkedComment(query.data !== undefined);
-  const showLoading = useShowLoading(query.isLoading);
-  if (query.isError && !query.data) {
-    return (
-      <SettingsActions>
-        <FormStatus>Couldn’t load this.</FormStatus>
-        <Button
-          size="sm"
-          onClick={query.refetch}>
-          Retry
-        </Button>
-      </SettingsActions>
-    );
-  }
-  if (!query.data) return showLoading && <FormStatus>Loading…</FormStatus>;
   return (
-    <CommentList>
-      {query.data.length === 0 && (
-        <FormStatus>{editable ? "No comments yet. Write one below." : "No comments yet."}</FormStatus>
+    <Zone
+      what="comments"
+      state={zoneState(query)}
+      retry={query.refetch}>
+      {(comments) => (
+        <CommentList>
+          {comments.length === 0 && (
+            <FormStatus>{editable ? "No comments yet. Write one below." : "No comments yet."}</FormStatus>
+          )}
+          {comments.map((comment) => (
+            <CommentItem
+              key={comment.id}
+              comment={comment}
+              editable={editable}
+              highlighted={comment.id === linked}
+            />
+          ))}
+          {editable && <CommentBox threadPath={threadPath} />}
+        </CommentList>
       )}
-      {query.data.map((comment) => (
-        <CommentItem
-          key={comment.id}
-          comment={comment}
-          editable={editable}
-          highlighted={comment.id === linked}
-        />
-      ))}
-      {editable && <CommentBox threadPath={threadPath} />}
-    </CommentList>
+    </Zone>
   );
 }
 

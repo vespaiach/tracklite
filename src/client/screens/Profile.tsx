@@ -24,19 +24,25 @@ import {
   useMeQuery,
   useUpdateProfileMutation,
 } from "../api";
-import { LoadFailed } from "../LoadStates";
 import { showToast } from "../toast";
+import { Zone, zoneState } from "../Zone";
 
 const roleNames: Record<Me["role"], string> = { admin: "Admin", member: "Member" };
 
 export function Profile() {
-  const { data: me, isError, refetch } = useMeQuery();
+  const me = useMeQuery();
   return (
     <>
       <AppBar>
         <AppBarTitle>Profile</AppBarTitle>
       </AppBar>
-      {isError ? <LoadFailed onRetry={refetch} /> : me && <ProfileForms me={me} />}
+      <Zone
+        what="your profile"
+        state={zoneState(me)}
+        retry={me.refetch}
+        page>
+        {(loaded) => <ProfileForms me={loaded} />}
+      </Zone>
     </>
   );
 }

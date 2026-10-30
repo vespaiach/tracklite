@@ -153,7 +153,7 @@ it("REQ-046: the issue page header shows the breadcrumb to the project and no vi
   expect(within(views).queryAllByRole("link", { current: "page" })).toEqual([]);
 });
 
-it("REQ-046, STD-7: the project header stays while the issue loads and when it fails to load", async () => {
+it("REQ-046, STD-11: the project header stays while the issue loads and when it fails to load", async () => {
   const loading = deferred();
   mockIssue({ get: loading.answer });
   renderAppAt("/issue/WEB-42");
@@ -164,8 +164,8 @@ it("REQ-046, STD-7: the project header stays while the issue loads and when it f
 
   loading.resolve(apiError(500, "Internal error"));
 
-  expect(await screen.findByText("Couldn’t load this.")).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+  expect(await screen.findByText("Couldn’t load this issue.")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
   expect(screen.getByRole("navigation", { name: "Breadcrumb" })).toBeTruthy();
 });
 

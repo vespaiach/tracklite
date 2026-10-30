@@ -22,8 +22,7 @@ import {
   useNotificationStatsQuery,
 } from "../api";
 import { formatExact, formatUpdated, formatWait } from "../dates";
-import { LoadFailed, Loading } from "../LoadStates";
-import { useShowLoading } from "../useShowLoading";
+import { Zone, zoneState } from "../Zone";
 
 const channelNames: Record<NotificationChannel, string> = { email: "Email" };
 
@@ -59,8 +58,8 @@ export function NotificationStatus() {
 }
 
 function NotificationStatusAdmin() {
-  const { data, isLoading, isFetching, isError, refetch } = useNotificationStatsQuery();
-  const showLoading = useShowLoading(isLoading);
+  const stats = useNotificationStatsQuery();
+  const { isLoading, isFetching, refetch } = stats;
   const refreshing = isFetching && !isLoading;
 
   return (
@@ -77,13 +76,13 @@ function NotificationStatusAdmin() {
         }>
         <AppBarTitle>Notification status</AppBarTitle>
       </AppBar>
-      {isError ? (
-        <LoadFailed onRetry={refetch} />
-      ) : data ? (
-        <StatsReport stats={data} />
-      ) : (
-        <Loading show={showLoading} />
-      )}
+      <Zone
+        what="notification status"
+        state={zoneState(stats)}
+        retry={refetch}
+        page>
+        {(loaded) => <StatsReport stats={loaded} />}
+      </Zone>
     </>
   );
 }
