@@ -15,6 +15,7 @@ export { checkResetLink, requestResetLink, resetPassword } from "./password-rese
 export { changePassword, updateProfile } from "./profile";
 export {
   ClientErrorReport,
+  FirstAdmin,
   InvitationAcceptance,
   InvitationLinkLookup,
   MemberChanges,
@@ -25,6 +26,7 @@ export {
   ProfileChanges,
   ResetLinkLookup,
   ResetLinkRequest,
+  SetupCheck,
   SignIn,
   type Username,
   usernameFormat,
@@ -40,7 +42,7 @@ export {
   sessionCookie,
   signedInMember,
 } from "./sessions";
-export { createFirstAdmin } from "./setup";
+export { checkSetupSecret, createFirstAdmin, setupNeeded } from "./setup";
 export { seededMembers, seedMembers, seedPassword } from "./seed";
 export { signIn } from "./sign-in";
 export {

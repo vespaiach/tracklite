@@ -1,22 +1,51 @@
 import "server-only";
+import { timingSafeEqual } from "node:crypto";
 import { sql } from "drizzle-orm";
-import * as v from "valibot";
-import { FirstAdmin } from "./schemas";
+import type { FirstAdmin } from "./schemas";
+import { ApiError } from "../shared/api-error";
+import { readConfig } from "../shared/config";
 import { db } from "../shared/db";
 import { hashPassword } from "../shared/passwords";
+import { hashToken } from "../shared/tokens";
+import { createSession } from "./sessions";
 import { members } from "./tables";
 
-export async function createFirstAdmin(input: v.InferInput<typeof FirstAdmin>) {
-  const result = v.safeParse(FirstAdmin, input, { abortEarly: true });
-  if (!result.success) throw new Error(result.issues[0].message);
-  const { email, fullName, username, password } = result.output;
+function setupDone() {
+  return new ApiError(410, "Setup already done");
+}
+
+export async function setupNeeded() {
+  return (await db.$count(members)) === 0;
+}
+
+export async function checkSetupSecret(secret: string) {
+  if (!(await setupNeeded())) throw setupDone();
+
+  const configured = readConfig().setupSecret;
+  if (!configured) {
+    throw new ApiError(503, "Setup isn't enabled. Set SETUP_SECRET on the server and restart.");
+  }
+
+  if (!timingSafeEqual(hashToken(secret), hashToken(configured))) {
+    throw new ApiError(403, "Wrong setup secret");
+  }
+}
+
+export async function createFirstAdmin({ secret, email, fullName, username, password }: FirstAdmin) {
+  await checkSetupSecret(secret);
 
   const passwordHash = await hashPassword(password);
-  await db.transaction(async (tx) => {
+
+  return db.transaction(async (tx) => {
     await tx.execute(sql`lock table ${members} in exclusive mode`);
 
-    if ((await tx.$count(members)) > 0) throw new Error("Setup already done");
+    if ((await tx.$count(members)) > 0) throw setupDone();
 
-    await tx.insert(members).values({ email, fullName, username, passwordHash, role: "admin" });
+    const [member] = await tx
+      .insert(members)
+      .values({ email, fullName, username, passwordHash, role: "admin" })
+      .returning();
+
+    return { member, sessionToken: await createSession(member.id, tx) };
   });
 }

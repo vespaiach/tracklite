@@ -1,5 +1,6 @@
 const alwaysRequired = ["DATABASE_URL", "APP_URL", "EMAIL_FROM"] as const;
 const requiredInProduction = ["RESEND_API_KEY", "RESEND_WEBHOOK_SECRET"] as const;
+const minSetupSecretLength = 32;
 
 export function readConfig(env: NodeJS.ProcessEnv = process.env) {
   const required =
@@ -8,6 +9,12 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
   if (missing.length > 0) {
     throw new Error(`Missing environment variables: ${missing.join(", ")}`);
   }
+
+  const setupSecret = env.SETUP_SECRET || undefined;
+  if (setupSecret !== undefined && [...setupSecret].length < minSetupSecretLength) {
+    throw new Error(`SETUP_SECRET must be at least ${minSetupSecretLength} characters`);
+  }
+
   return {
     databaseUrl: env.DATABASE_URL as string,
     appUrl: env.APP_URL as string,
@@ -16,5 +23,6 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
     resendWebhookSecret: env.RESEND_WEBHOOK_SECRET,
     mailpitHost: env.MAILPIT_HOST ?? "localhost",
     mailpitPort: env.MAILPIT_PORT ?? "8025",
+    setupSecret,
   };
 }

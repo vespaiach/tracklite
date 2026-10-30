@@ -26,6 +26,14 @@ it("production refuses to start without the Resend settings", () => {
   expect(() => register()).toThrow("Missing environment variables: RESEND_WEBHOOK_SECRET");
 });
 
+it("OPS-001.6: a SETUP_SECRET under 32 characters stops the app from starting, naming SETUP_SECRET", () => {
+  vi.stubEnv("SETUP_SECRET", "a".repeat(20));
+  expect(() => register()).toThrow("SETUP_SECRET");
+
+  vi.stubEnv("SETUP_SECRET", "a".repeat(32));
+  expect(() => register()).not.toThrow();
+});
+
 it("OPS-007.5: a page that fails to render logs one request-failed line with the method, the route pattern and the digest, never the path", () => {
   const loggedErrors = spyOnLoggedErrors();
   const error = Object.assign(new Error("render failed"), { digest: "2338717823" });

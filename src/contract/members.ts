@@ -22,3 +22,5 @@ export type Invitation = {
 };
 
 export type InvitationLookup = { email: string };
+
+export type SetupStatus = { needed: boolean };

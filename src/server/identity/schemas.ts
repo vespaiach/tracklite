@@ -83,7 +83,16 @@ export const MemberChanges = v.object({
 });
 export type MemberChanges = v.InferOutput<typeof MemberChanges>;
 
-export const FirstAdmin = v.object({ email: emailAddress, fullName, username, password: newPassword });
+export const SetupCheck = v.object({ secret: linkToken });
+
+export const FirstAdmin = v.object({
+  secret: linkToken,
+  email: emailAddress,
+  fullName,
+  username,
+  password: newPassword,
+});
+export type FirstAdmin = v.InferOutput<typeof FirstAdmin>;
 
 const clientErrorEvents = ["uncaught", "page-crashed", "zone-crashed"] as const;
 
