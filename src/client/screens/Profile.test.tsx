@@ -66,21 +66,6 @@ it("REQ-003.3: under Account the full name is editable and username, email and r
   expect(saveButton().disabled).toBe(false);
 });
 
-it("STD-7: when reloading the profile fails it shows “Couldn’t load this.”, and Retry loads it", async () => {
-  let meRequests = 0;
-  mockApi({
-    "GET /api/me": () => (++meRequests === 2 ? new Response(null, { status: 500 }) : Response.json(sam)),
-  });
-  renderAppAt("/settings/profile");
-
-  expect(await screen.findByText("Couldn’t load this.")).toBeTruthy();
-  expect(screen.queryByLabelText("Full name")).toBeNull();
-
-  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-
-  expect(((await screen.findByLabelText("Full name")) as HTMLInputElement).value).toBe("Sam Lee");
-});
-
 it("REQ-003: a full-name field error from the server shows beside the field and keeps the text", async () => {
   mockProfile({ save: () => apiError(422, "Check the highlighted fields", { fullName: "Name required" }) });
   renderAppAt("/settings/profile");

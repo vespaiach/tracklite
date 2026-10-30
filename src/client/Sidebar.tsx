@@ -14,10 +14,12 @@ import {
 } from "../components/ui/track-lite";
 import type { MemberSummary, ProjectSummary } from "./api";
 import { RouterRailItem } from "./links";
+import { Zone, type ZoneState } from "./Zone";
 
 export type SidebarProps = {
   admin: boolean;
-  projects?: ProjectSummary[];
+  projects: ZoneState<ProjectSummary[]>;
+  retryProjects: () => void;
   pathname: string;
   archivedProjectOpen: boolean;
   onNewProject: () => void;
@@ -31,6 +33,7 @@ const iconProps = { size: 15 } as const;
 export function Sidebar({
   admin,
   projects,
+  retryProjects,
   pathname,
   archivedProjectOpen,
   onNewProject,
@@ -78,44 +81,53 @@ export function Sidebar({
           }>
           Projects
         </RailLabel>
-        {projects?.map((project) => {
-          const href = `/project/${project.key}`;
-          return (
-            <TipTrigger
-              key={project.key}
-              block
-              tip={`${project.name} · ${project.key}`}>
-              <RouterRailItem
-                href={href}
-                icon={
-                  <Folder
-                    size={14}
-                    className="tl-rail-item__folder"
-                  />
-                }
-                label={project.name}
-                suffix={` · ${project.key}`}
-                title=""
-                aria-label={`${project.name} · ${project.key}`}
-                current={current === href.toLowerCase() || current.startsWith(`${href.toLowerCase()}/`)}
-              />
-            </TipTrigger>
-          );
-        })}
-        {projects?.length === 0 && (
-          <RailNote>
-            No projects yet.{" "}
-            {admin && (
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-haspopup="dialog"
-                onClick={onNewProject}>
-                Create one.
-              </Button>
-            )}
-          </RailNote>
-        )}
+        <Zone
+          what="projects"
+          state={projects}
+          retry={retryProjects}>
+          {(loaded) => (
+            <>
+              {loaded.map((project) => {
+                const href = `/project/${project.key}`;
+                return (
+                  <TipTrigger
+                    key={project.key}
+                    block
+                    tip={`${project.name} · ${project.key}`}>
+                    <RouterRailItem
+                      href={href}
+                      icon={
+                        <Folder
+                          size={14}
+                          className="tl-rail-item__folder"
+                        />
+                      }
+                      label={project.name}
+                      suffix={` · ${project.key}`}
+                      title=""
+                      aria-label={`${project.name} · ${project.key}`}
+                      current={current === href.toLowerCase() || current.startsWith(`${href.toLowerCase()}/`)}
+                    />
+                  </TipTrigger>
+                );
+              })}
+              {loaded.length === 0 && (
+                <RailNote>
+                  No projects yet.{" "}
+                  {admin && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-haspopup="dialog"
+                      onClick={onNewProject}>
+                      Create one.
+                    </Button>
+                  )}
+                </RailNote>
+              )}
+            </>
+          )}
+        </Zone>
         <RouterRailItem
           href="/projects/archived"
           icon={<Archive {...iconProps} />}

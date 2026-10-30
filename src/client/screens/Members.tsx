@@ -1,5 +1,5 @@
 import { Ellipsis } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 import { Link } from "react-router";
 import {
   AppBar,
@@ -37,8 +37,7 @@ import {
 } from "../api";
 import { formatDate } from "../dates";
 import { useFailureToast } from "../failure";
-import { LoadFailed, Loading } from "../LoadStates";
-import { useShowLoading } from "../useShowLoading";
+import { Zone, zoneState } from "../Zone";
 
 export function Members() {
   const { data: me } = useMeQuery();
@@ -62,31 +61,33 @@ function MembersAdmin() {
   const { data: me } = useMeQuery();
   const members = useMembersQuery();
   const invitations = useInvitationsQuery();
-  const showLoading = useShowLoading(members.isLoading || invitations.isLoading);
-
-  if (members.isError || invitations.isError) {
-    return (
-      <LoadFailed
-        onRetry={() => {
-          if (members.isError) members.refetch();
-          if (invitations.isError) invitations.refetch();
-        }}
-      />
-    );
-  }
-
-  if (!me || !members.data || !invitations.data) {
-    return <Loading show={showLoading} />;
-  }
+  const loaded = useMemo(
+    () =>
+      me && members.data && invitations.data
+        ? { you: me.username, members: members.data, invitations: invitations.data }
+        : undefined,
+    [me, members.data, invitations.data],
+  );
 
   return (
-    <SettingsLayout wide>
-      <MembersSection
-        members={members.data}
-        you={me.username}
-      />
-      <InvitationsSection invitations={invitations.data} />
-    </SettingsLayout>
+    <Zone
+      what="members"
+      state={zoneState({ data: loaded, isError: members.isError || invitations.isError })}
+      retry={() => {
+        members.refetch();
+        invitations.refetch();
+      }}
+      page>
+      {(data) => (
+        <SettingsLayout wide>
+          <MembersSection
+            members={data.members}
+            you={data.you}
+          />
+          <InvitationsSection invitations={data.invitations} />
+        </SettingsLayout>
+      )}
+    </Zone>
   );
 }
 

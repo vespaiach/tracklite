@@ -42,10 +42,9 @@ import {
 import { issueStatuses } from "../../contract";
 import { assignedTo } from "../IssueCells";
 import { priorities, statuses } from "../issue-fields";
-import { LoadFailed, Loading } from "../LoadStates";
 import { useRouterClick } from "../links";
 import { NewIssueDialog } from "../NewIssueDialog";
-import { useShowLoading } from "../useShowLoading";
+import { Zone, zoneState } from "../Zone";
 
 const labelsShown = 3;
 const closedStatuses: IssueStatus[] = ["done", "canceled"];
@@ -54,23 +53,28 @@ const cardLayout: ListLayoutOptions = { estimatedRowSize: 80, gap: 8, padding: 4
 
 export function BoardView({ project }: { project: ProjectSummary }) {
   const query = useBoardQuery(project.key);
-  const showLoading = useShowLoading(query.isLoading);
   const [creatingIn, setCreatingIn] = useState<IssueStatus>();
-  if (query.isError) return <LoadFailed onRetry={query.refetch} />;
-  if (!query.data) return <Loading show={showLoading} />;
   const archived = project.archivedAt !== null;
   return (
     <>
-      <BoardLayout>
-        {query.data.map((column) => (
-          <StatusColumn
-            key={column.status}
-            column={column}
-            archived={archived}
-            onCreate={() => setCreatingIn(column.status)}
-          />
-        ))}
-      </BoardLayout>
+      <Zone
+        what="the board"
+        state={zoneState(query)}
+        retry={query.refetch}
+        page>
+        {(columns) => (
+          <BoardLayout>
+            {columns.map((column) => (
+              <StatusColumn
+                key={column.status}
+                column={column}
+                archived={archived}
+                onCreate={() => setCreatingIn(column.status)}
+              />
+            ))}
+          </BoardLayout>
+        )}
+      </Zone>
       {creatingIn && (
         <NewIssueDialog
           project={project}

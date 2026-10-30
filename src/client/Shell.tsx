@@ -13,10 +13,11 @@ import {
 import { useFailureToast } from "./failure";
 import { type NewProject, NewProjectDialog } from "./NewProjectDialog";
 import { Sidebar } from "./Sidebar";
+import { zoneState } from "./Zone";
 
 export function Shell() {
   const { data: me } = useMeQuery();
-  const { data: projects } = useProjectsQuery({ archived: false });
+  const projects = useProjectsQuery({ archived: false });
   const { pathname } = useLocation();
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
@@ -28,7 +29,8 @@ export function Shell() {
       rail={
         <Sidebar
           admin={me?.role === "admin"}
-          projects={projects}
+          projects={zoneState(projects)}
+          retryProjects={projects.refetch}
           pathname={pathname}
           archivedProjectOpen={archivedProjectOpen}
           onNewProject={() => setCreating(true)}

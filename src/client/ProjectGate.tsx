@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
 import { type Location, Navigate, useLocation } from "react-router";
 import { type ApiFailure, type Project, useProjectQuery } from "./api";
-import { LoadFailed, Loading } from "./LoadStates";
 import { NotFound } from "./screens/NotFound";
-import { useShowLoading } from "./useShowLoading";
+import { Zone, zoneState } from "./Zone";
 
 function canonicalAddress({ pathname, search, hash }: Location, typedKey: string, key: string) {
   const typedPrefix = `/project/${typedKey}`;
@@ -21,20 +20,24 @@ export function ProjectGate({
   children: (project: Project) => ReactNode;
 }) {
   const query = useProjectQuery(projectKey);
-  const showLoading = useShowLoading(query.isLoading);
   const location = useLocation();
   if ((query.error as ApiFailure | undefined)?.status === 404) return <NotFound />;
-  if (query.isError) return <LoadFailed onRetry={query.refetch} />;
-  if (!query.data) return <Loading show={showLoading} />;
-
-  const canonical = canonicalAddress(location, projectKey, query.data.key);
-  if (canonical) {
-    return (
-      <Navigate
-        to={canonical}
-        replace
-      />
-    );
-  }
-  return children(query.data);
+  return (
+    <Zone
+      what="this project"
+      state={zoneState(query)}
+      retry={query.refetch}
+      page>
+      {(project) => {
+        const canonical = canonicalAddress(location, projectKey, project.key);
+        if (!canonical) return children(project);
+        return (
+          <Navigate
+            to={canonical}
+            replace
+          />
+        );
+      }}
+    </Zone>
+  );
 }

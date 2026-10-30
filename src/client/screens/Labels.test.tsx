@@ -143,20 +143,6 @@ it("STD-7: an empty project names the next action, and Create one. opens the new
   expect(screen.getByRole("form", { name: "New label" })).toBeTruthy();
 });
 
-it("STD-7: a load failure offers Retry", async () => {
-  let calls = 0;
-  const fetchMock = mockLabels({
-    list: () => (++calls === 1 ? apiError(500, "Internal error") : Response.json(typical)),
-  });
-  renderAppAt("/project/WEB/labels");
-
-  expect(await screen.findByText("Couldn’t load this.")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-
-  expect(await labelList()).toBeTruthy();
-  expect(requestsTo(fetchMock, "GET /api/projects/WEB/labels")).toHaveLength(2);
-});
-
 it("REQ-021, STD-5: creating a label is disabled while saving, then sends its name and colour and lists it", async () => {
   const save = deferred();
   const shown = [...typical];

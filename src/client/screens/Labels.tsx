@@ -39,7 +39,7 @@ import {
 import { useFailureToast } from "../failure";
 import { ProjectGate } from "../ProjectGate";
 import { ProjectHeader } from "../ProjectHeader";
-import { useShowLoading } from "../useShowLoading";
+import { Zone, zoneState } from "../Zone";
 import { useReturnFocus } from "../useReturnFocus";
 
 type FieldErrors = { name?: string; color?: string };
@@ -110,7 +110,6 @@ export function Labels() {
 
 function LabelsPage({ project }: { project: Project }) {
   const labels = useLabelsQuery(project.key);
-  const showLoading = useShowLoading(labels.isLoading);
   const canEdit = project.archivedAt === null;
   const [creating, setCreating] = useState(false);
   const newLabel = useReturnFocus<HTMLButtonElement>(creating);
@@ -135,46 +134,40 @@ function LabelsPage({ project }: { project: Project }) {
         <p className="tl-field__help">
           Renaming or deleting a label changes every issue in this project that has it.
         </p>
-        {labels.isError ? (
-          <SettingsActions>
-            <FormStatus>Couldn’t load this.</FormStatus>
-            <Button
-              size="sm"
-              onClick={labels.refetch}>
-              Retry
-            </Button>
-          </SettingsActions>
-        ) : !labels.data ? (
-          showLoading && <FormStatus>Loading…</FormStatus>
-        ) : (
-          <>
-            {creating && (
-              <CreateForm
-                projectKey={project.key}
-                onClose={() => setCreating(false)}
-              />
-            )}
-            {labels.data.length === 0 ? (
-              !creating && (
-                <IssueEmpty
-                  action={canEdit ? "Create one." : undefined}
-                  onAction={() => setCreating(true)}>
-                  No labels yet.
-                </IssueEmpty>
-              )
-            ) : (
-              <SettingsList label="Labels">
-                {labels.data.map((label) => (
-                  <LabelRow
-                    key={label.id}
-                    label={label}
-                    canEdit={canEdit}
-                  />
-                ))}
-              </SettingsList>
-            )}
-          </>
-        )}
+        <Zone
+          what="labels"
+          state={zoneState(labels)}
+          retry={labels.refetch}>
+          {(loaded) => (
+            <>
+              {creating && (
+                <CreateForm
+                  projectKey={project.key}
+                  onClose={() => setCreating(false)}
+                />
+              )}
+              {loaded.length === 0 ? (
+                !creating && (
+                  <IssueEmpty
+                    action={canEdit ? "Create one." : undefined}
+                    onAction={() => setCreating(true)}>
+                    No labels yet.
+                  </IssueEmpty>
+                )
+              ) : (
+                <SettingsList label="Labels">
+                  {loaded.map((label) => (
+                    <LabelRow
+                      key={label.id}
+                      label={label}
+                      canEdit={canEdit}
+                    />
+                  ))}
+                </SettingsList>
+              )}
+            </>
+          )}
+        </Zone>
       </SettingsSection>
     </SettingsLayout>
   );

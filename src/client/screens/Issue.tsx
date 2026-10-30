@@ -48,11 +48,10 @@ import { useFailureToast } from "../failure";
 import { assigneeOptions, memberNames, toggled } from "../IssueCells";
 import { issuePriorities, issueStatuses } from "../../contract";
 import { priorities, statuses } from "../issue-fields";
-import { LoadFailed, Loading } from "../LoadStates";
 import { ProjectGate } from "../ProjectGate";
 import { ProjectHeader } from "../ProjectHeader";
-import { useShowLoading } from "../useShowLoading";
 import { useReturnFocus } from "../useReturnFocus";
+import { Zone, zoneState } from "../Zone";
 import { NotFound } from "./NotFound";
 
 export function IssuePage() {
@@ -93,15 +92,22 @@ function IssueGate({ id }: { id: string }) {
   );
 }
 
-function IssueLoad({ query, project }: { query: ReturnType<typeof useIssueQuery>; project: Project }) {
-  const showLoading = useShowLoading(query.isLoading);
-  if (query.isError) return <LoadFailed onRetry={query.refetch} />;
-  if (!query.data) return <Loading show={showLoading} />;
+type IssueQuery = { data?: Issue; isError: boolean; refetch: () => void };
+
+function IssueLoad({ query, project }: { query: IssueQuery; project: Project }) {
   return (
-    <IssueView
-      issue={query.data}
-      project={project}
-    />
+    <Zone
+      what="this issue"
+      state={zoneState(query)}
+      retry={query.refetch}
+      page>
+      {(issue) => (
+        <IssueView
+          issue={issue}
+          project={project}
+        />
+      )}
+    </Zone>
   );
 }
 

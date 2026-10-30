@@ -1,9 +1,8 @@
 import { Link } from "react-router";
 import { AppBar, AppBarTitle, IssueEmpty, SettingsLayout, Table } from "../../components/ui/track-lite";
-import { useProjectsQuery } from "../api";
+import { type ProjectSummary, useProjectsQuery } from "../api";
 import { formatDate } from "../dates";
-import { LoadFailed, Loading } from "../LoadStates";
-import { useShowLoading } from "../useShowLoading";
+import { Zone, zoneState } from "../Zone";
 
 export function ArchivedProjects() {
   return (
@@ -18,11 +17,20 @@ export function ArchivedProjects() {
 
 function ArchivedList() {
   const query = useProjectsQuery({ archived: true });
-  const showLoading = useShowLoading(query.isLoading);
 
-  if (query.isError) return <LoadFailed onRetry={query.refetch} />;
-  if (!query.data) return <Loading show={showLoading} />;
-  if (query.data.length === 0) {
+  return (
+    <Zone
+      what="archived projects"
+      state={zoneState(query)}
+      retry={query.refetch}
+      page>
+      {(projects) => <ArchivedTable projects={projects} />}
+    </Zone>
+  );
+}
+
+function ArchivedTable({ projects }: { projects: ProjectSummary[] }) {
+  if (projects.length === 0) {
     return (
       <SettingsLayout>
         <IssueEmpty>No archived projects.</IssueEmpty>
@@ -40,7 +48,7 @@ function ArchivedList() {
           </tr>
         </thead>
         <tbody>
-          {query.data.map((project) => (
+          {projects.map((project) => (
             <tr key={project.key}>
               <td>
                 <Link to={`/project/${project.key}`}>{`${project.name} · ${project.key}`}</Link>

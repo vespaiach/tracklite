@@ -16,8 +16,7 @@ import { formatExact } from "../dates";
 import { Assignees, assignedTo, LabelPills, UpdatedAt } from "../IssueCells";
 import { priorities, statuses } from "../issue-fields";
 import { useRouterClick } from "../links";
-import { LoadFailed, Loading } from "../LoadStates";
-import { useShowLoading } from "../useShowLoading";
+import { Zone, zoneState } from "../Zone";
 
 const columns = "14px 64px minmax(240px, 1fr) minmax(100px, 140px) minmax(0, 180px) 72px 100px";
 
@@ -33,9 +32,7 @@ function groupId(status: IssueStatus) {
 
 export function MyIssues() {
   const myIssues = useMyIssuesQuery();
-  const showLoading = useShowLoading(myIssues.isLoading);
-  const groups = myIssues.data;
-  const total = groups?.reduce((sum, group) => sum + group.count, 0) ?? 0;
+  const total = myIssues.data?.reduce((sum, group) => sum + group.count, 0) ?? 0;
 
   return (
     <>
@@ -48,17 +45,21 @@ export function MyIssues() {
           />
         )}
       </AppBar>
-      {myIssues.isError && !groups ? (
-        <LoadFailed onRetry={myIssues.refetch} />
-      ) : !groups ? (
-        <Loading show={showLoading} />
-      ) : groups.length === 0 ? (
-        <SettingsLayout>
-          <FormStatus>Nothing assigned to you. Open a project to find or create issues.</FormStatus>
-        </SettingsLayout>
-      ) : (
-        <IssueGroups groups={groups} />
-      )}
+      <Zone
+        what="your issues"
+        state={zoneState(myIssues)}
+        retry={myIssues.refetch}
+        page>
+        {(groups) =>
+          groups.length === 0 ? (
+            <SettingsLayout>
+              <FormStatus>Nothing assigned to you. Open a project to find or create issues.</FormStatus>
+            </SettingsLayout>
+          ) : (
+            <IssueGroups groups={groups} />
+          )
+        }
+      </Zone>
     </>
   );
 }
