@@ -2,7 +2,8 @@ import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createMember, createProject, uniqueProjectKey } from "../../test/factories";
 import { db } from "../shared/db";
-import { createProject as create, deleteProject, updateProject, writableProject } from "./projects";
+import { createProject as create, deleteProject, updateProject } from "./projects";
+import { writableProject } from "./repository";
 import { projects } from "./tables";
 import { parseProjectKey } from "./schemas";
 

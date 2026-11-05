@@ -1,115 +1,68 @@
 import "server-only";
-import { eq, sql } from "drizzle-orm";
-import { DomainError } from "../shared/domain-error";
+import { randomUUID } from "node:crypto";
 import { db } from "../shared/db";
 import type { Transaction } from "../shared/transaction";
-import { publish } from "../shared/events";
+import { publishAll } from "../shared/events";
 import { assertAdmin, editConflict, type Member } from "../identity";
-import { byProjectKey, projectResponse } from "../queries";
-import { projectKeys, projects } from "./tables";
-import { needsAdmin, renamesArchived } from "./rules";
+import { updatedProject } from "../queries";
+import {
+  changeSettings,
+  descriptionSaveOf,
+  needsAdmin,
+  newProject,
+  type Project,
+  saveDescription,
+} from "./model";
+import { deleteProjectRow, loadProject, saveProject } from "./repository";
 import type { NewProject, ProjectChanges, ProjectKey } from "./schemas";
-
-function refuseFields(fields: Record<string, string>) {
-  if (Object.keys(fields).length > 0)
-    throw new DomainError("invalid", "Check the highlighted fields", fields);
-}
 
 export async function createProject(actor: Member, { name, key }: NewProject) {
   assertAdmin(actor);
   return db.transaction(async (tx) => {
-    const reserved = await tx.insert(projectKeys).values({ key }).onConflictDoNothing().returning();
-    if (reserved.length === 0) refuseFields({ key: "Key already used" });
+    const project = newProject(actor, { id: randomUUID(), key, name });
 
-    const [project] = await tx.insert(projects).values({ key, name, createdBy: actor.id }).returning();
-    return projectResponse(tx, project);
+    await saveProject(tx, null, project);
+
+    return updatedProject(tx, project.id);
   });
 }
 
+async function describedChange(
+  tx: Transaction,
+  actor: Member,
+  project: Project,
+  { description, descriptionVersion }: { description: string; descriptionVersion: number },
+) {
+  const change = saveDescription(project, actor, description, descriptionVersion);
+  if ("conflictWith" in change) throw await editConflict(tx, change.conflictWith);
+  return change;
+}
+
 export async function updateProject(actor: Member, key: ProjectKey | undefined, changes: ProjectChanges) {
-  const { description, descriptionVersion } = changes;
-  if (description !== undefined && descriptionVersion !== undefined)
-    return saveDescription(actor, key, description, descriptionVersion);
+  const descriptionSave = descriptionSaveOf(changes);
 
   if (needsAdmin(changes)) assertAdmin(actor);
 
   return db.transaction(async (tx) => {
-    const [project] = await tx.select().from(projects).where(byProjectKey(key)).for("update");
-    if (!project) throw new DomainError("notFound", "Not found");
+    const before = await loadProject(tx, key);
 
-    if (renamesArchived(project, changes)) throw new DomainError("forbidden", "This project is archived");
+    const { project, events } = descriptionSave
+      ? await describedChange(tx, actor, before, descriptionSave)
+      : changeSettings(before, changes);
 
-    const update = nameAndArchiveUpdate(changes);
-    if (Object.keys(update).length === 0) return projectResponse(tx, project);
+    await saveProject(tx, before, project);
 
-    const [updated] = await tx.update(projects).set(update).where(eq(projects.id, project.id)).returning();
-    return projectResponse(tx, updated);
+    await publishAll(tx, events);
+
+    return updatedProject(tx, project.id);
   });
-}
-
-function nameAndArchiveUpdate({ name, archived }: ProjectChanges) {
-  return {
-    ...(name !== undefined && { name }),
-    ...(archived === true && { archivedAt: sql`coalesce(${projects.archivedAt}, now())` }),
-    ...(archived === false && { archivedAt: null }),
-  };
 }
 
 export async function deleteProject(actor: Member, key: ProjectKey | undefined) {
   assertAdmin(actor);
-  const deleted = await db.delete(projects).where(byProjectKey(key)).returning({ id: projects.id });
-  if (deleted.length === 0) throw new DomainError("notFound", "Not found");
-}
+  await db.transaction(async (tx) => {
+    const project = await loadProject(tx, key);
 
-async function saveDescription(
-  member: Member,
-  key: ProjectKey | undefined,
-  description: string,
-  descriptionVersion: number,
-) {
-  return db.transaction(async (tx) => {
-    const project = await writableProject(tx, key, "update");
-
-    if (project.descriptionVersion !== descriptionVersion)
-      throw await editConflict(tx, project.descriptionEditedBy);
-
-    const [updated] = await tx
-      .update(projects)
-      .set({
-        description,
-        descriptionVersion: sql`${projects.descriptionVersion} + 1`,
-        descriptionEditedBy: member.id,
-      })
-      .where(eq(projects.id, project.id))
-      .returning();
-
-    await publish(tx, {
-      type: "DescriptionSaved",
-      actorId: member.id,
-      target: { projectId: project.id },
-      text: description,
-    });
-
-    return projectResponse(tx, updated);
+    await deleteProjectRow(tx, project);
   });
-}
-
-export async function writableProject(
-  tx: Transaction,
-  key: ProjectKey | undefined,
-  lock: "share" | "update" = "share",
-) {
-  const [project] = await tx.select().from(projects).where(byProjectKey(key)).for(lock);
-  if (!project) throw new DomainError("notFound", "Not found");
-  if (project.archivedAt !== null) throw new DomainError("forbidden", "This project is archived");
-  return project;
-}
-
-export async function takeIssueNumber(tx: Transaction, projectId: string) {
-  const [{ number }] = await tx
-    .update(projects)
-    .set({ nextIssueNumber: sql`${projects.nextIssueNumber} + 1` })
-    .where(eq(projects.id, projectId))
-    .returning({ number: sql<number>`${projects.nextIssueNumber} - 1` });
-  return number;
 }
