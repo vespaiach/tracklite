@@ -24,6 +24,12 @@ const tableReadsAgainstMap = [
   "src/server/projects/projects.ts -> issues",
   "src/server/projects/projects.ts -> notifications",
 ];
+const modelImportBans = [/^drizzle-orm(?:\/|$)/, /^next(?:\/|$)/];
+const modelModuleBans = [
+  "src/server/shared/db",
+  "src/server/shared/transaction",
+  "src/server/shared/api-route",
+];
 const tableWrite = /\.(?:insert|update|delete)\((\w+)\)/g;
 const importSpecifier = /(?:\bfrom|\bimport\(?|\bvi\.mock\()\s*["']([^"']+)["']/g;
 
@@ -34,12 +40,12 @@ const sourceFiles = execFileSync("git", ["ls-files", "-z", "src/server", "src/ap
   .filter((file) => /\.tsx?$/.test(file));
 const imports = sourceFiles.flatMap(relativeImportsOf);
 
-function relativeImportsOf(file: string): Import[] {
-  const specifiers = [...readFileSync(file, "utf8").matchAll(importSpecifier)].map(
-    ([, specifier]) => specifier,
-  );
+function specifiersOf(file: string) {
+  return [...readFileSync(file, "utf8").matchAll(importSpecifier)].map(([, specifier]) => specifier);
+}
 
-  return specifiers
+function relativeImportsOf(file: string): Import[] {
+  return specifiersOf(file)
     .filter((specifier) => specifier.startsWith("."))
     .map((specifier) => ({ file, specifier, target: modulePath(join(dirname(file), specifier)) }));
 }
@@ -107,7 +113,18 @@ function foreignTableWrites(owners: Map<string, string>) {
     .map(({ file, write, owner }) => `${file} calls ${write} on a table ${owner} owns`);
 }
 
-function describeImport({ file, specifier }: Import) {
+function bannedModelImports() {
+  return sourceFiles
+    .filter((file) => /^src\/server\/.+\/(?:model|rules)\.ts$/.test(file))
+    .flatMap((file) => specifiersOf(file).map((specifier) => ({ file, specifier })))
+    .filter(({ file, specifier }) =>
+      specifier.startsWith(".")
+        ? modelModuleBans.includes(modulePath(join(dirname(file), specifier)))
+        : modelImportBans.some((ban) => ban.test(specifier)),
+    );
+}
+
+function describeImport({ file, specifier }: Pick<Import, "file" | "specifier">) {
   return `${file} imports "${specifier}"`;
 }
 
@@ -124,4 +141,8 @@ it("M16: a context writes only its own tables", () => {
 
   expect(owners.size).toBe(19);
   expect(foreignTableWrites(owners)).toEqual([]);
+});
+
+it("G02: model and rules files import no database, HTTP or framework code", () => {
+  expect(bannedModelImports().map(describeImport)).toEqual([]);
 });
