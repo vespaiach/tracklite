@@ -1,11 +1,15 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "../shared/db";
+import { publishAll } from "../shared/events";
 import type { Member } from "../identity";
 import { type ProjectKey, takeIssueNumber, writableProject } from "../projects";
 import { issues } from "./tables";
 import type { NewIssue } from "./schemas";
-import { addAssignees, findIssue, topOfColumn } from "./rows";
+import { findIssue, updatedIssue } from "./rows";
+import { newIssue } from "./model";
+import { assigneeCandidates, firstPositionIn, saveIssue } from "./repository";
 
 export async function createIssue(
   actor: Member,
@@ -20,27 +24,22 @@ export async function createIssue(
 
     const number = await takeIssueNumber(tx, project.id);
 
-    const position = await topOfColumn(tx, project.id, status);
+    const firstInColumn = await firstPositionIn(tx, project.id, status);
 
-    const [inserted] = await tx
-      .insert(issues)
-      .values({
-        projectId: project.id,
-        number,
-        title,
-        status,
-        priority: "none",
-        position,
-        createdBy: actor.id,
-        requestId,
-      })
-      .returning({ id: issues.id });
+    const candidates = await assigneeCandidates(tx, assignees);
 
-    await addAssignees(tx, actor, inserted.id, assignees);
+    const { issue, events } = newIssue(
+      actor,
+      { id: randomUUID(), projectId: project.id, number, requestId, title, status },
+      firstInColumn,
+      assignees,
+      candidates,
+    );
 
-    const issue = await findIssue(tx, eq(issues.id, inserted.id));
-    if (!issue) throw new Error("Created issue not found");
+    await saveIssue(tx, null, issue);
 
-    return { issue, created: true };
+    await publishAll(tx, events);
+
+    return { issue: await updatedIssue(tx, issue.id), created: true };
   });
 }

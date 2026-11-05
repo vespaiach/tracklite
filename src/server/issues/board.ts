@@ -1,95 +1,33 @@
 import "server-only";
-import { and, asc, desc, eq, gt, ne, type SQL, sql } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "../shared/db";
-import type { Transaction } from "../shared/transaction";
+import { publishAll } from "../shared/events";
 import type { Member } from "../identity";
 import { issues } from "./tables";
-import { type ProjectKey, projects } from "../projects";
+import type { ProjectKey } from "../projects";
 import { type Board, type BoardIssue, type IssueStatus, issueStatuses } from "../../contract";
 import type { IssueId, IssueMove } from "./schemas";
 import {
   assigneesFor,
   assigneesOf,
-  byIssueId,
-  type IssueUpdate,
-  issueGone,
   labelsFor,
   labelsOf,
-  lockedIssue,
   readableProject,
   recentlyClosedOrOpen,
   updatedIssue,
 } from "./rows";
-import { positionBetween } from "./rules";
-
-async function positionIn(
-  tx: Transaction,
-  issue: typeof issues.$inferSelect,
-  status: IssueStatus,
-  place: IssueMove["place"],
-) {
-  const otherCards = and(
-    eq(issues.projectId, issue.projectId),
-    eq(issues.status, status),
-    ne(issues.id, issue.id),
-  );
-
-  if (place === "bottom") return bottomOf(tx, otherCards);
-
-  const afterPosition = place === "top" ? null : await positionOf(tx, otherCards, place.after);
-
-  const nextPosition = await firstPositionAfter(tx, otherCards, afterPosition);
-
-  return positionBetween(afterPosition, nextPosition);
-}
-
-async function bottomOf(tx: Transaction, cards: SQL | undefined) {
-  const [last] = await tx
-    .select({ position: issues.position })
-    .from(issues)
-    .where(cards)
-    .orderBy(desc(issues.position), desc(issues.id))
-    .limit(1);
-  return positionBetween(last?.position ?? null, null);
-}
-
-async function positionOf(tx: Transaction, cards: SQL | undefined, id: IssueId | undefined) {
-  const where = byIssueId(id);
-  if (!where) return null;
-  const [card] = await tx
-    .select({ position: issues.position })
-    .from(issues)
-    .innerJoin(projects, eq(projects.id, issues.projectId))
-    .where(and(cards, where));
-  return card?.position ?? null;
-}
-
-async function firstPositionAfter(tx: Transaction, cards: SQL | undefined, position: string | null) {
-  const [next] = await tx
-    .select({ position: issues.position })
-    .from(issues)
-    .where(position === null ? cards : and(cards, gt(issues.position, position)))
-    .orderBy(asc(issues.position), asc(issues.id))
-    .limit(1);
-  return next?.position ?? null;
-}
+import { move } from "./model";
+import { loadIssue, neighboursAt, saveIssue } from "./repository";
 
 export async function moveIssue(_actor: Member, id: IssueId | undefined, { status, place }: IssueMove) {
-  const where = byIssueId(id);
-  if (!where) throw issueGone();
-
   return db.transaction(async (tx) => {
-    const issue = await lockedIssue(tx, where);
+    const before = await loadIssue(tx, id);
 
-    const position = await positionIn(tx, issue, status, place);
+    const { issue, events } = move(before, status, await neighboursAt(tx, before, status, place));
 
-    const statusChange: IssueUpdate =
-      status === issue.status ? {} : { status, statusChangedAt: sql`now()`, updatedAt: sql`now()` };
+    await saveIssue(tx, before, issue);
 
-    await tx
-      .update(issues)
-      .set({ position, ...statusChange })
-      .where(eq(issues.id, issue.id));
+    await publishAll(tx, events);
 
     return updatedIssue(tx, issue.id);
   });

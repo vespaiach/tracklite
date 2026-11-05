@@ -7,7 +7,7 @@ import {
   mayDeleteIssue,
   positionBetween,
   sameLabels,
-} from "./rules";
+} from "./model";
 
 const issue = { title: "Fix login", status: "backlog", priority: "none" } as const;
 
@@ -61,12 +61,8 @@ it("REQ-023.1, REQ-023.2: the creator or an admin may delete an issue; another m
 });
 
 it("REQ-019.3, REQ-019.4: a new assignee set adds the members not yet assigned and removes the ones left out", () => {
-  const current = [
-    { memberId: "jo-id", username: "jo" },
-    { memberId: "sam-id", username: "sam" },
-  ];
-  const next = ["alex", "jo"] as Username[];
+  const current = ["jo-id", "sam-id"];
 
-  expect(assigneeChange(current, next)).toEqual({ added: ["alex"], removedIds: ["sam-id"] });
-  expect(assigneeChange(current, ["jo", "sam"] as Username[])).toEqual({ added: [], removedIds: [] });
+  expect(assigneeChange(current, ["alex-id", "jo-id"])).toEqual({ added: ["alex-id"], removed: ["sam-id"] });
+  expect(assigneeChange(current, ["jo-id", "sam-id"])).toEqual({ added: [], removed: [] });
 });

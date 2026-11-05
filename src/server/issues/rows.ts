@@ -1,19 +1,15 @@
 import "server-only";
-import { and, asc, eq, inArray, isNull, notInArray, or, type SQL, sql } from "drizzle-orm";
-import { alias, type PgUpdateSetSource } from "drizzle-orm/pg-core";
+import { and, asc, eq, inArray, notInArray, or, type SQL, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import type { Executor, Transaction } from "../shared/transaction";
-import { publish } from "../shared/events";
-import { type Member, memberSummary, members, type Username } from "../identity";
-import { byProjectKey, type ProjectKey, writableProject, labels, projects } from "../projects";
+import { memberSummary, members } from "../identity";
+import { byProjectKey, type ProjectKey, labels, projects } from "../projects";
 import { issueAssignees, issueLabels, issues } from "./tables";
 import { mentions } from "../notifications/tables";
 import type { Issue, IssueStatus } from "../../contract";
 import type { IssueId } from "./schemas";
-import { positionBetween } from "./rules";
-
-export type IssueUpdate = PgUpdateSetSource<typeof issues>;
 
 const closedStatuses: IssueStatus[] = ["done", "canceled"];
 
@@ -101,31 +97,6 @@ export function byIssueId(id: IssueId | undefined) {
   return and(eq(projects.key, key as ProjectKey), eq(issues.number, Number(number)));
 }
 
-export async function topOfColumn(tx: Transaction, projectId: string, status: IssueStatus) {
-  const [first] = await tx
-    .select({ position: issues.position })
-    .from(issues)
-    .where(and(eq(issues.projectId, projectId), eq(issues.status, status)))
-    .orderBy(asc(issues.position), asc(issues.id))
-    .limit(1);
-  return positionBetween(null, first?.position ?? null);
-}
-
-export async function lockedIssue(tx: Transaction, where: SQL) {
-  const [target] = await tx
-    .select({ id: issues.id, projectKey: projects.key })
-    .from(issues)
-    .innerJoin(projects, eq(projects.id, issues.projectId))
-    .where(where);
-  if (!target) throw issueGone();
-
-  await writableProject(tx, target.projectKey);
-
-  const [issue] = await tx.select().from(issues).where(eq(issues.id, target.id)).for("update");
-  if (!issue) throw issueGone();
-  return issue;
-}
-
 export async function updatedIssue(tx: Transaction, issueId: string) {
   const updated = await findIssue(tx, eq(issues.id, issueId));
   if (!updated) throw issueGone();
@@ -174,25 +145,6 @@ export async function assigneesOf(executor: Executor, issueIds: string[]) {
 
 export function assigneesFor(assigneeRows: Awaited<ReturnType<typeof assigneesOf>>, issueId: string) {
   return assigneeRows.filter((assignee) => assignee.issueId === issueId).map(memberSummary);
-}
-
-export async function addAssignees(tx: Transaction, actor: Member, issueId: string, usernames: Username[]) {
-  if (usernames.length === 0) return;
-
-  const added = await tx
-    .select({ id: members.id })
-    .from(members)
-    .where(and(inArray(members.username, usernames), isNull(members.deactivatedAt)));
-  if (added.length !== usernames.length) {
-    throw new DomainError("invalid", "Check the highlighted fields", {
-      assignees: "Choose an active member",
-    });
-  }
-
-  const assigneeIds = added.map((member) => member.id);
-  await tx.insert(issueAssignees).values(assigneeIds.map((memberId) => ({ issueId, memberId })));
-
-  await publish(tx, { type: "IssueAssigned", actorId: actor.id, issueId, assigneeIds });
 }
 
 export function recentlyClosedOrOpen() {

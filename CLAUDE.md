@@ -93,7 +93,7 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 - Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `projects`; `notifications` → `comments`, `issues`, `projects`; every context → `identity`, `shared/`. No other context imports `notifications`; `shared/api-route.ts` and `scripts/worker.ts` import it so its event subscription is registered. No cycles.
 - A context's request schemas are in its `schemas.ts`; tests sit next to their source.
 - Each context owns its tables (§1.8 table): only the owner inserts, updates or deletes them; others may read them in joins through the owner's `index.ts`.
-- Domain model (§1.8, M16): identifiers are branded types parsed in `schemas.ts` (`IssueId`, `ProjectKey`, `Username`, `RequestId`, `Uuid`); decisions that need no database live in each context's `rules.ts` as pure functions (load → decide → write); contexts publish domain events from `shared/events.ts` inside their transaction and `notifications` subscribes, and `publish` throws if nothing subscribed. Use the §1.8 glossary's terms in code.
+- Domain model (§1.8, M16): identifiers are branded types parsed in `schemas.ts` (`IssueId`, `ProjectKey`, `Username`, `RequestId`, `Uuid`); decisions that need no database are pure functions (load → decide → write), in the aggregate's `model.ts` where a context has one (`issues`; tech design §1.8) and in `rules.ts` elsewhere; contexts publish domain events from `shared/events.ts` inside their transaction and `notifications` subscribes, and `publish` throws if nothing subscribed. Use the §1.8 glossary's terms in code.
 
 **API conventions (§3.1).**
 - Issues are addressed by ID (`WEB-42`), projects by key, members by username, all matched ignoring case.
