@@ -83,6 +83,12 @@ export async function listProjects(_actor: Member, archived: boolean): Promise<P
   );
 }
 
+export async function updatedProject(executor: Executor, id: string) {
+  const [project] = await executor.select().from(projects).where(eq(projects.id, id));
+  if (!project) throw new DomainError("notFound", "Not found");
+  return projectResponse(executor, project);
+}
+
 export async function getProject(_actor: Member, key: ProjectKey | undefined) {
   const [project] = await db.select().from(projects).where(byProjectKey(key));
   if (!project) throw new DomainError("notFound", "Not found");

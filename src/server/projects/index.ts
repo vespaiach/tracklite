@@ -1,5 +1,6 @@
 export { createLabel, deleteLabel, updateLabel } from "./labels";
-export { createProject, deleteProject, takeIssueNumber, updateProject, writableProject } from "./projects";
+export { createProject, deleteProject, updateProject } from "./projects";
+export { takeIssueNumber, writableProject } from "./repository";
 export {
   LabelChanges,
   NewLabel,
