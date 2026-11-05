@@ -5,11 +5,13 @@ import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import type { Executor, Transaction } from "../shared/transaction";
 import { memberSummary, members } from "../identity";
-import { byProjectKey, type ProjectKey, labels, projects } from "../projects";
-import { issueAssignees, issueLabels, issues } from "./tables";
+import { labels, projects } from "../projects/tables";
+import type { ProjectKey } from "../projects/schemas";
+import { issueAssignees, issueLabels, issues } from "../issues/tables";
+import type { IssueId } from "../issues/schemas";
 import { mentions } from "../notifications/tables";
 import type { Issue, IssueStatus } from "../../contract";
-import type { IssueId } from "./schemas";
+import { byProjectKey } from "./project";
 
 const closedStatuses: IssueStatus[] = ["done", "canceled"];
 

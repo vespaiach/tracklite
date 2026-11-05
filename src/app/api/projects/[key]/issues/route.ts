@@ -1,7 +1,8 @@
 import type { Issue, IssueListPage } from "../../../../../contract";
 import { apiRoute } from "../../../../../server/shared/api-route";
 import { parseProjectKey } from "../../../../../server/projects";
-import { createIssue, listIssues, NewIssue } from "../../../../../server/issues";
+import { createIssue, NewIssue } from "../../../../../server/issues";
+import { listIssues } from "../../../../../server/queries";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]/issues">) {
   const key = parseProjectKey((await params).key);

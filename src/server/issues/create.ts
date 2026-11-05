@@ -7,7 +7,7 @@ import type { Member } from "../identity";
 import { type ProjectKey, takeIssueNumber, writableProject } from "../projects";
 import { issues } from "./tables";
 import type { NewIssue } from "./schemas";
-import { findIssue, updatedIssue } from "./rows";
+import { findIssue, updatedIssue } from "../queries";
 import { newIssue } from "./model";
 import { assigneeCandidates, firstPositionIn, saveIssue } from "./repository";
 

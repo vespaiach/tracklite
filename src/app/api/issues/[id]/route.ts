@@ -1,6 +1,7 @@
 import type { Issue } from "../../../../contract";
 import { apiRoute } from "../../../../server/shared/api-route";
-import { deleteIssue, getIssue, IssueChange, parseIssueId, updateIssue } from "../../../../server/issues";
+import { deleteIssue, IssueChange, parseIssueId, updateIssue } from "../../../../server/issues";
+import { getIssue } from "../../../../server/queries";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/issues/[id]">) {
   const id = parseIssueId((await params).id);

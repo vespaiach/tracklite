@@ -1,5 +1,6 @@
 import type { Label } from "../../../../../contract";
-import { createLabel, listLabels, NewLabel, parseProjectKey } from "../../../../../server/projects";
+import { createLabel, NewLabel, parseProjectKey } from "../../../../../server/projects";
+import { listLabels } from "../../../../../server/queries";
 import { apiRoute } from "../../../../../server/shared/api-route";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]/labels">) {

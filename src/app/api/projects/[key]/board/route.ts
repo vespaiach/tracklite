@@ -1,7 +1,7 @@
 import type { Board } from "../../../../../contract";
 import { apiRoute } from "../../../../../server/shared/api-route";
 import { parseProjectKey } from "../../../../../server/projects";
-import { getBoard } from "../../../../../server/issues";
+import { getBoard } from "../../../../../server/queries";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]/board">) {
   const key = parseProjectKey((await params).key);

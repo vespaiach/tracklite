@@ -1,23 +1,16 @@
 import "server-only";
-import { asc, eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { DrizzleQueryError } from "drizzle-orm/errors";
 import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import type { Uuid } from "../shared/ids";
 import type { Transaction } from "../shared/transaction";
-import { byProjectKey, writableProject } from "./projects";
+import { writableProject } from "./projects";
 import type { LabelChanges, NewLabel, ProjectKey } from "./schemas";
 import type { Label } from "../../contract";
-import { issueLabels } from "../issues/tables";
+import { findLabel } from "../queries";
 import { labels, projects } from "./tables";
 import type { Member } from "../identity";
-
-const labelResponse = {
-  id: labels.id,
-  name: labels.name,
-  color: labels.color,
-  issueCount: sql<number>`(select count(*)::int from ${issueLabels} where ${issueLabels.labelId} = ${labels.id})`,
-} satisfies Record<keyof Label, unknown>;
 
 function labelGone() {
   return new DomainError("notFound", "That label no longer exists");
@@ -55,16 +48,6 @@ async function lockLabelProject(tx: Transaction, id: Uuid | undefined) {
   return id;
 }
 
-export async function listLabels(_actor: Member, projectKey: ProjectKey | undefined): Promise<Label[]> {
-  const [project] = await db.select({ id: projects.id }).from(projects).where(byProjectKey(projectKey));
-  if (!project) throw new DomainError("notFound", "Not found");
-  return db
-    .select(labelResponse)
-    .from(labels)
-    .where(eq(labels.projectId, project.id))
-    .orderBy(asc(sql`lower(${labels.name})`), asc(labels.name));
-}
-
 export async function createLabel(
   _actor: Member,
   projectKey: ProjectKey | undefined,
@@ -94,7 +77,7 @@ export async function updateLabel(
       await refusingDuplicateNames(tx.update(labels).set(changes).where(eq(labels.id, labelId)));
     }
 
-    const [label] = await tx.select(labelResponse).from(labels).where(eq(labels.id, labelId));
+    const label = await findLabel(tx, labelId);
     if (!label) throw labelGone();
     return label;
   });

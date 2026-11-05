@@ -5,7 +5,7 @@ import type { Transaction } from "../shared/transaction";
 import { publishAll } from "../shared/events";
 import { editConflict, type Member } from "../identity";
 import type { IssueChange, IssueId } from "./schemas";
-import { updatedIssue } from "./rows";
+import { updatedIssue } from "../queries";
 import {
   assign,
   changePriority,
