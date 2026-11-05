@@ -25,7 +25,11 @@ const tableReadsAgainstMap = [
   "src/server/projects/projects.ts -> notifications",
 ];
 const modelImportBans = [/^drizzle-orm(?:\/|$)/, /^next(?:\/|$)/];
-const modelModuleBans = ["src/server/shared/db", "src/server/shared/transaction", "src/server/shared/api-route"];
+const modelModuleBans = [
+  "src/server/shared/db",
+  "src/server/shared/transaction",
+  "src/server/shared/api-route",
+];
 const tableWrite = /\.(?:insert|update|delete)\((\w+)\)/g;
 const importSpecifier = /(?:\bfrom|\bimport\(?|\bvi\.mock\()\s*["']([^"']+)["']/g;
 
@@ -120,7 +124,7 @@ function bannedModelImports() {
     );
 }
 
-function describeImport({ file, specifier }: Import) {
+function describeImport({ file, specifier }: Pick<Import, "file" | "specifier">) {
   return `${file} imports "${specifier}"`;
 }
 
