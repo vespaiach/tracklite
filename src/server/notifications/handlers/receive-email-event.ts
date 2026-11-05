@@ -1,11 +1,11 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
-import { readConfig } from "../shared/config";
-import { db } from "../shared/db";
-import { logInfo } from "../shared/log";
-import { markInvitationBounced } from "../identity";
-import { notificationDeliveries } from "./tables";
+import { readConfig } from "../../shared/config";
+import { db } from "../../shared/db";
+import { logInfo } from "../../shared/log";
+import { markInvitationBounced } from "../../identity";
+import { notificationDeliveries } from "../tables";
 
 const toleranceSeconds = 5 * 60;
 

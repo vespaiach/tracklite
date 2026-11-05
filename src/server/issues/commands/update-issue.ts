@@ -1,11 +1,10 @@
 import "server-only";
-import { DomainError } from "../shared/domain-error";
-import { db } from "../shared/db";
-import type { Transaction } from "../shared/transaction";
-import { publishAll } from "../shared/events";
-import { editConflict, type Member } from "../identity";
-import type { IssueChange, IssueId } from "./schemas";
-import { updatedIssue } from "../queries";
+import { db } from "../../shared/db";
+import type { Transaction } from "../../shared/transaction";
+import { publishAll } from "../../shared/events";
+import { editConflict, type Member } from "../../identity";
+import type { IssueChange, IssueId } from "../schemas";
+import { updatedIssue } from "../../queries";
 import {
   assign,
   changePriority,
@@ -15,19 +14,11 @@ import {
   type Issue,
   type IssueChangeResult,
   type IssueEdit,
-  mayDeleteIssue,
   relabel,
   retitle,
   saveDescription,
-} from "./model";
-import {
-  assigneeCandidates,
-  deleteIssueRow,
-  firstPositionIn,
-  loadIssue,
-  projectLabelIds,
-  saveIssue,
-} from "./repository";
+} from "../model";
+import { assigneeCandidates, firstPositionIn, loadIssue, projectLabelIds, saveIssue } from "../repository";
 
 async function applyEdit(
   tx: Transaction,
@@ -77,17 +68,5 @@ export async function updateIssue(actor: Member, id: IssueId | undefined, change
     await publishAll(tx, events);
 
     return updatedIssue(tx, issue.id);
-  });
-}
-
-export async function deleteIssue(actor: Member, id: IssueId | undefined) {
-  await db.transaction(async (tx) => {
-    const issue = await loadIssue(tx, id);
-
-    if (!mayDeleteIssue(actor, issue.createdBy)) {
-      throw new DomainError("forbidden", "You don't have permission to do that.");
-    }
-
-    await deleteIssueRow(tx, issue);
   });
 }

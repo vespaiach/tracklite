@@ -11,7 +11,7 @@ import { parseIssueId, updateIssue, issues } from "../issues";
 import { notificationSenders } from "./notification-channels";
 import { members, type Member, parseUsername } from "../identity";
 import { notificationBatches, notificationDeliveries, notifications, workerHeartbeats } from "./tables";
-import { runWorker, sendDueDeliveries } from "./worker";
+import { runWorker, sendDueDeliveries } from "./handlers/run-worker";
 
 beforeEach(() => {
   outbox.sent = [];

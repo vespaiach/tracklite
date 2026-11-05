@@ -1,9 +1,9 @@
 import "server-only";
-import { logError } from "../shared/log";
-import { clientErrorLimitReached, recordClientErrorReport } from "./limits";
-import { describeUserAgent, maskIp } from "./rules";
-import type { ClientErrorReport } from "./schemas";
-import type { Member } from "./sessions";
+import { logError } from "../../shared/log";
+import { clientErrorLimitReached, recordClientErrorReport } from "../limits";
+import { describeUserAgent, maskIp } from "../rules";
+import type { ClientErrorReport } from "../schemas";
+import type { Member } from "../sessions";
 
 type Sender = { ip: string; userAgent: string };
 
