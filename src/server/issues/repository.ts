@@ -7,7 +7,7 @@ import { labels, projects, writableProject } from "../projects";
 import type { IssueStatus } from "../../contract";
 import { issueAssignees, issueLabels, issues } from "./tables";
 import type { IssueId, IssueMove } from "./schemas";
-import { byIssueId, issueGone } from "./rows";
+import { byIssueId, issueGone } from "../queries";
 import { type AssigneeCandidate, assigneeChange, type Issue, type Neighbours } from "./model";
 
 type IssueRows = {

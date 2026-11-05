@@ -6,23 +6,17 @@ import { expect, it } from "vitest";
 type Import = { file: string; specifier: string; target: string };
 
 const allowedDependencies: Record<string, string[]> = {
-  comments: ["issues", "projects", "identity", "shared"],
-  issues: ["projects", "identity", "shared"],
-  projects: ["identity", "shared"],
+  comments: ["issues", "projects", "queries", "identity", "shared"],
+  issues: ["projects", "queries", "identity", "shared"],
+  projects: ["queries", "identity", "shared"],
   notifications: ["comments", "issues", "projects", "identity", "shared"],
+  queries: ["identity", "shared"],
   identity: ["shared"],
   shared: [],
 };
 const allowedFileDependencies = [
   "src/server/shared/api-route.ts -> identity",
   "src/server/shared/api-route.ts -> notifications",
-];
-const tableReadsAgainstMap = [
-  "src/server/comments/comments.ts -> notifications",
-  "src/server/issues/rows.ts -> notifications",
-  "src/server/projects/labels.ts -> issues",
-  "src/server/projects/projects.ts -> issues",
-  "src/server/projects/projects.ts -> notifications",
 ];
 const modelImportBans = [/^drizzle-orm(?:\/|$)/, /^next(?:\/|$)/];
 const modelModuleBans = [
@@ -54,11 +48,9 @@ function modulePath(path: string) {
   return path.replace(/\.tsx?$/, "").replace(/\/index$/, "");
 }
 
-function importsTablesOnly({ file, target }: Import) {
-  return (
-    target.endsWith("/tables") &&
-    (file.endsWith("/tables.ts") || tableReadsAgainstMap.includes(`${file} -> ${contextOf(target)}`))
-  );
+function importsOwnerDefinitions({ file, target }: Import) {
+  if (contextOf(file) === "queries") return /\/(?:tables|schemas)$/.test(target);
+  return target.endsWith("/tables") && file.endsWith("/tables.ts");
 }
 
 function contextOf(path: string) {
@@ -73,7 +65,7 @@ function reachesPastIndex(dependency: Import) {
   const { file, target } = dependency;
   const context = contextOf(target);
   return (
-    !importsTablesOnly(dependency) &&
+    !importsOwnerDefinitions(dependency) &&
     context !== undefined &&
     context !== "shared" &&
     context !== contextOf(file) &&
@@ -86,7 +78,7 @@ function breaksContextMap(dependency: Import) {
   const from = contextOf(file);
   const to = contextOf(target);
   if (from === undefined || to === undefined || from === to || isTestCode(file)) return false;
-  if (importsTablesOnly(dependency)) return false;
+  if (importsOwnerDefinitions(dependency)) return false;
 
   return !allowedDependencies[from].includes(to) && !allowedFileDependencies.includes(`${file} -> ${to}`);
 }

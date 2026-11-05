@@ -1,14 +1,5 @@
-export { createLabel, deleteLabel, listLabels, updateLabel } from "./labels";
-export {
-  byProjectKey,
-  createProject,
-  deleteProject,
-  getProject,
-  listProjects,
-  takeIssueNumber,
-  updateProject,
-  writableProject,
-} from "./projects";
+export { createLabel, deleteLabel, updateLabel } from "./labels";
+export { createProject, deleteProject, takeIssueNumber, updateProject, writableProject } from "./projects";
 export {
   LabelChanges,
   NewLabel,

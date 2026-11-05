@@ -1,12 +1,7 @@
 import type { Project } from "../../../../contract";
 import { apiRoute } from "../../../../server/shared/api-route";
-import {
-  deleteProject,
-  getProject,
-  parseProjectKey,
-  ProjectChanges,
-  updateProject,
-} from "../../../../server/projects";
+import { deleteProject, parseProjectKey, ProjectChanges, updateProject } from "../../../../server/projects";
+import { getProject } from "../../../../server/queries";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]">) {
   const key = parseProjectKey((await params).key);

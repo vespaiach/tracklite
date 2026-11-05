@@ -1,6 +1,6 @@
 import type { MyIssueGroup } from "../../../contract";
 import { apiRoute } from "../../../server/shared/api-route";
-import { getMyIssues } from "../../../server/issues";
+import { getMyIssues } from "../../../server/queries";
 
 export async function GET(request: Request) {
   return apiRoute("member", async (_request, member) =>

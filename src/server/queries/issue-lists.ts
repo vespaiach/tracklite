@@ -16,11 +16,15 @@ import {
 import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import { type Member, memberSummary, members } from "../identity";
-import { issueAssignees, issueLabels, issues } from "./tables";
-import type { IssueId } from "./schemas";
-import { labels, type ProjectKey, projects } from "../projects";
+import { issueAssignees, issueLabels, issues } from "../issues/tables";
+import type { IssueId } from "../issues/schemas";
+import { labels, projects } from "../projects/tables";
+import type { ProjectKey } from "../projects/schemas";
 import {
+  type Board,
+  type BoardIssue,
   type IssueListPage,
+  type IssueStatus,
   issuePriorities,
   issueStatuses,
   type ListIssue,
@@ -36,7 +40,7 @@ import {
   labelsOf,
   readableProject,
   recentlyClosedOrOpen,
-} from "./rows";
+} from "./issue";
 
 type SortColumn = keyof typeof sortColumns;
 
@@ -281,4 +285,47 @@ function myIssueRows(memberId: string) {
       ),
     )
     .orderBy(asc(issues.status), asc(issues.priority), desc(issues.updatedAt), asc(issues.id));
+}
+
+export async function getBoard(_actor: Member, projectKey: ProjectKey | undefined): Promise<Board> {
+  const project = await readableProject(projectKey);
+
+  const rows = await boardRows(project.id);
+
+  const labelRows = await labelsOf(rows.map((row) => row.issueId));
+
+  const assigneeRows = await assigneesOf(
+    db,
+    rows.map((row) => row.issueId),
+  );
+
+  const cards = rows.map((row): { status: IssueStatus; card: BoardIssue } => ({
+    status: row.status,
+    card: {
+      id: `${project.key}-${row.number}`,
+      title: row.title,
+      priority: row.priority,
+      assignees: assigneesFor(assigneeRows, row.issueId),
+      labels: labelsFor(labelRows, row.issueId),
+    },
+  }));
+
+  return issueStatuses.map((status) => {
+    const column = cards.filter((entry) => entry.status === status).map((entry) => entry.card);
+    return { status, count: column.length, cards: column };
+  });
+}
+
+function boardRows(projectId: string) {
+  return db
+    .select({
+      issueId: issues.id,
+      number: issues.number,
+      title: issues.title,
+      status: issues.status,
+      priority: issues.priority,
+    })
+    .from(issues)
+    .where(and(eq(issues.projectId, projectId), recentlyClosedOrOpen()))
+    .orderBy(asc(issues.status), asc(issues.position), asc(issues.id));
 }
