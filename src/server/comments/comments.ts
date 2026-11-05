@@ -1,6 +1,6 @@
 import "server-only";
 import { asc, eq, inArray, type SQL, sql } from "drizzle-orm";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import type { Uuid } from "../shared/ids";
 import type { Executor, Transaction } from "../shared/transaction";
@@ -17,11 +17,11 @@ import { mayDeleteComment, parentOf } from "./rules";
 type CommentParent = ReturnType<typeof parentOf>;
 
 function commentGone() {
-  return new ApiError(404, "This comment was deleted");
+  return new DomainError("notFound", "This comment was deleted");
 }
 
 function notAllowed() {
-  return new ApiError(403, "You don't have permission to do that.");
+  return new DomainError("forbidden", "You don't have permission to do that.");
 }
 
 async function findComments(executor: Executor, where: SQL): Promise<ThreadComment[]> {
@@ -99,13 +99,13 @@ async function issueOf(executor: Executor, id: IssueId | undefined) {
 
 export async function listIssueComments(_actor: Member, id: IssueId | undefined) {
   const issue = await issueOf(db, id);
-  if (!issue) throw new ApiError(404, "Not found");
+  if (!issue) throw new DomainError("notFound", "Not found");
   return findComments(db, eq(comments.issueId, issue.id));
 }
 
 export async function listProjectComments(_actor: Member, key: ProjectKey | undefined) {
   const [project] = await db.select({ id: projects.id }).from(projects).where(byProjectKey(key));
-  if (!project) throw new ApiError(404, "Not found");
+  if (!project) throw new DomainError("notFound", "Not found");
   return findComments(db, eq(comments.projectId, project.id));
 }
 

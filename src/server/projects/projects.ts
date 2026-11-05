@@ -1,6 +1,6 @@
 import "server-only";
 import { asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import type { Executor, Transaction } from "../shared/transaction";
 import { mentions } from "../notifications/tables";
@@ -15,7 +15,8 @@ import type { IssueStatus, Project, ProjectSummary } from "../../contract";
 type ProjectRow = typeof projects.$inferSelect;
 
 function refuseFields(fields: Record<string, string>) {
-  if (Object.keys(fields).length > 0) throw new ApiError(422, "Check the highlighted fields", fields);
+  if (Object.keys(fields).length > 0)
+    throw new DomainError("invalid", "Check the highlighted fields", fields);
 }
 
 export function byProjectKey(key: ProjectKey | undefined) {
@@ -91,7 +92,7 @@ export async function listProjects(_actor: Member, archived: boolean): Promise<P
 
 export async function getProject(_actor: Member, key: ProjectKey | undefined) {
   const [project] = await db.select().from(projects).where(byProjectKey(key));
-  if (!project) throw new ApiError(404, "Not found");
+  if (!project) throw new DomainError("notFound", "Not found");
   return projectResponse(db, project);
 }
 
@@ -115,9 +116,9 @@ export async function updateProject(actor: Member, key: ProjectKey | undefined, 
 
   return db.transaction(async (tx) => {
     const [project] = await tx.select().from(projects).where(byProjectKey(key)).for("update");
-    if (!project) throw new ApiError(404, "Not found");
+    if (!project) throw new DomainError("notFound", "Not found");
 
-    if (renamesArchived(project, changes)) throw new ApiError(403, "This project is archived");
+    if (renamesArchived(project, changes)) throw new DomainError("forbidden", "This project is archived");
 
     const update = nameAndArchiveUpdate(changes);
     if (Object.keys(update).length === 0) return projectResponse(tx, project);
@@ -138,7 +139,7 @@ function nameAndArchiveUpdate({ name, archived }: ProjectChanges) {
 export async function deleteProject(actor: Member, key: ProjectKey | undefined) {
   assertAdmin(actor);
   const deleted = await db.delete(projects).where(byProjectKey(key)).returning({ id: projects.id });
-  if (deleted.length === 0) throw new ApiError(404, "Not found");
+  if (deleted.length === 0) throw new DomainError("notFound", "Not found");
 }
 
 async function saveDescription(
@@ -180,8 +181,8 @@ export async function writableProject(
   lock: "share" | "update" = "share",
 ) {
   const [project] = await tx.select().from(projects).where(byProjectKey(key)).for(lock);
-  if (!project) throw new ApiError(404, "Not found");
-  if (project.archivedAt !== null) throw new ApiError(403, "This project is archived");
+  if (!project) throw new DomainError("notFound", "Not found");
+  if (project.archivedAt !== null) throw new DomainError("forbidden", "This project is archived");
   return project;
 }
 

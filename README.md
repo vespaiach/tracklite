@@ -61,7 +61,7 @@ Each route handler is wrapped in `apiRoute` ([src/server/shared/api-route.ts](sr
 2. authenticates the session (`401`), unless the route is public;
 3. validates the JSON body against a Valibot schema from the context's `schemas.ts` (`422`);
 4. calls one domain function in `src/server/`, passing the signed-in member as `actor`;
-5. maps a thrown `ApiError` to `{ error: { message, fields? } }`;
+5. maps a thrown `DomainError` by its kind to `{ error: { message, fields? } }`;
 6. writes one JSON log line, without bodies or tokens.
 
 Routes never check roles. The domain functions are the only permission layer: admin-only functions start with `assertAdmin(actor)`, and ownership checks run once the row is loaded (`docs/tech-design.md` §4.10). Each domain function opens its own transaction, so an action and the notification rows it creates commit together.

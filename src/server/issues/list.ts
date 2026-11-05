@@ -13,7 +13,7 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import { type Member, memberSummary, members } from "../identity";
 import { issueAssignees, issueLabels, issues } from "./tables";
@@ -52,7 +52,7 @@ const sortColumns = {
 export async function getIssue(_actor: Member, id: IssueId | undefined) {
   const where = byIssueId(id);
   const issue = where ? await findIssue(db, where) : undefined;
-  if (!issue) throw new ApiError(404, "Not found");
+  if (!issue) throw new DomainError("notFound", "Not found");
   return issue;
 }
 

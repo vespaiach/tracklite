@@ -1,8 +1,8 @@
-import { ApiError } from "../../../server/shared/api-error";
+import { DomainError } from "../../../server/shared/domain-error";
 import { apiRoute } from "../../../server/shared/api-route";
 
 const notFound = apiRoute("member", () => {
-  throw new ApiError(404, "Not found");
+  throw new DomainError("notFound", "Not found");
 });
 
 export { notFound as DELETE, notFound as GET, notFound as PATCH, notFound as POST, notFound as PUT };

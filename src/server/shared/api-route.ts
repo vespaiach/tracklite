@@ -1,9 +1,20 @@
 import * as v from "valibot";
-import { ApiError } from "./api-error";
+import { DomainError, type DomainErrorKind } from "./domain-error";
 import { readConfig } from "./config";
 import { logError, logInfo } from "./log";
 import { type Member, requireMember } from "../identity";
 import "../notifications";
+
+const statusOfKind: Record<DomainErrorKind, number> = {
+  signedOut: 401,
+  forbidden: 403,
+  notFound: 404,
+  conflict: 409,
+  expired: 410,
+  invalid: 422,
+  limited: 429,
+  unavailable: 503,
+};
 
 const writeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -19,8 +30,8 @@ function errorResponse(status: number, message: string, fields?: Record<string, 
 }
 
 function errorOutcome(error: unknown): Outcome {
-  if (error instanceof ApiError) {
-    return { response: errorResponse(error.status, error.message, error.fields) };
+  if (error instanceof DomainError) {
+    return { response: errorResponse(statusOfKind[error.kind], error.message, error.fields) };
   }
   return {
     response: errorResponse(500, "Something went wrong."),
@@ -29,7 +40,7 @@ function errorOutcome(error: unknown): Outcome {
 }
 
 function unreadableRequest() {
-  return new ApiError(422, "Couldn’t read the request.");
+  return new DomainError("invalid", "Couldn’t read the request.");
 }
 
 async function readInput(request: Request, schema: v.GenericSchema) {
@@ -51,12 +62,12 @@ async function readJsonObject(request: Request) {
 
 function inputError(issues: ValidationIssues) {
   const { root, nested } = v.flatten(withRequiredMessages(issues));
-  if (root) return new ApiError(422, root[0]);
+  if (root) return new DomainError("invalid", root[0]);
   if (!nested) return unreadableRequest();
   const fields = Object.fromEntries(
     Object.entries(nested).flatMap(([field, messages]) => (messages ? [[field, messages[0]]] : [])),
   );
-  return new ApiError(422, "Check the highlighted fields", fields);
+  return new DomainError("invalid", "Check the highlighted fields", fields);
 }
 
 function withRequiredMessages(issues: ValidationIssues) {
@@ -96,7 +107,8 @@ export function apiRoute(
   const inputOf = async (request: Request) => (schema ? [await readInput(request, schema)] : []);
 
   const respond = async (request: Request, caller: Caller) => {
-    if (isCrossSiteWrite(request)) throw new ApiError(403, "You don't have permission to do that.");
+    if (isCrossSiteWrite(request))
+      throw new DomainError("forbidden", "You don't have permission to do that.");
 
     if (access === "public") {
       const nameActor: NameActor = (username) => {

@@ -38,7 +38,7 @@ it("REQ-021.2: two concurrent creates of bug and BUG leave one label", async () 
   finishFirst();
   await first;
 
-  await expect(second).rejects.toMatchObject({ status: 422, fields: { name: "Label already exists" } });
+  await expect(second).rejects.toMatchObject({ kind: "invalid", fields: { name: "Label already exists" } });
   const stored = await db.select().from(labels).where(eq(labels.projectId, project.id));
   expect(stored.map((label) => label.name)).toEqual(["bug"]);
 });
