@@ -2,14 +2,14 @@
 
 | | |
 |---|---|
-| Version | v1.2 |
-| Date | 2026-10-30 |
+| Version | v1.3 |
+| Date | 2026-11-05 |
 | Inputs | [`tracklite-spec.md`](tracklite-spec.md) (v0.39) · [`tech-design.md`](tech-design.md) · [`design-system.md`](design-system.md) |
 | Checks | `npm run lint` → `npm run typecheck` → `npm test` |
 
 The backlog of open work. `/dooo` runs it top to bottom: it takes the first ⬜ row whose dependencies are ✅, does it in one PR, merges it and moves on until every row is ✅.
 
-**Left to the owner** (L03, [#272](https://github.com/vespaiach/tracklite/pull/272), owner decision 2026-10-26): L03 was closed on local results. These production checks stay with the owner, outside the backlog: SEC-005.1 (HTTP redirects to HTTPS, HSTS sent), SEC-007.2 (proxy access log shows `/reset-password` without the token), creating the first admin through the welcome screen on the production host once W02 ships (OPS-001, with `SETUP_SECRET` set in the server config), the team's headcount against spec §3's assumption, NFR-008 in Resend's delivery logs, and the first month's bills against NFR-009.
+**Left to the owner** (L03, [#272](https://github.com/vespaiach/tracklite/pull/272), owner decision 2026-10-26): L03 was closed on local results. These production checks stay with the owner, outside the backlog: SEC-005.1 (HTTP redirects to HTTPS, HSTS sent), SEC-007.2 (proxy access log shows `/reset-password` without the token), creating the first admin through the welcome screen on the production host (W02, [#285](https://github.com/vespaiach/tracklite/pull/285); OPS-001, with `SETUP_SECRET` set in the server config), the team's headcount against spec §3's assumption, NFR-008 in Resend's delivery logs, and the first month's bills against NFR-009.
 
 ## Status tracking
 
@@ -32,21 +32,33 @@ The backlog of open work. `/dooo` runs it top to bottom: it takes the first ⬜ 
 
 ## Tasks
 
-Batch: **W** = welcome screen for first-admin setup (spec 0.38, OPS-001; tech design 1.6, 1.7, 3.3, 4.6, 6.1, D-54). The spec and tech design are already updated, so the rows only build and test. W02 wires up W01's endpoints, so it runs second.
+Batch: **G** = domain-driven design: aggregates, a read side and domain errors (tech design 1.2, 1.4, 1.8, 3.2, 4.10, D-47, D-55 to D-59). Nothing a member sees changes, so the spec doesn't change. The tech design is already updated, so the rows only build and test, and every existing test stays green unless a row moves it. **Owner checkpoint:** G05 and G06 start only once the owner has reviewed G03, the pilot, and agreed to go on; if not, they're removed and 1.8 is trimmed back to what was built.
 
 | ID | Status | Task | Depends on | Done when | Covers |
 |---|---|---|---|---|---|
-| W01 | ✅ ([#284](https://github.com/vespaiach/tracklite/pull/284)) | **Setup API**: optional `SETUP_SECRET` in `readConfig` (refused under 32 characters) and commented in `.env.example`. In `src/server/identity/setup.ts`, `setupNeeded()`, `checkSetupSecret(secret)` and `createFirstAdmin({ secret, email, fullName, username, password })` follow tech design 4.6: `ApiError` 410 "Setup already done", 503 "Setup isn't enabled. Set SETUP_SECRET on the server and restart.", 403 "Wrong setup secret"; `timingSafeEqual` on the `hashToken` of both secrets; the existing members-table lock; `createSession(member.id, tx)`; returns `{ member, sessionToken }` like `acceptInvitation`. `FirstAdmin` gains `secret`; add `SetupCheck`; export through `identity/index.ts`. Public routes `GET`/`POST /api/setup` (`201` with `profileResponse(member) satisfies Me` and `sessionCookie`) and `POST /api/setup-checks` (`204`); `SetupStatus` in `src/contract/`. Delete `scripts/setup.ts`, the `setup` npm script, and the `npm run setup` lines in `README.md` and `CLAUDE.md`. | — | `setup.test.ts` tests named OPS-001.1 (creates the admin and returns a session token that signs in, keeping REQ-003.1's lowercase username), .2, .3, .4 and .7, plus the existing bad-input test; a route test that `POST /api/setup` answers `201` with the cookie and `GET` reports `needed`; a config test for OPS-001.6; `grep -rn "npm run setup" .` finds nothing outside `docs/`; Checks green | OPS-001 |
-| W02 | ✅ ([#285](https://github.com/vespaiach/tracklite/pull/285)) | **Welcome screen**: lazy `welcome` route in `src/client/routes.tsx`, `/welcome` added to `signedOutPaths` in `src/client/api.ts`, and RTK Query endpoints `setupStatus`, `checkSetupSecret` and `createFirstAdmin` (invalidates `Me`). `src/client/screens/Welcome.tsx`, built from the SignedOut kit pieces as in `AcceptInvitation.tsx`: step 1 is the secret, with the server's message on failure; step 2 is email, full name, username, and password twice, with field errors from the `422`; success goes to `/my-issues`; it goes to `/sign-in` when `needed` is false. `SignIn.tsx` goes to `/welcome` while `needed` is true (tech design 1.7). | W01 | `Welcome.test.tsx` against mocks, tests named OPS-001.1 (secret then form, lands on My issues), OPS-001.2 (not needed → sign-in), OPS-001.3 (wrong secret: message shown, profile fields hidden) and OPS-001.4 (the not-enabled message); a `SignIn` test named OPS-001.5 (needed → `/welcome`); manual run on a dropped and migrated, unseeded dev database with `SETUP_SECRET` set; Checks green | OPS-001 |
+| G01 | ⬜ | **Domain errors**: `src/server/shared/domain-error.ts` with `DomainError(kind, message, fields?)` and the kinds `signedOut`, `forbidden`, `notFound`, `conflict`, `expired`, `invalid`, `limited` and `unavailable` (tech design 3.2). `apiRoute` maps each kind to its status. Every `new ApiError(` under `src/server/` and `src/app/` becomes a `DomainError` with the same message and fields; delete `shared/api-error.ts`. | — | One `api-route.test.ts` test checks each kind's status and body; `grep -rn "ApiError" src` finds nothing; Checks green | STD-2, STD-3 |
+| G02 | ⬜ | **Model guard**: `architecture.test.ts` gains `G02: model and rules files import no database, HTTP or framework code`: a `model.ts` or `rules.ts` under `src/server/` may not import `drizzle-orm`, `shared/db`, `shared/transaction`, `shared/api-route` or `next/*` (tech design 1.8). | — | The test passes on the current tree and fails when `drizzle-orm` is imported in `issues/rules.ts` (checked by hand, not committed); Checks green | — |
+| G03 | ⬜ | **Issue aggregate (pilot)**: `issues/model.ts` with the `Issue` type (row fields, assignees, label ids), `newIssue`, `retitle`, `changeStatus`, `changePriority`, `assign`, `relabel`, `move`, `saveDescription` and `mayDeleteIssue`, each change returning `{ issue, events }` (1.8 Aggregates); it absorbs `issues/rules.ts`, and `rules.test.ts` becomes `model.test.ts`. `issues/repository.ts` with `loadIssue(tx, id)` (locked), `toIssue(rows)` and `saveIssue(tx, before, after)`. `create.ts`, `update.ts` and `board.ts`'s `moveIssue` become commands: load → model → save → publish → response. | G01, G02 | Existing issue, board and notification tests pass unchanged; `model.test.ts` holds the moved rule tests under their old names, without a database; `create.ts`, `update.ts` and `moveIssue` contain no `tx.select`, `tx.insert`, `tx.update` or `tx.delete`; Checks green | REQ-016, REQ-017, REQ-019, REQ-020, REQ-023, REQ-026, REQ-027, REQ-043 |
+| G04 | ⬜ | **Read side**: `src/server/queries/` with an `index.ts`. Move into it the reads in `issues/list.ts`, `issues/board.ts` (`getBoard`), `issues/rows.ts` (the issue response and the issue-ID condition), `projects/projects.ts` (summaries, details, issue counts), `projects/labels.ts` (labels with counts) and `comments/comments.ts` (threads and their mentions); routes and commands call them there. `architecture.test.ts` lets `queries` import any context's `tables.ts` and `schemas.ts`, and `tableReadsAgainstMap` is deleted (D-57). | G03 | `tableReadsAgainstMap` is gone and M15, M16 and G02 pass; route tests pass unchanged; Checks green | REQ-024, REQ-036, REQ-041, REQ-046 |
+| G05 | ⬜ | **Project aggregate**: `projects/model.ts` with `Project` (row, key, labels), `newProject`, `rename`, `archive`, `unarchive`, `saveDescription` and the label changes (create, rename, recolor, delete); `projects/repository.ts`; `projects.ts` and `labels.ts` become commands; `projects/rules.ts` folds into `model.ts`. | G04 | As G03, for projects and labels; Checks green | REQ-009, REQ-013, REQ-021 |
+| G06 | ⬜ | **Comment aggregate**: `comments/model.ts` with `Comment`, `newComment`, `edit` and `mayDeleteComment`; `comments/repository.ts`; `comments.ts` becomes commands; `comments/rules.ts` folds into `model.ts`. | G04 | As G03, for comments; Checks green | REQ-031, REQ-033, REQ-034, STD-8 |
+| G07 | ⬜ | **Delivery model**: `notifications/model.ts` with the `Delivery` type, `checkedMessage` and `stillWanted` moved from `worker.ts`, and `afterFailure(attempts)` (a retry after 1, 4 or 10 minutes, then `failed`) replacing the decision in `recordFailure`. `worker.ts` keeps the loop, heartbeat, metrics, claim, lease and record SQL (tech design 1.4). The drop-check and retry cases move from `worker.test.ts` to `model.test.ts` under their old names. | G02 | `model.test.ts` runs without a database and holds the moved cases; `worker.test.ts` keeps only claim, lease, send and record tests; Checks green | REQ-043, REQ-044, REQ-045 |
 
 ## Dependency map
 
 ```mermaid
 graph LR
-  W01 --> W02
+  G01 --> G03
+  G02 --> G03
+  G02 --> G07
+  G03 --> G04
+  G04 --> G05
+  G04 --> G06
 ```
 
 | Wave | Tasks (run in parallel) |
 |---|---|
-| 1 | W01 |
-| 2 | W02 |
+| 1 | G01, G02 |
+| 2 | G03, G07 |
+| 3 | G04 |
+| 4 | G05, G06 |
