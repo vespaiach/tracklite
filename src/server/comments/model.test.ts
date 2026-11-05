@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { mayDeleteComment, parentOf } from "./rules";
+import { mayDeleteComment, parentOf } from "./model";
 
 it("REQ-034.1, REQ-034.2, REQ-034.3: a comment may be deleted by its author or an admin, not by another member", () => {
   expect(mayDeleteComment({ id: "sam", role: "member" }, "sam")).toBe(true);
