@@ -9,7 +9,7 @@ import { createInvitation, listInvitations, resendInvitation, revokeInvitation }
 import { invitations } from "./tables";
 import { createToken, hashToken } from "../shared/tokens";
 
-const forbidden = { status: 403, message: "You don't have permission to do that." };
+const forbidden = { kind: "forbidden", message: "You don't have permission to do that." };
 
 async function openInvitation() {
   const admin = await createMember({ role: "admin" });

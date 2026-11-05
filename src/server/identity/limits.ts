@@ -1,7 +1,7 @@
 import "server-only";
 import { isIP } from "node:net";
 import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import { clientErrorReports, passwordResetRequests, signInAttempts } from "./tables";
 
@@ -17,7 +17,7 @@ export function clientIp(request: Request) {
 }
 
 export function tooManyAttempts() {
-  return new ApiError(429, "Too many attempts. Try again later.");
+  return new DomainError("limited", "Too many attempts. Try again later.");
 }
 
 async function lastHourCounts(

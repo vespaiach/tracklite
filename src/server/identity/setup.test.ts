@@ -58,14 +58,14 @@ it('OPS-001.1, REQ-003.1: the right secret creates admin "Sam" as "sam", signed 
 it('OPS-001.2: once members exist the check and the setup are refused with "Setup already done"', async () => {
   await firstAdmin();
 
-  const refusal = { status: 410, message: "Setup already done" };
+  const refusal = { kind: "expired", message: "Setup already done" };
   await expect(checkSetupSecret(secret)).rejects.toMatchObject(refusal);
   await expect(firstAdmin({ email: "alex@x.com", username: "alex" })).rejects.toMatchObject(refusal);
   expect(await memberCount()).toBe(1);
 });
 
 it('OPS-001.3: a wrong secret gets "Wrong setup secret" and nothing is saved', async () => {
-  const refusal = { status: 403, message: "Wrong setup secret" };
+  const refusal = { kind: "forbidden", message: "Wrong setup secret" };
 
   await expect(checkSetupSecret("not-the-secret")).rejects.toMatchObject(refusal);
   await expect(firstAdmin({ secret: `${secret}x` })).rejects.toMatchObject(refusal);
@@ -75,7 +75,7 @@ it('OPS-001.3: a wrong secret gets "Wrong setup secret" and nothing is saved', a
 it("OPS-001.4: without SETUP_SECRET setup isn't enabled and nothing is saved", async () => {
   vi.stubEnv("SETUP_SECRET", "");
   const refusal = {
-    status: 503,
+    kind: "unavailable",
     message: "Setup isn't enabled. Set SETUP_SECRET on the server and restart.",
   };
 
@@ -92,7 +92,7 @@ it('OPS-001.7: of two setups at the same moment one creates the admin and the ot
 
   expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
   expect(results.find((result) => result.status === "rejected")).toMatchObject({
-    reason: { status: 410, message: "Setup already done" },
+    reason: { kind: "expired", message: "Setup already done" },
   });
   expect(await memberCount()).toBe(1);
 });

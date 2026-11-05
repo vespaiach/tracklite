@@ -83,12 +83,12 @@ There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks
 2. runs `requireMember`, which only authenticates (`401`). Routes never check roles. A route declared `"public"` (sign-in, password resets, invitation lookups and acceptance, sign-out) skips this step;
 3. parses the JSON body against the route's Valibot schema, if it declares one, and fails fast with `422` (D-42). Schemas check shape and format only;
 4. calls one domain function through its context's `index.ts` (see Bounded contexts below), with the member as its first argument, `actor`. `apiRoute` opens no transaction; the domain function opens its own. The domain is the only permission layer (D-43): admin-only functions call `assertAdmin(actor)` before any lookup, and ownership checks run once the row is loaded. It then checks the rules that need the database and writes, so the action and its notification rows commit together;
-5. maps a thrown `ApiError` to `{ error: { message, fields? } }` with 401/403/404/409/410/422/429/503, and anything else to 500;
+5. maps a thrown `DomainError` by its kind (§3.2) to `{ error: { message, fields? } }` with 401/403/404/409/410/422/429/503, and anything else to 500;
 6. writes one JSON log line, with no bodies, tokens or query strings. A signed-in request names its `actor` by username.
 
 The browser shows `message` as-is, so all user-facing copy for server outcomes lives on the server.
 
-**Bounded contexts (§1.8).** `src/server/` is split into context folders: `identity`, `notifications`, `projects`, `issues`, `comments`, plus `shared/` for infrastructure (db, schema enums and column helpers, config, log, api-error, api-route, email, tokens, passwords, chunked-delete).
+**Bounded contexts (§1.8).** `src/server/` is split into context folders: `identity`, `notifications`, `projects`, `issues`, `comments`, plus `shared/` for infrastructure (db, schema enums and column helpers, config, log, domain-error, api-route, email, tokens, passwords, chunked-delete).
 - Each context has a public `index.ts`. Other contexts, routes and `scripts/` import a context only through it; `shared/` files are imported directly.
 - Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `projects`; `notifications` → `comments`, `issues`, `projects`; every context → `identity`, `shared/`. No other context imports `notifications`; `shared/api-route.ts` and `scripts/worker.ts` import it so its event subscription is registered. No cycles.
 - A context's request schemas are in its `schemas.ts`; tests sit next to their source.

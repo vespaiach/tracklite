@@ -17,7 +17,7 @@ it("REQ-003.4: initials of long, single, bracketed, numeric and CJK names", () =
 it("STD-2: a member can't change a role or deactivate", async () => {
   const member = await createMember();
   const target = await createMember({ role: "admin" });
-  const forbidden = { status: 403, message: "You don't have permission to do that." };
+  const forbidden = { kind: "forbidden", message: "You don't have permission to do that." };
 
   await expect(
     updateMember(member, parseUsername(target.username), { role: "member" }),

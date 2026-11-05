@@ -6,7 +6,7 @@ import { createProject as create, deleteProject, updateProject, writableProject 
 import { projects } from "./tables";
 import { parseProjectKey } from "./schemas";
 
-const forbidden = { status: 403, message: "You don't have permission to do that." };
+const forbidden = { kind: "forbidden", message: "You don't have permission to do that." };
 
 async function storedProject(id: string) {
   const [stored] = await db.select().from(projects).where(eq(projects.id, id));
@@ -52,7 +52,7 @@ it("REQ-013.4: archiving waits for a write already under way, so that write can'
   expect(stored.description).toBe("Saved");
   expect(stored.archivedAt).not.toBeNull();
   await expect(db.transaction((tx) => writableProject(tx, project.key))).rejects.toMatchObject({
-    status: 403,
+    kind: "forbidden",
   });
 });
 

@@ -1,7 +1,7 @@
 import "server-only";
 import { asc, eq, sql } from "drizzle-orm";
 import { DrizzleQueryError } from "drizzle-orm/errors";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import type { Uuid } from "../shared/ids";
 import type { Transaction } from "../shared/transaction";
@@ -20,7 +20,7 @@ const labelResponse = {
 } satisfies Record<keyof Label, unknown>;
 
 function labelGone() {
-  return new ApiError(404, "That label no longer exists");
+  return new DomainError("notFound", "That label no longer exists");
 }
 
 async function refusingDuplicateNames<T>(write: Promise<T>) {
@@ -28,7 +28,7 @@ async function refusingDuplicateNames<T>(write: Promise<T>) {
     return await write;
   } catch (error) {
     if (isDuplicateName(error)) {
-      throw new ApiError(422, "Check the highlighted fields", { name: "Label already exists" });
+      throw new DomainError("invalid", "Check the highlighted fields", { name: "Label already exists" });
     }
     throw error;
   }
@@ -57,7 +57,7 @@ async function lockLabelProject(tx: Transaction, id: Uuid | undefined) {
 
 export async function listLabels(_actor: Member, projectKey: ProjectKey | undefined): Promise<Label[]> {
   const [project] = await db.select({ id: projects.id }).from(projects).where(byProjectKey(projectKey));
-  if (!project) throw new ApiError(404, "Not found");
+  if (!project) throw new DomainError("notFound", "Not found");
   return db
     .select(labelResponse)
     .from(labels)

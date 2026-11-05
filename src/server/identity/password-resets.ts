@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import { sendEmail } from "../shared/email/send";
 import { passwordResetEmail } from "../shared/email/templates";
@@ -12,7 +12,7 @@ import { createSession } from "./sessions";
 import { createToken, hashToken } from "../shared/tokens";
 
 function expiredLink() {
-  return new ApiError(410, "This link has expired");
+  return new DomainError("expired", "This link has expired");
 }
 
 export async function requestResetLink(normalizedEmail: string, ip: string) {
@@ -31,7 +31,7 @@ export async function requestResetLink(normalizedEmail: string, ip: string) {
       expiresAt: sql`now() + interval '30 minutes'`,
     });
     const sent = await sendEmail({ to: member.email, ...passwordResetEmail({ email: member.email, token }) });
-    if (!sent.ok) throw new ApiError(503, "We couldn’t send the email. Try again.");
+    if (!sent.ok) throw new DomainError("unavailable", "We couldn’t send the email. Try again.");
   });
 }
 

@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import { parseUuid } from "../shared/ids";
 import type { Transaction } from "../shared/transaction";
@@ -28,7 +28,7 @@ import {
 } from "./rules";
 
 function labelGone() {
-  return new ApiError(404, "That label no longer exists");
+  return new DomainError("notFound", "That label no longer exists");
 }
 
 async function replaceAssignees(tx: Transaction, actor: Member, issueId: string, usernames: Username[]) {
@@ -182,7 +182,7 @@ export async function deleteIssue(actor: Member, id: IssueId | undefined) {
     const issue = await lockedIssue(tx, where);
 
     if (!mayDeleteIssue(actor, issue.createdBy)) {
-      throw new ApiError(403, "You don't have permission to do that.");
+      throw new DomainError("forbidden", "You don't have permission to do that.");
     }
 
     await tx.delete(issues).where(eq(issues.id, issue.id));

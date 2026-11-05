@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import type { Uuid } from "../shared/ids";
 import { sendEmail } from "../shared/email/send";
@@ -18,7 +18,7 @@ import { checkInvitationLink, inviteRefusal } from "./rules";
 const isOpen = and(isNull(invitations.acceptedAt), isNull(invitations.revokedAt));
 
 function notFound() {
-  return new ApiError(404, "Not found");
+  return new DomainError("notFound", "Not found");
 }
 
 function openInvitations(executor: Pick<typeof db, "select">) {
@@ -75,7 +75,7 @@ async function sendLink(executor: Executor, inviter: Member, invitation: { id: s
     to: invitation.email,
     ...invitationEmail({ inviterName: inviter.fullName, token }),
   });
-  if (!sent.ok) throw new ApiError(503, "We couldn’t send the email. Try again.");
+  if (!sent.ok) throw new DomainError("unavailable", "We couldn’t send the email. Try again.");
 
   await executor
     .update(invitations)
@@ -108,7 +108,7 @@ async function assertNotMember(email: string) {
     .from(members)
     .where(eq(sql`lower(${members.email})`, email));
   const refusal = inviteRefusal(member);
-  if (refusal) throw new ApiError(422, refusal);
+  if (refusal) throw new DomainError("invalid", refusal);
 }
 
 export async function resendInvitation(actor: Member, id: Uuid | undefined) {
@@ -162,7 +162,7 @@ function invitationByToken(executor: Pick<typeof db, "select">, token: string) {
 
 function usableInvitation(invitation: Awaited<ReturnType<typeof invitationByToken>>[number] | undefined) {
   const link = checkInvitationLink(invitation);
-  if ("refusal" in link) throw new ApiError(410, link.refusal);
+  if ("refusal" in link) throw new DomainError("expired", link.refusal);
   return link.usable;
 }
 
@@ -200,7 +200,7 @@ async function assertUsernameFree(executor: Pick<typeof db, "select">, username:
     .select({ id: members.id })
     .from(members)
     .where(eq(members.username, username));
-  if (taken) throw new ApiError(422, "Check the highlighted fields", { username: "Username taken" });
+  if (taken) throw new DomainError("invalid", "Check the highlighted fields", { username: "Username taken" });
 }
 
 export async function markInvitationBounced(providerMessageId: string) {

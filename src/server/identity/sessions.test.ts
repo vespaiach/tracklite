@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import { createMember } from "../../test/factories";
 import { moveIntoPast } from "../../test/time";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import { members, sessions } from "./tables";
 import { createSession, requireMember, sessionCookie } from "./sessions";
@@ -30,8 +30,8 @@ async function sessionRow(token: string) {
 
 async function expectSignedOut(request: Request) {
   const error = await requireMember(request).catch((thrown: unknown) => thrown);
-  expect(error).toBeInstanceOf(ApiError);
-  expect(error).toMatchObject({ status: 401, message: "Sign in to continue." });
+  expect(error).toBeInstanceOf(DomainError);
+  expect(error).toMatchObject({ kind: "signedOut", message: "Sign in to continue." });
 }
 
 it("REQ-006.1, REQ-006: Sam uses the app every day and stays signed in; a session idle over an hour is renewed with a cookie, one idle under an hour isn't rewritten", async () => {

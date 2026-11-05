@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, eq, inArray, isNull, notInArray, or, type SQL, sql } from "drizzle-orm";
 import { alias, type PgUpdateSetSource } from "drizzle-orm/pg-core";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import type { Executor, Transaction } from "../shared/transaction";
 import { publish } from "../shared/events";
@@ -92,7 +92,7 @@ function mentionsOfIssue(executor: Executor, issueId: string) {
 }
 
 export function issueGone() {
-  return new ApiError(404, "This issue was deleted");
+  return new DomainError("notFound", "This issue was deleted");
 }
 
 export function byIssueId(id: IssueId | undefined) {
@@ -137,7 +137,7 @@ export async function readableProject(projectKey: ProjectKey | undefined) {
     .select({ id: projects.id, key: projects.key })
     .from(projects)
     .where(byProjectKey(projectKey));
-  if (!project) throw new ApiError(404, "Not found");
+  if (!project) throw new DomainError("notFound", "Not found");
   return project;
 }
 
@@ -184,7 +184,9 @@ export async function addAssignees(tx: Transaction, actor: Member, issueId: stri
     .from(members)
     .where(and(inArray(members.username, usernames), isNull(members.deactivatedAt)));
   if (added.length !== usernames.length) {
-    throw new ApiError(422, "Check the highlighted fields", { assignees: "Choose an active member" });
+    throw new DomainError("invalid", "Check the highlighted fields", {
+      assignees: "Choose an active member",
+    });
   }
 
   const assigneeIds = added.map((member) => member.id);
