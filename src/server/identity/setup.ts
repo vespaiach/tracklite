@@ -2,7 +2,7 @@ import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { FirstAdmin } from "./schemas";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { readConfig } from "../shared/config";
 import { db } from "../shared/db";
 import { hashPassword } from "../shared/passwords";
@@ -11,7 +11,7 @@ import { createSession } from "./sessions";
 import { members } from "./tables";
 
 function setupDone() {
-  return new ApiError(410, "Setup already done");
+  return new DomainError("expired", "Setup already done");
 }
 
 export async function setupNeeded() {
@@ -23,11 +23,11 @@ export async function checkSetupSecret(secret: string) {
 
   const configured = readConfig().setupSecret;
   if (!configured) {
-    throw new ApiError(503, "Setup isn't enabled. Set SETUP_SECRET on the server and restart.");
+    throw new DomainError("unavailable", "Setup isn't enabled. Set SETUP_SECRET on the server and restart.");
   }
 
   if (!timingSafeEqual(hashToken(secret), hashToken(configured))) {
-    throw new ApiError(403, "Wrong setup secret");
+    throw new DomainError("forbidden", "Wrong setup secret");
   }
 }
 

@@ -526,18 +526,18 @@ One module, `src/lib/markdown/`, used for both **rendering** in the browser and 
 
 Built by the E batch (E02–E08). E02 built the writer, the info lines and `apiRoute`'s `request-failed` line; E03 the `onRequestError`, worker and script catch points; E04 the `mail/*` lines and `Result` (`ok`, `err` in `shared/result.ts`) for `sendEmail`.
 
-**The boundary rule.** An error is logged once, by the code that turns it into an answer: a status code, a retry, an exit code, a crash screen. Code below that boundary throws or returns and never logs. An `ApiError` is an expected outcome, not a fault: `apiRoute` maps it to its status and logs no error line (D-47).
+**The boundary rule.** An error is logged once, by the code that turns it into an answer: a status code, a retry, an exit code, a crash screen. Code below that boundary throws or returns and never logs. A `DomainError` is an expected outcome, not a fault: `apiRoute` maps it to its status and logs no error line (D-47).
 
 **Catch points.** These are the only places that log an error:
 
 | Where | Catches | Logs |
 |---|---|---|
-| `apiRoute`'s catch (`shared/api-route.ts`) | Anything but an `ApiError` thrown by a handler; answers `500` | `route/request-failed` |
+| `apiRoute`'s catch (`shared/api-route.ts`) | Anything but a `DomainError` thrown by a handler; answers `500` | `route/request-failed` |
 | `onRequestError` in `src/instrumentation.ts` | Errors Next.js sees outside `apiRoute`: the page shell, `/health`, `/webhooks/email` | `route/request-failed` |
 | The worker's per-delivery `try` (1.4 step 4) | One delivery's unexpected error; counts as a failed attempt. A failed send (`err` from the sender) also counts as one but logs nothing here, since `sendEmail` logged it | `worker/delivery-failed` |
 | The worker's per-pass, metrics and cleanup catches | Heartbeat, claim, drop-check loading; metrics; cleanup | `worker/pass-failed`, `metrics-failed`, `cleanup-failed` |
 | The top-level `catch` of each script in `scripts/` | A script that can't start or finish; exits `1`. A script's own usage message (a missing `DATABASE_URL`) is CLI output, not an error line | `boot/start-failed` |
-| `sendEmail` (`shared/email/send.ts`), the one outbound wrapper | A failed call to Resend or Mailpit: a thrown `fetch` or the 10-second timeout, a non-2xx status (the error is named after Resend's error `name`), or a 2xx without the message id; returns `err("email-failed")`, never throws. Invitations and password resets turn it into `ApiError(503)`, so the transaction rolls back (1.5); the worker records a failed attempt | `mail/fetch-failed`, `bad-status`, `bad-response` |
+| `sendEmail` (`shared/email/send.ts`), the one outbound wrapper | A failed call to Resend or Mailpit: a thrown `fetch` or the 10-second timeout, a non-2xx status (the error is named after Resend's error `name`), or a 2xx without the message id; returns `err("email-failed")`, never throws. Invitations and password resets turn it into `DomainError("unavailable")` (`503`), so the transaction rolls back (1.5); the worker records a failed attempt | `mail/fetch-failed`, `bad-status`, `bad-response` |
 | `POST /api/client-errors` | A report from the browser's catch points: `window` `error` and `unhandledrejection`, the router's root `errorElement` and `global-error.tsx`, each zone's error boundary (STD-11) | `client/uncaught`, `page-crashed`, `zone-crashed` |
 
 There's no database pool listener: postgres.js reconnects on its own and emits no pool `error` event, and a failed query reaches one of the catch points above (D-52).

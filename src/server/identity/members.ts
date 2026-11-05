@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import type { Me, MemberSummary } from "../../contract";
 import type { MemberChanges, Username } from "./schemas";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import type { Transaction } from "../shared/transaction";
 import { members, sessions } from "./tables";
@@ -66,7 +66,7 @@ async function keepLastAdmin(tx: Transaction, target: Member) {
     .for("update");
 
   const adminIds = activeAdmins.map((admin) => admin.id);
-  if (isLastAdmin(adminIds, target.id)) throw new ApiError(422, "There must be at least one admin.");
+  if (isLastAdmin(adminIds, target.id)) throw new DomainError("invalid", "There must be at least one admin.");
 }
 
 export async function updateMember(
@@ -77,7 +77,7 @@ export async function updateMember(
   assertAdmin(actor);
   return db.transaction(async (tx) => {
     const [target] = username ? await tx.select().from(members).where(eq(members.username, username)) : [];
-    if (!target) throw new ApiError(404, "Not found");
+    if (!target) throw new DomainError("notFound", "Not found");
 
     if (mayLeaveNoAdmin({ role, deactivated })) await keepLastAdmin(tx, target);
 
@@ -103,8 +103,8 @@ export async function editConflict(tx: Transaction, editorId: string | null) {
   const [editor] = editorId
     ? await tx.select({ fullName: members.fullName }).from(members).where(eq(members.id, editorId))
     : [];
-  return new ApiError(
-    409,
+  return new DomainError(
+    "conflict",
     `This was changed by ${editor?.fullName ?? "someone else"}. Copy your text and reload.`,
   );
 }

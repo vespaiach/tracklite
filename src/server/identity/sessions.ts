@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, getTableColumns, gt, isNull, sql } from "drizzle-orm";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import { members, sessions } from "./tables";
 import { createToken, hashToken } from "../shared/tokens";
@@ -85,7 +85,7 @@ export async function signedInMember(request: Request) {
 export async function requireMember(request: Request): Promise<{ member: Member; cookie?: string }> {
   const token = readSessionToken(request);
   const found = await findSession(token);
-  if (!token || !found) throw new ApiError(401, "Sign in to continue.");
+  if (!token || !found) throw new DomainError("signedOut", "Sign in to continue.");
 
   if (!found.needsRenewal) return { member: found.member };
   await db.update(sessions).set({ lastActiveAt: sql`now()` }).where(eq(sessions.id, found.sessionId));
@@ -93,5 +93,5 @@ export async function requireMember(request: Request): Promise<{ member: Member;
 }
 
 export function assertAdmin(member: Member): asserts member is Admin {
-  if (member.role !== "admin") throw new ApiError(403, "You don't have permission to do that.");
+  if (member.role !== "admin") throw new DomainError("forbidden", "You don't have permission to do that.");
 }

@@ -1,6 +1,6 @@
 import "server-only";
 import { eq } from "drizzle-orm";
-import { ApiError } from "../shared/api-error";
+import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
 import { recordFailedSignIn, signInLimitReached, tooManyAttempts } from "./limits";
 import { activeMemberByEmail } from "./members";
@@ -18,7 +18,7 @@ export async function signIn(normalizedEmail: string, password: string, ip: stri
   const passwordMatches = await verifyPassword(member?.passwordHash ?? unmatchablePasswordHash, password);
   if (!member || !passwordMatches) {
     await recordFailedSignIn(normalizedEmail, ip);
-    throw new ApiError(422, "Incorrect email or password.");
+    throw new DomainError("invalid", "Incorrect email or password.");
   }
 
   const newPasswordHash = needsRehash(member.passwordHash) ? await hashPassword(password) : undefined;

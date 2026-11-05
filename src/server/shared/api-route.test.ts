@@ -2,9 +2,9 @@ import { eq } from "drizzle-orm";
 import * as v from "valibot";
 import { afterEach, beforeEach, expect, it, type MockInstance, vi } from "vitest";
 import { createMember } from "../../test/factories";
-import { ApiError } from "./api-error";
 import { apiRoute } from "./api-route";
 import { db } from "./db";
+import { DomainError, type DomainErrorKind } from "./domain-error";
 import { createSession, members } from "../identity";
 
 const appOrigin = "http://localhost:3000";
@@ -84,20 +84,33 @@ it("SEC-004: a write whose Origin matches APP_URL, a write with Sec-Fetch-Site s
   expect(handler).toHaveBeenCalledTimes(3);
 });
 
-it("an ApiError maps to its status and { error: { message, fields } }, with no fields key when it has none", async () => {
-  const withFields = await apiRoute("public", () => {
-    throw new ApiError(422, "Check the highlighted fields", { title: "Title required" });
-  })(new Request(`${appOrigin}/api/issues`, { method: "POST", headers: { Origin: appOrigin } }));
-  const withoutFields = await apiRoute("public", () => {
-    throw new ApiError(404, "Not found");
-  })(new Request(`${appOrigin}/api/issues/WEB-999`));
+it("STD-2, STD-3: each DomainError kind maps to its status and { error: { message, fields } }, with no fields key when it has none", async () => {
+  const statuses = {
+    signedOut: 401,
+    forbidden: 403,
+    notFound: 404,
+    conflict: 409,
+    expired: 410,
+    invalid: 422,
+    limited: 429,
+    unavailable: 503,
+  } as const;
+  const throwing = (error: DomainError) =>
+    apiRoute("public", () => {
+      throw error;
+    })(new Request(`${appOrigin}/api/issues`));
 
-  expect(withFields.status).toBe(422);
+  for (const [kind, status] of Object.entries(statuses) as [DomainErrorKind, number][]) {
+    const response = await throwing(new DomainError(kind, `A ${kind} outcome`));
+    expect(response.status).toBe(status);
+    expect(await response.json()).toEqual({ error: { message: `A ${kind} outcome` } });
+  }
+  const withFields = await throwing(
+    new DomainError("invalid", "Check the highlighted fields", { title: "Title required" }),
+  );
   expect(await withFields.json()).toEqual({
     error: { message: "Check the highlighted fields", fields: { title: "Title required" } },
   });
-  expect(withoutFields.status).toBe(404);
-  expect(await withoutFields.json()).toEqual({ error: { message: "Not found" } });
 });
 
 it("§4.8: any other thrown error maps to 500 with a generic message, logged once as route/request-failed and once as the info request line", async () => {
