@@ -6,6 +6,7 @@ import { db } from "../shared/db";
 import type { Transaction } from "../shared/transaction";
 import { logError, logInfo } from "../shared/log";
 import { notificationSenders, type Recipient } from "./notification-channels";
+import { afterFailure, assignmentKey, checkedMessage, mentionKey } from "./model";
 import { dueAt, queueCounts } from "./notification-queue";
 import { issueAssignees, issues } from "../issues";
 import { members } from "../identity";
@@ -27,7 +28,6 @@ type Tally = Record<Outcome, number>;
 
 const batchSize = 10;
 const pollIntervalMs = 5_000;
-const retryDelaysMinutes = [1, 4, 10];
 const cleanupIntervalMs = 60 * 60_000;
 const metricsIntervalMs = 60_000;
 
@@ -269,14 +269,6 @@ function mentionsOf(
     );
 }
 
-function assignmentKey(memberId: string, issueId: string) {
-  return `${memberId}:${issueId}`;
-}
-
-function mentionKey(memberId: string, sourceId: string | null) {
-  return `${memberId}:${sourceId}`;
-}
-
 function applyDropChecks(delivery: ClaimedDelivery, checks: DropChecks) {
   const { recipient, kept, droppedIds } = checkedMessage(delivery, checks);
 
@@ -296,27 +288,6 @@ function applyDropChecks(delivery: ClaimedDelivery, checks: DropChecks) {
   });
 }
 
-function checkedMessage(delivery: ClaimedDelivery, checks: DropChecks) {
-  const recipient = checks.recipients.get(delivery.recipientId);
-  const items = checks.items.filter((item) => item.batchId === delivery.batchId);
-
-  const kept =
-    recipient?.deactivatedAt === null ? items.filter((item) => stillWanted(checks, delivery, item)) : [];
-  const droppedIds = items.filter((item) => !kept.includes(item)).map((item) => item.id);
-  return { recipient, kept, droppedIds };
-}
-
-function stillWanted(checks: DropChecks, delivery: DueDelivery, item: Item) {
-  if (delivery.targetType === "project") {
-    if (!checks.existingProjectIds.has(delivery.targetId)) return true;
-  } else {
-    if (!checks.existingIssueIds.has(delivery.targetId)) return true;
-    if (item.kind === "assigned")
-      return checks.assignmentKeys.has(assignmentKey(delivery.recipientId, delivery.targetId));
-  }
-  return checks.mentionKeys.has(mentionKey(delivery.recipientId, item.commentId ?? delivery.targetId));
-}
-
 async function holdsLease(tx: Transaction, delivery: ClaimedDelivery) {
   const held = await tx
     .select({ id: notificationDeliveries.id })
@@ -332,14 +303,14 @@ async function dropNotifications(tx: Transaction, ids: string[]) {
 }
 
 async function recordFailure(delivery: ClaimedDelivery) {
-  const delayMinutes = retryDelaysMinutes[delivery.attempts];
-  if (delayMinutes === undefined) return markFailed(delivery);
+  const next = afterFailure(delivery.attempts);
+  if (next === "failed") return markFailed(delivery);
 
   await db
     .update(notificationDeliveries)
     .set({
       attempts: delivery.attempts + 1,
-      nextAttemptAt: sql`now() + make_interval(mins => ${delayMinutes})`,
+      nextAttemptAt: sql`now() + make_interval(mins => ${next.retryInMinutes})`,
       lockedUntil: null,
     })
     .where(heldBy(delivery));
