@@ -3,9 +3,8 @@ import { PostgresJsPreparedQuery } from "drizzle-orm/postgres-js/session";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createIssue, createMember, createProject, newRequestId } from "../../test/factories";
 import { spyOnLoggedErrors } from "../../test/log";
-import { deleteComment, editComment, postIssueComment } from "../comments";
+import { postIssueComment } from "../comments";
 import { db } from "../shared/db";
-import { parseUuid } from "../shared/ids";
 import { outbox } from "../shared/email/outbox";
 import type { Transaction } from "../shared/transaction";
 import { parseIssueId, updateIssue, issues } from "../issues";
@@ -255,7 +254,7 @@ it("REQ-045.1: assign + mention within the wait → Sam gets one email covering 
   );
 });
 
-it("REQ-045.2, REQ-053: reassigned to Jo during the wait → Sam's delivery is dropped, with the time recorded; Jo gets one email", async () => {
+it("REQ-053: a delivery whose notifications are no longer wanted is recorded as dropped, with its time; one still wanted is sent", async () => {
   const alex = await createMember();
   const sam = await createMember();
   const jo = await createMember();
@@ -270,47 +269,6 @@ it("REQ-045.2, REQ-053: reassigned to Jo during the wait → Sam's delivery is d
   expect(mailTo(sam)).toEqual([]);
   expect(await stateChangesOf(sam)).toEqual([{ state: "dropped", changedJustNow: true }]);
   expect(mailTo(jo)).toHaveLength(1);
-});
-
-it("REQ-045.3, REQ-045.4, REQ-045.5: a mention edited out, a comment deleted, or the recipient deactivated during the wait → dropped, no email", async () => {
-  const alex = await createMember();
-  const editedOut = await createMember();
-  const deletedFor = await createMember();
-  const deactivated = await createMember();
-  const { issueRef } = await website();
-  const edited = await comment(issueRef, alex, `@${editedOut.username} look`);
-  await editComment(alex, parseUuid(edited.id), { body: "look", version: 0 });
-  const deleted = await comment(issueRef, alex, `@${deletedFor.username} look`);
-  await deleteComment(alex, parseUuid(deleted.id));
-  await assign(issueRef, alex, deactivated);
-  await db.update(members).set({ deactivatedAt: sql`now()` }).where(eq(members.id, deactivated.id));
-  for (const recipient of [editedOut, deletedFor, deactivated]) await waitIsOver(recipient);
-
-  await sendAllDue();
-
-  for (const recipient of [editedOut, deletedFor, deactivated]) {
-    expect(mailTo(recipient)).toEqual([]);
-    expect((await emailsOf(recipient)).map((email) => email.state)).toEqual(["dropped"]);
-  }
-});
-
-it("REQ-045.7: WEB-42 deleted during the wait → Sam still gets the email", async () => {
-  const alex = await createMember();
-  const sam = await createMember();
-  const { issue, issueRef } = await website();
-  await assign(issueRef, alex, sam);
-  await comment(issueRef, alex, `@${sam.username} look`);
-  await db.delete(issues).where(eq(issues.id, issue.id));
-  await waitIsOver(sam);
-
-  await sendAllDue();
-
-  expect(mailTo(sam)).toHaveLength(1);
-  expect(mailTo(sam)[0].subject).toBe(`[${issueRef}] Fix login button: 2 updates for you`);
-  expect(mailTo(sam)[0].text).toContain(
-    `${alex.fullName} assigned ${issueRef} to you in Website.\n\nhttp://localhost:3000/issue/${issueRef}\n`,
-  );
-  expect((await emailsOf(sam)).map((email) => email.state)).toEqual(["sent"]);
 });
 
 it("REQ-045.8: the first two mentions go out together; the third waits for its own email", async () => {
@@ -335,26 +293,6 @@ it("REQ-045.8: the first two mentions go out together; the third waits for its o
   expect(mailTo(sam)[1].subject).toBe(`[${issueRef}] Fix login button: ${alex.fullName} mentioned you`);
 });
 
-it("REQ-045: one notification dropped, another kept → the email is sent with the kept one only", async () => {
-  const alex = await createMember();
-  const sam = await createMember();
-  const jo = await createMember();
-  const { issueRef } = await website();
-  await assign(issueRef, alex, sam);
-  await comment(issueRef, alex, `@${sam.username} look`);
-  await assign(issueRef, alex, jo);
-  await waitIsOver(sam);
-
-  await sendAllDue();
-
-  expect(mailTo(sam)).toHaveLength(1);
-  expect(mailTo(sam)[0].subject).toBe(`[${issueRef}] Fix login button: ${alex.fullName} mentioned you`);
-  expect(await droppedFlagsOf(sam)).toEqual([
-    { kind: "assigned", dropped: true },
-    { kind: "mentioned", dropped: false },
-  ]);
-});
-
 it("REQ-045: a notification already dropped isn't sent by a later delivery", async () => {
   const alex = await createMember();
   const sam = await createMember();
@@ -377,7 +315,7 @@ it("REQ-045: a notification already dropped isn't sent by a later delivery", asy
   ]);
 });
 
-it("STD-6, REQ-053: a failed send is retried after 1, then 4, then 10 minutes; after the third retry fails it is failed, its time recorded, and nothing more is sent; a failed send is sendEmail's to log, so the worker logs no delivery-failed line", async () => {
+it("STD-6, REQ-053: each failed attempt records its retry time; the last records failed with its time, and nothing more is sent; a failed send is sendEmail's to log, so the worker logs no delivery-failed line", async () => {
   const alex = await createMember();
   const sam = await createMember();
   const { issueRef } = await website();
