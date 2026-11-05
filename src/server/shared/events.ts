@@ -21,3 +21,7 @@ export async function publish(tx: Transaction, event: DomainEvent) {
   if (!subscriber) throw new Error(`No subscriber for ${event.type}: import the notifications context first`);
   await subscriber(tx, event);
 }
+
+export async function publishAll(tx: Transaction, events: DomainEvent[]) {
+  for (const event of events) await publish(tx, event);
+}

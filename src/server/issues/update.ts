@@ -1,190 +1,93 @@
 import "server-only";
-import { and, eq, inArray, sql } from "drizzle-orm";
 import { DomainError } from "../shared/domain-error";
 import { db } from "../shared/db";
-import { parseUuid } from "../shared/ids";
 import type { Transaction } from "../shared/transaction";
-import { publish } from "../shared/events";
-import { editConflict, type Member, members, type Username } from "../identity";
-import { issueAssignees, issueLabels, issues } from "./tables";
-import { labels } from "../projects";
+import { publishAll } from "../shared/events";
+import { editConflict, type Member } from "../identity";
 import type { IssueChange, IssueId } from "./schemas";
+import { updatedIssue } from "./rows";
 import {
-  addAssignees,
-  byIssueId,
-  type IssueUpdate,
-  issueGone,
-  lockedIssue,
-  topOfColumn,
-  updatedIssue,
-} from "./rows";
-import {
-  assigneeChange,
+  assign,
+  changePriority,
+  changeStatus,
   descriptionSaveOf,
   editOf,
+  type Issue,
+  type IssueChangeResult,
   type IssueEdit,
   mayDeleteIssue,
-  sameLabels,
-} from "./rules";
+  relabel,
+  retitle,
+  saveDescription,
+} from "./model";
+import {
+  assigneeCandidates,
+  deleteIssueRow,
+  firstPositionIn,
+  loadIssue,
+  projectLabelIds,
+  saveIssue,
+} from "./repository";
 
-function labelGone() {
-  return new DomainError("notFound", "That label no longer exists");
-}
-
-async function replaceAssignees(tx: Transaction, actor: Member, issueId: string, usernames: Username[]) {
-  const current = await tx
-    .select({ memberId: issueAssignees.memberId, username: members.username })
-    .from(issueAssignees)
-    .innerJoin(members, eq(members.id, issueAssignees.memberId))
-    .where(eq(issueAssignees.issueId, issueId));
-
-  const { added, removedIds } = assigneeChange(current, usernames);
-
-  if (removedIds.length > 0) {
-    await tx
-      .delete(issueAssignees)
-      .where(and(eq(issueAssignees.issueId, issueId), inArray(issueAssignees.memberId, removedIds)));
-  }
-
-  await addAssignees(tx, actor, issueId, added);
-  return added.length > 0 || removedIds.length > 0;
-}
-
-async function replaceLabels(tx: Transaction, issue: typeof issues.$inferSelect, labelIds: string[]) {
-  await assertProjectLabels(tx, issue.projectId, labelIds);
-
-  const current = await tx
-    .select({ labelId: issueLabels.labelId })
-    .from(issueLabels)
-    .where(eq(issueLabels.issueId, issue.id));
-  if (
-    sameLabels(
-      current.map((row) => row.labelId),
-      labelIds,
-    )
-  )
-    return false;
-
-  await tx.delete(issueLabels).where(eq(issueLabels.issueId, issue.id));
-
-  if (labelIds.length > 0) {
-    await tx.insert(issueLabels).values(labelIds.map((labelId) => ({ issueId: issue.id, labelId })));
-  }
-  return true;
-}
-
-async function assertProjectLabels(tx: Transaction, projectId: string, labelIds: string[]) {
-  if (!labelIds.every((labelId) => parseUuid(labelId))) throw labelGone();
-
-  const found =
-    labelIds.length === 0
-      ? []
-      : await tx
-          .select({ id: labels.id })
-          .from(labels)
-          .where(and(inArray(labels.id, labelIds), eq(labels.projectId, projectId)))
-          .for("share");
-  if (found.length !== labelIds.length) throw labelGone();
-}
-
-async function fieldChange(
+async function applyEdit(
   tx: Transaction,
   actor: Member,
-  issue: typeof issues.$inferSelect,
+  issue: Issue,
   edit: IssueEdit,
-): Promise<IssueUpdate> {
+): Promise<IssueChangeResult> {
   switch (edit.field) {
     case "title":
-      return { title: edit.title };
+      return retitle(issue, edit.title);
     case "status":
-      return {
-        status: edit.status,
-        position: await topOfColumn(tx, issue.projectId, edit.status),
-        statusChangedAt: sql`now()`,
-      };
+      return changeStatus(issue, edit.status, await firstPositionIn(tx, issue.projectId, edit.status));
     case "priority":
-      return { priority: edit.priority };
+      return changePriority(issue, edit.priority);
     case "assignees":
-      return (await replaceAssignees(tx, actor, issue.id, edit.assignees)) ? { updatedAt: sql`now()` } : {};
+      return assign(issue, actor, edit.assignees, await assigneeCandidates(tx, edit.assignees));
     case "labels":
-      return (await replaceLabels(tx, issue, edit.labelIds)) ? { updatedAt: sql`now()` } : {};
+      return relabel(issue, edit.labelIds, await projectLabelIds(tx, issue.projectId, edit.labelIds));
     case "none":
-      return {};
+      return { issue, events: [] };
   }
 }
 
-async function saveDescription(
-  id: IssueId | undefined,
-  member: Member,
-  description: string,
-  descriptionVersion: number,
+async function describedChange(
+  tx: Transaction,
+  actor: Member,
+  issue: Issue,
+  { description, descriptionVersion }: { description: string; descriptionVersion: number },
 ) {
-  const where = byIssueId(id);
-  if (!where) throw issueGone();
-
-  return db.transaction(async (tx) => {
-    const issue = await lockedIssue(tx, where);
-
-    if (issue.descriptionVersion !== descriptionVersion)
-      throw await editConflict(tx, issue.descriptionEditedBy);
-
-    await tx
-      .update(issues)
-      .set({
-        description,
-        descriptionVersion: sql`${issues.descriptionVersion} + 1`,
-        descriptionEditedBy: member.id,
-        updatedAt: sql`now()`,
-      })
-      .where(eq(issues.id, issue.id));
-
-    await publish(tx, {
-      type: "DescriptionSaved",
-      actorId: member.id,
-      target: { issueId: issue.id },
-      text: description,
-    });
-
-    return updatedIssue(tx, issue.id);
-  });
+  const change = saveDescription(issue, actor, description, descriptionVersion);
+  if ("conflictWith" in change) throw await editConflict(tx, change.conflictWith);
+  return change;
 }
 
 export async function updateIssue(actor: Member, id: IssueId | undefined, change: IssueChange) {
   const descriptionSave = descriptionSaveOf(change);
-  if (descriptionSave) {
-    return saveDescription(id, actor, descriptionSave.description, descriptionSave.descriptionVersion);
-  }
-
-  const where = byIssueId(id);
-  if (!where) throw issueGone();
 
   return db.transaction(async (tx) => {
-    const issue = await lockedIssue(tx, where);
+    const before = await loadIssue(tx, id);
 
-    const update = await fieldChange(tx, actor, issue, editOf(issue, change));
+    const { issue, events } = descriptionSave
+      ? await describedChange(tx, actor, before, descriptionSave)
+      : await applyEdit(tx, actor, before, editOf(before, change));
 
-    if (Object.keys(update).length > 0) {
-      await tx
-        .update(issues)
-        .set({ ...update, updatedAt: sql`now()` })
-        .where(eq(issues.id, issue.id));
-    }
+    await saveIssue(tx, before, issue);
+
+    await publishAll(tx, events);
 
     return updatedIssue(tx, issue.id);
   });
 }
 
 export async function deleteIssue(actor: Member, id: IssueId | undefined) {
-  const where = byIssueId(id);
-  if (!where) throw issueGone();
-
   await db.transaction(async (tx) => {
-    const issue = await lockedIssue(tx, where);
+    const issue = await loadIssue(tx, id);
 
     if (!mayDeleteIssue(actor, issue.createdBy)) {
       throw new DomainError("forbidden", "You don't have permission to do that.");
     }
 
-    await tx.delete(issues).where(eq(issues.id, issue.id));
+    await deleteIssueRow(tx, issue);
   });
 }
