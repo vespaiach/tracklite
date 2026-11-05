@@ -2,7 +2,8 @@ import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createMember } from "../../test/factories";
 import { db } from "../shared/db";
-import { initials, updateMember } from "./members";
+import { updateMember } from "./commands/update-member";
+import { initials } from "./members";
 import { members } from "./tables";
 import { parseUsername } from "./schemas";
 

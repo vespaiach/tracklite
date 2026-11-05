@@ -1,20 +1,14 @@
 import "server-only";
 import { and, eq, ne } from "drizzle-orm";
-import type { PasswordChange } from "./schemas";
-import type { ProfileChanges } from "./schemas";
-import { DomainError } from "../shared/domain-error";
-import { db } from "../shared/db";
-import { recordFailedSignIn, signInLimitReached, tooManyAttempts } from "./limits";
-import { normalizeEmail } from "./members";
-import { hashPassword, verifyPassword } from "../shared/passwords";
-import { members, sessions } from "./tables";
-import type { Member } from "./sessions";
-import { hashToken } from "../shared/tokens";
-
-export async function updateProfile(actor: Member, { fullName }: ProfileChanges) {
-  const [updated] = await db.update(members).set({ fullName }).where(eq(members.id, actor.id)).returning();
-  return updated;
-}
+import type { PasswordChange } from "../schemas";
+import { DomainError } from "../../shared/domain-error";
+import { db } from "../../shared/db";
+import { recordFailedSignIn, signInLimitReached, tooManyAttempts } from "../limits";
+import { normalizeEmail } from "../members";
+import { hashPassword, verifyPassword } from "../../shared/passwords";
+import { members, sessions } from "../tables";
+import type { Member } from "../sessions";
+import { hashToken } from "../../shared/tokens";
 
 export async function changePassword(
   actor: Member,

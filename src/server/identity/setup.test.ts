@@ -8,7 +8,8 @@ import { jsonRequest } from "../../test/reset-links";
 import { db } from "../shared/db";
 import { FirstAdmin } from "./schemas";
 import { members } from "./tables";
-import { checkSetupSecret, createFirstAdmin } from "./setup";
+import { checkSetupSecret } from "./commands/check-setup-secret";
+import { createFirstAdmin } from "./commands/create-first-admin";
 
 const secret = "s3tup-secret-that-is-long-enough-to-pass";
 

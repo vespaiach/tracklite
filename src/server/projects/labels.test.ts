@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createMember, createProject } from "../../test/factories";
 import { db } from "../shared/db";
-import { createLabel } from "./labels";
+import { createLabel } from "./commands/create-label";
 import { labels } from "./tables";
 
 async function waitForLockWaiters(count: number) {

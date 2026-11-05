@@ -54,10 +54,6 @@ export async function createSession(memberId: string, executor: Pick<typeof db, 
   return token;
 }
 
-export async function endSession(token: string) {
-  await db.delete(sessions).where(eq(sessions.tokenHash, hashToken(token)));
-}
-
 async function findSession(token: string | undefined) {
   if (!token) return undefined;
   const [found] = await db

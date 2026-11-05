@@ -5,7 +5,10 @@ import { uniqueEmail } from "../../test/invitations";
 import { db } from "../shared/db";
 import { parseUuid } from "../shared/ids";
 import { outbox } from "../shared/email/outbox";
-import { createInvitation, listInvitations, resendInvitation, revokeInvitation } from "./invitations";
+import { createInvitation } from "./commands/create-invitation";
+import { listInvitations } from "./commands/list-invitations";
+import { resendInvitation } from "./commands/resend-invitation";
+import { revokeInvitation } from "./commands/revoke-invitation";
 import { invitations } from "./tables";
 import { createToken, hashToken } from "../shared/tokens";
 

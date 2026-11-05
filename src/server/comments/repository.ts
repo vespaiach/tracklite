@@ -2,9 +2,10 @@ import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { DomainError } from "../shared/domain-error";
 import type { Uuid } from "../shared/ids";
-import type { Transaction } from "../shared/transaction";
+import type { Executor, Transaction } from "../shared/transaction";
 import { issues } from "../issues";
 import { projects, writableProject } from "../projects";
+import { findComments } from "../queries";
 import { comments } from "./tables";
 import { type Comment, parentOf } from "./model";
 
@@ -57,4 +58,10 @@ async function insertComment(tx: Transaction, { target, ...comment }: Comment) {
 
 export async function deleteCommentRow(tx: Transaction, comment: Comment) {
   await tx.delete(comments).where(eq(comments.id, comment.id));
+}
+
+export async function oneComment(executor: Executor, id: string) {
+  const [comment] = await findComments(executor, eq(comments.id, id));
+  if (!comment) throw commentGone();
+  return comment;
 }

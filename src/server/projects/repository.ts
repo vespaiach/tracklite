@@ -3,7 +3,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { DrizzleQueryError } from "drizzle-orm/errors";
 import { DomainError } from "../shared/domain-error";
 import type { Transaction } from "../shared/transaction";
-import { byProjectKey } from "../queries";
+import { byProjectKey, findLabel } from "../queries";
 import { labels, projectKeys, projects } from "./tables";
 import { labelGone, type Project, type ProjectLabel } from "./model";
 import type { ProjectKey } from "./schemas";
@@ -152,4 +152,10 @@ export async function takeIssueNumber(tx: Transaction, projectId: string) {
     .where(eq(projects.id, projectId))
     .returning({ number: sql<number>`${projects.nextIssueNumber} - 1` });
   return number;
+}
+
+export async function savedLabel(tx: Transaction, id: string) {
+  const label = await findLabel(tx, id);
+  if (!label) throw labelGone();
+  return label;
 }

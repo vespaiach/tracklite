@@ -1,11 +1,11 @@
 import "server-only";
-import { db } from "../shared/db";
-import { publishAll } from "../shared/events";
-import type { Member } from "../identity";
-import { updatedIssue } from "../queries";
-import type { IssueId, IssueMove } from "./schemas";
-import { move } from "./model";
-import { loadIssue, neighboursAt, saveIssue } from "./repository";
+import { db } from "../../shared/db";
+import { publishAll } from "../../shared/events";
+import type { Member } from "../../identity";
+import { updatedIssue } from "../../queries";
+import type { IssueId, IssueMove } from "../schemas";
+import { move } from "../model";
+import { loadIssue, neighboursAt, saveIssue } from "../repository";
 
 export async function moveIssue(_actor: Member, id: IssueId | undefined, { status, place }: IssueMove) {
   return db.transaction(async (tx) => {

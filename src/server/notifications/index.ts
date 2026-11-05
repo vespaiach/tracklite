@@ -1,12 +1,12 @@
 import { subscribe } from "../shared/events";
-import { onDomainEvent } from "./notifications";
+import { onDomainEvent } from "./handlers/on-domain-event";
 
 subscribe(onDomainEvent);
 
-export { receiveEmailEvent } from "./email-webhook";
-export { workerIsHealthy } from "./notification-queue";
-export { notificationStats } from "./notification-stats";
-export { runWorker } from "./worker";
+export { receiveEmailEvent } from "./handlers/receive-email-event";
+export { runWorker } from "./handlers/run-worker";
+export { notificationStats } from "./commands/notification-stats";
+export { workerIsHealthy } from "./commands/worker-is-healthy";
 export {
   mentions,
   notificationBatches,

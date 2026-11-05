@@ -1,15 +1,15 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { db } from "../shared/db";
-import { publishAll } from "../shared/events";
-import type { Member } from "../identity";
-import { type ProjectKey, takeIssueNumber, writableProject } from "../projects";
-import { issues } from "./tables";
-import type { NewIssue } from "./schemas";
-import { findIssue, updatedIssue } from "../queries";
-import { newIssue } from "./model";
-import { assigneeCandidates, firstPositionIn, saveIssue } from "./repository";
+import { db } from "../../shared/db";
+import { publishAll } from "../../shared/events";
+import type { Member } from "../../identity";
+import { type ProjectKey, takeIssueNumber, writableProject } from "../../projects";
+import { issues } from "../tables";
+import type { NewIssue } from "../schemas";
+import { findIssue, updatedIssue } from "../../queries";
+import { newIssue } from "../model";
+import { assigneeCandidates, firstPositionIn, saveIssue } from "../repository";
 
 export async function createIssue(
   actor: Member,

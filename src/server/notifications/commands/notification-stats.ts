@@ -5,11 +5,11 @@ import {
   type NotificationStats,
   notificationChannels,
   type ProblemDelivery,
-} from "../../contract";
-import { db } from "../shared/db";
-import { queueCounts, workerPassWindow } from "./notification-queue";
-import { members, assertAdmin, type Member } from "../identity";
-import { notificationBatches, notificationDeliveries, notifications, workerHeartbeats } from "./tables";
+} from "../../../contract";
+import { db } from "../../shared/db";
+import { queueCounts, workerPassWindow } from "../notification-queue";
+import { members, assertAdmin, type Member } from "../../identity";
+import { notificationBatches, notificationDeliveries, notifications, workerHeartbeats } from "../tables";
 
 type ProblemRow = Awaited<ReturnType<typeof problemRows>>[number];
 
