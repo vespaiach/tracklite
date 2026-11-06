@@ -15,7 +15,7 @@ const allowedDependencies: Record<string, string[]> = {
 };
 const allowedFileDependencies = [
   "src/server/shared/api-route.ts -> identity",
-  "src/server/shared/api-route.ts -> notifications",
+  "src/infrastructure/unit-of-work.ts -> notifications",
 ];
 const layerRules: Record<string, { mayImport: string; allows: (target: string) => boolean }> = {
   domain: {
@@ -165,7 +165,7 @@ it("M15: context dependencies follow the context map", () => {
 it("M16: a context writes only its own tables", () => {
   const owners = tableOwners();
 
-  expect(owners.size).toBe(19);
+  expect(owners.size).toBe(20);
   expect(foreignTableWrites(owners)).toEqual([]);
 });
 

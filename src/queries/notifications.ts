@@ -10,17 +10,18 @@ import { type Actor, assertAdmin } from "../domain/identity/actor";
 import { db } from "../infrastructure/db";
 import { members } from "../infrastructure/identity/tables";
 import {
+  jobRuns,
   notificationBatches,
   notificationDeliveries,
   notifications,
-  workerHeartbeats,
+  outboxEvents,
 } from "../infrastructure/notifications/tables";
 
 type ProblemRow = Awaited<ReturnType<typeof problemRows>>[number];
 
 const recentProblemCount = 20;
 const finishedState = ["sent", "dropped", "failed", "bounced"] as const;
-const workerPassWindow = sql`interval '2 minutes'`;
+const outboxRunWindow = sql`interval '2 minutes'`;
 
 export const dueAt = sql`coalesce(${notificationDeliveries.nextAttemptAt}, ${notificationBatches.sendAfter})`;
 
@@ -37,17 +38,21 @@ export async function queueCounts() {
   return counts;
 }
 
-export async function workerIsHealthy() {
+export async function outboxIsHealthy() {
   const [{ healthy }] = await db.execute<{ healthy: boolean }>(sql`
     select exists (
-      select 1 from ${workerHeartbeats}
-      where ${workerHeartbeats.name} = 'worker'
-        and ${workerHeartbeats.lastPassAt} > now() - ${workerPassWindow}
+      select 1 from ${jobRuns}
+      where ${jobRuns.name} = 'outbox'
+        and ${jobRuns.lastRunAt} > now() - ${outboxRunWindow}
     ) and not exists (
       select 1 from ${notificationDeliveries}
       join ${notificationBatches} on ${notificationBatches.id} = ${notificationDeliveries.batchId}
       where ${notificationDeliveries.state} = 'pending'
         and ${dueAt} < now() - interval '10 minutes'
+    ) and not exists (
+      select 1 from ${outboxEvents}
+      where ${outboxEvents.publishedAt} is null
+        and ${outboxEvents.occurredAt} < now() - interval '10 minutes'
     ) as healthy`);
   return healthy;
 }
@@ -56,25 +61,25 @@ export async function notificationStats(actor: Actor): Promise<NotificationStats
   assertAdmin(actor);
 
   return {
-    ...(await workerLastPass()),
+    ...(await outboxLastRun()),
     queue: await queueCounts(),
     channels: await channelStats(),
     recentProblems: (await problemRows()).map(problemDelivery),
   };
 }
 
-async function workerLastPass() {
-  const [heartbeat] = await db
+async function outboxLastRun() {
+  const [run] = await db
     .select({
-      lastPassAt: workerHeartbeats.lastPassAt,
-      staleMinutes: sql<number | null>`case when ${workerHeartbeats.lastPassAt} <= now() - ${workerPassWindow}
-        then floor(extract(epoch from now() - ${workerHeartbeats.lastPassAt}) / 60)::int end`,
+      lastRunAt: jobRuns.lastRunAt,
+      staleMinutes: sql<number | null>`case when ${jobRuns.lastRunAt} <= now() - ${outboxRunWindow}
+        then floor(extract(epoch from now() - ${jobRuns.lastRunAt}) / 60)::int end`,
     })
-    .from(workerHeartbeats)
-    .where(eq(workerHeartbeats.name, "worker"));
+    .from(jobRuns)
+    .where(eq(jobRuns.name, "outbox"));
   return {
-    workerLastPassAt: heartbeat?.lastPassAt.toISOString() ?? null,
-    workerStaleMinutes: heartbeat?.staleMinutes ?? null,
+    outboxLastRunAt: run?.lastRunAt.toISOString() ?? null,
+    outboxStaleMinutes: run?.staleMinutes ?? null,
   };
 }
 

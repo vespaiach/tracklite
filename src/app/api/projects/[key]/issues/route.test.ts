@@ -10,6 +10,7 @@ import { issues } from "../../../../../infrastructure/issues/tables";
 import { notificationBatches, notifications } from "../../../../../infrastructure/notifications/tables";
 import { labels, projects } from "../../../../../infrastructure/projects/tables";
 import { createIssue, createLabel, createMember, createProject } from "../../../../../test/factories";
+import { recordEvents } from "../../../../../test/outbox";
 import { jsonRequest } from "../../../../../test/reset-links";
 import { PUT as moveIssue } from "../../../issues/[id]/position/route";
 import { GET, POST } from "./route";
@@ -88,6 +89,7 @@ it("REQ-016.6, REQ-019.5: Sam creates an issue with Alex and Jo as assignees →
     memberSummary(jo),
     memberSummary(sam.member),
   ]);
+  await recordEvents();
   const notified = await db
     .select({ recipientId: notificationBatches.recipientId })
     .from(notifications)

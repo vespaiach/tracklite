@@ -31,8 +31,8 @@ function problem(overrides: Partial<ProblemDelivery> = {}): ProblemDelivery {
 
 function stats(overrides: Partial<NotificationStats> = {}): NotificationStats {
   return {
-    workerLastPassAt: secondsAgo(4),
-    workerStaleMinutes: null,
+    outboxLastRunAt: secondsAgo(4),
+    outboxStaleMinutes: null,
     queue: { pending: 3, due: 1, oldestDueSeconds: 40 },
     channels: [{ channel: "email", sent: 12, dropped: 2, failed: 1, bounced: 1 }],
     recentProblems: [problem()],
@@ -67,7 +67,7 @@ function cellTexts(row: HTMLElement) {
 }
 
 function workerWarning(worker: HTMLElement) {
-  return within(worker).queryByText(/never run|No pass/)?.textContent;
+  return within(worker).queryByText(/never run|No outbox run/)?.textContent;
 }
 
 it("REQ-053.1, REQ-053.2, REQ-053.3, REQ-053.4, REQ-053.10, STD-2: worker without a warning, queue, Email counts, problem rows newest first, Members link current", async () => {
@@ -105,7 +105,7 @@ it("REQ-053.5, REQ-053.6, REQ-053.9: a worker that never ran shows Never with it
   mockStatusPage(() =>
     Response.json(
       stats({
-        workerLastPassAt: null,
+        outboxLastRunAt: null,
         queue: { pending: 2, due: 0, oldestDueSeconds: 0 },
         recentProblems: [],
       }),
@@ -115,7 +115,7 @@ it("REQ-053.5, REQ-053.6, REQ-053.9: a worker that never ran shows Never with it
 
   const worker = await section("Worker");
   expect(fact(worker, "Last seen")).toBe("Never");
-  expect(workerWarning(worker)).toBe("The worker has never run. No notifications are sent until it does.");
+  expect(workerWarning(worker)).toBe("The outbox has never run. No notifications are sent until it does.");
 
   const queue = await section("Queue");
   expect(fact(queue, "Pending")).toBe("2");
@@ -128,11 +128,11 @@ it("REQ-053.5, REQ-053.6, REQ-053.9: a worker that never ran shows Never with it
 });
 
 it("REQ-053.10: no pass for 3 minutes warns with the whole minutes", async () => {
-  mockStatusPage(() => Response.json(stats({ workerLastPassAt: secondsAgo(200), workerStaleMinutes: 3 })));
+  mockStatusPage(() => Response.json(stats({ outboxLastRunAt: secondsAgo(200), outboxStaleMinutes: 3 })));
   renderAppAt("/settings/notifications");
 
   expect(workerWarning(await section("Worker"))).toBe(
-    "No pass for 3 min. Notifications wait in the queue until the worker runs.",
+    "No outbox run for 3 min. Notifications wait in the queue until it runs.",
   );
 });
 

@@ -24,8 +24,9 @@ type InfoEvents = {
   action: {
     call: { action: string; outcome: "ok" | DomainErrorKind | "error"; durationMs: number; actor?: string };
   };
-  worker: {
+  outbox: {
     metrics: {
+      events: number;
       pending: number;
       due: number;
       oldestDueSeconds: number;
@@ -41,9 +42,10 @@ type ErrorEvents = {
   route: {
     "request-failed": { method: string; path?: string; route?: string; actor?: string; digest?: string };
   };
-  worker: {
+  outbox: {
+    "event-failed": { eventId: string; type: string };
     "delivery-failed": { deliveryId: string; channel: string };
-    "pass-failed": NoContext;
+    "run-failed": NoContext;
     "metrics-failed": NoContext;
     "cleanup-failed": NoContext;
   };

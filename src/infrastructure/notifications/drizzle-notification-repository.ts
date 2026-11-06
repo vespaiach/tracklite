@@ -1,9 +1,12 @@
 import "server-only";
-import { and, eq, gt, inArray, isNull, notInArray, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, notInArray, type SQL, sql } from "drizzle-orm";
 import type {
   MentionSource,
   Notice,
   NotificationRepository,
+  OutboxEvent,
+  OutboxWriter,
+  Snapshot,
 } from "../../domain/notifications/notification-repository";
 import type { EventTarget } from "../../domain/shared/events";
 import { findMentions, toPlainText } from "../../lib/markdown/parse";
@@ -11,30 +14,54 @@ import { members } from "../identity/tables";
 import { issues } from "../issues/tables";
 import { projects } from "../projects/tables";
 import type { Transaction } from "../transaction";
-import { mentions, notificationBatches, notificationDeliveries, notifications } from "./tables";
+import { mentions, notificationBatches, notificationDeliveries, notifications, outboxEvents } from "./tables";
 
 const maxExcerptLength = 500;
 
-export function drizzleNotificationRepository(tx: Transaction): NotificationRepository {
+export function drizzleOutboxWriter(tx: Transaction): OutboxWriter {
   return {
     replaceMentions: (source, text) => replaceMentions(tx, source, text),
 
-    async record(recipientIds, notice) {
-      const { targetType, targetId, linkPath, ...snapshot } = await snapshotOf(tx, notice.target);
-
-      for (const recipientId of recipientIds) {
-        await tx.insert(notifications).values({
-          batchId: await batchFor(tx, recipientId, targetType, targetId),
+    async add(type, recipientIds, notice) {
+      await tx.insert(outboxEvents).values({
+        type,
+        payload: {
           kind: notice.kind,
           actorId: notice.actorId,
           commentId: notice.commentId ?? null,
-          ...snapshot,
-          linkPath: notice.commentId ? `${linkPath}#comment-${notice.commentId}` : linkPath,
-          excerpt: excerptOf(notice),
-        });
-      }
+          recipientIds,
+          snapshot: await snapshotOf(tx, notice),
+        },
+      });
     },
   };
+}
+
+export function drizzleNotificationRepository(tx: Transaction): NotificationRepository {
+  return {
+    async record(event, recipientId) {
+      if (await alreadyRecorded(tx, event, recipientId)) return;
+
+      const { targetType, targetId, ...snapshot } = event.payload.snapshot;
+      await tx.insert(notifications).values({
+        batchId: await batchFor(tx, event, recipientId, targetType, targetId),
+        eventId: event.id,
+        recipientId,
+        kind: event.payload.kind,
+        actorId: event.payload.actorId,
+        commentId: event.payload.commentId,
+        ...snapshot,
+      });
+    },
+  };
+}
+
+async function alreadyRecorded(tx: Transaction, event: OutboxEvent, recipientId: string) {
+  const found = await tx.$count(
+    notifications,
+    and(eq(notifications.eventId, event.id), eq(notifications.recipientId, recipientId)),
+  );
+  return found > 0;
 }
 
 async function replaceMentions(tx: Transaction, source: MentionSource, text: string) {
@@ -78,7 +105,16 @@ function excerptOf({ text }: Notice) {
   return `${characters.slice(0, maxExcerptLength).join("")}…`;
 }
 
-function snapshotOf(tx: Transaction, target: EventTarget) {
+async function snapshotOf(tx: Transaction, notice: Notice): Promise<Snapshot> {
+  const { linkPath, ...target } = await targetSnapshot(tx, notice.target);
+  return {
+    ...target,
+    linkPath: notice.commentId ? `${linkPath}#comment-${notice.commentId}` : linkPath,
+    excerpt: excerptOf(notice),
+  };
+}
+
+function targetSnapshot(tx: Transaction, target: EventTarget) {
   return "issueId" in target ? issueSnapshot(tx, target.issueId) : projectSnapshot(tx, target.projectId);
 }
 
@@ -95,7 +131,7 @@ async function issueSnapshot(tx: Transaction, issueId: string) {
     .where(eq(issues.id, issueId));
   const issueRef = `${issue.projectKey}-${issue.number}`;
   return {
-    targetType: "issue",
+    targetType: "issue" as const,
     targetId: issueId,
     issueRef,
     issueTitle: issue.title,
@@ -111,7 +147,7 @@ async function projectSnapshot(tx: Transaction, projectId: string) {
     .from(projects)
     .where(eq(projects.id, projectId));
   return {
-    targetType: "project",
+    targetType: "project" as const,
     targetId: projectId,
     issueRef: null,
     issueTitle: null,
@@ -121,7 +157,14 @@ async function projectSnapshot(tx: Transaction, projectId: string) {
   };
 }
 
-async function batchFor(tx: Transaction, recipientId: string, targetType: string, targetId: string) {
+async function batchFor(
+  tx: Transaction,
+  event: OutboxEvent,
+  recipientId: string,
+  targetType: string,
+  targetId: string,
+) {
+  const occurredAt = occurredAtOf(event);
   const [waiting] = await tx
     .select({ id: notificationBatches.id })
     .from(notificationBatches)
@@ -130,19 +173,30 @@ async function batchFor(tx: Transaction, recipientId: string, targetType: string
         eq(notificationBatches.recipientId, recipientId),
         eq(notificationBatches.targetType, targetType),
         eq(notificationBatches.targetId, targetId),
+        gt(notificationBatches.sendAfter, occurredAt),
         gt(notificationBatches.sendAfter, sql`now()`),
       ),
     )
     .limit(1);
   if (waiting) return waiting.id;
 
-  return createBatch(tx, recipientId, targetType, targetId);
+  return createBatch(tx, recipientId, targetType, targetId, sql`${occurredAt} + interval '2 minutes'`);
 }
 
-async function createBatch(tx: Transaction, recipientId: string, targetType: string, targetId: string) {
+function occurredAtOf(event: OutboxEvent) {
+  return sql`(select ${outboxEvents.occurredAt} from ${outboxEvents} where ${outboxEvents.id} = ${event.id})`;
+}
+
+async function createBatch(
+  tx: Transaction,
+  recipientId: string,
+  targetType: string,
+  targetId: string,
+  sendAfter: SQL,
+) {
   const [batch] = await tx
     .insert(notificationBatches)
-    .values({ recipientId, targetType, targetId, sendAfter: sql`now() + interval '2 minutes'` })
+    .values({ recipientId, targetType, targetId, sendAfter })
     .returning({ id: notificationBatches.id });
 
   const [recipient] = await tx
