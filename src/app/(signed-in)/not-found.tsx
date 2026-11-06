@@ -1,4 +1,4 @@
-export function NotFound() {
+export default function NotFound() {
   return (
     <main className="tl-page-message">
       <h1 className="tl-page-message__title">Not found</h1>

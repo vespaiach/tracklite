@@ -109,9 +109,9 @@ function mockThread({
   return mockApi(routes);
 }
 
-async function projectLink() {
-  return within(await screen.findByRole("navigation", { name: "Breadcrumb" })).findByRole("link", {
-    name: /Website/,
+async function listLink() {
+  return within(await screen.findByRole("navigation", { name: "Project views" })).findByRole("link", {
+    name: "List",
   });
 }
 
@@ -413,7 +413,7 @@ it("REQ-035.1: leaving with an unsent comment asks first; Cancel keeps the text"
   openIssue();
   await type("Half a thought");
 
-  fireEvent.click(await projectLink());
+  fireEvent.click(await listLink());
   const prompt = await screen.findByRole("alertdialog", {
     name: "You have an unsent comment. Leave anyway?",
   });
@@ -447,9 +447,9 @@ it("REQ-035.2, REQ-035: a posted comment or a blank box doesn't hold back leavin
   await commentWith("Verified on staging.");
   await type("   ");
 
-  fireEvent.click(await projectLink());
+  fireEvent.click(await listLink());
 
-  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB"));
+  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB/list"));
   expect(screen.queryByRole("alertdialog")).toBeNull();
 });
 

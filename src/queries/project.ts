@@ -69,6 +69,15 @@ async function creator(executor: Executor, memberId: string | null) {
   return memberSummary(member);
 }
 
+export async function findProject(_actor: Member, key: ProjectKey | undefined) {
+  const [project] = await db
+    .select({ key: projects.key, name: projects.name, archivedAt: projects.archivedAt })
+    .from(projects)
+    .where(byProjectKey(key));
+  if (!project) return null;
+  return { ...project, archivedAt: project.archivedAt?.toISOString() ?? null } satisfies ProjectSummary;
+}
+
 export async function listProjects(_actor: Member, archived: boolean): Promise<ProjectSummary[]> {
   const rows = await db
     .select({ key: projects.key, name: projects.name, archivedAt: projects.archivedAt })

@@ -31,7 +31,12 @@ afterEach(() => {
 
 function renderAt(path: string) {
   window.history.replaceState(null, "", path);
-  return render(<ClientApp refreshServer={() => {}} />);
+  return render(
+    <ClientApp
+      refreshServer={() => {}}
+      createIssue={vi.fn()}
+    />,
+  );
 }
 
 it("M0.4, STD-4: an unknown address shows Not found, with a “Go to My issues” link that loads /my-issues", async () => {

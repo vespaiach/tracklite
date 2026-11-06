@@ -22,10 +22,6 @@ export const routes: RouteObject[] = [
             }),
           },
           {
-            path: "project/:key",
-            lazy: async () => ({ Component: (await import("./screens/Project")).ProjectBoard }),
-          },
-          {
             path: "project/:key/list",
             lazy: async () => ({ Component: (await import("./screens/Project")).ProjectList }),
           },
@@ -49,7 +45,10 @@ export const routes: RouteObject[] = [
             path: "projects/archived",
             lazy: async () => ({ Component: (await import("./screens/ArchivedProjects")).ArchivedProjects }),
           },
-          { path: "*", lazy: async () => ({ Component: (await import("./screens/NotFound")).NotFound }) },
+          {
+            path: "*",
+            lazy: async () => ({ Component: (await import("../app/(signed-in)/not-found")).default }),
+          },
         ],
       },
     ],

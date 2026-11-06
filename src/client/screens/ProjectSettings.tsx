@@ -27,7 +27,6 @@ import {
 } from "../api";
 import { loadPage } from "../../lib/load-page";
 import { useFailureToast } from "../failure";
-import { useRouterClick } from "../links";
 import { ProjectGate } from "../ProjectGate";
 
 export function ProjectSettings() {
@@ -46,12 +45,11 @@ export function ProjectSettings() {
 function SettingsPage({ project }: { project: Project }) {
   const full = `${project.name} · ${project.key}`;
   const projectHref = `/project/${project.key}`;
-  const projectClick = useRouterClick(projectHref);
   const archived = project.archivedAt !== null;
   return (
     <>
       <AppBar>
-        <Crumbs items={[{ label: full, href: projectHref, onClick: projectClick }, { label: "Settings" }]} />
+        <Crumbs items={[{ label: full, href: projectHref }, { label: "Settings" }]} />
         {archived && <Tag variant="neutral">Archived</Tag>}
       </AppBar>
       <SettingsLayout medium>

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { type Location, Navigate, useLocation } from "react-router";
 import { type ApiFailure, type Project, useProjectQuery } from "./api";
-import { NotFound } from "./screens/NotFound";
+import NotFound from "../app/(signed-in)/not-found";
 import { Zone, zoneState } from "./Zone";
 
 function canonicalAddress({ pathname, search, hash }: Location, typedKey: string, key: string) {

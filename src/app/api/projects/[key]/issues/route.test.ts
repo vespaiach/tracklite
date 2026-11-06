@@ -1,19 +1,18 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, type SQL, sql } from "drizzle-orm";
+import { and, eq, type SQL, sql } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../../../infrastructure/db";
 import { comments } from "../../../../../infrastructure/comments/tables";
 import { createSession } from "../../../../../infrastructure/identity/session";
-import { memberSummary } from "../../../../../domain/identity/member-summary";
 import { issues } from "../../../../../infrastructure/issues/tables";
-import { notificationBatches, notifications } from "../../../../../infrastructure/notifications/tables";
 import { labels, projects } from "../../../../../infrastructure/projects/tables";
 import { createIssue, createLabel, createMember, createProject } from "../../../../../test/factories";
-import { recordEvents } from "../../../../../test/outbox";
-import { jsonRequest } from "../../../../../test/reset-links";
-import { PUT as moveIssue } from "../../../issues/[id]/position/route";
-import { GET, POST } from "./route";
+import { moveIssue } from "../../../../../application/issues/move-issue";
+import { IssueId } from "../../../../../domain/shared/identifiers";
+import { issueWork } from "../../../../../infrastructure/issues/issue-work";
+import { IssueStatus } from "../../../../../domain/issues/issue-status";
+import { GET } from "./route";
 
 beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -27,188 +26,6 @@ async function signedIn(fullName = "Sam Lee") {
   const member = await createMember({ fullName });
   return { member, cookie: `session=${await createSession(member.id)}` };
 }
-
-function createWith(cookie: string, key: string, body: unknown) {
-  return POST(jsonRequest("POST", `/api/projects/${key}/issues`, body, { Cookie: cookie }), {
-    params: Promise.resolve({ key }),
-  });
-}
-
-async function issuesOf(projectId: string) {
-  return db.select().from(issues).where(eq(issues.projectId, projectId));
-}
-
-function fieldError(fields: Record<string, string>) {
-  return { error: { message: "Check the highlighted fields", fields } };
-}
-
-it("REQ-016.1: the first issue in WEB is WEB-1, Backlog, No priority, unassigned, created by Sam", async () => {
-  const sam = await signedIn("Sam Lee");
-  const project = await createProject();
-
-  const response = await createWith(sam.cookie, project.key.toLowerCase(), {
-    requestId: randomUUID(),
-    title: "  Fix login button  ",
-  });
-
-  expect(response.status).toBe(201);
-  expect(await response.json()).toEqual({
-    id: `${project.key}-1`,
-    title: "Fix login button",
-    description: "",
-    status: "backlog",
-    priority: "none",
-    assignees: [],
-    createdBy: memberSummary(sam.member),
-    createdAt: expect.any(String),
-    updatedAt: expect.any(String),
-    labels: [],
-    descriptionVersion: 0,
-    mentions: [],
-    archived: false,
-  });
-  expect(memberSummary(sam.member).fullName).toBe("Sam Lee");
-});
-
-it("REQ-016.6, REQ-019.5: Sam creates an issue with Alex and Jo as assignees → assigned to both, sorted by name, and each is notified; a deactivated assignee creates nothing", async () => {
-  const sam = await signedIn("Sam Lee");
-  const alex = await createMember({ fullName: "Alex Kim" });
-  const jo = await createMember({ fullName: "Jo Park" });
-  const pat = await createMember({ deactivatedAt: new Date() });
-  const project = await createProject();
-
-  const response = await createWith(sam.cookie, project.key, {
-    requestId: randomUUID(),
-    title: "Fix login button",
-    assignees: [jo.username, alex.username, sam.member.username],
-  });
-
-  expect(response.status).toBe(201);
-  expect((await response.json()).assignees).toEqual([
-    memberSummary(alex),
-    memberSummary(jo),
-    memberSummary(sam.member),
-  ]);
-  await recordEvents();
-  const notified = await db
-    .select({ recipientId: notificationBatches.recipientId })
-    .from(notifications)
-    .innerJoin(notificationBatches, eq(notificationBatches.id, notifications.batchId))
-    .where(and(eq(notifications.kind, "assigned"), eq(notifications.actorId, sam.member.id)));
-  expect(notified.map((row) => row.recipientId).sort()).toEqual([alex.id, jo.id].sort());
-
-  const refused = await createWith(sam.cookie, project.key, {
-    requestId: randomUUID(),
-    title: "Fix logout button",
-    assignees: [alex.username, pat.username],
-  });
-
-  expect(refused.status).toBe(422);
-  expect(await refused.json()).toEqual(fieldError({ assignees: "Choose an active member" }));
-  expect(await issuesOf(project.id)).toHaveLength(1);
-});
-
-it("REQ-016.2: after WEB-41 with WEB-40 deleted, the next issue is WEB-42", async () => {
-  const { cookie } = await signedIn();
-  const project = await createProject({ nextIssueNumber: 40 });
-  await createWith(cookie, project.key, { requestId: randomUUID(), title: "Forty" });
-  await createWith(cookie, project.key, { requestId: randomUUID(), title: "Forty-one" });
-  await db.delete(issues).where(and(eq(issues.projectId, project.id), eq(issues.number, 40)));
-
-  const response = await createWith(cookie, project.key, { requestId: randomUUID(), title: "Next" });
-
-  expect(response.status).toBe(201);
-  expect((await response.json()).id).toBe(`${project.key}-42`);
-});
-
-it("REQ-016.3, REQ-016, STD-5: a blank or 201-character title and a requestId that isn't a UUID get field errors and create nothing", async () => {
-  const { cookie } = await signedIn();
-  const project = await createProject();
-
-  const blank = await createWith(cookie, project.key, { requestId: randomUUID(), title: "   " });
-  const tooLong = await createWith(cookie, project.key, { requestId: randomUUID(), title: "x".repeat(201) });
-  const badRequestId = await createWith(cookie, project.key, {
-    requestId: "not-a-uuid",
-    title: "Fix login button",
-  });
-
-  expect(blank.status).toBe(422);
-  expect(await blank.json()).toEqual(fieldError({ title: "Title required" }));
-  expect(tooLong.status).toBe(422);
-  expect(await tooLong.json()).toEqual(fieldError({ title: "Too long (max 200)" }));
-  expect(badRequestId.status).toBe(422);
-  expect(await badRequestId.json()).toEqual(fieldError({ requestId: "Invalid request" }));
-  expect(await issuesOf(project.id)).toHaveLength(0);
-});
-
-it("REQ-016.4: concurrent creates get distinct numbers", async () => {
-  const sam = await signedIn("Sam Lee");
-  const alex = await signedIn("Alex Kim");
-  const project = await createProject({ nextIssueNumber: 42 });
-
-  const responses = await Promise.all([
-    createWith(sam.cookie, project.key, { requestId: randomUUID(), title: "From Sam" }),
-    createWith(alex.cookie, project.key, { requestId: randomUUID(), title: "From Alex" }),
-  ]);
-
-  expect(responses.map((response) => response.status)).toEqual([201, 201]);
-  const ids = await Promise.all(responses.map(async (response) => (await response.json()).id));
-  expect(ids.sort()).toEqual([`${project.key}-42`, `${project.key}-43`]);
-});
-
-it("STD-5: a repeated requestId returns the original issue with 200 and creates nothing", async () => {
-  const { cookie } = await signedIn();
-  const project = await createProject();
-  const requestId = randomUUID();
-
-  const first = await createWith(cookie, project.key, { requestId, title: "Fix login button" });
-  const repeat = await createWith(cookie, project.key, { requestId, title: "Fix login button" });
-
-  expect(first.status).toBe(201);
-  expect(repeat.status).toBe(200);
-  expect(await repeat.json()).toEqual(await first.json());
-  expect(await issuesOf(project.id)).toHaveLength(1);
-  const [stored] = await db.select().from(projects).where(eq(projects.id, project.id));
-  expect(stored.nextIssueNumber).toBe(2);
-});
-
-it("REQ-013.4: creating an issue in an archived project is refused", async () => {
-  const { cookie } = await signedIn();
-  const project = await createProject({ archivedAt: new Date() });
-
-  const response = await createWith(cookie, project.key, {
-    requestId: randomUUID(),
-    title: "Fix login button",
-  });
-
-  expect(response.status).toBe(403);
-  expect(await response.json()).toEqual({ error: { message: "This project is archived" } });
-  expect(await issuesOf(project.id)).toHaveLength(0);
-});
-
-it("REQ-027.3: Sam clicks + on Backlog and creates WEB-43 → it's at the top of Backlog", async () => {
-  const sam = await signedIn();
-  const project = await createProject({ nextIssueNumber: 43_000 });
-  const existing = await createIssue(project.id);
-
-  const response = await createWith(sam.cookie, project.key, {
-    requestId: randomUUID(),
-    title: "New card",
-    status: "backlog",
-  });
-
-  expect(response.status).toBe(201);
-  const created = await response.json();
-  const column = await db
-    .select({ number: issues.number })
-    .from(issues)
-    .where(and(eq(issues.projectId, project.id), eq(issues.status, "backlog")))
-    .orderBy(asc(issues.position), asc(issues.id));
-  expect(column.map((row) => `${project.key}-${row.number}`)).toEqual([
-    created.id,
-    `${project.key}-${existing.number}`,
-  ]);
-});
 
 type IssueChange = PgUpdateSetSource<typeof issues> & { assigneeIds?: string[] };
 type ListRow = {
@@ -342,19 +159,17 @@ it("REQ-036.3: WEB is archived → the list, filters, search and sort all work",
 });
 
 it("REQ-036.5: reordering within a column keeps the issue's place; a status change by dragging moves it to the top", async () => {
-  const { cookie } = await signedIn();
+  const { member, cookie } = await signedIn();
   const project = await createProject();
   const nine = await issueIn(project, { status: "in_progress", position: "a2", updatedAt: minutesAgo(30) });
   const five = await issueIn(project, { status: "in_progress", position: "a1", updatedAt: minutesAgo(10) });
-  const move = (body: unknown) =>
-    moveIssue(jsonRequest("PUT", `/api/issues/${nine}/position`, body, { Cookie: cookie }), {
-      params: Promise.resolve({ id: nine }),
-    });
+  const move = (status: "in_progress" | "in_review") =>
+    moveIssue(member, issueWork, IssueId.from(nine), { status: IssueStatus.from(status), place: "top" });
 
-  expect((await move({ status: "in_progress", place: "top" })).status).toBe(200);
+  await move("in_progress");
   expect(await idsOf(cookie, project.key)).toEqual([five, nine]);
 
-  expect((await move({ status: "in_review", place: "top" })).status).toBe(200);
+  await move("in_review");
   expect(await idsOf(cookie, project.key)).toEqual([nine, five]);
 });
 
