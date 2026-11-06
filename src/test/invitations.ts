@@ -6,7 +6,8 @@ import { POST as resend } from "../app/api/invitations/[id]/resend/route";
 import { GET as list, POST as create } from "../app/api/invitations/route";
 import { db } from "../infrastructure/db";
 import { outbox } from "../infrastructure/email/outbox";
-import { invitations, createSession } from "../server/identity";
+import { invitations } from "../infrastructure/identity/tables";
+import { createSession } from "../infrastructure/identity/session";
 import { createMember } from "./factories";
 import { jsonRequest } from "./reset-links";
 

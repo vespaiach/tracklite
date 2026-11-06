@@ -38,7 +38,7 @@ npm run typecheck      # next typegen && tsc --noEmit
 npm run db:generate    # drizzle-kit: write a migration from infrastructure/schema.ts and infrastructure/<context>/tables.ts
 npm run db:migrate     # apply migrations to DATABASE_URL
 npm run db:studio
-npm run db:seed        # dev members and admins (password in src/server/identity/seed.ts)
+npm run db:seed        # dev members and admins (password in src/infrastructure/identity/seed.ts)
 npm run db:seed:load   # NFR-001 load data: 50 projects, 10,000 issues, 50,000 comments
 npm run db:reset       # drop the local dev database's schemas, re-run migrations, then db:seed
 npm run worker         # run the notification worker
@@ -57,6 +57,7 @@ Test setup (`vitest.config.ts`):
 - Two projects. `unit` runs `src/**/*.test.ts` in node with no file parallelism, because the tests share one database. `components` runs `src/**/*.test.tsx` in jsdom.
 - Under vitest, `DATABASE_URL` is replaced by `TEST_DATABASE_URL` from `.env.local`.
 - `server-only` is aliased to a no-op so server modules can be imported in tests.
+- In `unit`, `src/test/next-mocks.ts` mocks `next/headers`, `next/cache` and `next/navigation`; set the request's cookies and headers with `setNextRequest` from `src/test/next-request.ts`.
 
 Always run drizzle-kit through the npm scripts. They set `NODE_OPTIONS=--conditions=react-server`, which `server-only` imports need. Never hand-edit `migrations/meta/`.
 
@@ -64,12 +65,12 @@ Always run drizzle-kit through the npm scripts. They set `NODE_OPTIONS=--conditi
 
 **Processes (§1.1).** `tracklite-web` is `next start` behind a reverse proxy. Deployment (servers, proxy, deploys, backups) is maintained outside this repository. `tracklite-worker` is a Node entry point in `scripts/`, run from the same codebase. Both use PostgreSQL 18 and nothing else; there is no Redis and no paid queue.
 
-**Strict single-page app (§1.7).** Every page address serves the same HTML shell. `src/app/[[...path]]/page.tsx` renders `<ClientApp />` with `next/dynamic` and `ssr: false`. The browser does all of these:
+**Strict single-page app (§1.7).** Every page address serves the same HTML shell. `src/app/(signed-in)/[[...path]]/page.tsx` (and, until H13, the `(signed-out)` pages) renders `<ClientApp />` through `src/client/ClientPage.tsx` with `next/dynamic` and `ssr: false`. The browser does all of these:
 - routing, with React Router in data mode and lazy routes;
 - signed-out redirects (`GET /api/me`, then `/sign-in?next=…`);
 - all data loading, through `/api`.
 
-There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks` are more specific routes, so the catch-all never handles them. `src/proxy.ts` only sets the nonce-based CSP and `Referrer-Policy`.
+There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks` are more specific routes, so the catch-all never handles them. `src/proxy.ts` only sets the nonce-based CSP and `Referrer-Policy`, and forwards the requested path in `x-request-path`. The `(signed-in)` layout redirects a signed-out visitor to `/sign-in?next=…` on the server; server actions are wrapped by `action()` in `src/app/_server/action.ts` (tech design §1.2).
 
 **Client state (§1.7).** Redux Toolkit:
 - RTK Query holds all server data, in one `api` slice with a shared `baseQuery` that redirects on `401`.

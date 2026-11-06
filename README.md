@@ -45,7 +45,7 @@ Tests are named after the spec example they prove, e.g. `it("REQ-016.4: concurre
 
 ### Browser app
 
-The app is a strict single-page app. Every page address returns the same HTML shell (`src/app/[[...path]]/page.tsx`), which loads `<ClientApp />` in the browser only. From there:
+The app is a strict single-page app. Every page address returns the same HTML shell (`src/app/(signed-in)/[[...path]]/page.tsx`, behind a layout that sends a signed-out visitor to `/sign-in?next=…`), which loads `<ClientApp />` in the browser only. From there:
 
 - **React Router** (data mode, lazy routes) does the routing and the signed-out redirect to `/sign-in?next=…`.
 - **RTK Query** holds all server data and loads it through `/api`. Screens refetch when opened; there is no polling. Board moves are optimistic and roll back on failure.

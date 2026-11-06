@@ -3,7 +3,7 @@ import type { Me } from "../../../contract";
 import { Username } from "../../../domain/shared/identifiers";
 import { identityWork } from "../../../infrastructure/identity/repositories";
 import { memberProfile, profileResponse } from "../../../queries";
-import { ProfileChanges } from "../../../server/identity";
+import { ProfileChanges } from "../../_server/schemas/identity";
 import { apiRoute } from "../../../server/shared/api-route";
 
 export const GET = apiRoute("member", (_request, member) =>

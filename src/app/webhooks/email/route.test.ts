@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { NotificationStats } from "../../../contract";
 import { db } from "../../../infrastructure/db";
 import { outbox } from "../../../infrastructure/email/outbox";
-import { invitations } from "../../../server/identity";
+import { invitations } from "../../../infrastructure/identity/tables";
 import { notificationDeliveries } from "../../../infrastructure/notifications/tables";
 import { createMember, createNotificationBatch } from "../../../test/factories";
 import { invitedBy, listedInvitation, signedInAdmin, uniqueEmail } from "../../../test/invitations";

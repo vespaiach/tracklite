@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../infrastructure/db";
 import { outbox } from "../../../infrastructure/email/outbox";
 import { passwordResetEmail } from "../../../infrastructure/email/templates";
-import { passwordResetRequests, passwordResetTokens } from "../../../server/identity";
+import { passwordResetRequests, passwordResetTokens } from "../../../infrastructure/identity/tables";
 import { createMember } from "../../../test/factories";
 import { requestResetLink, uniqueIp } from "../../../test/reset-links";
 

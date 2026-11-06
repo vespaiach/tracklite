@@ -1,4 +1,5 @@
-import * as v from "valibot";
+import type * as v from "valibot";
+import { parseInput, unreadableInput } from "../../app/_server/parse-input";
 import { DomainError, type DomainErrorKind } from "../../domain/shared/domain-error";
 import { readConfig } from "../../infrastructure/config";
 import { logError, logInfo } from "../../infrastructure/log";
@@ -40,44 +41,18 @@ function errorOutcome(error: unknown): Outcome {
   };
 }
 
-function unreadableRequest() {
-  return new DomainError("invalid", "Couldn’t read the request.");
-}
-
 async function readInput(request: Request, schema: v.GenericSchema) {
-  const body = await readJsonObject(request);
-
-  const result = v.safeParse(schema, body, { abortPipeEarly: true });
-  if (result.success) return result.output;
-
-  throw inputError(result.issues);
+  return parseInput(schema, await readJsonObject(request));
 }
 
 async function readJsonObject(request: Request) {
   const body: unknown = await request.json().catch(() => {
-    throw unreadableRequest();
+    throw unreadableInput();
   });
-  if (typeof body !== "object" || body === null || Array.isArray(body)) throw unreadableRequest();
+  if (typeof body !== "object" || body === null || Array.isArray(body)) throw unreadableInput();
   return body;
 }
 
-function inputError(issues: ValidationIssues) {
-  const { root, nested } = v.flatten(withRequiredMessages(issues));
-  if (root) return new DomainError("invalid", root[0]);
-  if (!nested) return unreadableRequest();
-  const fields = Object.fromEntries(
-    Object.entries(nested).flatMap(([field, messages]) => (messages ? [[field, messages[0]]] : [])),
-  );
-  return new DomainError("invalid", "Check the highlighted fields", fields);
-}
-
-function withRequiredMessages(issues: ValidationIssues) {
-  return issues.map((issue) =>
-    issue.type === "object" && issue.input === undefined ? { ...issue, message: "Required" } : issue,
-  ) as ValidationIssues;
-}
-
-type ValidationIssues = [v.BaseIssue<unknown>, ...v.BaseIssue<unknown>[]];
 type Outcome = { response: Response; failure?: { error: unknown } };
 type Caller = { username?: string; renewedCookie?: string };
 type NameActor = (username: string) => void;

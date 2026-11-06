@@ -5,7 +5,7 @@ type MailEvent = { kind?: "notification" | "invitation" | "untracked"; id?: stri
 export type EmailEventServices = {
   signatures: { verify(headers: Headers, body: string): boolean };
   deliveries: DeliveryRepository;
-  invitations: { markBounced(providerMessageId: string): Promise<{ id: string } | undefined> };
+  invitations: { markBounced(providerMessageId: string): Promise<string | undefined> };
   logMail(event: "bounced" | "ignored", fields: MailEvent): void;
 };
 
@@ -34,8 +34,8 @@ async function markBounced(
   const deliveryId = await deliveries.markBounced(providerMessageId);
   if (deliveryId) return logMail("bounced", { kind: "notification", id: deliveryId });
 
-  const invitation = await invitations.markBounced(providerMessageId);
-  if (invitation) return logMail("bounced", { kind: "invitation", id: invitation.id });
+  const invitationId = await invitations.markBounced(providerMessageId);
+  if (invitationId) return logMail("bounced", { kind: "invitation", id: invitationId });
 
   logMail("bounced", { kind: "untracked" });
 }

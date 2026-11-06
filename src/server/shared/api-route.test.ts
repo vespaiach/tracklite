@@ -5,7 +5,8 @@ import { createMember } from "../../test/factories";
 import { apiRoute } from "./api-route";
 import { db } from "../../infrastructure/db";
 import { DomainError, type DomainErrorKind } from "../../domain/shared/domain-error";
-import { createSession, members } from "../identity";
+import { createSession } from "../../infrastructure/identity/session";
+import { members } from "../../infrastructure/identity/tables";
 
 const appOrigin = "http://localhost:3000";
 let log: MockInstance<typeof console.error>;

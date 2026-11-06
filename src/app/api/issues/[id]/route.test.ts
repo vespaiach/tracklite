@@ -2,8 +2,10 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../../infrastructure/db";
-import { createSession, memberSummary, members } from "../../../../server/identity";
 import { comments } from "../../../../infrastructure/comments/tables";
+import { createSession } from "../../../../infrastructure/identity/session";
+import { memberSummary } from "../../../../domain/identity/member-summary";
+import { members } from "../../../../infrastructure/identity/tables";
 import { issueAssignees, issueLabels, issues } from "../../../../infrastructure/issues/tables";
 import { labels, projects } from "../../../../infrastructure/projects/tables";
 import {

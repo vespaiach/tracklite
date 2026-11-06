@@ -2,7 +2,9 @@ import "server-only";
 import type { CleanUpServices } from "../../application/notifications/clean-up";
 import type { EmailEventServices } from "../../application/notifications/receive-email-event";
 import type { DeliveryServices } from "../../application/notifications/send-due-deliveries";
-import { deleteExpiredAccountRows, markInvitationBounced } from "../../server/identity";
+import { markInvitationBounced } from "../../application/identity/mark-invitation-bounced";
+import { deleteExpiredAccountRows } from "../identity/delete-expired-account-rows";
+import { identityWork } from "../identity/repositories";
 import { logError, logInfo } from "../log";
 import { notificationSenders } from "./channels";
 import { drizzleDeliveryRepository } from "./drizzle-delivery-repository";
@@ -23,6 +25,6 @@ export const cleanUpServices: CleanUpServices = {
 export const emailEventServices: EmailEventServices = {
   signatures: { verify: isSignedEmailEvent },
   deliveries: drizzleDeliveryRepository,
-  invitations: { markBounced: markInvitationBounced },
+  invitations: { markBounced: (providerMessageId) => markInvitationBounced(identityWork, providerMessageId) },
   logMail: (event, fields) => logInfo("mail", event, fields),
 };

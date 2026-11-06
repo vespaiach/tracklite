@@ -7,7 +7,7 @@ import { POST as postSetup } from "../../app/api/setup/route";
 import { db } from "../../infrastructure/db";
 import { identityWork } from "../../infrastructure/identity/repositories";
 import { members } from "../../infrastructure/identity/tables";
-import { FirstAdmin } from "../../server/identity";
+import { FirstAdmin } from "../../app/_server/schemas/identity";
 import { jsonRequest } from "../../test/reset-links";
 import { checkSetupSecret as checkSecret } from "./check-setup-secret";
 import { createFirstAdmin } from "./create-first-admin";
