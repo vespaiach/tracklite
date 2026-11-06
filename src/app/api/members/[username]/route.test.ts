@@ -6,10 +6,11 @@ import { hashPassword } from "../../../../infrastructure/passwords";
 import { members, sessions, type Member } from "../../../../infrastructure/identity/tables";
 import { createSession } from "../../../../infrastructure/identity/session";
 import { createMember } from "../../../../test/factories";
-import { jsonRequest, requestResetLink, resetTokenFor } from "../../../../test/reset-links";
+import { fromNewIp, outcome, sessionCookieWritten, signInAs } from "../../../../test/actions";
+import { jsonRequest, resetTokenFor } from "../../../../test/reset-links";
+import { requestResetLink } from "../../../(signed-out)/forgot-password/actions";
+import { resetPassword } from "../../../(signed-out)/reset-password/actions";
 import { GET as getMe, PATCH as patchMe } from "../../me/route";
-import { POST as resetPassword } from "../../password-resets/route";
-import { POST as signIn } from "../../sessions/route";
 import { PATCH } from "./route";
 
 const password = "correct horse battery";
@@ -42,7 +43,7 @@ function getMeWith(cookie: string) {
 }
 
 function signInWith(email: string, withPassword = password) {
-  return signIn(jsonRequest("POST", "/api/sessions", { email, password: withPassword }));
+  return signInAs(email, withPassword);
 }
 
 async function storedMember(id: string) {
@@ -136,19 +137,21 @@ it('REQ-007.1, REQ-007.5: a deactivated member\'s correct password gets "Incorre
 
   await patchMember(adminCookie, sam.username, { deactivated: true });
 
-  const signedInAgain = await signInWith(sam.email);
-  expect(signedInAgain.status).toBe(422);
-  expect(await signedInAgain.json()).toEqual({ error: { message: "Incorrect email or password." } });
+  expect(await signInWith(sam.email)).toEqual({
+    ok: false,
+    error: { kind: "invalid", message: "Incorrect email or password." },
+  });
 
-  expect((await requestResetLink(sam.email)).status).toBe(204);
+  fromNewIp();
+  expect(outcome(await requestResetLink({ email: sam.email }))).toBe("ok");
   expect(outbox.sent).toEqual([]);
 
-  const reset = await resetPassword(
-    jsonRequest("POST", "/api/password-resets", { token, password: "a brand new password" }),
-  );
-  expect(reset.status).toBe(410);
-  expect(await reset.json()).toEqual({ error: { message: "This link has expired" } });
-  expect(reset.headers.get("set-cookie")).toBeNull();
+  fromNewIp();
+  expect(await resetPassword({ token, password: "a brand new password" })).toEqual({
+    ok: false,
+    error: { kind: "expired", message: "This link has expired" },
+  });
+  expect(sessionCookieWritten()).toBeUndefined();
   expect((await storedMember(sam.id)).passwordHash).toBe(passwordHash);
 });
 
@@ -174,9 +177,8 @@ it("REQ-008.1: a reactivated member signs in with their existing password and pr
 
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({ username: sam.username, deactivated: false });
-  const signedInAgain = await signInWith(sam.email);
-  expect(signedInAgain.status).toBe(204);
-  const cookie = signedInAgain.headers.get("set-cookie")?.split(";")[0] ?? "";
+  expect(outcome(await signInWith(sam.email))).toBe("ok");
+  const cookie = sessionCookieWritten() ?? "";
   expect(await (await getMeWith(cookie)).json()).toMatchObject({
     username: sam.username,
     fullName: "Sam Lee",

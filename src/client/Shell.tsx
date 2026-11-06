@@ -11,6 +11,7 @@ import {
   useSignOutMutation,
 } from "./api";
 import { useFailureToast } from "./failure";
+import { loadPage } from "./load-page";
 import { type NewProject, NewProjectDialog } from "./NewProjectDialog";
 import { Sidebar } from "./Sidebar";
 import { zoneState } from "./Zone";
@@ -57,13 +58,12 @@ function useArchivedProjectOpen(pathname: string) {
 
 function useSignOutAndLeave() {
   const [signOut] = useSignOutMutation();
-  const navigate = useNavigate();
   const toastFailure = useFailureToast();
 
   return async () => {
     try {
       await signOut().unwrap();
-      await navigate("/sign-in", { replace: true });
+      loadPage("/sign-in");
     } catch (caught) {
       toastFailure(caught as ApiFailure);
     }

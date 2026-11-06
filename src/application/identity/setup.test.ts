@@ -2,13 +2,12 @@ import { sql } from "drizzle-orm";
 import * as v from "valibot";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { GET as getMe } from "../../app/api/me/route";
-import { POST as signIn } from "../../app/api/sessions/route";
-import { POST as postSetup } from "../../app/api/setup/route";
+import { createFirstAdmin as createFirstAdminAction } from "../../app/(signed-out)/welcome/actions";
 import { db } from "../../infrastructure/db";
 import { identityWork } from "../../infrastructure/identity/repositories";
 import { members } from "../../infrastructure/identity/tables";
 import { FirstAdmin } from "../../app/_server/schemas/identity";
-import { jsonRequest } from "../../test/reset-links";
+import { outcome, signInAs } from "../../test/actions";
 import { checkSetupSecret as checkSecret } from "./check-setup-secret";
 import { createFirstAdmin } from "./create-first-admin";
 
@@ -58,10 +57,7 @@ it('OPS-001.1, REQ-003.1: the right secret creates admin "Sam" as "sam", signed 
     new Request("http://localhost:3000/api/me", { headers: { Cookie: `session=${sessionToken}` } }),
   );
   expect(me.status).toBe(200);
-  const response = await signIn(
-    jsonRequest("POST", "/api/sessions", { email: admin.email, password: admin.password }),
-  );
-  expect(response.status).toBe(204);
+  expect(outcome(await signInAs(admin.email, admin.password))).toBe("ok");
 });
 
 it('OPS-001.2: once members exist the check and the setup are refused with "Setup already done"', async () => {
@@ -107,18 +103,17 @@ it('OPS-001.7: of two setups at the same moment one creates the admin and the ot
 });
 
 it("OPS-001, REQ-003, REQ-048: a blank name, a bad username or a short password is refused and nothing is saved", async () => {
-  const response = await postSetup(
-    jsonRequest("POST", "/api/setup", {
-      ...admin,
-      fullName: "   ",
-      username: "sam_lee",
-      password: "Sh0rt!pass",
-    }),
-  );
+  const result = await createFirstAdminAction({
+    ...admin,
+    fullName: "   ",
+    username: "sam_lee",
+    password: "Sh0rt!pass",
+  });
 
-  expect(response.status).toBe(422);
-  expect(await response.json()).toEqual({
+  expect(result).toEqual({
+    ok: false,
     error: {
+      kind: "invalid",
       message: "Check the highlighted fields",
       fields: {
         fullName: "Name required",

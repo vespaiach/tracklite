@@ -6,23 +6,6 @@ export const routes: RouteObject[] = [
   {
     errorElement: <RouteCrashScreen />,
     children: [
-      { path: "sign-in", lazy: async () => ({ Component: (await import("./screens/SignIn")).SignIn }) },
-      {
-        path: "forgot-password",
-        lazy: async () => ({ Component: (await import("./screens/ForgotPassword")).ForgotPassword }),
-      },
-      {
-        path: "reset-password",
-        lazy: async () => ({ Component: (await import("./screens/ResetPassword")).ResetPassword }),
-      },
-      {
-        path: "invite",
-        lazy: async () => ({ Component: (await import("./screens/AcceptInvitation")).AcceptInvitation }),
-      },
-      {
-        path: "welcome",
-        lazy: async () => ({ Component: (await import("./screens/Welcome")).Welcome }),
-      },
       {
         Component: Shell,
         children: [

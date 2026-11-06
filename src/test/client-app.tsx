@@ -28,7 +28,6 @@ export function mockApi(routes: Record<string, Handler>) {
     const key = `${init?.method ?? "GET"} ${url}`;
     const defaults: Record<string, Handler> = {
       "GET /api/projects?archived=false": () => Response.json([]),
-      "GET /api/setup": () => Response.json({ needed: false }),
     };
     const handler = { ...defaults, ...routes }[key];
     if (!handler) throw new Error(`Unmocked request ${key}`);

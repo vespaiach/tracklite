@@ -5,6 +5,7 @@ import type { ActionError, ActionResult } from "../../contract";
 import { DomainError, type DomainErrorKind } from "../../domain/shared/domain-error";
 import type { Member } from "../../infrastructure/identity/tables";
 import { logInfo } from "../../infrastructure/log";
+import "../../infrastructure/notifications/subscription";
 import { parseInput } from "./parse-input";
 import { actionMember } from "./session";
 

@@ -2,7 +2,6 @@ import { type BaseQueryFn, createApi } from "@reduxjs/toolkit/query/react";
 import type {
   Board,
   Invitation,
-  InvitationLookup,
   Issue,
   IssueListPage,
   IssuePriority,
@@ -14,10 +13,10 @@ import type {
   NotificationStats,
   Project,
   ProjectSummary,
-  SetupStatus,
   ThreadComment,
 } from "../contract";
 import type { StoreExtra } from "./store";
+import { loadPage } from "./load-page";
 import { showToast } from "./toast";
 
 export type * from "../contract";
@@ -66,8 +65,6 @@ function projectKeyOf(id: string) {
   return id.slice(0, id.lastIndexOf("-"));
 }
 
-const signedOutPaths = ["/sign-in", "/forgot-password", "/reset-password", "/invite", "/welcome"];
-
 function fetchApi(request: ApiRequest, signal: AbortSignal) {
   if (typeof request === "string") return fetch(`/api/${request}`, { signal });
   if (request.body === undefined) return fetch(`/api/${request.path}`, { signal, method: request.method });
@@ -89,9 +86,7 @@ const baseQuery: BaseQueryFn<ApiRequest, unknown, ApiFailure> = async (request, 
   if (response.status === 401) {
     const { router } = extra as StoreExtra;
     const { pathname, search } = router.state.location;
-    if (!signedOutPaths.includes(pathname)) {
-      await router.navigate(`/sign-in?next=${encodeURIComponent(pathname + search)}`, { replace: true });
-    }
+    loadPage(`/sign-in?next=${encodeURIComponent(pathname + search)}`);
   }
   if (response.status === 204) {
     return { data: null };
@@ -112,41 +107,8 @@ export const api = createApi({
   tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels", "Issue", "Board", "Comments"],
   endpoints: (build) => ({
     me: build.query<Me, void>({ query: () => "me", providesTags: ["Me"] }),
-    signIn: build.mutation<null, { email: string; password: string }>({
-      query: (body) => ({ path: "sessions", method: "POST", body }),
-    }),
     signOut: build.mutation<null, void>({
       query: () => ({ path: "sessions/current", method: "DELETE" }),
-      invalidatesTags: ["Me"],
-    }),
-    requestResetLink: build.mutation<null, { email: string }>({
-      query: (body) => ({ path: "password-reset-links", method: "POST", body }),
-    }),
-    lookUpResetLink: build.query<null, { token: string }>({
-      query: (body) => ({ path: "password-reset-lookups", method: "POST", body }),
-    }),
-    resetPassword: build.mutation<null, { token: string; password: string }>({
-      query: (body) => ({ path: "password-resets", method: "POST", body }),
-    }),
-    lookUpInvitation: build.query<InvitationLookup, { token: string }>({
-      query: (body) => ({ path: "invitation-lookups", method: "POST", body }),
-    }),
-    acceptInvitation: build.mutation<
-      Me,
-      { token: string; fullName: string; username: string; password: string }
-    >({
-      query: (body) => ({ path: "members", method: "POST", body }),
-      invalidatesTags: ["Me"],
-    }),
-    setupStatus: build.query<SetupStatus, void>({ query: () => "setup" }),
-    checkSetupSecret: build.mutation<null, { secret: string }>({
-      query: (body) => ({ path: "setup-checks", method: "POST", body }),
-    }),
-    createFirstAdmin: build.mutation<
-      Me,
-      { secret: string; email: string; fullName: string; username: string; password: string }
-    >({
-      query: (body) => ({ path: "setup", method: "POST", body }),
       invalidatesTags: ["Me"],
     }),
     updateProfile: build.mutation<Me, { fullName: string }>({
@@ -281,16 +243,7 @@ export const api = createApi({
 
 export const {
   useMeQuery,
-  useSignInMutation,
   useSignOutMutation,
-  useRequestResetLinkMutation,
-  useLookUpResetLinkQuery,
-  useResetPasswordMutation,
-  useLookUpInvitationQuery,
-  useAcceptInvitationMutation,
-  useSetupStatusQuery,
-  useCheckSetupSecretMutation,
-  useCreateFirstAdminMutation,
   useUpdateProfileMutation,
   useChangePasswordMutation,
   useMembersQuery,

@@ -1,8 +1,9 @@
 import { randomInt } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
-import { POST as requestLink } from "../app/api/password-reset-links/route";
+import { requestResetLink } from "../application/identity/request-reset-link";
 import { db } from "../infrastructure/db";
 import { outbox } from "../infrastructure/email/outbox";
+import { identityWork } from "../infrastructure/identity/repositories";
 import { passwordResetTokens } from "../infrastructure/identity/tables";
 import { hashToken } from "../infrastructure/tokens";
 
@@ -28,13 +29,8 @@ export function jsonRequest(
   });
 }
 
-export function requestResetLink(email: string, headers?: Record<string, string>) {
-  return requestLink(jsonRequest("POST", "/api/password-reset-links", { email }, headers));
-}
-
 export async function resetTokenFor(email: string) {
-  const response = await requestResetLink(email);
-  if (response.status !== 204) throw new Error(`Requesting a reset link answered ${response.status}`);
+  await requestResetLink(identityWork, { email, ip: uniqueIp() });
   const token = outbox.sent.at(-1)?.text.match(/token=(\S+)/)?.[1];
   if (!token) throw new Error("No reset email in the outbox");
   return token;

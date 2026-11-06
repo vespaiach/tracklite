@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
+import { ToastProvider } from "../components/toast";
 import "../components/ui/track-lite/styles/index.css";
 
 const text = Geist({ subsets: ["latin"], variable: "--font-geist" });
@@ -17,7 +18,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html
       lang="en"
       className={`${text.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

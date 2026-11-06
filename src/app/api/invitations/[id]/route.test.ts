@@ -27,15 +27,13 @@ it("REQ-001.4, REQ-001: revoking Sam's invitation → the link stops working, an
   const response = await revokeInvitation(cookie, invitation.id);
 
   expect(response.status).toBe(204);
-  const lookup = await lookUp(token);
-  expect(lookup.status).toBe(410);
-  expect(await lookup.json()).toEqual({ error: { message: "This invitation is no longer valid." } });
+  expect(await lookUp(token)).toEqual({ expired: "This invitation is no longer valid." });
   expect(await listedInvitation(cookie, email)).toBeUndefined();
 
   const again = await invitedBy(cookie, email);
 
   expect(again.invitation.id).not.toBe(invitation.id);
-  expect(await (await lookUp(again.token)).json()).toEqual({ email });
+  expect(await lookUp(again.token)).toEqual({ email });
 });
 
 it("STD-4: revoking an unknown, already revoked or malformed id → 404", async () => {

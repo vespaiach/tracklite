@@ -101,8 +101,8 @@ it("REQ-001: inviting an email that has an open invitation resends it", async ()
 
   expect(second.invitation.id).toBe(first.invitation.id);
   expect(await storedInvitations(email)).toHaveLength(1);
-  expect((await lookUp(first.token)).status).toBe(410);
-  expect(await (await lookUp(second.token)).json()).toEqual({ email });
+  expect(await lookUp(first.token)).toHaveProperty("expired");
+  expect(await lookUp(second.token)).toEqual({ email });
 });
 
 it("REQ-001: the list holds Pending, Bounced and Expired, and leaves out Accepted and Revoked", async () => {
