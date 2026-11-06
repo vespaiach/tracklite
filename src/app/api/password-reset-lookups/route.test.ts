@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { outbox } from "../../../server/shared/email/outbox";
+import { outbox } from "../../../infrastructure/email/outbox";
 import { createSession } from "../../../server/identity";
 import { createMember } from "../../../test/factories";
 import { ageResetLink, jsonRequest, resetTokenFor } from "../../../test/reset-links";

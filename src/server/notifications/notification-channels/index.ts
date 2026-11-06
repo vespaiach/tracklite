@@ -1,8 +1,8 @@
 import "server-only";
-import type { NotificationItem } from "../../shared/email/templates";
+import type { NotificationItem } from "../../../infrastructure/email/templates";
 import type { members } from "../../identity";
-import type { Result } from "../../shared/result";
-import type { notificationChannel } from "../../shared/schema";
+import type { Result } from "../../../domain/shared/result";
+import type { notificationChannel } from "../../../infrastructure/schema";
 import { sendNotificationEmail } from "./email";
 
 export type Recipient = typeof members.$inferSelect;

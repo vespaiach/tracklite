@@ -1,7 +1,7 @@
 import "server-only";
-import { db } from "../../shared/db";
-import type { Uuid } from "../../shared/ids";
-import { publishAll } from "../../shared/events";
+import { db } from "../../../infrastructure/db";
+import type { Uuid } from "../../../infrastructure/ids";
+import { publishAll } from "../../../infrastructure/events";
 import { editConflict, type Member } from "../../identity";
 import type { CommentEdit } from "../schemas";
 import { edit } from "../model";

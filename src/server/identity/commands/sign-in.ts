@@ -1,11 +1,11 @@
 import "server-only";
 import { eq } from "drizzle-orm";
-import { DomainError } from "../../shared/domain-error";
-import { db } from "../../shared/db";
+import { DomainError } from "../../../domain/shared/domain-error";
+import { db } from "../../../infrastructure/db";
 import { recordFailedSignIn, signInLimitReached, tooManyAttempts } from "../limits";
 import { activeMemberByEmail } from "../members";
-import { hashPassword, needsRehash, verifyPassword } from "../../shared/passwords";
-import { members } from "../tables";
+import { hashPassword, needsRehash, verifyPassword } from "../../../infrastructure/passwords";
+import { members } from "../../../infrastructure/identity/tables";
 import { createSession } from "../sessions";
 
 const unmatchablePasswordHash =

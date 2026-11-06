@@ -1,6 +1,6 @@
 import type { ThreadComment } from "../../../../contract";
 import { apiRoute } from "../../../../server/shared/api-route";
-import { parseUuid } from "../../../../server/shared/ids";
+import { parseUuid } from "../../../../infrastructure/ids";
 import { CommentEdit, deleteComment, editComment } from "../../../../server/comments";
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/comments/[id]">) {

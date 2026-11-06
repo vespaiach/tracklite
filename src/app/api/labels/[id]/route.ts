@@ -1,7 +1,7 @@
 import type { Label } from "../../../../contract";
 import { deleteLabel, LabelChanges, updateLabel } from "../../../../server/projects";
 import { apiRoute } from "../../../../server/shared/api-route";
-import { parseUuid } from "../../../../server/shared/ids";
+import { parseUuid } from "../../../../infrastructure/ids";
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/labels/[id]">) {
   const id = parseUuid((await params).id);

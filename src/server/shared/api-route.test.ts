@@ -3,8 +3,8 @@ import * as v from "valibot";
 import { afterEach, beforeEach, expect, it, type MockInstance, vi } from "vitest";
 import { createMember } from "../../test/factories";
 import { apiRoute } from "./api-route";
-import { db } from "./db";
-import { DomainError, type DomainErrorKind } from "./domain-error";
+import { db } from "../../infrastructure/db";
+import { DomainError, type DomainErrorKind } from "../../domain/shared/domain-error";
 import { createSession, members } from "../identity";
 
 const appOrigin = "http://localhost:3000";

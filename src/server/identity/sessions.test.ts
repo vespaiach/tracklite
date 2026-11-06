@@ -2,11 +2,11 @@ import { eq, sql } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import { createMember } from "../../test/factories";
 import { moveIntoPast } from "../../test/time";
-import { DomainError } from "../shared/domain-error";
-import { db } from "../shared/db";
-import { members, sessions } from "./tables";
+import { DomainError } from "../../domain/shared/domain-error";
+import { db } from "../../infrastructure/db";
+import { members, sessions } from "../../infrastructure/identity/tables";
 import { createSession, requireMember, sessionCookie } from "./sessions";
-import { hashToken } from "../shared/tokens";
+import { hashToken } from "../../infrastructure/tokens";
 
 afterEach(() => {
   vi.unstubAllEnvs();

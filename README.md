@@ -141,7 +141,7 @@ npm run worker
 | `npm test` | Run every test (needs `TEST_DATABASE_URL`) |
 | `npm run lint` | Biome check (`npx biome check --write` to fix) |
 | `npm run typecheck` | `next typegen` and `tsc --noEmit` |
-| `npm run db:generate` | Write a migration from `src/server/shared/schema.ts` and each context's `tables.ts` |
+| `npm run db:generate` | Write a migration from `src/infrastructure/schema.ts` and each context's `src/infrastructure/<context>/tables.ts` |
 | `npm run db:migrate` | Apply migrations |
 | `npm run db:studio` | Open Drizzle Studio |
 | `npm run db:seed` | Add dev members and admins |

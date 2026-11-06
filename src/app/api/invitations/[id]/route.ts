@@ -1,5 +1,5 @@
 import { apiRoute } from "../../../../server/shared/api-route";
-import { parseUuid } from "../../../../server/shared/ids";
+import { parseUuid } from "../../../../infrastructure/ids";
 import { revokeInvitation } from "../../../../server/identity";
 
 export async function DELETE(request: Request, { params }: RouteContext<"/api/invitations/[id]">) {

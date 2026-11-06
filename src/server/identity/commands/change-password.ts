@@ -1,14 +1,14 @@
 import "server-only";
 import { and, eq, ne } from "drizzle-orm";
 import type { PasswordChange } from "../schemas";
-import { DomainError } from "../../shared/domain-error";
-import { db } from "../../shared/db";
+import { DomainError } from "../../../domain/shared/domain-error";
+import { db } from "../../../infrastructure/db";
 import { recordFailedSignIn, signInLimitReached, tooManyAttempts } from "../limits";
 import { normalizeEmail } from "../members";
-import { hashPassword, verifyPassword } from "../../shared/passwords";
-import { members, sessions } from "../tables";
+import { hashPassword, verifyPassword } from "../../../infrastructure/passwords";
+import { members, sessions } from "../../../infrastructure/identity/tables";
 import type { Member } from "../sessions";
-import { hashToken } from "../../shared/tokens";
+import { hashToken } from "../../../infrastructure/tokens";
 
 export async function changePassword(
   actor: Member,

@@ -1,6 +1,6 @@
 import "server-only";
-import { DomainError } from "../../shared/domain-error";
-import { db } from "../../shared/db";
+import { DomainError } from "../../../domain/shared/domain-error";
+import { db } from "../../../infrastructure/db";
 import type { Member } from "../../identity";
 import type { IssueId } from "../schemas";
 import { mayDeleteIssue } from "../model";

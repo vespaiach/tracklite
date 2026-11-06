@@ -1,5 +1,5 @@
 import { customType, pgEnum, timestamp, uuid } from "drizzle-orm/pg-core";
-import { issuePriorities, issueStatuses, labelColors, notificationChannels, roles } from "../../contract";
+import { issuePriorities, issueStatuses, labelColors, notificationChannels, roles } from "../contract";
 
 export const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
 export const byteOrderedText = customType<{ data: string }>({ dataType: () => 'text COLLATE "C"' });

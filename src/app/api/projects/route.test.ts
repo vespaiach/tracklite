@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../server/shared/db";
+import { db } from "../../../infrastructure/db";
 import { projects } from "../../../server/projects";
 import { createSession } from "../../../server/identity";
 import { createMember, createProject, uniqueProjectKey } from "../../../test/factories";

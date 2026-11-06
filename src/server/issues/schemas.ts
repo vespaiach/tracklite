@@ -3,6 +3,9 @@ import * as v from "valibot";
 import { issuePriorities, issueStatuses } from "../../contract";
 import { descriptionText, descriptionVersion, maxCharacters, requestId } from "../shared/schemas";
 import { parseUsername, type Username } from "../identity";
+import { parseIssueId } from "../../domain/shared/identifiers";
+
+export { type IssueId, parseIssueId } from "../../domain/shared/identifiers";
 
 const maxTitleLength = 200;
 const maxLabels = 10;
@@ -26,20 +29,6 @@ const assignees = v.pipe(
   ),
   v.transform((usernames) => [...new Set(usernames.map((username) => username.toLowerCase() as Username))]),
 );
-
-const issueId = v.pipe(
-  v.string(),
-  v.regex(/^[A-Za-z]{2,5}-[1-9]\d{0,8}$/),
-  v.toUpperCase(),
-  v.brand("IssueId"),
-);
-
-export type IssueId = v.InferOutput<typeof issueId>;
-
-export function parseIssueId(text: string): IssueId | undefined {
-  const result = v.safeParse(issueId, text);
-  return result.success ? result.output : undefined;
-}
 
 export const NewIssue = v.object({
   requestId,

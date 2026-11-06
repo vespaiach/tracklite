@@ -5,9 +5,9 @@ import { GET as getMe } from "../../app/api/me/route";
 import { POST as signIn } from "../../app/api/sessions/route";
 import { POST as postSetup } from "../../app/api/setup/route";
 import { jsonRequest } from "../../test/reset-links";
-import { db } from "../shared/db";
+import { db } from "../../infrastructure/db";
 import { FirstAdmin } from "./schemas";
-import { members } from "./tables";
+import { members } from "../../infrastructure/identity/tables";
 import { checkSetupSecret } from "./commands/check-setup-secret";
 import { createFirstAdmin } from "./commands/create-first-admin";
 

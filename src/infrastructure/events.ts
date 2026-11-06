@@ -1,13 +1,6 @@
 import "server-only";
+import type { DomainEvent } from "../domain/shared/events";
 import type { Transaction } from "./transaction";
-
-export type EventTarget = { issueId: string } | { projectId: string };
-
-export type DomainEvent =
-  | { type: "IssueAssigned"; actorId: string; issueId: string; assigneeIds: string[] }
-  | { type: "DescriptionSaved"; actorId: string; target: EventTarget; text: string }
-  | { type: "CommentPosted"; actorId: string; target: EventTarget; commentId: string; text: string }
-  | { type: "CommentEdited"; actorId: string; target: EventTarget; commentId: string; text: string };
 
 type Subscriber = (tx: Transaction, event: DomainEvent) => Promise<void>;
 

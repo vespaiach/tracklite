@@ -1,6 +1,6 @@
 import type { Instrumentation } from "next";
-import { readConfig } from "./server/shared/config";
-import { logError } from "./server/shared/log";
+import { readConfig } from "./infrastructure/config";
+import { logError } from "./infrastructure/log";
 
 export function register() {
   readConfig();

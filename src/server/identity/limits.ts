@@ -1,9 +1,13 @@
 import "server-only";
 import { isIP } from "node:net";
 import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
-import { DomainError } from "../shared/domain-error";
-import { db } from "../shared/db";
-import { clientErrorReports, passwordResetRequests, signInAttempts } from "./tables";
+import { DomainError } from "../../domain/shared/domain-error";
+import { db } from "../../infrastructure/db";
+import {
+  clientErrorReports,
+  passwordResetRequests,
+  signInAttempts,
+} from "../../infrastructure/identity/tables";
 
 const failedSignInsPerEmail = 10;
 const failedSignInsPerIp = 30;

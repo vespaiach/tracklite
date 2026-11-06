@@ -1,5 +1,5 @@
 import { seedLoadData } from "../src/test/seed-load";
-import { logError } from "../src/server/shared/log";
+import { logError } from "../src/infrastructure/log";
 
 try {
   const { seeded } = await seedLoadData();

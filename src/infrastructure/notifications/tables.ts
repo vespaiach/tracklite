@@ -1,13 +1,6 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, index, integer, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import {
-  createdAt,
-  deliveryState,
-  id,
-  notificationChannel,
-  notificationKind,
-  timestamptz,
-} from "../shared/schema";
+import { createdAt, deliveryState, id, notificationChannel, notificationKind, timestamptz } from "../schema";
 import { comments } from "../comments/tables";
 import { members } from "../identity/tables";
 import { issues } from "../issues/tables";

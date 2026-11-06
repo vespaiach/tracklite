@@ -4,7 +4,7 @@ import { comments } from "../server/comments";
 import { members } from "../server/identity";
 import { createIssue, issueAssignees, issues } from "../server/issues";
 import { type ProjectKey, projectKeys, projects } from "../server/projects";
-import { db } from "../server/shared/db";
+import { db } from "../infrastructure/db";
 import { newRequestId } from "./factories";
 import { seedLoadData } from "./seed-load";
 

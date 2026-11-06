@@ -1,7 +1,7 @@
 import { DrizzleQueryError } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import { logError, logInfo } from "./log";
-import { spyOnLoggedErrors } from "../../test/log";
+import { spyOnLoggedErrors } from "../test/log";
 
 afterEach(() => {
   vi.restoreAllMocks();

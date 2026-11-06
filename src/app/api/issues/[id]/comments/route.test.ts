@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../../../server/shared/db";
+import { db } from "../../../../../infrastructure/db";
 import { comments } from "../../../../../server/comments";
 import { issues } from "../../../../../server/issues";
 import { mentions } from "../../../../../server/notifications";

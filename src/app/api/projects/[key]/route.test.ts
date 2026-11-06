@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq, inArray, or } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../../server/shared/db";
+import { db } from "../../../../infrastructure/db";
 import { comments } from "../../../../server/comments";
 import { issueLabels, issues } from "../../../../server/issues";
 import { labels, projectKeys, projects } from "../../../../server/projects";

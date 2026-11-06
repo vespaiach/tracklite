@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../server/shared/db";
-import { hashPassword } from "../../../server/shared/passwords";
+import { db } from "../../../infrastructure/db";
+import { hashPassword } from "../../../infrastructure/passwords";
 import { members, createSession } from "../../../server/identity";
 import { createMember } from "../../../test/factories";
 import { jsonRequest } from "../../../test/reset-links";

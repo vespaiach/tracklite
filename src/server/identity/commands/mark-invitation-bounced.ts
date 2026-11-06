@@ -1,7 +1,7 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
-import { db } from "../../shared/db";
-import { invitations } from "../tables";
+import { db } from "../../../infrastructure/db";
+import { invitations } from "../../../infrastructure/identity/tables";
 
 export async function markInvitationBounced(providerMessageId: string) {
   const [invitation] = await db

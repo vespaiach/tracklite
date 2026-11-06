@@ -2,9 +2,9 @@ import "server-only";
 import { setTimeout as sleep } from "node:timers/promises";
 import { and, asc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { deleteExpiredRows } from "../cleanup";
-import { db } from "../../shared/db";
-import type { Transaction } from "../../shared/transaction";
-import { logError, logInfo } from "../../shared/log";
+import { db } from "../../../infrastructure/db";
+import type { Transaction } from "../../../infrastructure/transaction";
+import { logError, logInfo } from "../../../infrastructure/log";
 import { notificationSenders, type Recipient } from "../notification-channels";
 import { afterFailure, assignmentKey, checkedMessage, mentionKey } from "../model";
 import { dueAt, queueCounts } from "../notification-queue";
@@ -16,7 +16,7 @@ import {
   notificationDeliveries,
   notifications,
   workerHeartbeats,
-} from "../tables";
+} from "../../../infrastructure/notifications/tables";
 import { projects } from "../../projects";
 
 type DueDelivery = Awaited<ReturnType<typeof dueDeliveries>>[number];

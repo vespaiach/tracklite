@@ -1,10 +1,10 @@
 import "server-only";
-import { db } from "../../shared/db";
-import type { Transaction } from "../../shared/transaction";
-import { publishAll } from "../../shared/events";
+import { db } from "../../../infrastructure/db";
+import type { Transaction } from "../../../infrastructure/transaction";
+import { publishAll } from "../../../infrastructure/events";
 import { editConflict, type Member } from "../../identity";
 import type { IssueChange, IssueId } from "../schemas";
-import { updatedIssue } from "../../queries";
+import { updatedIssue } from "../../../queries";
 import {
   assign,
   changePriority,

@@ -7,8 +7,8 @@ import { comments } from "../server/comments";
 import { members, seedMembers } from "../server/identity";
 import { issueAssignees, issues } from "../server/issues";
 import { type ProjectKey, projectKeys, projects } from "../server/projects";
-import { db } from "../server/shared/db";
-import type { Transaction } from "../server/shared/transaction";
+import { db } from "../infrastructure/db";
+import type { Transaction } from "../infrastructure/transaction";
 
 type Person = { id: string };
 

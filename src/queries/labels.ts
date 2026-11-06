@@ -1,13 +1,13 @@
 import "server-only";
 import { asc, eq, sql } from "drizzle-orm";
-import { DomainError } from "../shared/domain-error";
-import { db } from "../shared/db";
-import type { Executor } from "../shared/transaction";
-import type { Member } from "../identity";
-import { issueLabels } from "../issues/tables";
-import { labels, projects } from "../projects/tables";
-import type { ProjectKey } from "../projects/schemas";
-import type { Label } from "../../contract";
+import { DomainError } from "../domain/shared/domain-error";
+import { db } from "../infrastructure/db";
+import type { Executor } from "../infrastructure/transaction";
+import type { Member } from "../infrastructure/identity/tables";
+import { issueLabels } from "../infrastructure/issues/tables";
+import { labels, projects } from "../infrastructure/projects/tables";
+import type { ProjectKey } from "../domain/shared/identifiers";
+import type { Label } from "../contract";
 import { byProjectKey } from "./project";
 
 const labelResponse = {

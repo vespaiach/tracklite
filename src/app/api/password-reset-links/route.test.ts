@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../server/shared/db";
-import { outbox } from "../../../server/shared/email/outbox";
-import { passwordResetEmail } from "../../../server/shared/email/templates";
+import { db } from "../../../infrastructure/db";
+import { outbox } from "../../../infrastructure/email/outbox";
+import { passwordResetEmail } from "../../../infrastructure/email/templates";
 import { passwordResetRequests, passwordResetTokens } from "../../../server/identity";
 import { createMember } from "../../../test/factories";
 import { requestResetLink, uniqueIp } from "../../../test/reset-links";

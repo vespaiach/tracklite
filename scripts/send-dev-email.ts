@@ -1,7 +1,7 @@
-import { sendEmail } from "../src/server/shared/email/send";
-import { passwordResetEmail } from "../src/server/shared/email/templates";
-import { createToken } from "../src/server/shared/tokens";
-import { logError } from "../src/server/shared/log";
+import { sendEmail } from "../src/infrastructure/email/send";
+import { passwordResetEmail } from "../src/infrastructure/email/templates";
+import { createToken } from "../src/infrastructure/tokens";
+import { logError } from "../src/infrastructure/log";
 
 const to = process.argv[2] ?? "sam@acme.com";
 try {

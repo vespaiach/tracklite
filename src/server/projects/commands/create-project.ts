@@ -1,8 +1,8 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { db } from "../../shared/db";
+import { db } from "../../../infrastructure/db";
 import { assertAdmin, type Member } from "../../identity";
-import { updatedProject } from "../../queries";
+import { updatedProject } from "../../../queries";
 import { newProject } from "../model";
 import { saveProject } from "../repository";
 import type { NewProject } from "../schemas";

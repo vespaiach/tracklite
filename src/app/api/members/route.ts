@@ -7,7 +7,7 @@ import {
   sessionCookie,
   signedInMember,
 } from "../../../server/identity";
-import { DomainError } from "../../../server/shared/domain-error";
+import { DomainError } from "../../../domain/shared/domain-error";
 import { apiRoute } from "../../../server/shared/api-route";
 
 export const GET = apiRoute("member", async (_request, member) =>

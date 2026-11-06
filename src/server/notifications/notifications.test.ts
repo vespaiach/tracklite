@@ -3,13 +3,18 @@ import { expect, it } from "vitest";
 import { createIssue, createMember, createProject, newRequestId } from "../../test/factories";
 import { moveIntoPast } from "../../test/time";
 import { editComment, postIssueComment, postProjectComment } from "../comments";
-import { db } from "../shared/db";
-import { type DomainEvent, publish } from "../shared/events";
-import { parseUuid } from "../shared/ids";
+import { db } from "../../infrastructure/db";
+import type { DomainEvent } from "../../domain/shared/events";
+import { publish } from "../../infrastructure/events";
+import { parseUuid } from "../../infrastructure/ids";
 import { parseIssueId, updateIssue, issues } from "../issues";
 import { updateProject } from "../projects";
 import { members, type Member, parseUsername } from "../identity";
-import { notificationBatches, notificationDeliveries, notifications } from "./tables";
+import {
+  notificationBatches,
+  notificationDeliveries,
+  notifications,
+} from "../../infrastructure/notifications/tables";
 
 async function website(assigneeIds: string[] = []) {
   const project = await createProject({ name: "Website" });

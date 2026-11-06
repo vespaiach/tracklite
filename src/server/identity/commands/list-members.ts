@@ -1,7 +1,7 @@
 import "server-only";
 import { asc, sql } from "drizzle-orm";
-import { db } from "../../shared/db";
-import { members } from "../tables";
+import { db } from "../../../infrastructure/db";
+import { members } from "../../../infrastructure/identity/tables";
 import type { Member } from "../sessions";
 import { memberSummary, profileResponse } from "../members";
 

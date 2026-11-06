@@ -6,10 +6,15 @@ import {
   notificationChannels,
   type ProblemDelivery,
 } from "../../../contract";
-import { db } from "../../shared/db";
+import { db } from "../../../infrastructure/db";
 import { queueCounts, workerPassWindow } from "../notification-queue";
 import { members, assertAdmin, type Member } from "../../identity";
-import { notificationBatches, notificationDeliveries, notifications, workerHeartbeats } from "../tables";
+import {
+  notificationBatches,
+  notificationDeliveries,
+  notifications,
+  workerHeartbeats,
+} from "../../../infrastructure/notifications/tables";
 
 type ProblemRow = Awaited<ReturnType<typeof problemRows>>[number];
 

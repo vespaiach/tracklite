@@ -13,4 +13,4 @@ export {
   ProjectChanges,
   type ProjectKey,
 } from "./schemas";
-export { labels, projectKeys, projects } from "./tables";
+export { labels, projectKeys, projects } from "../../infrastructure/projects/tables";

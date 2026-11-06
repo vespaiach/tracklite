@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
 import { db } from "./db";
-import type { DomainEvent } from "./events";
+import type { DomainEvent } from "../domain/shared/events";
 
 it("M16: publishing with no subscriber throws, so a missing notifications import can't drop notifications", async () => {
   vi.resetModules();

@@ -158,7 +158,7 @@ src/
 |---|---|---|
 | `domain/**` | `domain/**`, `valibot` | the rules: entities, value objects, domain events, `DomainError`, repository interfaces. No database, framework or I/O |
 | `application/**` | `domain/**`, `application/**`, `src/contract` | use cases: load through repository interfaces, call entities, save, inside a `UnitOfWork` |
-| `queries/**` | `domain/**` (value objects, `assertAdmin`), `infrastructure/**/tables.ts`, `infrastructure/db`, `src/contract` | the reads behind pages (D-64) |
+| `queries/**` | `domain/**` (value objects, `assertAdmin`), `infrastructure/**/tables.ts`, `infrastructure/db` and its `Transaction`/`Executor` types in `infrastructure/transaction`, `src/contract`, and packages other than `next/*` (Drizzle) | the reads behind pages (D-64) |
 | `infrastructure/**` | anything but `app/` and `components/` | Drizzle tables, mappers and repositories, the unit of work, the outbox writer, channels, email, tokens, passwords, log, config |
 | `app/**` | everything | pages and route handlers, and the actions, which are the composition root: they wire infrastructure into use cases |
 

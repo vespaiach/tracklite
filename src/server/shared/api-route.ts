@@ -1,7 +1,7 @@
 import * as v from "valibot";
-import { DomainError, type DomainErrorKind } from "./domain-error";
-import { readConfig } from "./config";
-import { logError, logInfo } from "./log";
+import { DomainError, type DomainErrorKind } from "../../domain/shared/domain-error";
+import { readConfig } from "../../infrastructure/config";
+import { logError, logInfo } from "../../infrastructure/log";
 import { type Member, requireMember } from "../identity";
 import "../notifications";
 

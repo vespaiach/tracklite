@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../server/shared/db";
+import { db } from "../../../infrastructure/db";
 import { issues } from "../../../server/issues";
 import { createSession, memberSummary } from "../../../server/identity";
 import { createIssue, createLabel, createMember, createProject } from "../../../test/factories";

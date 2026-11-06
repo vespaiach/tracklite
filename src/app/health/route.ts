@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db } from "../../server/shared/db";
+import { db } from "../../infrastructure/db";
 
 export async function GET() {
   try {

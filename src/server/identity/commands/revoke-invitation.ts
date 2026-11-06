@@ -1,8 +1,8 @@
 import "server-only";
 import { and, eq, sql } from "drizzle-orm";
-import { db } from "../../shared/db";
-import type { Uuid } from "../../shared/ids";
-import { invitations } from "../tables";
+import { db } from "../../../infrastructure/db";
+import type { Uuid } from "../../../infrastructure/ids";
+import { invitations } from "../../../infrastructure/identity/tables";
 import { assertAdmin, type Member } from "../sessions";
 import { isOpen, notFound } from "../invitations";
 

@@ -1,5 +1,5 @@
-import { DomainError } from "../shared/domain-error";
-import type { DomainEvent, EventTarget } from "../shared/events";
+import { DomainError } from "../../domain/shared/domain-error";
+import type { DomainEvent, EventTarget } from "../../domain/shared/events";
 import type { Member } from "../identity";
 
 export type Comment = Readonly<{

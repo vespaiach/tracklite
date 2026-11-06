@@ -1,10 +1,10 @@
 import "server-only";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { MemberChanges, Username } from "../schemas";
-import { DomainError } from "../../shared/domain-error";
-import { db } from "../../shared/db";
-import type { Transaction } from "../../shared/transaction";
-import { members, sessions } from "../tables";
+import { DomainError } from "../../../domain/shared/domain-error";
+import { db } from "../../../infrastructure/db";
+import type { Transaction } from "../../../infrastructure/transaction";
+import { members, sessions } from "../../../infrastructure/identity/tables";
 import { assertAdmin, type Member } from "../sessions";
 import { isLastAdmin, mayLeaveNoAdmin } from "../rules";
 

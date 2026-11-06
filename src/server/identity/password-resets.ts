@@ -1,9 +1,9 @@
 import "server-only";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
-import { DomainError } from "../shared/domain-error";
-import type { db } from "../shared/db";
-import { members, passwordResetTokens } from "./tables";
-import { hashToken } from "../shared/tokens";
+import { DomainError } from "../../domain/shared/domain-error";
+import type { db } from "../../infrastructure/db";
+import { members, passwordResetTokens } from "../../infrastructure/identity/tables";
+import { hashToken } from "../../infrastructure/tokens";
 
 export function expiredLink() {
   return new DomainError("expired", "This link has expired");
