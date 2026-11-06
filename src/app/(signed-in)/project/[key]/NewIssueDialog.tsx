@@ -1,6 +1,10 @@
+"use client";
+
 import { Plus, Users } from "lucide-react";
-import { type FormEvent, useId, useState } from "react";
-import { useNavigate } from "react-router";
+import { type FormEvent, useId, useState, useTransition } from "react";
+import { assigneeOptions, memberNames, toggled } from "../../../../client/IssueCells";
+import { statuses } from "../../../../client/issue-fields";
+import { useToast } from "../../../../components/toast";
 import {
   AppDialog,
   AvatarStack,
@@ -9,21 +13,29 @@ import {
   MultiPicker,
   Status,
   TitleInput,
-} from "../components/ui/track-lite";
-import {
-  type ApiFailure,
-  type IssueStatus,
-  type Me,
-  type ProjectSummary,
-  useCreateIssueMutation,
-  useMeQuery,
-  useMembersQuery,
-} from "./api";
-import { useFailureToast } from "./failure";
-import { assigneeOptions, memberNames, toggled } from "./IssueCells";
-import { statuses } from "./issue-fields";
+} from "../../../../components/ui/track-lite";
+import { useRequestId } from "../../../../components/useRequestId";
+import type {
+  ActionResult,
+  IssueDraft,
+  IssueStatus,
+  MemberSummary,
+  ProjectSummary,
+} from "../../../../contract";
 
-export function NewIssueButton({ project }: { project: ProjectSummary }) {
+const couldNotSave = "Couldn’t save. Try again.";
+
+export type CreateIssue = (draft: IssueDraft) => Promise<ActionResult<{ id: string }>>;
+
+export type NewIssueProps = {
+  project: ProjectSummary;
+  members: MemberSummary[];
+  me: string;
+  createIssue: CreateIssue;
+  onCreated: (id: string) => void;
+};
+
+export function NewIssueButton(props: NewIssueProps) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -37,7 +49,7 @@ export function NewIssueButton({ project }: { project: ProjectSummary }) {
       </Button>
       {open && (
         <NewIssueDialog
-          project={project}
+          {...props}
           onClose={() => setOpen(false)}
         />
       )}
@@ -45,34 +57,39 @@ export function NewIssueButton({ project }: { project: ProjectSummary }) {
   );
 }
 
-export type NewIssueDialogProps = { project: ProjectSummary; status?: IssueStatus; onClose: () => void };
+export type NewIssueDialogProps = NewIssueProps & { status?: IssueStatus; onClose: () => void };
 
-export function NewIssueDialog({ project, status, onClose }: NewIssueDialogProps) {
+export function NewIssueDialog({
+  project,
+  members,
+  me,
+  createIssue,
+  onCreated,
+  status,
+  onClose,
+}: NewIssueDialogProps) {
   const formId = useId();
   const errorId = useId();
-  const navigate = useNavigate();
-  const toastFailure = useFailureToast();
-  const [createIssue, { isLoading: saving }] = useCreateIssueMutation();
-  const [requestId] = useState(() => crypto.randomUUID());
+  const toast = useToast();
+  const [saving, startSaving] = useTransition();
+  const [requestId] = useRequestId();
   const [title, setTitle] = useState("");
   const [assignees, setAssignees] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>();
   const error = errors?.title;
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrors(undefined);
-    try {
-      const created = await createIssue({ key: project.key, requestId, title, status, assignees }).unwrap();
-      await navigate(`/issue/${created.id}`);
-    } catch (caught) {
-      const failure = caught as ApiFailure;
-      if (failure.status === 422 && failure.fields) {
-        setErrors(failure.fields);
-      } else {
-        toastFailure(failure);
-      }
-    }
+    startSaving(async () => {
+      const result = await createIssue({ key: project.key, requestId, title, status, assignees }).catch(
+        () => undefined,
+      );
+
+      if (result?.ok) onCreated(result.data.id);
+      else if (result?.error.fields) setErrors(result.error.fields);
+      else toast(result?.error.message ?? couldNotSave);
+    });
   }
 
   return (
@@ -89,6 +106,8 @@ export function NewIssueDialog({ project, status, onClose }: NewIssueDialogProps
       foot={
         <>
           <AssigneesChoice
+            members={members}
+            me={me}
             chosen={assignees}
             error={errors?.assignees}
             onToggle={(username) => setAssignees(toggled(assignees, username))}
@@ -135,19 +154,16 @@ function StartingStatus({ status }: { status: IssueStatus }) {
   );
 }
 
-function AssigneesChoice({
-  chosen,
-  error,
-  onToggle,
-}: {
+type AssigneesChoiceProps = {
+  members: MemberSummary[];
+  me: string;
   chosen: string[];
   error?: string;
   onToggle: (username: string) => void;
-}) {
-  const { data: members } = useMembersQuery();
-  const { data: me } = useMeQuery();
+};
+
+function AssigneesChoice({ members, me, chosen, error, onToggle }: AssigneesChoiceProps) {
   const errorId = useId();
-  if (!members) return null;
   return (
     <>
       <MultiPicker
@@ -163,14 +179,14 @@ function AssigneesChoice({
         aria-describedby={error ? errorId : undefined}
         onToggle={(key) => onToggle(String(key))}
         search={{ label: "Filter members", placeholder: "Assign to…" }}>
-        {assigneeOptions(members, me?.username)}
+        {assigneeOptions(members, me)}
       </MultiPicker>
       {error && <FieldError id={errorId}>{error}</FieldError>}
     </>
   );
 }
 
-function ChosenAssignees({ members, me }: { members: Me[]; me?: Me }) {
+function ChosenAssignees({ members, me }: { members: MemberSummary[]; me: string }) {
   if (members.length === 0) {
     return (
       <>
@@ -183,7 +199,7 @@ function ChosenAssignees({ members, me }: { members: Me[]; me?: Me }) {
     <>
       <AvatarStack
         members={members}
-        me={me?.username}
+        me={me}
       />
       <span>{memberNames(members)}</span>
     </>

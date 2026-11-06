@@ -31,7 +31,8 @@ import { Assignees, assignedTo, LabelPills, memberName, UpdatedAt } from "../Iss
 import { issuePriorities, issueStatuses } from "../../contract";
 import { priorities, statuses } from "../issue-fields";
 import { useRouterClick } from "../links";
-import { NewIssueDialog } from "../NewIssueDialog";
+import { NewIssueDialog } from "../../app/(signed-in)/project/[key]/NewIssueDialog";
+import { useNewIssue } from "../useNewIssue";
 import { Zone, zoneState } from "../Zone";
 
 type SortColumn = "id" | "status" | "priority" | "updated";
@@ -74,6 +75,7 @@ export function ListView({ project }: { project: ProjectSummary }) {
   const { data: members = [] } = useMembersQuery();
   const { data: projectLabels = [] } = useLabelsQuery(project.key);
   const [creating, setCreating] = useState(false);
+  const newIssue = useNewIssue();
 
   const pages = list.data?.pages ?? [];
   const issues = pages.flatMap((page) => page.issues);
@@ -308,6 +310,7 @@ export function ListView({ project }: { project: ProjectSummary }) {
       {creating && (
         <NewIssueDialog
           project={project}
+          {...newIssue}
           onClose={() => setCreating(false)}
         />
       )}

@@ -33,6 +33,18 @@ export type BoardStatusColumn = { status: IssueStatus; count: number; cards: Boa
 
 export type Board = BoardStatusColumn[];
 
+export type BoardPlace = "top" | "bottom" | { after: string };
+
+export type BoardMove = { id: string; status: IssueStatus; place: BoardPlace };
+
+export type IssueDraft = {
+  key: string;
+  requestId: string;
+  title: string;
+  status?: IssueStatus;
+  assignees: string[];
+};
+
 export type ListIssue = Pick<
   Issue,
   "id" | "title" | "status" | "priority" | "assignees" | "labels" | "updatedAt"

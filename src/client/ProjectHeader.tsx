@@ -4,7 +4,8 @@ import { Link } from "react-router";
 import { AppBar, AppBarTitle, LinkTabs, Tag } from "../components/ui/track-lite";
 import type { Issue, ProjectSummary } from "./api";
 import { useRouterClick } from "./links";
-import { NewIssueButton } from "./NewIssueDialog";
+import { NewIssueButton } from "../app/(signed-in)/project/[key]/NewIssueDialog";
+import { useNewIssue } from "./useNewIssue";
 
 export type ProjectView = "board" | "list" | "detail" | "labels";
 
@@ -29,7 +30,7 @@ export function ProjectHeader({ project, view, issue, admin }: ProjectHeaderProp
       end={
         <>
           {admin && <SettingsButton href={`${base}/settings`} />}
-          {!project.archivedAt && <NewIssueButton project={project} />}
+          {!project.archivedAt && <SpaNewIssueButton project={project} />}
         </>
       }>
       {issue ? (
@@ -51,6 +52,15 @@ export function ProjectHeader({ project, view, issue, admin }: ProjectHeaderProp
         view={view}
       />
     </AppBar>
+  );
+}
+
+function SpaNewIssueButton({ project }: { project: ProjectSummary }) {
+  return (
+    <NewIssueButton
+      project={project}
+      {...useNewIssue()}
+    />
   );
 }
 
@@ -92,11 +102,11 @@ function IssueCrumbs({ details, projectTitle, projectHref, issue }: IssueCrumbsP
       className="tl-crumbs">
       <span className="tl-crumbs__item tl-appbar__lead">
         {details}
-        <Link
-          to={projectHref}
+        <a
+          href={projectHref}
           className="tl-appbar__title">
           {projectTitle}
-        </Link>
+        </a>
       </span>
       <span className="tl-crumbs__item">
         <span
@@ -116,7 +126,6 @@ function IssueCrumbs({ details, projectTitle, projectHref, issue }: IssueCrumbsP
 }
 
 function ViewTabs({ base, view }: { base: string; view?: ProjectView }) {
-  const boardClick = useRouterClick(base);
   const listClick = useRouterClick(`${base}/list`);
   const labelsClick = useRouterClick(`${base}/labels`);
   return (
@@ -130,7 +139,6 @@ function ViewTabs({ base, view }: { base: string; view?: ProjectView }) {
           label: "Board",
           icon: tabIcon(SquareKanban),
           current: view === "board",
-          onClick: boardClick,
         },
         {
           href: `${base}/list`,
