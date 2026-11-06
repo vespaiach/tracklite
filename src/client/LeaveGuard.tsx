@@ -1,18 +1,25 @@
-import { useEffect } from "react";
-import { useBlocker } from "react-router";
+import { use } from "react";
+import { UNSAFE_DataRouterContext, useBlocker } from "react-router";
+import { useLeaveGuard } from "../components/leave-guard";
 import { Button, Dialog } from "../components/ui/track-lite";
 
 export function LeaveGuard({ unsaved, message }: { unsaved: boolean; message: string }) {
+  useLeaveGuard(unsaved ? message : null);
+
+  return (
+    use(UNSAFE_DataRouterContext) && (
+      <RouterLeaveGuard
+        unsaved={unsaved}
+        message={message}
+      />
+    )
+  );
+}
+
+function RouterLeaveGuard({ unsaved, message }: { unsaved: boolean; message: string }) {
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) => unsaved && currentLocation.pathname !== nextLocation.pathname,
   );
-
-  useEffect(() => {
-    if (!unsaved) return;
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [unsaved]);
 
   return (
     blocker.state === "blocked" && (

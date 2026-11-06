@@ -55,7 +55,6 @@ function mockThread({
   post,
   patch,
   remove,
-  on = "issue",
 }: {
   me?: Me;
   inProject?: Project;
@@ -64,10 +63,9 @@ function mockThread({
   post?: Answer;
   patch?: Answer;
   remove?: Answer;
-  on?: "issue" | "project";
 } = {}) {
   let current = comments;
-  const listPath = on === "issue" ? "/api/issues/WEB-42/comments" : "/api/projects/WEB/comments";
+  const listPath = "/api/issues/WEB-42/comments";
   const routes: Record<string, Answer> = {
     "GET /api/me": () => Response.json(me),
     "GET /api/members": () => Response.json([alex, sam]),
@@ -109,9 +107,9 @@ function mockThread({
   return mockApi(routes);
 }
 
-async function listLink() {
+async function labelsLink() {
   return within(await screen.findByRole("navigation", { name: "Project views" })).findByRole("link", {
-    name: "List",
+    name: "Labels",
   });
 }
 
@@ -181,14 +179,6 @@ it("REQ-032.1: comments on an issue are shown oldest first", async () => {
 
   await screen.findByText("Posted at nine");
   expect((await shownComments()).map((each) => each.textContent?.includes("nine"))).toEqual([true, false]);
-});
-
-it("REQ-032.2: a project's comments are on its details page", async () => {
-  mockThread({ on: "project", comments: [comment({ body: "Scope is in the description." })] });
-  renderAppAt("/project/WEB/detail");
-
-  expect(await screen.findByText("Scope is in the description.")).toBeTruthy();
-  expect(await shownComments()).toHaveLength(1);
 });
 
 it("REQ-031.1: a posted comment shows “Sam Lee · just now” with @alex highlighted", async () => {
@@ -413,7 +403,7 @@ it("REQ-035.1: leaving with an unsent comment asks first; Cancel keeps the text"
   openIssue();
   await type("Half a thought");
 
-  fireEvent.click(await listLink());
+  fireEvent.click(await labelsLink());
   const prompt = await screen.findByRole("alertdialog", {
     name: "You have an unsent comment. Leave anyway?",
   });
@@ -447,9 +437,9 @@ it("REQ-035.2, REQ-035: a posted comment or a blank box doesn't hold back leavin
   await commentWith("Verified on staging.");
   await type("   ");
 
-  fireEvent.click(await listLink());
+  fireEvent.click(await labelsLink());
 
-  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB/list"));
+  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB/labels"));
   expect(screen.queryByRole("alertdialog")).toBeNull();
 });
 

@@ -42,7 +42,8 @@ import {
   useMembersQuery,
   useUpdateIssueMutation,
 } from "../api";
-import { CommentThread } from "../CommentThread";
+import { asActionResult } from "../action-result";
+import { SpaCommentThread } from "../SpaCommentThread";
 import { formatDate } from "../dates";
 import { type DescriptionDraft, DescriptionEditor } from "../DescriptionEditor";
 import { useFailureToast } from "../failure";
@@ -141,7 +142,7 @@ function IssueView({ issue, project }: { issue: Issue; project: Project }) {
             editable={editable}
           />
           <IssueSection title="Comments">
-            <CommentThread
+            <SpaCommentThread
               threadPath={`issues/${issue.id}/comments`}
               editable={editable}
             />
@@ -386,6 +387,7 @@ function Description({ issue, editable }: { issue: Issue; editable: boolean }) {
   const editButton = useReturnFocus<HTMLButtonElement>(draft !== undefined);
   const [updateIssue] = useUpdateIssueMutation();
   const [loadIssue] = useLazyIssueQuery();
+  const { data: members = [] } = useMembersQuery();
 
   async function reload() {
     setDraft(startDraft(await loadIssue(issue.id).unwrap()));
@@ -414,8 +416,11 @@ function Description({ issue, editable }: { issue: Issue; editable: boolean }) {
           onDone={() => setDraft(undefined)}
           onReload={() => void reload()}
           save={(description, descriptionVersion) =>
-            updateIssue({ id: issue.id, change: { description, descriptionVersion } }).unwrap()
+            asActionResult(
+              updateIssue({ id: issue.id, change: { description, descriptionVersion } }).unwrap(),
+            )
           }
+          members={members}
         />
       ) : issue.description ? (
         <Markdown

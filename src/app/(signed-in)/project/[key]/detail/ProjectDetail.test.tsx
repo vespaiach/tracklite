@@ -1,45 +1,104 @@
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { type ReactNode, startTransition, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import {
-  alex,
-  apiError,
-  deferred,
-  memberOf,
-  mockApi,
-  project,
-  renderAppAt,
-  requestsTo,
-  sam,
-} from "../../test/client-app";
-import type { Project } from "../api";
+import { Link } from "../../../../../components/leave-guard";
+import { ToastProvider } from "../../../../../components/toast";
+import type { ActionResult, MemberSummary, Project } from "../../../../../contract";
+import { refused } from "../../../../../test/forms";
+import { ProjectDetail, type SaveDescription } from "./ProjectDetail";
+
+const router = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    onNavigate,
+    children,
+  }: {
+    href: string;
+    onNavigate: (event: { preventDefault: () => void }) => void;
+    children: ReactNode;
+  }) => (
+    <a
+      href={href}
+      onClick={(event) => {
+        event.preventDefault();
+        onNavigate({ preventDefault: () => {} });
+      }}>
+      {children}
+    </a>
+  ),
+}));
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  router.refresh.mockReset();
 });
-
-type Answer = (body: unknown) => Response | Promise<Response>;
 
 const saved = "### This quarter\n\n- Ship the new pricing page\n- Fix the login button";
 
-const web: Project = { ...project("WEB", "Website"), description: saved, descriptionVersion: 3 };
+const alex: MemberSummary = { username: "alex", fullName: "Alex Kim", initials: "AK", deactivated: false };
 
-function mockDetail({ shown = web, patch }: { shown?: Project; patch?: Answer } = {}) {
-  let current = shown;
-  return mockApi({
-    "GET /api/me": () => Response.json(sam),
-    [`GET /api/projects/${shown.key}`]: () => Response.json(current),
-    [`PATCH /api/projects/${shown.key}`]: async (body) => {
-      const answer = await (patch ?? (() => Response.json(described(current, body))))(body);
-      if (answer.ok) current = await answer.clone().json();
-      return answer;
+const web: Project = {
+  key: "WEB",
+  name: "Website",
+  description: saved,
+  descriptionVersion: 3,
+  mentions: [],
+  archivedAt: null,
+  issueCounts: { backlog: 0, in_progress: 0, in_review: 0, done: 0, canceled: 0 },
+  createdAt: "2026-09-20T10:42:00.000Z",
+  createdBy: null,
+};
+
+const archived = "2025-09-14T10:00:00.000Z";
+
+type Answer = (save: Parameters<SaveDescription>[0]) => ActionResult<null> | Promise<ActionResult<null>>;
+
+function renderDetail({ shown = web, answer }: { shown?: Project; answer?: Answer } = {}) {
+  let onServer = shown;
+  const saveDescription = vi.fn<SaveDescription>();
+
+  function RefreshingDetail() {
+    const [current, setCurrent] = useState(shown);
+    const refresh = () => startTransition(() => setCurrent(onServer));
+    router.refresh.mockImplementation(refresh);
+    saveDescription.mockImplementation(async (save) => {
+      const result = await (answer ?? (() => ({ ok: true, data: null }) as const))(save);
+      if (result.ok) {
+        onServer = {
+          ...onServer,
+          description: save.description,
+          descriptionVersion: onServer.descriptionVersion + 1,
+        };
+        refresh();
+      }
+      return result;
+    });
+    return (
+      <>
+        <ProjectDetail
+          project={current}
+          members={[alex]}
+          saveDescription={saveDescription}
+        />
+        <Link href="/my-issues">My issues</Link>
+      </>
+    );
+  }
+
+  render(
+    <ToastProvider>
+      <RefreshingDetail />
+    </ToastProvider>,
+  );
+  return {
+    saveDescription,
+    changeOnServer(project: Project) {
+      onServer = project;
     },
-  });
-}
-
-function described(current: Project, body: unknown): Project {
-  const { description } = body as { description: string };
-  return { ...current, description, descriptionVersion: current.descriptionVersion + 1 };
+  };
 }
 
 async function startEditing() {
@@ -61,19 +120,21 @@ function editor() {
   return screen.getByLabelText("Description (Markdown)") as HTMLTextAreaElement;
 }
 
-it("REQ-046.1: the details page shows the project's description formatted", async () => {
-  mockDetail();
-  renderAppAt("/project/WEB/detail");
+it("REQ-046.1: the details page shows the project's description formatted", () => {
+  renderDetail();
 
-  expect(await screen.findByRole("heading", { level: 3, name: "This quarter" })).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 3, name: "This quarter" })).toBeTruthy();
   expect(screen.getByText("Ship the new pricing page").tagName).toBe("LI");
-  expect(screen.getByRole("link", { name: "Project details" }).getAttribute("aria-current")).toBe("page");
 });
 
 it("REQ-012.1, STD-5: saving a description disables Save, sends it with its version and shows it formatted", async () => {
-  const answer = deferred();
-  const fetchMock = mockDetail({ patch: answer.answer });
-  renderAppAt("/project/WEB/detail");
+  let answer: (result: ActionResult<null>) => void = () => {};
+  const { saveDescription } = renderDetail({
+    answer: () =>
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+  });
   const text = "## Goals\n\n- Launch pricing\n- Fix Safari";
 
   await editTo(text);
@@ -82,24 +143,28 @@ it("REQ-012.1, STD-5: saving a description disables Save, sends it with its vers
   const saving = (await screen.findByRole("button", { name: "Saving…" })) as HTMLButtonElement;
   expect(saving.disabled).toBe(true);
 
-  answer.resolve(Response.json({ ...web, description: text, descriptionVersion: 4 }));
+  answer({ ok: true, data: null });
 
   expect(await screen.findByRole("heading", { level: 2, name: "Goals" })).toBeTruthy();
   expect(screen.getByText("Launch pricing").tagName).toBe("LI");
   expect(screen.queryByLabelText("Description (Markdown)")).toBeNull();
-  expect(requestsTo(fetchMock, "PATCH /api/projects/WEB")).toEqual([
-    { description: text, descriptionVersion: 3 },
-  ]);
+  expect(saveDescription.mock.calls).toEqual([[{ key: "WEB", description: text, descriptionVersion: 3 }]]);
 });
 
-it("REQ-012.2, REQ-022.2, STD-8, STD-9: a refused save shows the field error, a toast, or the conflict in the editor with Save disabled, and always keeps the text", async () => {
-  const answers = [
-    apiError(422, "Check the highlighted fields", { description: "Too long (max 20,000)" }),
-    apiError(500, "Internal error"),
-    apiError(409, "This was changed by Alex Kim. Copy your text and reload."),
+it("REQ-012.2, REQ-022.2, STD-8, STD-9: a refused save shows the field error, a toast, or the conflict in the editor with Save disabled, and always keeps the text; Reload starts from the saved text", async () => {
+  const answers: (ActionResult<null> | Error)[] = [
+    refused("invalid", "Check the highlighted fields", { description: "Too long (max 20,000)" }),
+    new Error("Failed to fetch"),
+    refused("forbidden", "This project is archived"),
+    refused("conflict", "This was changed by Alex Kim. Copy your text and reload."),
   ];
-  mockDetail({ patch: () => answers.shift() as Response });
-  renderAppAt("/project/WEB/detail");
+  const { changeOnServer } = renderDetail({
+    answer: async () => {
+      const next = answers.shift() as ActionResult<null> | Error;
+      if (next instanceof Error) throw next;
+      return next;
+    },
+  });
   const long = "a".repeat(20_001);
 
   await editTo(long);
@@ -111,26 +176,30 @@ it("REQ-012.2, REQ-022.2, STD-8, STD-9: a refused save shows the field error, a 
 
   fireEvent.change(editor(), { target: { value: "My version" } });
   save();
-
   expect(await screen.findByText("Couldn’t save. Try again.")).toBeTruthy();
   expect(editor().value).toBe("My version");
 
   save();
+  expect(await screen.findByText("This project is archived")).toBeTruthy();
+  expect(editor().value).toBe("My version");
 
+  save();
   const alert = await screen.findByRole("alert");
   expect(alert.textContent).toContain("This was changed by Alex Kim. Copy your text and reload.");
   expect(alert.closest(".tl-editor")).toBeTruthy();
   expect(editor().value).toBe("My version");
   expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
 
+  changeOnServer({ ...web, description: "Alex's text", descriptionVersion: 4 });
   fireEvent.click(within(alert).getByRole("button", { name: "Reload" }));
 
-  await waitFor(() => expect(editor().value).toBe(saved));
+  expect(router.refresh).toHaveBeenCalledOnce();
+  await waitFor(() => expect(editor().value).toBe("Alex's text"));
+  expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(false);
 });
 
 it("REQ-022: Cancel or Escape discards the description draft", async () => {
-  const fetchMock = mockDetail();
-  renderAppAt("/project/WEB/detail");
+  const { saveDescription } = renderDetail();
 
   await editTo("Thrown away");
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -142,62 +211,41 @@ it("REQ-022: Cancel or Escape discards the description draft", async () => {
 
   expect(await screen.findByRole("heading", { level: 3, name: "This quarter" })).toBeTruthy();
   expect(screen.queryByLabelText("Description (Markdown)")).toBeNull();
-  expect(requestsTo(fetchMock, "PATCH /api/projects/WEB")).toEqual([]);
+  expect(saveDescription).not.toHaveBeenCalled();
 });
 
-it("REQ-035.3, REQ-035.4: leaving or closing the tab with unsaved description changes asks first", async () => {
-  mockDetail();
-  renderAppAt("/project/WEB/detail");
+it("REQ-035.3, REQ-035.4, REQ-035: leaving or closing the tab with unsaved description changes asks first; an unchanged editor doesn't", async () => {
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  renderDetail();
   await startEditing();
 
   const unchanged = new Event("beforeunload", { cancelable: true });
   window.dispatchEvent(unchanged);
   expect(unchanged.defaultPrevented).toBe(false);
+  fireEvent.click(screen.getByRole("link", { name: "My issues" }));
+  expect(confirm).not.toHaveBeenCalled();
 
   fireEvent.change(editor(), { target: { value: "Unsaved text" } });
   const changed = new Event("beforeunload", { cancelable: true });
   window.dispatchEvent(changed);
   expect(changed.defaultPrevented).toBe(true);
 
-  fireEvent.click(await screen.findByRole("link", { name: "List" }));
-  const prompt = await screen.findByRole("alertdialog", { name: "You have unsaved changes. Leave anyway?" });
-  fireEvent.click(within(prompt).getByRole("button", { name: "Cancel" }));
-
-  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
-  expect(window.location.pathname).toBe("/project/WEB/detail");
+  fireEvent.click(screen.getByRole("link", { name: "My issues" }));
+  expect(confirm).toHaveBeenCalledWith("You have unsaved changes. Leave anyway?");
   expect(editor().value).toBe("Unsaved text");
-
-  fireEvent.click(screen.getByRole("link", { name: "List" }));
-  const again = await screen.findByRole("alertdialog", { name: "You have unsaved changes. Leave anyway?" });
-  fireEvent.click(within(again).getByRole("button", { name: "Leave" }));
-
-  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB/list"));
 });
 
-it("REQ-035: leaving with an unchanged editor doesn't ask", async () => {
-  mockDetail();
-  renderAppAt("/project/WEB/detail");
-  await startEditing();
+it("REQ-013: an archived project's description has no Edit button", () => {
+  renderDetail({ shown: { ...web, archivedAt: archived } });
 
-  fireEvent.click(await screen.findByRole("link", { name: "List" }));
-
-  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB/list"));
-  expect(screen.queryByRole("alertdialog")).toBeNull();
-});
-
-it("REQ-013: an archived project's description has no Edit button", async () => {
-  mockDetail({ shown: { ...web, archivedAt: "2025-09-14T10:00:00.000Z" } });
-  renderAppAt("/project/WEB/detail");
-
-  expect(await screen.findByRole("heading", { level: 3, name: "This quarter" })).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 3, name: "This quarter" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Edit project description" })).toBeNull();
 });
 
-it("STD-7: an empty description says No description yet. and Add one. opens the editor", async () => {
-  mockDetail({ shown: { ...web, description: "" } });
-  renderAppAt("/project/WEB/detail");
+it("STD-7: an empty description says No description yet. and Add one. opens the editor", () => {
+  renderDetail({ shown: { ...web, description: "" } });
 
-  const empty = await screen.findByText(/^No description yet\./);
+  const empty = screen.getByText(/^No description yet\./);
   expect(empty.textContent).toBe("No description yet. Add one.");
 
   fireEvent.click(within(empty).getByRole("button", { name: "Add one." }));
@@ -205,21 +253,19 @@ it("STD-7: an empty description says No description yet. and Add one. opens the 
   expect(editor().value).toBe("");
 });
 
-it("REQ-013: an archived project's empty description has no Add one.", async () => {
-  mockDetail({ shown: { ...web, description: "", archivedAt: "2025-09-14T10:00:00.000Z" } });
-  renderAppAt("/project/WEB/detail");
+it("REQ-013: an archived project's empty description has no Add one.", () => {
+  renderDetail({ shown: { ...web, description: "", archivedAt: archived } });
 
-  expect((await screen.findByText(/^No description yet\./)).textContent).toBe("No description yet.");
+  expect(screen.getByText(/^No description yet\./).textContent).toBe("No description yet.");
   expect(screen.queryByRole("button", { name: "Add one." })).toBeNull();
 });
 
-it("REQ-046.3: the Issues section shows the open count and each status's count, linking to the list filtered by it", async () => {
-  mockDetail({
+it("REQ-046.3: the Issues section shows the open count and each status's count, linking to the list filtered by it", () => {
+  renderDetail({
     shown: { ...web, issueCounts: { backlog: 3, in_progress: 1, in_review: 0, done: 2, canceled: 0 } },
   });
-  renderAppAt("/project/WEB/detail");
 
-  const issues = await screen.findByRole("region", { name: "Issues" });
+  const issues = screen.getByRole("region", { name: "Issues" });
   expect(within(issues).getByText(/open$/).textContent).toBe("4 open");
   expect(
     within(issues)
@@ -232,30 +278,21 @@ it("REQ-046.3: the Issues section shows the open count and each status's count, 
     ["Done, 2 issues. Open list view", "/project/WEB/list?status=done"],
     ["Canceled, 0 issues. Open list view", "/project/WEB/list?status=canceled"],
   ]);
-
-  fireEvent.click(within(issues).getByRole("link", { name: "Done, 2 issues. Open list view" }));
-
-  await waitFor(() =>
-    expect(`${window.location.pathname}${window.location.search}`).toBe("/project/WEB/list?status=done"),
-  );
 });
 
-it("REQ-046.4: the details page shows Created {date} by its creator, or only the date when none was recorded", async () => {
-  mockDetail({ shown: { ...web, createdAt: "2026-09-20T10:42:00.000Z", createdBy: memberOf(alex) } });
-  renderAppAt("/project/WEB/detail");
+it("REQ-046.4: the details page shows Created {date} by its creator, or only the date when none was recorded", () => {
+  renderDetail({ shown: { ...web, createdBy: alex } });
 
-  expect((await screen.findByText(/^Created\b/)).textContent).toBe("Created Sep 20, 2026 by Alex Kim");
+  expect(screen.getByText(/^Created\b/).textContent).toBe("Created Sep 20, 2026 by Alex Kim");
 
   cleanup();
-  mockDetail({ shown: { ...web, createdAt: "2026-09-20T10:42:00.000Z", createdBy: null } });
-  renderAppAt("/project/WEB/detail");
+  renderDetail();
 
-  expect((await screen.findByText(/^Created\b/)).textContent).toBe("Created Sep 20, 2026");
+  expect(screen.getByText(/^Created\b/).textContent).toBe("Created Sep 20, 2026");
 });
 
 it("NFR-007: Edit moves focus into the project description editor; Escape and Save return it to Edit", async () => {
-  mockDetail();
-  renderAppAt("/project/WEB/detail");
+  renderDetail();
 
   const escaping = await startEditing();
   await waitFor(() => expect(document.activeElement).toBe(escaping));

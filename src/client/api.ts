@@ -183,7 +183,6 @@ export const {
   useNotificationStatsQuery,
   useProjectsQuery,
   useProjectQuery,
-  useLazyProjectQuery,
   useUpdateProjectMutation,
   useDeleteProjectMutation,
   useLabelsQuery,

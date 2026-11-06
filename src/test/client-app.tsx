@@ -1,6 +1,7 @@
 import { render } from "@testing-library/react";
 import { vi } from "vitest";
 import ClientApp from "../client/ClientApp";
+import { ToastProvider } from "../components/toast";
 import type { Issue, Me, MemberSummary, Project, ProjectSummary } from "../client/api";
 
 type Handler = (body: unknown) => Response | Promise<Response>;
@@ -67,10 +68,12 @@ export function renderAppAt(path: string) {
   refreshServer.mockClear();
   createIssue.mockReset();
   return render(
-    <ClientApp
-      refreshServer={refreshServer}
-      createIssue={createIssue}
-    />,
+    <ToastProvider>
+      <ClientApp
+        refreshServer={refreshServer}
+        createIssue={createIssue}
+      />
+    </ToastProvider>,
   );
 }
 

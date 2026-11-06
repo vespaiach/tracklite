@@ -2,7 +2,15 @@
 
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type ReactNode, startTransition, useEffect, useOptimistic, useRef, useState, useTransition } from "react";
+import {
+  type ReactNode,
+  startTransition,
+  useEffect,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import type { Key } from "react-aria-components";
 import {
   Avatar,
@@ -66,11 +74,7 @@ function icon(content: ReactNode) {
   return <span aria-hidden="true">{content}</span>;
 }
 
-export type MoreIssues = (more: {
-  key: string;
-  query: string;
-  offset: number;
-}) => Promise<IssueListPage>;
+export type MoreIssues = (more: { key: string; query: string; offset: number }) => Promise<IssueListPage>;
 
 export type IssueListProps = Omit<NewIssueProps, "onCreated"> & {
   query: string;

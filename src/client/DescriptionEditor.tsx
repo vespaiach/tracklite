@@ -1,7 +1,8 @@
 import { type FormEvent, type KeyboardEvent, useId, useState } from "react";
 import { Button, Editor, EditorNotice, FieldError, SettingsActions } from "../components/ui/track-lite";
-import type { ApiFailure } from "./api";
-import { useFailureToast } from "./failure";
+import { useToast } from "../components/toast";
+import type { ActionResult, MemberSummary } from "../contract";
+import { settled } from "./action-result";
 import { LeaveGuard } from "./LeaveGuard";
 import { useMentions } from "./useMentions";
 
@@ -13,19 +14,21 @@ export function DescriptionEditor({
   onDone,
   onReload,
   save,
+  members,
 }: {
   draft: DescriptionDraft;
   onChange: (text: string) => void;
   onDone: () => void;
   onReload: () => void;
-  save: (description: string, descriptionVersion: number) => Promise<unknown>;
+  save: (description: string, descriptionVersion: number) => Promise<ActionResult<unknown>>;
+  members: MemberSummary[];
 }) {
-  const toastFailure = useFailureToast();
+  const toast = useToast();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
   const [conflict, setConflict] = useState<string>();
   const messageId = useId();
-  const mentions = useMentions({ value: draft.text, onChange });
+  const mentions = useMentions({ value: draft.text, onChange, members });
   const unsaved = draft.text !== draft.startedFrom;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -33,17 +36,14 @@ export function DescriptionEditor({
     setError(undefined);
     setConflict(undefined);
     setSaving(true);
-    try {
-      await save(draft.text, draft.version);
-      onDone();
-    } catch (caught) {
-      const failure = caught as ApiFailure;
-      if (failure.status === 422) setError(failure.fields?.description ?? failure.message);
-      else if (failure.status === 409) setConflict(failure.message);
-      else toastFailure(failure);
-    } finally {
-      setSaving(false);
-    }
+    const result = await settled(save(draft.text, draft.version));
+    setSaving(false);
+
+    if (result.ok) onDone();
+    else if (result.error.kind === "invalid")
+      setError(result.error.fields?.description ?? result.error.message);
+    else if (result.error.kind === "conflict") setConflict(result.error.message);
+    else toast(result.error.message);
   }
 
   function reload() {

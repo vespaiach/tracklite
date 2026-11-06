@@ -181,7 +181,7 @@ function rowIds() {
 }
 
 it("REQ-040.1: a shared link opens the same filtered, sorted list", () => {
-  const list = vi.fn(() => page([web42]));
+  const list = vi.fn((_query: URLSearchParams) => page([web42]));
   renderList({ at: "assignee=alex&sort=priority&dir=asc", list });
 
   expect(String(list.mock.calls[0][0])).toBe("assignee=alex&sort=priority&dir=asc");
@@ -190,7 +190,10 @@ it("REQ-040.1: a shared link opens the same filtered, sorted list", () => {
 });
 
 it("REQ-040.2, REQ-040.3: a deleted label and an unknown status in a link are ignored; Done still applies", async () => {
-  renderList({ at: "label=frontend&status=done&status=Todo", projectLabels: [projectLabel("bug"), projectLabel("backend")] });
+  renderList({
+    at: "label=frontend&status=done&status=Todo",
+    projectLabels: [projectLabel("bug"), projectLabel("backend")],
+  });
 
   expect(ruleText("Status")).toBe("StatusisDone×");
   expect(rowIds()).toEqual(["WEB-42", "WEB-12", "WEB-7"]);
@@ -243,7 +246,10 @@ it("REQ-038: search waits until 300 ms after typing stops, and replaces the addr
 });
 
 it("REQ-037.4: nothing matches → Clear filters, which clears the filters and the search", async () => {
-  renderList({ at: "status=done&q=invoice", list: (query) => page(query.size > 0 ? [] : [web42, web12, web7]) });
+  renderList({
+    at: "status=done&q=invoice",
+    list: (query) => page(query.size > 0 ? [] : [web42, web12, web7]),
+  });
 
   const list = issueList();
   expect(within(list).getByText("No issues match these filters")).toBeTruthy();
@@ -354,7 +360,9 @@ it("REQ-037.2, REQ-037.5, REQ-037.6: the Assignee filter offers Unassigned, acti
   expect(within(listbox).queryByRole("option", { name: /Kim Wu/ })).toBeNull();
   fireEvent.click(within(listbox).getByRole("option", { name: "Unassigned" }));
   fireEvent.click(within(listbox).getByRole("option", { name: "Jo Park (deactivated)" }));
-  await waitFor(() => expect(ruleText("Assignee")).toBe("Assigneeis any ofUnassigned, Jo Park (deactivated)×"));
+  await waitFor(() =>
+    expect(ruleText("Assignee")).toBe("Assigneeis any ofUnassigned, Jo Park (deactivated)×"),
+  );
   fireEvent.click(within(listbox).getByRole("option", { name: "Alex Kim" }));
   expect(addresses(router.push)).toEqual([
     "/project/WEB/list?assignee=-",

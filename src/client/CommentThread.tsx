@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { useLocation } from "react-router";
 import {
   Avatar,
   Button,
@@ -23,58 +22,61 @@ import {
   SettingsActions,
 } from "../components/ui/track-lite";
 import { Markdown } from "../lib/markdown/Markdown";
-import {
-  type ApiFailure,
-  type ThreadComment,
-  useCommentsQuery,
-  useDeleteCommentMutation,
-  useEditCommentMutation,
-  useMeQuery,
-  usePostCommentMutation,
-} from "./api";
+import { useToast } from "../components/toast";
+import type { ActionError, ActionResult, MemberSummary, ThreadComment } from "../contract";
+import { settled } from "./action-result";
 import { formatExact, formatUpdated } from "./dates";
-import { useFailureToast } from "./failure";
 import { LeaveGuard } from "./LeaveGuard";
 import { useMentions } from "./useMentions";
 import { useReturnFocus } from "./useReturnFocus";
-import { Zone, zoneState } from "./Zone";
 
-export function CommentThread({ threadPath, editable }: { threadPath: string; editable: boolean }) {
-  const query = useCommentsQuery(threadPath);
-  const linked = useLinkedComment(query.data !== undefined);
+type Saved = Promise<ActionResult<unknown>>;
+
+export type CommentActions = {
+  postComment: (comment: { requestId: string; body: string }) => Saved;
+  editComment: (change: { id: string; body: string; version: number }) => Saved;
+  deleteComment: (id: string) => Saved;
+};
+
+export type CommentThreadProps = CommentActions & {
+  comments: ThreadComment[];
+  editable: boolean;
+  me: string;
+  admin: boolean;
+  members: MemberSummary[];
+};
+
+type Viewer = Omit<CommentThreadProps, "comments" | "editable">;
+
+export function CommentThread({ comments, editable, ...viewer }: CommentThreadProps) {
+  const linked = useLinkedComment();
   return (
-    <Zone
-      what="comments"
-      state={zoneState(query)}
-      retry={query.refetch}>
-      {(comments) => (
-        <CommentList>
-          {comments.length === 0 && (
-            <FormStatus>{editable ? "No comments yet. Write one below." : "No comments yet."}</FormStatus>
-          )}
-          {comments.map((comment) => (
-            <CommentItem
-              key={comment.id}
-              comment={comment}
-              editable={editable}
-              highlighted={comment.id === linked}
-            />
-          ))}
-          {editable && <CommentBox threadPath={threadPath} />}
-        </CommentList>
+    <CommentList>
+      {comments.length === 0 && (
+        <FormStatus>{editable ? "No comments yet. Write one below." : "No comments yet."}</FormStatus>
       )}
-    </Zone>
+      {comments.map((comment) => (
+        <CommentItem
+          key={comment.id}
+          comment={comment}
+          editable={editable}
+          highlighted={comment.id === linked}
+          viewer={viewer}
+        />
+      ))}
+      {editable && <CommentBox viewer={viewer} />}
+    </CommentList>
   );
 }
 
 const linkPrefix = "#comment-";
 
-function useLinkedComment(loaded: boolean) {
-  const { hash } = useLocation();
+function useLinkedComment() {
   const [highlighted, setHighlighted] = useState<string>();
 
   useEffect(() => {
-    if (!loaded || !hash.startsWith(linkPrefix)) return;
+    const { hash } = window.location;
+    if (!hash.startsWith(linkPrefix)) return;
     const id = hash.slice(linkPrefix.length);
     const target = document.getElementById(`comment-${id}`);
     if (!target) return;
@@ -82,7 +84,7 @@ function useLinkedComment(loaded: boolean) {
     setHighlighted(id);
     const fade = setTimeout(() => setHighlighted(undefined), 2000);
     return () => clearTimeout(fade);
-  }, [loaded, hash]);
+  }, []);
 
   return highlighted;
 }
@@ -95,23 +97,25 @@ function CommentItem({
   comment,
   editable,
   highlighted,
+  viewer,
 }: {
   comment: ThreadComment;
   editable: boolean;
   highlighted: boolean;
+  viewer: Viewer;
 }) {
-  const { data: me } = useMeQuery();
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const options = useReturnFocus<HTMLButtonElement>(editing);
-  const own = me?.username === comment.author.username;
+  const own = viewer.me === comment.author.username;
   const canEdit = editable && own;
-  const canDelete = editable && (own || me?.role === "admin");
+  const canDelete = editable && (own || viewer.admin);
 
   if (editing) {
     return (
       <EditComment
         comment={comment}
+        viewer={viewer}
         onDone={() => setEditing(false)}
       />
     );
@@ -160,6 +164,7 @@ function CommentItem({
       {confirming && (
         <DeleteComment
           comment={comment}
+          deleteComment={viewer.deleteComment}
           onCancel={() => setConfirming(false)}
         />
       )}
@@ -167,9 +172,17 @@ function CommentItem({
   );
 }
 
-function DeleteComment({ comment, onCancel }: { comment: ThreadComment; onCancel: () => void }) {
-  const [deleteComment, { isLoading }] = useDeleteCommentMutation();
-  const toastFailure = useFailureToast();
+function DeleteComment({
+  comment,
+  deleteComment,
+  onCancel,
+}: {
+  comment: ThreadComment;
+  deleteComment: CommentActions["deleteComment"];
+  onCancel: () => void;
+}) {
+  const [isLoading, setLoading] = useState(false);
+  const toast = useToast();
   const cancel = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -177,12 +190,13 @@ function DeleteComment({ comment, onCancel }: { comment: ThreadComment; onCancel
   }, []);
 
   async function confirm() {
-    try {
-      await deleteComment(comment.id).unwrap();
-    } catch (caught) {
-      toastFailure(caught);
-      onCancel();
-    }
+    setLoading(true);
+    const result = await settled(deleteComment(comment.id));
+    setLoading(false);
+    if (result.ok) return;
+
+    toast(result.error.message);
+    onCancel();
   }
 
   return (
@@ -212,13 +226,21 @@ function DeleteComment({ comment, onCancel }: { comment: ThreadComment; onCancel
   );
 }
 
-function bodyError(failure: ApiFailure) {
-  return failure.status === 422 ? (failure.fields?.body ?? failure.message) : undefined;
+function bodyError(error: ActionError) {
+  return error.kind === "invalid" ? (error.fields?.body ?? error.message) : undefined;
 }
 
-function EditComment({ comment, onDone }: { comment: ThreadComment; onDone: () => void }) {
-  const [editComment, { isLoading }] = useEditCommentMutation();
-  const toastFailure = useFailureToast();
+function EditComment({
+  comment,
+  viewer,
+  onDone,
+}: {
+  comment: ThreadComment;
+  viewer: Viewer;
+  onDone: () => void;
+}) {
+  const [isLoading, setLoading] = useState(false);
+  const toast = useToast();
   const [text, setText] = useState(comment.body);
   const [error, setError] = useState<string>();
   const [conflict, setConflict] = useState<string>();
@@ -226,21 +248,23 @@ function EditComment({ comment, onDone }: { comment: ThreadComment; onDone: () =
   async function save() {
     setError(undefined);
     setConflict(undefined);
-    try {
-      await editComment({ id: comment.id, body: text, version: comment.version }).unwrap();
-      onDone();
-    } catch (caught) {
-      const failure = caught as ApiFailure;
-      const fieldError = bodyError(failure);
-      if (fieldError) setError(fieldError);
-      else if (failure.status === 409) setConflict(failure.message);
-      else toastFailure(failure);
-    }
+    setLoading(true);
+    const result = await settled(
+      viewer.editComment({ id: comment.id, body: text, version: comment.version }),
+    );
+    setLoading(false);
+    if (result.ok) return onDone();
+
+    const fieldError = bodyError(result.error);
+    if (fieldError) setError(fieldError);
+    else if (result.error.kind === "conflict") setConflict(result.error.message);
+    else toast(result.error.message);
   }
 
   return (
     <CommentForm
       label="Edit comment (Markdown)"
+      members={viewer.members}
       text={text}
       onChange={setText}
       onSubmit={save}
@@ -276,24 +300,26 @@ function EditComment({ comment, onDone }: { comment: ThreadComment; onDone: () =
   );
 }
 
-function CommentBox({ threadPath }: { threadPath: string }) {
-  const [postComment, { isLoading }] = usePostCommentMutation();
-  const toastFailure = useFailureToast();
+function CommentBox({ viewer }: { viewer: Viewer }) {
+  const [isLoading, setLoading] = useState(false);
+  const toast = useToast();
   const [text, setText] = useState("");
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [error, setError] = useState<string>();
 
   async function post() {
     setError(undefined);
-    try {
-      await postComment({ threadPath, requestId, body: text }).unwrap();
+    setLoading(true);
+    const result = await settled(viewer.postComment({ requestId, body: text }));
+    setLoading(false);
+
+    if (result.ok) {
       setText("");
       setRequestId(crypto.randomUUID());
-    } catch (caught) {
-      const failure = caught as ApiFailure;
-      const fieldError = bodyError(failure);
+    } else {
+      const fieldError = bodyError(result.error);
       if (fieldError) setError(fieldError);
-      else toastFailure(failure);
+      else toast(result.error.message);
     }
   }
 
@@ -305,6 +331,7 @@ function CommentBox({ threadPath }: { threadPath: string }) {
       />
       <CommentForm
         label="Comment (Markdown)"
+        members={viewer.members}
         placeholder="Leave a comment…"
         text={text}
         onChange={setText}
@@ -328,6 +355,7 @@ function CommentBox({ threadPath }: { threadPath: string }) {
 
 function CommentForm({
   label,
+  members,
   placeholder,
   text,
   onChange,
@@ -340,6 +368,7 @@ function CommentForm({
   actions,
 }: {
   label: string;
+  members: MemberSummary[];
   placeholder?: string;
   text: string;
   onChange: (text: string) => void;
@@ -352,7 +381,7 @@ function CommentForm({
   actions: ReactNode;
 }) {
   const errorId = useId();
-  const mentions = useMentions({ value: text, onChange });
+  const mentions = useMentions({ value: text, onChange, members });
   const textarea = mentions.textarea.ref;
 
   useEffect(() => {
