@@ -11,13 +11,13 @@ function isProduction() {
   return process.env.NODE_ENV === "production";
 }
 
-function cookieName() {
+export function sessionCookieName() {
   return isProduction() ? "__Host-session" : "session";
 }
 
 function cookieWith(value: string, maxAgeSeconds: number) {
   const attributes = [
-    `${cookieName()}=${value}`,
+    `${sessionCookieName()}=${value}`,
     "Path=/",
     `Max-Age=${maxAgeSeconds}`,
     "HttpOnly",
@@ -31,12 +31,22 @@ export function sessionCookie(token: string) {
   return cookieWith(token, sessionMaxAgeSeconds);
 }
 
+export function sessionCookieOptions() {
+  return {
+    path: "/",
+    maxAge: sessionMaxAgeSeconds,
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: isProduction(),
+  };
+}
+
 export function clearedSessionCookie() {
   return cookieWith("", 0);
 }
 
 export function readSessionToken(request: Request) {
-  const prefix = `${cookieName()}=`;
+  const prefix = `${sessionCookieName()}=`;
   const pair = request.headers
     .get("cookie")
     ?.split(";")
@@ -72,15 +82,26 @@ async function findSession(token: string | undefined) {
 }
 
 export async function signedInMember(request: Request) {
-  return (await findSession(readSessionToken(request)))?.member;
+  return signedInMemberBy(readSessionToken(request));
+}
+
+export async function signedInMemberBy(token: string | undefined) {
+  return (await findSession(token))?.member;
 }
 
 export async function requireMember(request: Request): Promise<{ member: Member; cookie?: string }> {
   const token = readSessionToken(request);
+  const { member, renewed } = await requireSession(token);
+  return { member, cookie: renewed && token ? sessionCookie(token) : undefined };
+}
+
+export async function requireSession(
+  token: string | undefined,
+): Promise<{ member: Member; renewed: boolean }> {
   const found = await findSession(token);
   if (!token || !found) throw new DomainError("signedOut", "Sign in to continue.");
 
-  if (!found.needsRenewal) return { member: found.member };
+  if (!found.needsRenewal) return { member: found.member, renewed: false };
   await db.update(sessions).set({ lastActiveAt: sql`now()` }).where(eq(sessions.id, found.sessionId));
-  return { member: found.member, cookie: sessionCookie(token) };
+  return { member: found.member, renewed: true };
 }

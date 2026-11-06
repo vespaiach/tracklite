@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+export const requestPathHeader = "x-request-path";
+
 function contentSecurityPolicy(nonce: string) {
   const devEval = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
   return [
@@ -21,6 +23,7 @@ export function proxy(request: NextRequest) {
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("content-security-policy", policy);
+  requestHeaders.set(requestPathHeader, request.nextUrl.pathname + request.nextUrl.search);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("content-security-policy", policy);

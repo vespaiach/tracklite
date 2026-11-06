@@ -1,7 +1,7 @@
 import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
 import { expect, it } from "vitest";
-import { config, proxy } from "./proxy";
+import { config, proxy, requestPathHeader } from "./proxy";
 
 function pageResponse() {
   return proxy(new NextRequest("http://localhost:3000/my-issues"));
@@ -45,4 +45,16 @@ it("D-26: the proxy runs on page addresses only", () => {
   expect(matches("/health")).toBe(false);
   expect(matches("/webhooks/resend")).toBe(false);
   expect(matches("/_next/static/chunks/main.js")).toBe(false);
+});
+
+it("STD-1: the proxy forwards the requested path and query, replacing any sent by the browser, so the signed-in layout can return there after sign-in", () => {
+  const response = proxy(
+    new NextRequest("http://localhost:3000/project/WEB/list?status=todo", {
+      headers: { [requestPathHeader]: "//evil.example" },
+    }),
+  );
+
+  expect(response.headers.get(`x-middleware-request-${requestPathHeader}`)).toBe(
+    "/project/WEB/list?status=todo",
+  );
 });
