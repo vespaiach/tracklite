@@ -1,5 +1,6 @@
 import "server-only";
 import { asc, eq, inArray, type SQL } from "drizzle-orm";
+import { commentGone } from "../domain/comments/comment";
 import { DomainError } from "../domain/shared/domain-error";
 import { db } from "../infrastructure/db";
 import type { Executor } from "../infrastructure/transaction";
@@ -14,7 +15,7 @@ import { byIssueId } from "./issue";
 import { byProjectKey } from "./project";
 import type { IssueId, ProjectKey } from "../domain/shared/identifiers";
 
-export async function findComments(executor: Executor, where: SQL): Promise<ThreadComment[]> {
+async function findComments(executor: Executor, where: SQL): Promise<ThreadComment[]> {
   const rows = await commentRows(executor, where);
 
   const mentioned = await mentionsOfComments(
@@ -70,7 +71,13 @@ async function mentionsOfComments(executor: Executor, commentIds: string[]) {
     .orderBy(asc(members.username));
 }
 
-export async function issueTarget(executor: Executor, id: IssueId | undefined) {
+export async function updatedComment(executor: Executor, id: string) {
+  const [comment] = await findComments(executor, eq(comments.id, id));
+  if (!comment) throw commentGone();
+  return comment;
+}
+
+async function issueTarget(executor: Executor, id: IssueId | undefined) {
   const where = byIssueId(id);
   if (!where) return undefined;
   const [issue] = await executor

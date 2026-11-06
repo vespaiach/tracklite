@@ -1,8 +1,11 @@
+import { postProjectComment } from "../../../../../application/comments/post-comment";
 import type { ThreadComment } from "../../../../../contract";
 import { ProjectKey, tryFrom } from "../../../../../domain/shared/identifiers";
+import { commentWork } from "../../../../../infrastructure/comments/comment-work";
+import { db } from "../../../../../infrastructure/db";
+import { listProjectComments, updatedComment } from "../../../../../queries";
 import { apiRoute } from "../../../../../server/shared/api-route";
-import { NewComment, postProjectComment } from "../../../../../server/comments";
-import { listProjectComments } from "../../../../../queries";
+import { NewComment } from "../../../../_server/schemas/comments";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]/comments">) {
   const key = tryFrom(ProjectKey, (await params).key);
@@ -14,7 +17,9 @@ export async function GET(request: Request, { params }: RouteContext<"/api/proje
 export async function POST(request: Request, { params }: RouteContext<"/api/projects/[key]/comments">) {
   const key = tryFrom(ProjectKey, (await params).key);
   return apiRoute("member", NewComment, async (_memberRequest, member, newComment) => {
-    const { comment, created } = await postProjectComment(member, key, newComment);
-    return Response.json(comment satisfies ThreadComment, { status: created ? 201 : 200 });
+    const { commentId, created } = await postProjectComment(member, commentWork, key, newComment);
+    return Response.json((await updatedComment(db, commentId)) satisfies ThreadComment, {
+      status: created ? 201 : 200,
+    });
   })(request);
 }

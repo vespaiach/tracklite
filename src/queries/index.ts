@@ -1,4 +1,4 @@
-export { listIssueComments, listProjectComments, findComments, issueTarget } from "./comments";
+export { listIssueComments, listProjectComments, updatedComment } from "./comments";
 export { byIssueId, findIssue, issueGone, updatedIssue } from "./issue";
 export { getBoard, getIssue, getMyIssues, listIssues } from "./issue-lists";
 export { listLabels, updatedLabel } from "./labels";

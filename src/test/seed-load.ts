@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { asc, isNull, like } from "drizzle-orm";
 import { generateNKeysBetween } from "fractional-indexing";
 import { issuePriorities, issueStatuses } from "../contract";
-import { comments } from "../server/comments";
+import { comments } from "../infrastructure/comments/tables";
 import { members } from "../infrastructure/identity/tables";
 import { seedMembers } from "../infrastructure/identity/seed";
 import { issueAssignees, issues } from "../infrastructure/issues/tables";

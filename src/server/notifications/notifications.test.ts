@@ -2,7 +2,9 @@ import { asc, DrizzleQueryError, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createIssue, createMember, createProject, newRequestId } from "../../test/factories";
 import { moveIntoPast } from "../../test/time";
-import { editComment, postIssueComment, postProjectComment } from "../comments";
+import { editComment } from "../../application/comments/edit-comment";
+import { postIssueComment, postProjectComment } from "../../application/comments/post-comment";
+import { commentWork } from "../../infrastructure/comments/comment-work";
 import { db } from "../../infrastructure/db";
 import type { DomainEvent } from "../../domain/shared/events";
 import { publish } from "../../infrastructure/events";
@@ -71,8 +73,11 @@ function assign(issueRef: string, by: Member, ...assignees: Member[]) {
 }
 
 async function comment(issueRef: string, by: Member, body: string) {
-  const { comment } = await postIssueComment(by, IssueId.from(issueRef), { requestId: newRequestId(), body });
-  return comment;
+  const { commentId } = await postIssueComment(by, commentWork, IssueId.from(issueRef), {
+    requestId: newRequestId(),
+    body,
+  });
+  return { id: commentId };
 }
 
 it("REQ-043.1, §2.6: Alex assigns WEB-42 to Sam → Sam gets the email, in a new batch with one pending delivery per channel (email by default)", async () => {
@@ -185,7 +190,7 @@ it("REQ-044.3: Alex edits a comment that already mentions @sam and adds @jo → 
   const { issueRef } = await website();
   const posted = await comment(issueRef, alex, `@${sam.username} look`);
 
-  await editComment(alex, Uuid.from(posted.id), {
+  await editComment(alex, commentWork, Uuid.from(posted.id), {
     body: `@${sam.username} @${jo.username} look`,
     version: 0,
   });
@@ -209,7 +214,7 @@ it("REQ-044.5: Alex mentions @sam in a comment on project WEB → the email link
   const sam = await createMember();
   const project = await createProject({ name: "Website" });
 
-  const { comment: posted } = await postProjectComment(alex, ProjectKey.from(project.key), {
+  const { commentId } = await postProjectComment(alex, commentWork, ProjectKey.from(project.key), {
     requestId: newRequestId(),
     body: `@${sam.username} thoughts?`,
   });
@@ -219,12 +224,12 @@ it("REQ-044.5: Alex mentions @sam in a comment on project WEB → the email link
       targetType: "project",
       targetId: project.id,
       kind: "mentioned",
-      commentId: posted.id,
+      commentId: commentId,
       issueRef: null,
       issueTitle: null,
       projectName: "Website",
       projectKey: project.key,
-      linkPath: `/project/${project.key}/detail#comment-${posted.id}`,
+      linkPath: `/project/${project.key}/detail#comment-${commentId}`,
       excerpt: `@${sam.username} thoughts?`,
     }),
   ]);
@@ -283,8 +288,11 @@ it("REQ-044.7: Alex mentions @sam in a comment, edits the mention out, then adds
   const { issueRef } = await website();
   const posted = await comment(issueRef, alex, `@${sam.username} look`);
 
-  await editComment(alex, Uuid.from(posted.id), { body: "look", version: 0 });
-  await editComment(alex, Uuid.from(posted.id), { body: `@${sam.username} look again`, version: 1 });
+  await editComment(alex, commentWork, Uuid.from(posted.id), { body: "look", version: 0 });
+  await editComment(alex, commentWork, Uuid.from(posted.id), {
+    body: `@${sam.username} look again`,
+    version: 1,
+  });
 
   expect((await notificationsFor(sam)).map((row) => row.excerpt)).toEqual([
     `@${sam.username} look`,

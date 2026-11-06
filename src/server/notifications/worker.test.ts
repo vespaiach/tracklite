@@ -3,7 +3,8 @@ import { PostgresJsPreparedQuery } from "drizzle-orm/postgres-js/session";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createIssue, createMember, createProject, newRequestId } from "../../test/factories";
 import { spyOnLoggedErrors } from "../../test/log";
-import { postIssueComment } from "../comments";
+import { postIssueComment } from "../../application/comments/post-comment";
+import { commentWork } from "../../infrastructure/comments/comment-work";
 import { db } from "../../infrastructure/db";
 import { outbox } from "../../infrastructure/email/outbox";
 import type { Transaction } from "../../infrastructure/transaction";
@@ -44,8 +45,11 @@ function assign(issueRef: string, by: Member, ...assignees: Member[]) {
 }
 
 async function comment(issueRef: string, by: Member, body: string) {
-  const { comment } = await postIssueComment(by, IssueId.from(issueRef), { requestId: newRequestId(), body });
-  return comment;
+  const { commentId } = await postIssueComment(by, commentWork, IssueId.from(issueRef), {
+    requestId: newRequestId(),
+    body,
+  });
+  return { id: commentId };
 }
 
 function batchesOf(member: { id: string }) {

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray, or } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../../infrastructure/db";
-import { comments } from "../../../../server/comments";
+import { comments } from "../../../../infrastructure/comments/tables";
 import { issueLabels, issues } from "../../../../infrastructure/issues/tables";
 import { labels, projectKeys, projects } from "../../../../infrastructure/projects/tables";
 import { mentions, notifications } from "../../../../server/notifications";
