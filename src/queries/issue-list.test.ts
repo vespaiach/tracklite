@@ -1,59 +1,28 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, type SQL, sql } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../../../infrastructure/db";
-import { comments } from "../../../../../infrastructure/comments/tables";
-import { createSession } from "../../../../../infrastructure/identity/session";
-import { issues } from "../../../../../infrastructure/issues/tables";
-import { labels, projects } from "../../../../../infrastructure/projects/tables";
-import { createIssue, createLabel, createMember, createProject } from "../../../../../test/factories";
-import { moveIssue } from "../../../../../application/issues/move-issue";
-import { IssueId } from "../../../../../domain/shared/identifiers";
-import { issueWork } from "../../../../../infrastructure/issues/issue-work";
-import { IssueStatus } from "../../../../../domain/issues/issue-status";
-import { GET } from "./route";
-
-beforeEach(() => {
-  vi.spyOn(console, "error").mockImplementation(() => {});
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
-async function signedIn(fullName = "Sam Lee") {
-  const member = await createMember({ fullName });
-  return { member, cookie: `session=${await createSession(member.id)}` };
-}
+import { expect, it } from "vitest";
+import { moveIssue } from "../application/issues/move-issue";
+import { IssueStatus } from "../domain/issues/issue-status";
+import { DomainError } from "../domain/shared/domain-error";
+import { IssueId, ProjectKey, tryFrom } from "../domain/shared/identifiers";
+import { comments } from "../infrastructure/comments/tables";
+import { db } from "../infrastructure/db";
+import type { Member } from "../infrastructure/identity/tables";
+import { issueWork } from "../infrastructure/issues/issue-work";
+import { issues } from "../infrastructure/issues/tables";
+import { labels, projects } from "../infrastructure/projects/tables";
+import { createIssue, createLabel, createMember, createProject } from "../test/factories";
+import { listIssues } from "./issue-lists";
 
 type IssueChange = PgUpdateSetSource<typeof issues> & { assigneeIds?: string[] };
-type ListRow = {
-  id: string;
-  title: string;
-  status: string;
-  priority: string;
-  assignees: unknown[];
-  labels: unknown[];
-  updatedAt: string;
-};
-type IssueList = { issues: ListRow[]; hasMore: boolean; deactivatedAssignees: unknown[] };
 
-function listWith(cookie: string, key: string, query = "") {
-  return GET(
-    new Request(`http://localhost:3000/api/projects/${key}/issues${query}`, { headers: { Cookie: cookie } }),
-    { params: Promise.resolve({ key }) },
-  );
+function listOf(member: Member, key: string, query = "") {
+  return listIssues(member, tryFrom(ProjectKey, key), new URLSearchParams(query));
 }
 
-async function listOf(cookie: string, key: string, query = ""): Promise<IssueList> {
-  const response = await listWith(cookie, key, query);
-  expect(response.status).toBe(200);
-  return response.json();
-}
-
-async function idsOf(cookie: string, key: string, query = "") {
-  return (await listOf(cookie, key, query)).issues.map((row) => row.id);
+async function idsOf(member: Member, key: string, query = "") {
+  return (await listOf(member, key, query)).issues.map((row) => row.id);
 }
 
 function minutesAgo(minutes: number): SQL {
@@ -97,20 +66,20 @@ async function manyIssuesIn(
 }
 
 it("REQ-036.1: exactly 100 issues fit on one page; at 120, 40 of them Done → the first 100 rows, then the other 20", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject({ nextIssueNumber: 1000 });
   await manyIssuesIn(project, 80);
   await manyIssuesIn(project, 20, "done");
 
-  const exactlyOnePage = await listOf(cookie, project.key);
+  const exactlyOnePage = await listOf(member, project.key);
 
   expect(exactlyOnePage.issues).toHaveLength(100);
   expect(exactlyOnePage.hasMore).toBe(false);
 
   await manyIssuesIn(project, 20, "done");
 
-  const first = await listOf(cookie, project.key);
-  const second = await listOf(cookie, project.key, "?offset=100");
+  const first = await listOf(member, project.key);
+  const second = await listOf(member, project.key, "?offset=100");
 
   expect(first.issues).toHaveLength(100);
   expect(first.hasMore).toBe(true);
@@ -121,45 +90,45 @@ it("REQ-036.1: exactly 100 issues fit on one page; at 120, 40 of them Done → t
 });
 
 it("REQ-036, REQ-040: newest-updated first by default, the key matched ignoring capitals, and an unknown sort, direction or offset falls back to the defaults", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject();
   const old = await issueIn(project, { updatedAt: minutesAgo(30) });
   const newest = await issueIn(project, { updatedAt: minutesAgo(1) });
   const middle = await issueIn(project, { updatedAt: minutesAgo(10) });
   const defaultOrder = [newest, middle, old];
 
-  expect(await idsOf(cookie, project.key)).toEqual(defaultOrder);
-  expect(await idsOf(cookie, project.key.toLowerCase())).toEqual(defaultOrder);
-  expect(await idsOf(cookie, project.key, "?sort=title&dir=sideways&offset=abc")).toEqual(defaultOrder);
-  expect(await idsOf(cookie, project.key, "?offset=-5")).toEqual(defaultOrder);
+  expect(await idsOf(member, project.key)).toEqual(defaultOrder);
+  expect(await idsOf(member, project.key.toLowerCase())).toEqual(defaultOrder);
+  expect(await idsOf(member, project.key, "?sort=title&dir=sideways&offset=abc")).toEqual(defaultOrder);
+  expect(await idsOf(member, project.key, "?offset=-5")).toEqual(defaultOrder);
 });
 
 it("REQ-036.2: WEB-10 was Done 20 days ago → it's in the list", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject();
   const twentyDaysAgo = sql`now() - interval '20 days'`;
   const done = await issueIn(project, { status: "done", statusChangedAt: twentyDaysAgo });
   const canceled = await issueIn(project, { status: "canceled", statusChangedAt: twentyDaysAgo });
 
-  expect((await idsOf(cookie, project.key)).sort()).toEqual([done, canceled].sort());
+  expect((await idsOf(member, project.key)).sort()).toEqual([done, canceled].sort());
 });
 
 it("REQ-036.3: WEB is archived → the list, filters, search and sort all work", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject({ archivedAt: new Date() });
   const urgent = await issueIn(project, { priority: "urgent", title: "Fix login button" });
   await issueIn(project, { priority: "low", title: "Fix login form" });
   const other = await issueIn(project, { priority: "high", title: "Write docs" });
 
-  expect(await idsOf(cookie, project.key, "?priority=urgent&priority=high&sort=priority")).toEqual([
+  expect(await idsOf(member, project.key, "?priority=urgent&priority=high&sort=priority")).toEqual([
     urgent,
     other,
   ]);
-  expect(await idsOf(cookie, project.key, "?q=button")).toEqual([urgent]);
+  expect(await idsOf(member, project.key, "?q=button")).toEqual([urgent]);
 });
 
 it("REQ-036.5: reordering within a column keeps the issue's place; a status change by dragging moves it to the top", async () => {
-  const { member, cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject();
   const nine = await issueIn(project, { status: "in_progress", position: "a2", updatedAt: minutesAgo(30) });
   const five = await issueIn(project, { status: "in_progress", position: "a1", updatedAt: minutesAgo(10) });
@@ -167,14 +136,14 @@ it("REQ-036.5: reordering within a column keeps the issue's place; a status chan
     moveIssue(member, issueWork, IssueId.from(nine), { status: IssueStatus.from(status), place: "top" });
 
   await move("in_progress");
-  expect(await idsOf(cookie, project.key)).toEqual([five, nine]);
+  expect(await idsOf(member, project.key)).toEqual([five, nine]);
 
   await move("in_review");
-  expect(await idsOf(cookie, project.key)).toEqual([nine, five]);
+  expect(await idsOf(member, project.key)).toEqual([nine, five]);
 });
 
 it("REQ-037.1: Status = In Progress and In Review, and Assignee = Sam → only Sam's issues in either status", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const sam = await createMember({ fullName: "Sam Lee" });
   const alex = await createMember({ fullName: "Alex Kim" });
   const project = await createProject();
@@ -185,7 +154,7 @@ it("REQ-037.1: Status = In Progress and In Review, and Assignee = Sam → only S
   await issueIn(project, { status: "in_review" });
 
   const ids = await idsOf(
-    cookie,
+    member,
     project.key,
     `?status=in_progress&status=in_review&assignee=${sam.username.toUpperCase()}`,
   );
@@ -194,7 +163,7 @@ it("REQ-037.1: Status = In Progress and In Review, and Assignee = Sam → only S
 });
 
 it("REQ-037.2: Assignee = Unassigned → only issues with no assignee; with a member too → either", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const sam = await createMember();
   const alex = await createMember();
   const project = await createProject();
@@ -202,13 +171,13 @@ it("REQ-037.2: Assignee = Unassigned → only issues with no assignee; with a me
   const sams = await issueIn(project, { assigneeIds: [sam.id] });
   await issueIn(project, { assigneeIds: [alex.id] });
 
-  expect(await idsOf(cookie, project.key, "?assignee=-")).toEqual([unassigned]);
-  const either = await idsOf(cookie, project.key, `?assignee=-&assignee=${sam.username}`);
+  expect(await idsOf(member, project.key, "?assignee=-")).toEqual([unassigned]);
+  const either = await idsOf(member, project.key, `?assignee=-&assignee=${sam.username}`);
   expect(either.sort()).toEqual([unassigned, sams].sort());
 });
 
 it("REQ-037.6: WEB-7 is assigned to Sam and Jo, WEB-8 to Alex → Assignee = Jo shows WEB-7; Jo and Alex shows both, each once", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const sam = await createMember();
   const jo = await createMember();
   const alex = await createMember();
@@ -216,18 +185,18 @@ it("REQ-037.6: WEB-7 is assigned to Sam and Jo, WEB-8 to Alex → Assignee = Jo 
   const seven = await issueIn(project, { assigneeIds: [sam.id, jo.id] });
   const eight = await issueIn(project, { assigneeIds: [alex.id] });
 
-  expect(await idsOf(cookie, project.key, `?assignee=${jo.username}`)).toEqual([seven]);
+  expect(await idsOf(member, project.key, `?assignee=${jo.username}`)).toEqual([seven]);
   const both = await idsOf(
-    cookie,
+    member,
     project.key,
     `?assignee=${jo.username}&assignee=${sam.username}&assignee=${alex.username}`,
   );
   expect(both.sort()).toEqual([seven, eight].sort());
-  expect(await idsOf(cookie, project.key, "?assignee=-")).toEqual([]);
+  expect(await idsOf(member, project.key, "?assignee=-")).toEqual([]);
 });
 
 it("REQ-037.3: Label = bug and frontend → issues with either label, each listed once, and not another project's bug", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject();
   const other = await createProject();
   const bug = await createLabel(project.id, { name: "bug" });
@@ -241,24 +210,24 @@ it("REQ-037.3: Label = bug and frontend → issues with either label, each liste
   await issueIn(project);
   await issueIn(other, {}, [otherBug.id]);
 
-  const ids = await idsOf(cookie, project.key, "?label=BUG&label=frontend");
+  const ids = await idsOf(member, project.key, "?label=BUG&label=frontend");
 
   expect(ids.sort()).toEqual([bugOnly, frontendOnly, both].sort());
 });
 
 it("REQ-037.4: nothing matches → no rows and nothing more to load", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject();
   await issueIn(project, { status: "backlog" });
 
-  const list = await listOf(cookie, project.key, "?status=done");
+  const list = await listOf(member, project.key, "?status=done");
 
   expect(list.issues).toEqual([]);
   expect(list.hasMore).toBe(false);
 });
 
 it("REQ-037.5: Jo is deactivated and still assigned to WEB-7 → offered as an assignee whatever the filters, and choosing Jo shows WEB-7; no one else is offered", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const jo = await createMember({ fullName: "Jo Park", deactivatedAt: new Date() });
   const project = await createProject();
   const other = await createProject();
@@ -270,8 +239,8 @@ it("REQ-037.5: Jo is deactivated and still assigned to WEB-7 → offered as an a
   await issueIn(other, { assigneeIds: [elsewhere.id] });
   const joOnly = [{ username: jo.username, fullName: "Jo Park", initials: "JP", deactivated: true }];
 
-  const chosen = await listOf(cookie, project.key, `?assignee=${jo.username}`);
-  const filteredAway = await listOf(cookie, project.key, "?status=canceled");
+  const chosen = await listOf(member, project.key, `?assignee=${jo.username}`);
+  const filteredAway = await listOf(member, project.key, "?status=canceled");
 
   expect(chosen.issues.map((row) => row.id)).toEqual([sevens]);
   expect(chosen.deactivatedAssignees).toEqual(joOnly);
@@ -280,7 +249,7 @@ it("REQ-037.5: Jo is deactivated and still assigned to WEB-7 → offered as an a
 });
 
 it('REQ-038.1, REQ-038: "login button" → WEB-1 Fix login button, plus any issue whose description has both words; a blank search shows every issue', async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject();
   const titled = await issueIn(project, { title: "Fix login button" });
   const described = await issueIn(project, {
@@ -291,20 +260,20 @@ it('REQ-038.1, REQ-038: "login button" → WEB-1 Fix login button, plus any issu
   await issueIn(project, { title: "Login page", description: "Redesign it" });
   await issueIn(project, { title: "Button colours" });
 
-  const ids = await idsOf(cookie, project.key, "?q=login%20%20button%20");
+  const ids = await idsOf(member, project.key, "?q=login%20%20button%20");
 
   expect(ids.sort()).toEqual([titled, described, split].sort());
-  expect(await idsOf(cookie, project.key, "?q=%20%20")).toHaveLength(5);
+  expect(await idsOf(member, project.key, "?q=%20%20")).toHaveLength(5);
 });
 
 it('REQ-038.2: "42" or "web-42" → WEB-42', async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject();
   const fortyTwo = await issueIn(project, { number: 42, title: "Something" });
   const seven = await issueIn(project, { number: 7, title: "Other" });
 
-  const byNumber = await idsOf(cookie, project.key, "?q=42");
-  const byId = await idsOf(cookie, project.key, `?q=${project.key.toLowerCase()}-42`);
+  const byNumber = await idsOf(member, project.key, "?q=42");
+  const byId = await idsOf(member, project.key, `?q=${project.key.toLowerCase()}-42`);
 
   expect(byNumber).toContain(fortyTwo);
   expect(byNumber).not.toContain(seven);
@@ -312,7 +281,7 @@ it('REQ-038.2: "42" or "web-42" → WEB-42', async () => {
 });
 
 it("REQ-038.3: a word that only appears in a comment → that issue isn't shown", async () => {
-  const { member, cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject();
   const id = await issueIn(project, { title: "Fix login" });
   const [issue] = await db
@@ -323,12 +292,12 @@ it("REQ-038.3: a word that only appears in a comment → that issue isn't shown"
     .insert(comments)
     .values({ issueId: issue.id, authorId: member.id, body: "zebra", requestId: randomUUID() });
 
-  expect(await idsOf(cookie, project.key, "?q=zebra")).toEqual([]);
-  expect(await idsOf(cookie, project.key, "?q=login")).toEqual([id]);
+  expect(await idsOf(member, project.key, "?q=zebra")).toEqual([]);
+  expect(await idsOf(member, project.key, "?q=login")).toEqual([id]);
 });
 
 it('REQ-038.4: "100%" → only issues containing the text 100%; %, _ and \\ are plain characters', async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject();
   const percent = await issueIn(project, { title: "Coverage at 100% now" });
   const underscore = await issueIn(project, { title: "Rename user_id" });
@@ -338,13 +307,13 @@ it('REQ-038.4: "100%" → only issues containing the text 100%; %, _ and \\ are 
   await issueIn(project, { title: "Rename userXid" });
   await issueIn(project, { title: "Path C:temp" });
 
-  expect(await idsOf(cookie, project.key, `?q=${encodeURIComponent("100%")}`)).toEqual([percent]);
-  expect(await idsOf(cookie, project.key, `?q=${encodeURIComponent("user_id")}`)).toEqual([underscore]);
-  expect(await idsOf(cookie, project.key, `?q=${encodeURIComponent("c:\\")}`)).toEqual([backslash]);
+  expect(await idsOf(member, project.key, `?q=${encodeURIComponent("100%")}`)).toEqual([percent]);
+  expect(await idsOf(member, project.key, `?q=${encodeURIComponent("user_id")}`)).toEqual([underscore]);
+  expect(await idsOf(member, project.key, `?q=${encodeURIComponent("c:\\")}`)).toEqual([backslash]);
 });
 
 it("REQ-039.1: Sam clicks Priority → Urgent first and No priority last; clicking again → the reverse", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject();
   const low = await issueIn(project, { priority: "low" });
   const none = await issueIn(project, { priority: "none" });
@@ -352,15 +321,15 @@ it("REQ-039.1: Sam clicks Priority → Urgent first and No priority last; clicki
   const medium = await issueIn(project, { priority: "medium" });
   const high = await issueIn(project, { priority: "high" });
 
-  expect(await idsOf(cookie, project.key, "?sort=priority")).toEqual([urgent, high, medium, low, none]);
-  expect(await idsOf(cookie, project.key, "?sort=priority&dir=asc")).toEqual([
+  expect(await idsOf(member, project.key, "?sort=priority")).toEqual([urgent, high, medium, low, none]);
+  expect(await idsOf(member, project.key, "?sort=priority&dir=asc")).toEqual([
     urgent,
     high,
     medium,
     low,
     none,
   ]);
-  expect(await idsOf(cookie, project.key, "?sort=priority&dir=desc")).toEqual([
+  expect(await idsOf(member, project.key, "?sort=priority&dir=desc")).toEqual([
     none,
     low,
     medium,
@@ -370,7 +339,7 @@ it("REQ-039.1: Sam clicks Priority → Urgent first and No priority last; clicki
 });
 
 it("REQ-039: Status sorts in the REQ-017 order, ID by number, Last updated newest first, and each reverses", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject();
   const canceled = await issueIn(project, { number: 100, status: "canceled", updatedAt: minutesAgo(40) });
   const inReview = await issueIn(project, { number: 2, status: "in_review", updatedAt: minutesAgo(10) });
@@ -381,49 +350,49 @@ it("REQ-039: Status sorts in the REQ-017 order, ID by number, Last updated newes
   const byStatus = [backlog, inProgress, inReview, done, canceled];
   const byNumber = [inReview, inProgress, done, backlog, canceled];
   const byNewest = [backlog, inReview, inProgress, done, canceled];
-  expect(await idsOf(cookie, project.key, "?sort=status")).toEqual(byStatus);
-  expect(await idsOf(cookie, project.key, "?sort=status&dir=desc")).toEqual([...byStatus].reverse());
-  expect(await idsOf(cookie, project.key, "?sort=id")).toEqual(byNumber);
-  expect(await idsOf(cookie, project.key, "?sort=id&dir=desc")).toEqual([...byNumber].reverse());
-  expect(await idsOf(cookie, project.key, "?sort=updated")).toEqual(byNewest);
-  expect(await idsOf(cookie, project.key, "?sort=updated&dir=asc")).toEqual([...byNewest].reverse());
+  expect(await idsOf(member, project.key, "?sort=status")).toEqual(byStatus);
+  expect(await idsOf(member, project.key, "?sort=status&dir=desc")).toEqual([...byStatus].reverse());
+  expect(await idsOf(member, project.key, "?sort=id")).toEqual(byNumber);
+  expect(await idsOf(member, project.key, "?sort=id&dir=desc")).toEqual([...byNumber].reverse());
+  expect(await idsOf(member, project.key, "?sort=updated")).toEqual(byNewest);
+  expect(await idsOf(member, project.key, "?sort=updated&dir=asc")).toEqual([...byNewest].reverse());
 });
 
 it("REQ-039.2: WEB-3 and WEB-7 are both Urgent, and WEB-7 was updated more recently → WEB-7 comes first", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject();
   const three = await issueIn(project, { number: 3, priority: "urgent", updatedAt: minutesAgo(20) });
   const seven = await issueIn(project, { number: 7, priority: "urgent", updatedAt: minutesAgo(5) });
   const low = await issueIn(project, { number: 9, priority: "low", updatedAt: minutesAgo(1) });
 
-  expect(await idsOf(cookie, project.key, "?sort=priority")).toEqual([seven, three, low]);
-  expect(await idsOf(cookie, project.key, "?sort=priority&dir=desc")).toEqual([low, seven, three]);
+  expect(await idsOf(member, project.key, "?sort=priority")).toEqual([seven, three, low]);
+  expect(await idsOf(member, project.key, "?sort=priority&dir=desc")).toEqual([low, seven, three]);
 });
 
 it("REQ-040.2: a deleted label and Status = Done → only the Done filter applies", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const project = await createProject();
   const frontend = await createLabel(project.id, { name: "frontend" });
   const done = await issueIn(project, { status: "done" });
   await issueIn(project, { status: "backlog" }, [frontend.id]);
   await db.delete(labels).where(eq(labels.id, frontend.id));
 
-  expect(await idsOf(cookie, project.key, "?label=frontend&status=done")).toEqual([done]);
+  expect(await idsOf(member, project.key, "?label=frontend&status=done")).toEqual([done]);
 });
 
 it("REQ-040.3, REQ-040: status=Todo, unknown usernames and unknown priorities are ignored, and the rest still applies", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const sam = await createMember();
   const project = await createProject();
   const sams = await issueIn(project, { assigneeIds: [sam.id], priority: "high", status: "done" });
   await issueIn(project, { priority: "high" });
   await issueIn(project, { assigneeIds: [sam.id], priority: "low" });
 
-  expect(await idsOf(cookie, project.key, "?status=Todo")).toHaveLength(3);
-  expect(await idsOf(cookie, project.key, "?assignee=nobody-here&priority=extreme")).toHaveLength(3);
+  expect(await idsOf(member, project.key, "?status=Todo")).toHaveLength(3);
+  expect(await idsOf(member, project.key, "?assignee=nobody-here&priority=extreme")).toHaveLength(3);
   expect(
     await idsOf(
-      cookie,
+      member,
       project.key,
       `?assignee=nobody-here&assignee=${sam.username}&priority=high&priority=extreme`,
     ),
@@ -431,7 +400,7 @@ it("REQ-040.3, REQ-040: status=Todo, unknown usernames and unknown priorities ar
 });
 
 it("REQ-036: a row carries ID, title, status, priority, assignees, labels sorted by name, and last updated", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
   const alex = await createMember({ fullName: "Alex Kim" });
   const project = await createProject();
   const ux = await createLabel(project.id, { name: "ux", color: "blue" });
@@ -448,7 +417,7 @@ it("REQ-036: a row carries ID, title, status, priority, assignees, labels sorted
     [ux.id, bug.id],
   );
 
-  const [row] = (await listOf(cookie, project.key)).issues;
+  const [row] = (await listOf(member, project.key)).issues;
 
   expect(row).toEqual({
     id,
@@ -466,10 +435,7 @@ it("REQ-036: a row carries ID, title, status, priority, assignees, labels sorted
 });
 
 it("REQ-036: an unknown project key gets Not found", async () => {
-  const { cookie } = await signedIn();
+  const member = await createMember();
 
-  const response = await listWith(cookie, "NOPE");
-
-  expect(response.status).toBe(404);
-  expect(await response.json()).toEqual({ error: { message: "Not found" } });
+  await expect(listOf(member, "NOPE")).rejects.toEqual(new DomainError("notFound", "Not found"));
 });

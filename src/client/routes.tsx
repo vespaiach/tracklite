@@ -22,14 +22,6 @@ export const routes: RouteObject[] = [
             }),
           },
           {
-            path: "project/:key/list",
-            lazy: async () => ({ Component: (await import("./screens/Project")).ProjectList }),
-          },
-          {
-            path: "project/:key/detail",
-            lazy: async () => ({ Component: (await import("./screens/ProjectDetail")).ProjectDetail }),
-          },
-          {
             path: "project/:key/labels",
             lazy: async () => ({ Component: (await import("./screens/Labels")).Labels }),
           },

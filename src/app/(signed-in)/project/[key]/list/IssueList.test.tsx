@@ -1,29 +1,39 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { startTransition, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { alex, memberOf, mockApi, project, renderAppAt, requestsTo, sam } from "../../test/client-app";
-import type { IssueLabel, IssueListPage, Label, ListIssue, Me, MemberSummary, Project } from "../api";
-import { formatExact } from "../dates";
+import { formatExact } from "../../../../../client/dates";
+import type {
+  IssueLabel,
+  IssueListPage,
+  Label,
+  ListIssue,
+  MemberSummary,
+  ProjectSummary,
+} from "../../../../../contract";
+import { renderForm } from "../../../../../test/forms";
+import type { CreateIssue } from "../NewIssueDialog";
+import { IssueList, type MoreIssues } from "./IssueList";
+
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("../../../../../lib/load-page", () => ({ loadPage: vi.fn() }));
 
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  router.push.mockReset();
+  router.replace.mockReset();
 });
 
-const listPath = "/api/projects/WEB/issues";
+const web: ProjectSummary = { key: "WEB", name: "Website", archivedAt: null };
+const archivedWeb: ProjectSummary = { ...web, archivedAt: "2026-09-30T10:00:00.000Z" };
 
-const web = project("WEB", "Website");
-const archivedWeb = project("WEB", "Website", "2026-09-30T10:00:00.000Z");
-
-const jo: Me = {
-  username: "jo",
-  fullName: "Jo Park",
-  initials: "JP",
-  deactivated: true,
-  email: "jo@acme.com",
-  role: "member",
-};
-const kim: Me = { ...jo, username: "kim", fullName: "Kim Wu", initials: "KW", email: "kim@acme.com" };
+const sam: MemberSummary = { username: "sam", fullName: "Sam Lee", initials: "SL", deactivated: false };
+const alex: MemberSummary = { username: "alex", fullName: "Alex Kim", initials: "AK", deactivated: false };
+const jo: MemberSummary = { username: "jo", fullName: "Jo Park", initials: "JP", deactivated: true };
+const kim: MemberSummary = { username: "kim", fullName: "Kim Wu", initials: "KW", deactivated: true };
+const nina: MemberSummary = { username: "nina", fullName: "Nina Shah", initials: "NS", deactivated: false };
 
 function minutesAgo(minutes: number) {
   return new Date(Date.now() - minutes * 60_000).toISOString();
@@ -43,7 +53,7 @@ function row(id: string, title: string, overrides: Partial<ListIssue> = {}): Lis
     title,
     status: "backlog",
     priority: "medium",
-    assignees: [memberOf(alex)],
+    assignees: [alex],
     labels: [],
     updatedAt: minutesAgo(5),
     ...overrides,
@@ -53,7 +63,7 @@ function row(id: string, title: string, overrides: Partial<ListIssue> = {}): Lis
 const web42 = row("WEB-42", "Fix login button", {
   status: "in_progress",
   priority: "high",
-  assignees: [memberOf(sam)],
+  assignees: [sam],
   labels: labels("bug", "frontend", "Safari"),
 });
 const web12 = row("WEB-12", "Tidy up footer links", {
@@ -61,50 +71,58 @@ const web12 = row("WEB-12", "Tidy up footer links", {
   assignees: [],
   updatedAt: "2026-09-16T12:00:00.000Z",
 });
-const nina: MemberSummary = { username: "nina", fullName: "Nina Shah", initials: "NS", deactivated: false };
 const web7 = row("WEB-7", "Add password rules to the reset form", {
-  assignees: [memberOf(alex), memberOf(jo), memberOf(kim), nina, memberOf(sam)],
+  assignees: [alex, jo, kim, nina, sam],
 });
 
 function page(issues: ListIssue[], overrides: Partial<IssueListPage> = {}): IssueListPage {
-  return { issues, hasMore: false, deactivatedAssignees: [memberOf(jo)], ...overrides };
+  return { issues, hasMore: false, deactivatedAssignees: [jo], ...overrides };
 }
 
-type ListAnswer = (query: URLSearchParams) => IssueListPage | Response | Promise<Response>;
+function searchOf(address: string) {
+  return new URL(address, "http://tracklite.test").search.slice(1);
+}
 
-function mockList({
+function renderList({
   shown = web,
+  at = "",
   list = () => page([web42, web12, web7]),
   projectLabels = [projectLabel("bug"), projectLabel("frontend")],
+  moreIssues = vi.fn<MoreIssues>(),
 }: {
-  shown?: Project;
-  list?: ListAnswer;
+  shown?: ProjectSummary;
+  at?: string;
+  list?: (query: URLSearchParams) => IssueListPage;
   projectLabels?: Label[];
+  moreIssues?: MoreIssues;
 } = {}) {
-  const fetchMock = mockApi({
-    "GET /api/me": () => Response.json(sam),
-    "GET /api/members": () => Response.json([sam, alex, jo, kim]),
-    "GET /api/projects/WEB": () => Response.json(shown),
-    "GET /api/projects/WEB/labels": () => Response.json(projectLabels),
-  });
-  const routes = fetchMock.getMockImplementation();
-  fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
-    if ((init?.method ?? "GET") === "GET" && (url === listPath || url.startsWith(`${listPath}?`))) {
-      const answer = await list(new URL(url, "http://tracklite.test").searchParams);
-      return answer instanceof Response ? answer : Response.json(answer);
-    }
-    if (!routes) throw new Error("No API routes");
-    return routes(url, init);
-  });
-  return fetchMock;
+  const createIssue = vi.fn<CreateIssue>();
+
+  function ListAt() {
+    const [query, setQuery] = useState(at);
+    const navigate = (address: string) => startTransition(() => setQuery(searchOf(address)));
+    router.push.mockImplementation(navigate);
+    router.replace.mockImplementation(navigate);
+    return (
+      <IssueList
+        project={shown}
+        query={query}
+        page={list(new URLSearchParams(query))}
+        labels={projectLabels}
+        members={[sam, alex, jo, kim]}
+        me="sam"
+        createIssue={createIssue}
+        moreIssues={moreIssues}
+      />
+    );
+  }
+
+  renderForm(<ListAt />);
+  return { createIssue };
 }
 
-function listQueries(fetchMock: ReturnType<typeof mockApi>) {
-  const queries = fetchMock.mock.calls
-    .map(([url, init]) => ((init?.method ?? "GET") === "GET" ? String(url) : ""))
-    .filter((url) => url === listPath || url.startsWith(`${listPath}?`))
-    .map((url) => url.slice(listPath.length));
-  return [...new Set(queries)];
+function addresses(navigation: typeof router.push) {
+  return navigation.mock.calls.map(([address]) => address);
 }
 
 function filters() {
@@ -117,7 +135,6 @@ function filterButton(field: string) {
 }
 
 async function openFilter(field: string) {
-  await screen.findByRole("searchbox", { name: "Search issues" });
   fireEvent.click(filterButton(field));
   return screen.findByRole("listbox");
 }
@@ -163,21 +180,18 @@ function rowIds() {
     .map((cell) => cell.textContent);
 }
 
-it("REQ-040.1: a shared link opens the same filtered, sorted list", async () => {
-  const fetchMock = mockList();
-  renderAppAt("/project/WEB/list?assignee=alex&sort=priority&dir=asc");
+it("REQ-040.1: a shared link opens the same filtered, sorted list", () => {
+  const list = vi.fn(() => page([web42]));
+  renderList({ at: "assignee=alex&sort=priority&dir=asc", list });
 
-  await screen.findByRole("main", { name: "Issues" });
-  expect(listQueries(fetchMock)).toEqual(["?assignee=alex&sort=priority&dir=asc"]);
-  await waitFor(() => expect(ruleText("Assignee")).toBe("AssigneeisAlex Kim×"));
+  expect(String(list.mock.calls[0][0])).toBe("assignee=alex&sort=priority&dir=asc");
+  expect(ruleText("Assignee")).toBe("AssigneeisAlex Kim×");
   expect(sortButtons()).toEqual(["ID", "Status", "Priority, sorted ascending", "Last updated"]);
 });
 
 it("REQ-040.2, REQ-040.3: a deleted label and an unknown status in a link are ignored; Done still applies", async () => {
-  mockList({ projectLabels: [projectLabel("bug"), projectLabel("backend")] });
-  renderAppAt("/project/WEB/list?label=frontend&status=done&status=Todo");
+  renderList({ at: "label=frontend&status=done&status=Todo", projectLabels: [projectLabel("bug"), projectLabel("backend")] });
 
-  await screen.findByRole("main", { name: "Issues" });
   expect(ruleText("Status")).toBe("StatusisDone×");
   expect(rowIds()).toEqual(["WEB-42", "WEB-12", "WEB-7"]);
 
@@ -189,41 +203,30 @@ it("REQ-040.2, REQ-040.3: a deleted label and an unknown status in a link are ig
   expect(filterButton("Label").classList.contains("tl-filter-add")).toBe(true);
 });
 
-it("REQ-040: filters and sort round-trip through the address as repeated parameters", async () => {
-  const fetchMock = mockList();
-  renderAppAt("/project/WEB/list");
-  await screen.findByRole("main", { name: "Issues" });
+it("REQ-040: filters and sort push the address as repeated parameters", async () => {
+  renderList();
 
   const listbox = await openFilter("Status");
   fireEvent.click(within(listbox).getByRole("option", { name: "In Progress" }));
   fireEvent.click(within(listbox).getByRole("option", { name: "In Review" }));
-  await waitFor(() => expect(window.location.search).toBe("?status=in_progress&status=in_review"));
-  expect(ruleText("Status")).toBe("Statusis any ofIn Progress, In Review×");
+  await waitFor(() => expect(ruleText("Status")).toBe("Statusis any ofIn Progress, In Review×"));
   await closeFilter();
 
   sortBy("Priority");
-  await waitFor(() =>
-    expect(window.location.search).toBe("?status=in_progress&status=in_review&sort=priority&dir=asc"),
-  );
   sortBy("Priority");
-  await waitFor(() =>
-    expect(window.location.search).toBe("?status=in_progress&status=in_review&sort=priority&dir=desc"),
-  );
-  await waitFor(() =>
-    expect(listQueries(fetchMock)).toEqual([
-      "",
-      "?status=in_progress",
-      "?status=in_progress&status=in_review",
-      "?status=in_progress&status=in_review&sort=priority&dir=asc",
-      "?status=in_progress&status=in_review&sort=priority&dir=desc",
-    ]),
-  );
+  await waitFor(() => expect(sortButtons()[2]).toBe("Priority, sorted descending"));
+  expect(addresses(router.push)).toEqual([
+    "/project/WEB/list?status=in_progress",
+    "/project/WEB/list?status=in_progress&status=in_review",
+    "/project/WEB/list?status=in_progress&status=in_review&sort=priority&dir=asc",
+    "/project/WEB/list?status=in_progress&status=in_review&sort=priority&dir=desc",
+  ]);
+  expect(router.push.mock.calls[0][1]).toEqual({ scroll: false });
+  expect(router.replace).not.toHaveBeenCalled();
 });
 
-it("REQ-038: search waits until 300 ms after typing stops", async () => {
-  const fetchMock = mockList();
-  renderAppAt("/project/WEB/list");
-  await screen.findByRole("main", { name: "Issues" });
+it("REQ-038: search waits until 300 ms after typing stops, and replaces the address", () => {
+  renderList();
   const search = screen.getByRole("searchbox", { name: "Search issues" });
 
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
@@ -231,37 +234,33 @@ it("REQ-038: search waits until 300 ms after typing stops", async () => {
   act(() => vi.advanceTimersByTime(200));
   fireEvent.change(search, { target: { value: "login button" } });
   act(() => vi.advanceTimersByTime(299));
-  expect(window.location.search).toBe("");
-  expect(listQueries(fetchMock)).toEqual([""]);
+  expect(router.replace).not.toHaveBeenCalled();
 
   act(() => vi.advanceTimersByTime(1));
-  vi.useRealTimers();
-  await waitFor(() => expect(window.location.search).toBe("?q=login+button"));
-  await waitFor(() => expect(listQueries(fetchMock)).toEqual(["", "?q=login+button"]));
+  expect(addresses(router.replace)).toEqual(["/project/WEB/list?q=login+button"]);
+  expect(router.push).not.toHaveBeenCalled();
+  expect((search as HTMLInputElement).value).toBe("login button");
 });
 
 it("REQ-037.4: nothing matches → Clear filters, which clears the filters and the search", async () => {
-  mockList({ list: (query) => page(query.size > 0 ? [] : [web42, web12, web7]) });
-  renderAppAt("/project/WEB/list?status=done&q=invoice");
+  renderList({ at: "status=done&q=invoice", list: (query) => page(query.size > 0 ? [] : [web42, web12, web7]) });
 
-  const list = await screen.findByRole("main", { name: "Issues" });
-  await within(list).findByText("No issues match these filters");
+  const list = issueList();
+  expect(within(list).getByText("No issues match these filters")).toBeTruthy();
   expect((screen.getByRole("searchbox", { name: "Search issues" }) as HTMLInputElement).value).toBe(
     "invoice",
   );
 
   fireEvent.click(within(list).getByRole("button", { name: "Clear filters" }));
-  await waitFor(() => expect(window.location.search).toBe(""));
+  expect(addresses(router.push)).toEqual(["/project/WEB/list"]);
   expect((screen.getByRole("searchbox", { name: "Search issues" }) as HTMLInputElement).value).toBe("");
-  expect(filterButton("Status").classList.contains("tl-filter-add")).toBe(true);
   await waitFor(() => expect(rowIds()).toEqual(["WEB-42", "WEB-12", "WEB-7"]));
+  expect(filterButton("Status").classList.contains("tl-filter-add")).toBe(true);
 });
 
 it("REQ-039, REQ-036.4, REQ-025.3: default columns and row cells; 5 assignees show 3 avatars and +2; newest-updated first; ID starts highest first, Status from Backlog", async () => {
-  mockList();
-  renderAppAt("/project/WEB/list");
+  renderList();
 
-  await screen.findByRole("main", { name: "Issues" });
   expect(sortButtons()).toEqual(["ID", "Status", "Priority", "Last updated, sorted descending"]);
 
   const r42 = rowOf("WEB-42");
@@ -297,15 +296,15 @@ it("REQ-039, REQ-036.4, REQ-025.3: default columns and row cells; 5 assignees sh
   expect(within(stack).getByText("+2")).toBeTruthy();
 
   sortBy("ID");
-  await waitFor(() => expect(window.location.search).toBe("?sort=id&dir=desc"));
-  expect(sortButtons()[0]).toBe("ID, sorted descending");
+  await waitFor(() => expect(sortButtons()[0]).toBe("ID, sorted descending"));
   sortBy("Status");
-  await waitFor(() => expect(window.location.search).toBe("?sort=status&dir=asc"));
+  await waitFor(() => expect(sortButtons()[1]).toBe("Status, sorted ascending"));
   sortBy("Last updated");
-  await waitFor(() => expect(window.location.search).toBe("?sort=updated&dir=desc"));
-
-  fireEvent.click(r42);
-  await waitFor(() => expect(window.location.pathname).toBe("/issue/WEB-42"));
+  expect(addresses(router.push)).toEqual([
+    "/project/WEB/list?sort=id&dir=desc",
+    "/project/WEB/list?sort=status&dir=asc",
+    "/project/WEB/list?sort=updated&dir=desc",
+  ]);
 });
 
 it("REQ-036.1: 120 issues → 100 rows, and the other 20 load on scrolling down", async () => {
@@ -322,72 +321,65 @@ it("REQ-036.1: 120 issues → 100 rows, and the other 20 load on scrolling down"
     },
   );
   const issues = Array.from({ length: 120 }, (_, index) => row(`WEB-${120 - index}`, `Issue ${120 - index}`));
-  let sendRest: (response: Response) => void = () => {};
-  const fetchMock = mockList({
-    list: (query) =>
-      query.get("offset") === "100"
-        ? new Promise<Response>((resolve) => {
-            sendRest = resolve;
-          })
-        : page(issues.slice(0, 100), { hasMore: true }),
-  });
-  renderAppAt("/project/WEB/list");
+  let sendRest: (rest: IssueListPage) => void = () => {};
+  const moreIssues = vi.fn<MoreIssues>(
+    () =>
+      new Promise((resolve) => {
+        sendRest = resolve;
+      }),
+  );
+  renderList({ at: "status=backlog", list: () => page(issues.slice(0, 100), { hasMore: true }), moreIssues });
 
-  await screen.findByRole("main", { name: "Issues" });
   expect(rowIds()).toHaveLength(100);
   act(() =>
     observers.at(-1)?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver),
   );
   expect(await screen.findByText("Loading more…")).toBeTruthy();
-  expect(listQueries(fetchMock)).toEqual(["", "?offset=100"]);
+  expect(moreIssues.mock.calls).toEqual([[{ key: "WEB", query: "status=backlog", offset: 100 }]]);
 
-  await act(async () => sendRest(Response.json(page(issues.slice(100)))));
+  await act(async () => sendRest(page(issues.slice(100))));
   await waitFor(() => expect(rowIds()).toHaveLength(120));
   expect(rowIds().at(-1)).toBe("WEB-1");
   expect(screen.queryByText("Loading more…")).toBeNull();
 });
 
 it("REQ-037.2, REQ-037.5, REQ-037.6: the Assignee filter offers Unassigned, active members and Jo Park (deactivated), and sends every chosen member", async () => {
-  const fetchMock = mockList();
-  renderAppAt("/project/WEB/list");
-  await screen.findByRole("main", { name: "Issues" });
+  renderList();
 
   const listbox = await openFilter("Assignee");
-  await waitFor(() => expect(keysOf(listbox)).toEqual(["-", "alex", "sam", "jo"]));
+  expect(keysOf(listbox)).toEqual(["-", "alex", "sam", "jo"]);
   for (const name of ["Unassigned", "Alex Kim", "Sam Lee", "Jo Park (deactivated)"]) {
     expect(within(listbox).getByRole("option", { name })).toBeTruthy();
   }
   expect(within(listbox).queryByRole("option", { name: /Kim Wu/ })).toBeNull();
   fireEvent.click(within(listbox).getByRole("option", { name: "Unassigned" }));
-  await waitFor(() => expect(window.location.search).toBe("?assignee=-"));
   fireEvent.click(within(listbox).getByRole("option", { name: "Jo Park (deactivated)" }));
-  await waitFor(() => expect(window.location.search).toBe("?assignee=-&assignee=jo"));
-  expect(ruleText("Assignee")).toBe("Assigneeis any ofUnassigned, Jo Park (deactivated)×");
-  await waitFor(() => expect(listQueries(fetchMock)).toContain("?assignee=-&assignee=jo"));
+  await waitFor(() => expect(ruleText("Assignee")).toBe("Assigneeis any ofUnassigned, Jo Park (deactivated)×"));
   fireEvent.click(within(listbox).getByRole("option", { name: "Alex Kim" }));
-  await waitFor(() => expect(listQueries(fetchMock)).toContain("?assignee=-&assignee=jo&assignee=alex"));
+  expect(addresses(router.push)).toEqual([
+    "/project/WEB/list?assignee=-",
+    "/project/WEB/list?assignee=-&assignee=jo",
+    "/project/WEB/list?assignee=-&assignee=jo&assignee=alex",
+  ]);
 });
 
-it("List — empty project: “Create one.” opens New issue", async () => {
-  mockList({ list: () => page([]) });
-  renderAppAt("/project/WEB/list");
+it("List — empty project: “Create one.” opens New issue", () => {
+  renderList({ list: () => page([]) });
 
-  expect(await screen.findByText(/No issues yet\./)).toBeTruthy();
+  expect(screen.getByText(/No issues yet\./)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Create one." }));
   expect(screen.getByRole("dialog", { name: "New issue" })).toBeTruthy();
 });
 
 it("REQ-036.3: an archived project's list has no New issue, but filters and sort still work", async () => {
-  const fetchMock = mockList({ shown: archivedWeb });
-  renderAppAt("/project/WEB/list");
-  await screen.findByRole("main", { name: "Issues" });
+  const { createIssue } = renderList({ shown: archivedWeb, list: () => page([]) });
 
-  expect(screen.queryByRole("button", { name: "New issue" })).toBeNull();
+  expect(screen.getByText("No issues.")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Create one." })).toBeNull();
   const listbox = await openFilter("Priority");
   fireEvent.click(within(listbox).getByRole("option", { name: "Urgent" }));
   await closeFilter();
   sortBy("Status");
-  await waitFor(() => expect(window.location.search).toBe("?priority=urgent&sort=status&dir=asc"));
-  await waitFor(() => expect(listQueries(fetchMock)).toContain("?priority=urgent&sort=status&dir=asc"));
-  expect(requestsTo(fetchMock, "POST /api/projects/WEB/issues")).toEqual([]);
+  expect(addresses(router.push).at(-1)).toBe("/project/WEB/list?priority=urgent&sort=status&dir=asc");
+  expect(createIssue).not.toHaveBeenCalled();
 });

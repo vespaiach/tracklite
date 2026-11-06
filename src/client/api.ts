@@ -2,7 +2,6 @@ import { type BaseQueryFn, createApi } from "@reduxjs/toolkit/query/react";
 import type {
   Invitation,
   Issue,
-  IssueListPage,
   IssuePriority,
   IssueStatus,
   Label,
@@ -19,15 +18,6 @@ import { loadPage } from "../lib/load-page";
 export type * from "../contract";
 
 export type ApiFailure = { status: number | "network"; message: string; fields?: Record<string, string> };
-
-const issueListPageSize = 100;
-
-function issueListPath(key: string, query: string, offset: number) {
-  const params = new URLSearchParams(query);
-  if (offset > 0) params.set("offset", String(offset));
-  const search = params.toString();
-  return `projects/${key}/issues${search ? `?${search}` : ""}`;
-}
 
 export type IssueChange =
   | { title: string }
@@ -161,14 +151,6 @@ export const api = createApi({
     deleteIssue: build.mutation<null, string>({
       query: (id) => ({ path: `issues/${id}`, method: "DELETE" }),
     }),
-    issueList: build.infiniteQuery<IssueListPage, { key: string; query: string }, number>({
-      infiniteQueryOptions: {
-        initialPageParam: 0,
-        getNextPageParam: (lastPage, _allPages, lastOffset) =>
-          lastPage.hasMore ? lastOffset + issueListPageSize : undefined,
-      },
-      query: ({ queryArg, pageParam }) => issueListPath(queryArg.key, queryArg.query, pageParam),
-    }),
     comments: build.query<ThreadComment[], string>({
       query: (threadPath) => threadPath,
       providesTags: ["Comments"],
@@ -212,7 +194,6 @@ export const {
   useLazyIssueQuery,
   useUpdateIssueMutation,
   useDeleteIssueMutation,
-  useIssueListInfiniteQuery,
   useCommentsQuery,
   usePostCommentMutation,
   useEditCommentMutation,

@@ -7,7 +7,7 @@ import { useRouterClick } from "./links";
 import { NewIssueButton } from "../app/(signed-in)/project/[key]/NewIssueDialog";
 import { useNewIssue } from "./useNewIssue";
 
-export type ProjectView = "board" | "list" | "detail" | "labels";
+export type ProjectView = "labels";
 
 type IssueCrumb = Pick<Issue, "id"> & Partial<Pick<Issue, "title">>;
 
@@ -19,12 +19,7 @@ export type ProjectHeaderProps = {
 export function ProjectHeader({ project, view, issue, admin }: ProjectHeaderProps) {
   const base = `/project/${project.key}`;
   const title = `${project.name} · ${project.key}`;
-  const details = (
-    <DetailsButton
-      href={`${base}/detail`}
-      current={view === "detail"}
-    />
-  );
+  const details = <DetailsButton href={`${base}/detail`} />;
   return (
     <AppBar
       end={
@@ -64,16 +59,15 @@ function SpaNewIssueButton({ project }: { project: ProjectSummary }) {
   );
 }
 
-function DetailsButton({ href, current }: { href: string; current: boolean }) {
+function DetailsButton({ href }: { href: string }) {
   return (
-    <Link
-      to={href}
+    <a
+      href={href}
       aria-label="Project details"
       title="Project details"
-      aria-current={current ? "page" : undefined}
       className="tl-btn tl-btn--sm tl-btn--quiet tl-btn--icon">
       <BookOpen size={16} />
-    </Link>
+    </a>
   );
 }
 
@@ -126,7 +120,6 @@ function IssueCrumbs({ details, projectTitle, projectHref, issue }: IssueCrumbsP
 }
 
 function ViewTabs({ base, view }: { base: string; view?: ProjectView }) {
-  const listClick = useRouterClick(`${base}/list`);
   const labelsClick = useRouterClick(`${base}/labels`);
   return (
     <LinkTabs
@@ -138,14 +131,11 @@ function ViewTabs({ base, view }: { base: string; view?: ProjectView }) {
           href: base,
           label: "Board",
           icon: tabIcon(SquareKanban),
-          current: view === "board",
         },
         {
           href: `${base}/list`,
           label: "List",
           icon: tabIcon(ListIcon),
-          current: view === "list",
-          onClick: listClick,
         },
         {
           href: `${base}/labels`,
