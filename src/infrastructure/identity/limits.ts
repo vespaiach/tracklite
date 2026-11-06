@@ -16,8 +16,8 @@ const resetRequestsPerEmail = 5;
 const resetRequestsPerIp = 20;
 const clientErrorReportsPerWindow = 30;
 
-export function clientIp(request: Request) {
-  const rightmost = request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
+export function clientIp(headers: Headers) {
+  const rightmost = headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
   return rightmost && isIP(rightmost) ? rightmost : "127.0.0.1";
 }
 

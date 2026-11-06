@@ -22,7 +22,7 @@ export function action<Schema extends v.GenericSchema, Data>(
   name: string,
   access: "public",
   schema: Schema,
-  run: (input: v.InferOutput<Schema>) => Promise<Data>,
+  run: (input: v.InferOutput<Schema>, nameActor: (username: string) => void) => Promise<Data>,
 ): Action<Data>;
 export function action(name: string, access: "member" | "public", schema: v.GenericSchema, run: AnyUseCase) {
   const execute = run as (...args: unknown[]) => Promise<unknown>;
@@ -39,7 +39,11 @@ export function action(name: string, access: "member" | "public", schema: v.Gene
       });
 
     const perform = async () => {
-      if (access === "public") return execute(parseInput(schema, formValues(input)));
+      if (access === "public") {
+        return execute(parseInput(schema, formValues(input)), (username: string) => {
+          actor = username;
+        });
+      }
 
       const member = await actionMember();
       actor = member.username;
