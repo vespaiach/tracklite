@@ -53,12 +53,6 @@ export function drizzleProjectRepository({ tx, saved }: TransactionScope): Proje
   };
 }
 
-export async function writableProject(tx: Transaction, key: ProjectKey | undefined) {
-  const project = await existingProject(tx, key, "share");
-  project.assertWritable();
-  return project.props;
-}
-
 export async function takeIssueNumber(tx: Transaction, projectId: string) {
   const [{ number }] = await tx
     .update(projects)

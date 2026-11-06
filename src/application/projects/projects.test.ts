@@ -3,7 +3,8 @@ import { expect, it } from "vitest";
 import { createMember, createProject, uniqueProjectKey } from "../../test/factories";
 import { db } from "../../infrastructure/db";
 import { ProjectName } from "../../domain/projects/project-name";
-import { writableProject } from "../../infrastructure/projects/drizzle-project-repository";
+import { drizzleProjectRepository } from "../../infrastructure/projects/drizzle-project-repository";
+import type { Transaction } from "../../infrastructure/transaction";
 import { projectWork } from "../../infrastructure/projects/project-work";
 import { createProject as create } from "./create-project";
 import { deleteProject } from "./delete-project";
@@ -16,6 +17,11 @@ const forbidden = { kind: "forbidden", message: "You don't have permission to do
 async function storedProject(id: string) {
   const [stored] = await db.select().from(projects).where(eq(projects.id, id));
   return stored;
+}
+
+async function holdWritable(tx: Transaction, key: string) {
+  const project = await drizzleProjectRepository({ tx, saved: () => {} }).hold(ProjectKey.from(key));
+  project?.assertWritable();
 }
 
 async function waitForLockWaiters(count: number) {
@@ -38,7 +44,7 @@ it("REQ-013.4: archiving waits for a write already under way, so that write can'
     writeChecked = resolve;
   });
   const write = db.transaction(async (tx) => {
-    await writableProject(tx, ProjectKey.from(project.key));
+    await holdWritable(tx, project.key);
     writeChecked();
     await new Promise<void>((resolve) => {
       finishWrite = resolve;
@@ -56,9 +62,7 @@ it("REQ-013.4: archiving waits for a write already under way, so that write can'
   const [stored] = await db.select().from(projects).where(eq(projects.id, project.id));
   expect(stored.description).toBe("Saved");
   expect(stored.archivedAt).not.toBeNull();
-  await expect(
-    db.transaction((tx) => writableProject(tx, ProjectKey.from(project.key))),
-  ).rejects.toMatchObject({
+  await expect(db.transaction((tx) => holdWritable(tx, project.key))).rejects.toMatchObject({
     kind: "forbidden",
   });
 });

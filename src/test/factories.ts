@@ -2,7 +2,7 @@ import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import type { PgInsertValue } from "drizzle-orm/pg-core";
 import { generateKeyBetween } from "fractional-indexing";
 import { db } from "../infrastructure/db";
-import { comments } from "../server/comments";
+import { comments } from "../infrastructure/comments/tables";
 import { issueAssignees, issueLabels, issues } from "../infrastructure/issues/tables";
 import { labels, projectKeys, projects } from "../infrastructure/projects/tables";
 import { members } from "../server/identity";

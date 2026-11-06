@@ -1,6 +1,6 @@
 import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
-import { comments } from "../server/comments";
+import { comments } from "../infrastructure/comments/tables";
 import { members } from "../server/identity";
 import { createIssue } from "../application/issues/create-issue";
 import { IssueStatus } from "../domain/issues/issue-status";
