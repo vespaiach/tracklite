@@ -11,7 +11,7 @@ import { issueWork } from "../../infrastructure/issues/issue-work";
 import { issues } from "../../infrastructure/issues/tables";
 import { updateProject } from "../../application/projects/update-project";
 import { projectWork } from "../../infrastructure/projects/project-work";
-import { members, type Member } from "../identity";
+import { members, type Member } from "../../infrastructure/identity/tables";
 import {
   notificationBatches,
   notificationDeliveries,

@@ -3,7 +3,7 @@ import type { Me } from "../../../../contract";
 import { tryFrom, Username } from "../../../../domain/shared/identifiers";
 import { identityWork } from "../../../../infrastructure/identity/repositories";
 import { memberProfile } from "../../../../queries";
-import { MemberChanges } from "../../../../server/identity";
+import { MemberChanges } from "../../../_server/schemas/identity";
 import { apiRoute } from "../../../../server/shared/api-route";
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/members/[username]">) {

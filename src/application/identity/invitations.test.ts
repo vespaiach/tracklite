@@ -4,10 +4,11 @@ import { createMember } from "../../test/factories";
 import { uniqueEmail } from "../../test/invitations";
 import { db } from "../../infrastructure/db";
 import { outbox } from "../../infrastructure/email/outbox";
-import { createInvitation } from "./commands/create-invitation";
-import { listInvitations } from "./commands/list-invitations";
-import { resendInvitation } from "./commands/resend-invitation";
-import { revokeInvitation } from "./commands/revoke-invitation";
+import { createInvitation } from "./create-invitation";
+import { listInvitations } from "../../queries";
+import { resendInvitation } from "./resend-invitation";
+import { revokeInvitation } from "./revoke-invitation";
+import { identityWork } from "../../infrastructure/identity/repositories";
 import { invitations } from "../../infrastructure/identity/tables";
 import { createToken, hashToken } from "../../infrastructure/tokens";
 import { Uuid } from "../../domain/shared/identifiers";
@@ -43,7 +44,7 @@ it("STD-2: a member can't invite", async () => {
   const member = await createMember();
   const email = uniqueEmail();
 
-  await expect(createInvitation(member, email)).rejects.toMatchObject(forbidden);
+  await expect(createInvitation(member, identityWork, email)).rejects.toMatchObject(forbidden);
 
   expect(await db.select().from(invitations).where(eq(invitations.email, email))).toHaveLength(0);
   expect(outbox.sent).toEqual([]);
@@ -53,7 +54,9 @@ it("STD-2: a member can't resend an invitation", async () => {
   const member = await createMember();
   const invitation = await openInvitation();
 
-  await expect(resendInvitation(member, Uuid.from(invitation.id))).rejects.toMatchObject(forbidden);
+  await expect(resendInvitation(member, identityWork, Uuid.from(invitation.id))).rejects.toMatchObject(
+    forbidden,
+  );
 
   expect((await storedInvitation(invitation.id)).tokenHash).toEqual(invitation.tokenHash);
   expect(outbox.sent).toEqual([]);
@@ -63,7 +66,9 @@ it("STD-2: a member can't revoke an invitation", async () => {
   const member = await createMember();
   const invitation = await openInvitation();
 
-  await expect(revokeInvitation(member, Uuid.from(invitation.id))).rejects.toMatchObject(forbidden);
+  await expect(revokeInvitation(member, identityWork, Uuid.from(invitation.id))).rejects.toMatchObject(
+    forbidden,
+  );
 
   expect((await storedInvitation(invitation.id)).revokedAt).toBeNull();
 });

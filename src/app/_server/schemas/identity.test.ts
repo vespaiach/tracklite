@@ -1,6 +1,6 @@
 import * as v from "valibot";
 import { expect, it } from "vitest";
-import { newPassword } from "./schemas";
+import { newPassword } from "./identity";
 
 function passwordError(password: string) {
   const result = v.safeParse(newPassword, password, { abortPipeEarly: true });

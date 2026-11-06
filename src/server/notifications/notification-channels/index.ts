@@ -1,6 +1,6 @@
 import "server-only";
 import type { NotificationItem } from "../../../infrastructure/email/templates";
-import type { members } from "../../identity";
+import type { members } from "../../../infrastructure/identity/tables";
 import type { Result } from "../../../domain/shared/result";
 import type { notificationChannel } from "../../../infrastructure/schema";
 import { sendNotificationEmail } from "./email";

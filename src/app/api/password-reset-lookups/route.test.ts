@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { outbox } from "../../../infrastructure/email/outbox";
-import { createSession } from "../../../server/identity";
+import { createSession } from "../../../infrastructure/identity/session";
 import { createMember } from "../../../test/factories";
 import { ageResetLink, jsonRequest, resetTokenFor } from "../../../test/reset-links";
 import { POST as resetPassword } from "../password-resets/route";

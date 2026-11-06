@@ -1,6 +1,6 @@
 import { DomainError } from "../../domain/shared/domain-error";
 import type { DomainEvent, EventTarget } from "../../domain/shared/events";
-import type { Member } from "../identity";
+import type { Member } from "../../infrastructure/identity/tables";
 
 export type Comment = Readonly<{
   id: string;

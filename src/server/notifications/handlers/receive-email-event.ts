@@ -4,7 +4,8 @@ import { and, eq, sql } from "drizzle-orm";
 import { readConfig } from "../../../infrastructure/config";
 import { db } from "../../../infrastructure/db";
 import { logInfo } from "../../../infrastructure/log";
-import { markInvitationBounced } from "../../identity";
+import { markInvitationBounced } from "../../../application/identity/mark-invitation-bounced";
+import { identityWork } from "../../../infrastructure/identity/repositories";
 import { notificationDeliveries } from "../../../infrastructure/notifications/tables";
 
 const toleranceSeconds = 5 * 60;
@@ -48,8 +49,8 @@ async function markBounced(providerMessageId: string) {
     .returning({ id: notificationDeliveries.id });
   if (notification) return logInfo("mail", "bounced", { kind: "notification", id: notification.id });
 
-  const invitation = await markInvitationBounced(providerMessageId);
-  if (invitation) return logInfo("mail", "bounced", { kind: "invitation", id: invitation.id });
+  const invitation = await markInvitationBounced(identityWork, providerMessageId);
+  if (invitation) return logInfo("mail", "bounced", { kind: "invitation", id: invitation });
 
   logInfo("mail", "bounced", { kind: "untracked" });
 }

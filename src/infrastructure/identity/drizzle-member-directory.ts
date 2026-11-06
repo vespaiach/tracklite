@@ -32,7 +32,7 @@ async function withUsernames(tx: Transaction, usernames: Username[]) {
   }));
 }
 
-async function fullNameOf(tx: Transaction, memberId: string | null) {
+export async function fullNameOf(tx: Transaction, memberId: string | null) {
   if (!memberId) return undefined;
   const [editor] = await tx
     .select({ fullName: members.fullName })

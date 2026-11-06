@@ -3,7 +3,7 @@ import type { Me, SetupStatus } from "../../../contract";
 import { identityWork } from "../../../infrastructure/identity/repositories";
 import { sessionCookie } from "../../../infrastructure/identity/session";
 import { memberProfile, setupNeeded } from "../../../queries";
-import { FirstAdmin } from "../../../server/identity";
+import { FirstAdmin } from "../../_server/schemas/identity";
 import { apiRoute } from "../../../server/shared/api-route";
 
 export const GET = apiRoute("public", async () =>

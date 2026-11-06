@@ -11,7 +11,7 @@ import { updateIssue } from "../../application/issues/update-issue";
 import { issueWork } from "../../infrastructure/issues/issue-work";
 import { issues } from "../../infrastructure/issues/tables";
 import { notificationSenders } from "./notification-channels";
-import { members, type Member } from "../identity";
+import { members, type Member } from "../../infrastructure/identity/tables";
 import {
   notificationBatches,
   notificationDeliveries,

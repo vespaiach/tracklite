@@ -38,7 +38,7 @@ npm run typecheck      # next typegen && tsc --noEmit
 npm run db:generate    # drizzle-kit: write a migration from infrastructure/schema.ts and infrastructure/<context>/tables.ts
 npm run db:migrate     # apply migrations to DATABASE_URL
 npm run db:studio
-npm run db:seed        # dev members and admins (password in src/server/identity/seed.ts)
+npm run db:seed        # dev members and admins (password in src/infrastructure/identity/seed.ts)
 npm run db:seed:load   # NFR-001 load data: 50 projects, 10,000 issues, 50,000 comments
 npm run db:reset       # drop the local dev database's schemas, re-run migrations, then db:seed
 npm run worker         # run the notification worker

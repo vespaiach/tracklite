@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "../../../infrastructure/db";
-import type { Member } from "../../identity";
+import type { Member } from "../../../infrastructure/identity/tables";
 import { mayDeleteComment, notAllowed } from "../model";
 import { deleteCommentRow, loadComment } from "../repository";
 import type { Uuid } from "../../../domain/shared/identifiers";

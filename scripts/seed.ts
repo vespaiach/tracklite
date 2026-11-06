@@ -1,9 +1,9 @@
-import { seededMembers, seedMembers } from "../src/server/identity";
+import { seededMembers, seedMembers } from "../src/infrastructure/identity/seed";
 import { logError } from "../src/infrastructure/log";
 
 try {
   await seedMembers();
-  console.log("Seeded members (password in src/server/identity/seed.ts):");
+  console.log("Seeded members (password in src/infrastructure/identity/seed.ts):");
   for (const { email, role, deactivated } of seededMembers) {
     console.log(`  ${email}  ${role}${deactivated ? "  deactivated" : ""}`);
   }

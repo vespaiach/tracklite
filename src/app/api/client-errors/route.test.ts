@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createSession } from "../../../server/identity";
+import { createSession } from "../../../infrastructure/identity/session";
 import { createMember } from "../../../test/factories";
 import { spyOnLoggedErrors } from "../../../test/log";
 import { jsonRequest } from "../../../test/reset-links";

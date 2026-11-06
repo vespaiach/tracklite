@@ -1,6 +1,6 @@
 import "server-only";
 import { sql } from "drizzle-orm";
-import { deleteInChunks } from "../../../infrastructure/chunked-delete";
+import { deleteInChunks } from "../chunked-delete";
 import {
   clientErrorReports,
   invitations,
@@ -8,7 +8,7 @@ import {
   passwordResetTokens,
   sessions,
   signInAttempts,
-} from "../../../infrastructure/identity/tables";
+} from "./tables";
 
 export async function deleteExpiredAccountRows() {
   await deleteInChunks(

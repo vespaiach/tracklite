@@ -5,7 +5,7 @@ import { db } from "../infrastructure/db";
 import { comments } from "../server/comments";
 import { issueAssignees, issueLabels, issues } from "../infrastructure/issues/tables";
 import { labels, projectKeys, projects } from "../infrastructure/projects/tables";
-import { members } from "../server/identity";
+import { members } from "../infrastructure/identity/tables";
 import { notificationBatches, notificationDeliveries } from "../server/notifications";
 import { RequestId } from "../domain/shared/identifiers";
 

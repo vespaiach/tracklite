@@ -3,7 +3,7 @@ import { hash } from "@node-rs/argon2";
 import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, type MockInstance, vi } from "vitest";
 import { hashPassword, verifyPassword } from "../../../infrastructure/passwords";
-import { members, signInAttempts } from "../../../server/identity";
+import { members, signInAttempts } from "../../../infrastructure/identity/tables";
 import { db } from "../../../infrastructure/db";
 import { createMember } from "../../../test/factories";
 import { GET as getIssue } from "../[...path]/route";
