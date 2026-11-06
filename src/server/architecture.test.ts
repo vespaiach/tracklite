@@ -107,7 +107,7 @@ function foreignTableWrites(owners: Map<string, string>) {
 
 function bannedModelImports() {
   return sourceFiles
-    .filter((file) => /^src\/server\/.+\/(?:model|rules)\.ts$/.test(file))
+    .filter((file) => /^src\/server\/.+\/(?:model|services\/[^/]+(?<!\.test))\.ts$/.test(file))
     .flatMap((file) => specifiersOf(file).map((specifier) => ({ file, specifier })))
     .filter(({ file, specifier }) =>
       specifier.startsWith(".")
@@ -135,6 +135,6 @@ it("M16: a context writes only its own tables", () => {
   expect(foreignTableWrites(owners)).toEqual([]);
 });
 
-it("G02: model and rules files import no database, HTTP or framework code", () => {
+it("G02: model and services files import no database, HTTP or framework code", () => {
   expect(bannedModelImports().map(describeImport)).toEqual([]);
 });

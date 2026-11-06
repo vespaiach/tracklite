@@ -40,7 +40,6 @@ export {
   usernameFormat,
 } from "./schemas";
 export {
-  assertAdmin,
   clearedSessionCookie,
   createSession,
   type Member,
@@ -49,6 +48,7 @@ export {
   sessionCookie,
   signedInMember,
 } from "./sessions";
+export { assertAdmin } from "./services/authorization";
 export { seededMembers, seedMembers, seedPassword } from "./seed";
 export {
   clientErrorReports,

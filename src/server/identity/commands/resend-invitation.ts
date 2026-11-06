@@ -3,7 +3,8 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../../shared/db";
 import type { Uuid } from "../../shared/ids";
 import { invitations } from "../tables";
-import { assertAdmin, type Member } from "../sessions";
+import type { Member } from "../sessions";
+import { assertAdmin } from "../services/authorization";
 import type { Executor } from "../../shared/transaction";
 import { isOpen, notFound, openInvitation, sendLink } from "../invitations";
 

@@ -3,7 +3,8 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "../../shared/db";
 import type { Uuid } from "../../shared/ids";
 import { invitations } from "../tables";
-import { assertAdmin, type Member } from "../sessions";
+import type { Member } from "../sessions";
+import { assertAdmin } from "../services/authorization";
 import { isOpen, notFound } from "../invitations";
 
 export async function revokeInvitation(actor: Member, id: Uuid | undefined) {

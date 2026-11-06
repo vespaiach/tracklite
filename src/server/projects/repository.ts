@@ -7,6 +7,7 @@ import { byProjectKey, findLabel } from "../queries";
 import { labels, projectKeys, projects } from "./tables";
 import { labelGone, type Project, type ProjectLabel } from "./model";
 import type { ProjectKey } from "./schemas";
+import { assertWritable } from "./services/writable-project";
 
 type ProjectRows = { row: typeof projects.$inferSelect; labels: ProjectLabel[] };
 
@@ -141,7 +142,7 @@ export async function writableProject(
 ) {
   const [project] = await tx.select().from(projects).where(byProjectKey(key)).for(lock);
   if (!project) throw projectGone();
-  if (project.archivedAt !== null) throw new DomainError("forbidden", "This project is archived");
+  assertWritable(project);
   return project;
 }
 

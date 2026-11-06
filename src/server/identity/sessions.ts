@@ -6,7 +6,6 @@ import { members, sessions } from "./tables";
 import { createToken, hashToken } from "../shared/tokens";
 
 export type Member = typeof members.$inferSelect;
-export type Admin = Member & { role: "admin" };
 
 const sessionMaxAgeSeconds = 30 * 24 * 60 * 60;
 
@@ -86,8 +85,4 @@ export async function requireMember(request: Request): Promise<{ member: Member;
   if (!found.needsRenewal) return { member: found.member };
   await db.update(sessions).set({ lastActiveAt: sql`now()` }).where(eq(sessions.id, found.sessionId));
   return { member: found.member, cookie: sessionCookie(token) };
-}
-
-export function assertAdmin(member: Member): asserts member is Admin {
-  if (member.role !== "admin") throw new DomainError("forbidden", "You don't have permission to do that.");
 }

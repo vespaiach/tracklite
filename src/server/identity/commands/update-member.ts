@@ -5,8 +5,9 @@ import { DomainError } from "../../shared/domain-error";
 import { db } from "../../shared/db";
 import type { Transaction } from "../../shared/transaction";
 import { members, sessions } from "../tables";
-import { assertAdmin, type Member } from "../sessions";
-import { isLastAdmin, mayLeaveNoAdmin } from "../rules";
+import type { Member } from "../sessions";
+import { assertAdmin } from "../services/authorization";
+import { isLastAdmin, mayLeaveNoAdmin } from "../services/admin-rules";
 
 async function keepLastAdmin(tx: Transaction, target: Member) {
   const activeAdmins = await tx

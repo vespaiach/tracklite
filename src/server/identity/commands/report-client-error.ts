@@ -1,7 +1,7 @@
 import "server-only";
 import { logError } from "../../shared/log";
 import { clientErrorLimitReached, recordClientErrorReport } from "../limits";
-import { describeUserAgent, maskIp } from "../rules";
+import { describeUserAgent, maskIp } from "../services/client-error-report";
 import type { ClientErrorReport } from "../schemas";
 import type { Member } from "../sessions";
 

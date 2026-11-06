@@ -10,7 +10,7 @@ import { invitations, members } from "./tables";
 import type { Member } from "./sessions";
 import { createToken, hashToken } from "../shared/tokens";
 import type { Executor } from "../shared/transaction";
-import { checkInvitationLink } from "./rules";
+import { checkInvitationLink } from "./services/invitation-rules";
 
 export const isOpen = and(isNull(invitations.acceptedAt), isNull(invitations.revokedAt));
 
