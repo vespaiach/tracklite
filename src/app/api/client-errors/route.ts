@@ -2,7 +2,7 @@ import { reportClientError } from "../../../application/identity/report-client-e
 import { clientIp } from "../../../infrastructure/identity/limits";
 import { identityWork } from "../../../infrastructure/identity/repositories";
 import { signedInMember } from "../../../infrastructure/identity/session";
-import { apiRoute } from "../../../server/shared/api-route";
+import { apiRoute } from "../_route";
 import { ClientErrorReport } from "../../_server/schemas/identity";
 
 export const POST = apiRoute("public", ClientErrorReport, async (request, report, nameActor) => {

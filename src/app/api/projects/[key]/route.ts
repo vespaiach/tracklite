@@ -5,7 +5,7 @@ import { ProjectKey, tryFrom } from "../../../../domain/shared/identifiers";
 import { db } from "../../../../infrastructure/db";
 import { projectWork } from "../../../../infrastructure/projects/project-work";
 import { getProject, updatedProject } from "../../../../queries";
-import { apiRoute } from "../../../../server/shared/api-route";
+import { apiRoute } from "../../_route";
 import { ProjectChanges } from "../../../_server/schemas/projects";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]">) {

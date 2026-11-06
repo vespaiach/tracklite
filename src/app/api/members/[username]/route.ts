@@ -4,7 +4,7 @@ import { tryFrom, Username } from "../../../../domain/shared/identifiers";
 import { identityWork } from "../../../../infrastructure/identity/repositories";
 import { memberProfile } from "../../../../queries";
 import { MemberChanges } from "../../../_server/schemas/identity";
-import { apiRoute } from "../../../../server/shared/api-route";
+import { apiRoute } from "../../_route";
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/members/[username]">) {
   const username = tryFrom(Username, (await params).username);

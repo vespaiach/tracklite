@@ -3,7 +3,7 @@ import { clientIp } from "../../../../infrastructure/identity/limits";
 import { identityWork } from "../../../../infrastructure/identity/repositories";
 import { readSessionToken } from "../../../../infrastructure/identity/session";
 import { PasswordChange } from "../../../_server/schemas/identity";
-import { apiRoute } from "../../../../server/shared/api-route";
+import { apiRoute } from "../../_route";
 
 export const PUT = apiRoute("member", PasswordChange, async (request, member, change) => {
   await changePassword(member, identityWork, {

@@ -1,5 +1,5 @@
 import { DomainError } from "../../../domain/shared/domain-error";
-import { apiRoute } from "../../../server/shared/api-route";
+import { apiRoute } from "../_route";
 
 const notFound = apiRoute("member", () => {
   throw new DomainError("notFound", "Not found");
