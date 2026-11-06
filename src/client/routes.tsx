@@ -1,27 +1,12 @@
-import { Navigate, type RouteObject } from "react-router";
+import type { RouteObject } from "react-router";
 import { RouteCrashScreen } from "./CrashScreen";
-import { Shell } from "./Shell";
 
 export const routes: RouteObject[] = [
   {
     errorElement: <RouteCrashScreen />,
     children: [
       {
-        Component: Shell,
         children: [
-          {
-            index: true,
-            element: (
-              <Navigate
-                to="/my-issues"
-                replace
-              />
-            ),
-          },
-          {
-            path: "my-issues",
-            lazy: async () => ({ Component: (await import("./screens/MyIssues")).MyIssues }),
-          },
           {
             path: "settings/profile",
             lazy: async () => ({ Component: (await import("./screens/Profile")).Profile }),

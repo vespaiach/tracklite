@@ -1,9 +1,0 @@
-import type { MyIssueGroup } from "../../../contract";
-import { apiRoute } from "../_route";
-import { getMyIssues } from "../../../queries";
-
-export async function GET(request: Request) {
-  return apiRoute("member", async (_request, member) =>
-    Response.json((await getMyIssues(member)) satisfies MyIssueGroup[]),
-  )(request);
-}

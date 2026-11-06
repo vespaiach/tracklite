@@ -1,10 +1,10 @@
 import { createMemoryRouter } from "react-router";
 import { afterEach, expect, it, vi } from "vitest";
 import { api } from "./api";
-import { loadPage } from "./load-page";
+import { loadPage } from "../lib/load-page";
 import { makeStore } from "./store";
 
-vi.mock("./load-page", () => ({ loadPage: vi.fn() }));
+vi.mock("../lib/load-page", () => ({ loadPage: vi.fn() }));
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -12,7 +12,7 @@ afterEach(() => {
 
 function storeAt(path: string) {
   const router = createMemoryRouter([{ path: "*" }], { initialEntries: [path] });
-  return { router, store: makeStore(router) };
+  return { router, store: makeStore(router, () => {}) };
 }
 
 function respondWith(status: number, body?: unknown) {

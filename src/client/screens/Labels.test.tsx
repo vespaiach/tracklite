@@ -9,7 +9,6 @@ import {
   project,
   renderAppAt,
   requestsTo,
-  summary,
 } from "../../test/client-app";
 import type { Label, Project } from "../api";
 
@@ -50,7 +49,6 @@ function mockLabels({
   const byName = (a: Label, b: Label) => a.name.toLowerCase().localeCompare(b.name.toLowerCase());
   const routes: Record<string, Answer> = {
     "GET /api/me": () => Response.json(admin),
-    "GET /api/projects?archived=false": () => Response.json(shown.archivedAt ? [] : [summary(shown)]),
     "GET /api/projects/WEB": () => Response.json(shown),
     "GET /api/projects/WEB/labels": list ?? (() => Response.json(current)),
     "POST /api/projects/WEB/labels":

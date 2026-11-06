@@ -1,15 +1,11 @@
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
-import { alex, apiError, memberOf, mockApi, renderAppAt, requestsTo, sam } from "../../test/client-app";
-import type { IssueLabel, MyIssue, MyIssueGroup } from "../api";
-import { formatExact } from "../dates";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, expect, it } from "vitest";
+import { formatExact } from "../../../client/dates";
+import type { IssueLabel, MyIssue, MyIssueGroup } from "../../../contract";
+import { alex, memberOf, sam } from "../../../test/client-app";
+import { MyIssues } from "./MyIssues";
 
-afterEach(() => {
-  cleanup();
-  vi.unstubAllGlobals();
-});
-
-const myIssuesPath = "GET /api/my-issues";
+afterEach(cleanup);
 
 function minutesAgo(minutes: number) {
   return new Date(Date.now() - minutes * 60_000).toISOString();
@@ -36,14 +32,13 @@ function group(status: MyIssueGroup["status"], issues: MyIssue[]): MyIssueGroup 
   return { status, count: issues.length, issues };
 }
 
-function mockMyIssues(answer: () => MyIssueGroup[] | Response | Promise<Response>) {
-  return mockApi({
-    "GET /api/me": () => Response.json(sam),
-    [myIssuesPath]: async () => {
-      const result = await answer();
-      return result instanceof Response ? result : Response.json(result);
-    },
-  });
+function renderMyIssues(shown: MyIssueGroup[]) {
+  return render(
+    <MyIssues
+      groups={shown}
+      me={sam.username}
+    />,
+  );
 }
 
 function groups() {
@@ -69,11 +64,10 @@ const defaultGroups = [
   ]),
 ];
 
-it("REQ-041.1, REQ-041.7, REQ-042, REQ-042.2: groups in status order with no empty groups and a total; a row shows its cells; clicking opens the issue", async () => {
-  mockMyIssues(() => defaultGroups);
-  renderAppAt("/my-issues");
+it("REQ-041.1, REQ-041.7, REQ-042, REQ-042.2: groups in status order with no empty groups and a total; a row shows its cells and links to the issue", async () => {
+  renderMyIssues(defaultGroups);
 
-  await waitFor(() => expect(groups()).toEqual(["Backlog, 1 issue", "In Progress, 2 issues"]));
+  expect(groups()).toEqual(["Backlog, 1 issue", "In Progress, 2 issues"]);
   const total = screen.getByText("3 issues").parentElement as HTMLElement;
   expect(within(total).getByText("3").getAttribute("aria-hidden")).toBe("true");
   const [backlog, inProgress] = screen.getAllByRole("region");
@@ -101,20 +95,16 @@ it("REQ-041.1, REQ-041.7, REQ-042, REQ-042.2: groups in status order with no emp
   expect(row.getByText("5 min ago").getAttribute("title")).toBe(`Updated ${formatExact(updatedAt)}`);
   const unprioritized = screen.getByRole("link", { name: /^WEB-3, / });
   expect(within(unprioritized).queryByRole("img")).toBeNull();
-
-  fireEvent.click(link);
-  await waitFor(() => expect(window.location.pathname).toBe("/issue/WEB-42"));
 });
 
 it("My issues: Done and Canceled start collapsed and expand from their group head", async () => {
-  mockMyIssues(() => [
+  renderMyIssues([
     group("in_progress", [mine("WEB-42", "Fix login button")]),
     group("done", [mine("WEB-7", "Ship the footer")]),
     group("canceled", [mine("WEB-8", "Drop the blog")]),
   ]);
-  renderAppAt("/my-issues");
 
-  const done = await screen.findByRole("button", { name: "Done 1" });
+  const done = screen.getByRole("button", { name: "Done 1" });
   const canceled = screen.getByRole("button", { name: "Canceled 1" });
   expect(screen.getByRole("button", { name: "In Progress 1" }).getAttribute("aria-expanded")).toBe("true");
   expect(done.getAttribute("aria-expanded")).toBe("false");
@@ -128,11 +118,8 @@ it("My issues: Done and Canceled start collapsed and expand from their group hea
 });
 
 it('REQ-041.4: nothing assigned → "Nothing assigned to you. Open a project to find or create issues."', async () => {
-  mockMyIssues(() => []);
-  renderAppAt("/my-issues");
+  renderMyIssues([]);
 
-  expect(
-    await screen.findByText("Nothing assigned to you. Open a project to find or create issues."),
-  ).toBeTruthy();
+  expect(screen.getByText("Nothing assigned to you. Open a project to find or create issues.")).toBeTruthy();
   expect(groups()).toEqual([]);
 });

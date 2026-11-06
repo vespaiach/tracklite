@@ -25,7 +25,7 @@ Deployment (servers, the reverse proxy, the scheduler, process supervision, depl
 | **Scheduler** | Calls `POST /api/cron/outbox` once a minute with `Authorization: Bearer {CRON_SECRET}` (1.4, 1.6). Any cron-like service works; a missed or overlapping call is harmless. |
 | **PostgreSQL** | All state, including the outbox and the notification queue. |
 
-**Batch H.** The code is moving to this design one task at a time (`docs/execution-plan.md`, batch H). Until H20, the old client-rendered screens under `src/app/(signed-in)/[[...path]]` and the `/api` routes they call (3.3) still run beside the new pages. Where the code and this file differ, the open H row says which way the code goes.
+**Batch H.** The code is moving to this design one task at a time (`docs/execution-plan.md`, batch H). Until H20, the old client-rendered screens under `src/app/(signed-in)/[...path]` and the `/api` routes they call (3.3) still run beside the new pages. Where the code and this file differ, the open H row says which way the code goes.
 
 ### 1.2 Request flow
 
@@ -110,7 +110,8 @@ Next.js App Router with React Server Components (D-10). A page renders on the se
 
 **Layout.**
 - `src/app/layout.tsx` holds `<html>`, `<body>`, the fonts (`next/font/google`, served from the app so the CSP's `font-src 'self'` holds), the Track Lite stylesheet, the toast provider and the error reporter (4.8).
-- `src/app/(signed-out)/` holds `/sign-in`, `/forgot-password`, `/reset-password`, `/invite` and `/welcome`; `src/app/(signed-in)/` holds every other API-004 page, under a layout that renders the shell and sidebar (6.2). Each route folder has its `page.tsx`, an `actions.ts` for its server actions, and its client components.
+- `src/app/(signed-out)/` holds `/sign-in`, `/forgot-password`, `/reset-password`, `/invite` and `/welcome`; `src/app/(signed-in)/` holds every other API-004 page, under a layout that renders the shell and sidebar (6.2): `Shell` (`src/app/(signed-in)/Shell.tsx`) gets the member, the sidebar projects as a `Region` and the **New project** (`createProject` in `(signed-in)/actions.ts`) and **Sign out** actions as props, and marks the current item from `usePathname()`. Each route folder has its `page.tsx`, an `actions.ts` for its server actions, and its client components. A layout and its page render in parallel, so each page also calls `signedInPageMember()` (`src/app/_server/session.ts`, cached per request with React `cache`), which redirects as the layout does.
+- Until H20, links between a server page and a screen still in the single-page app are plain anchors that load a new document (and so trigger its `beforeunload` guard); the single-page app reaches server pages with `loadPage` (`src/lib/load-page.ts`). It calls Next's `router.refresh()` after a project rename, archive or unarchive, so the server-rendered sidebar is read again; deleting a project loads `/my-issues`.
 - `src/proxy.ts` only sets the Content Security Policy and `Referrer-Policy` (4.9), and forwards the requested path and query to the app in the `x-request-path` request header, replacing any the browser sent, since a layout isn't given the address. Redirects happen in layouts and pages.
 - Every page renders per request: it reads cookies, and the CSP nonce (4.9) needs a fresh render. Nothing is cached between requests, which matches "pages show current data when they load" (spec §12). There's no polling: REQ-041.6 and REQ-053.7 expect an open page to stay as it is until it's reloaded or the member acts.
 
@@ -395,17 +396,16 @@ A schema failure gets `invalid` "Check the highlighted fields", with the first f
 
 ### 3.3 `/api` endpoints (until H20)
 
-The client-rendered screens under `src/app/(signed-in)/[[...path]]` call these until H20 deletes them. As each screen moves to its own page (H13 to H19), its reads become `src/queries` calls and its writes become actions with the same rules, permissions and messages as below; the tables stay the reference for those rules until then.
+The client-rendered screens under `src/app/(signed-in)/[...path]` call these until H20 deletes them. As each screen moves to its own page (H13 to H19), its reads become `src/queries` calls and its writes become actions with the same rules, permissions and messages as below; the tables stay the reference for those rules until then.
 
 "Member" means any signed-in active member. Every write to something inside an archived project (its description, issues, comments, labels) gets `403` "This project is archived". Admins can still unarchive or delete an archived project; renaming it gets the same `403`.
 
 The queries declare the contract types (3.5) as their return types. The tables give only what the types can't say.
 
-**Sign-in and account** (no session needed unless noted). Signing in, password resets, accepting an invitation and first-admin setup are the `(signed-out)` pages' actions since H13 (6.1); signing out stays here for the shell until H14.
+**Sign-in and account** (no session needed unless noted). Signing in, password resets, accepting an invitation and first-admin setup are the `(signed-out)` pages' actions since H13 (6.1); signing out is the shell's `signOut` action since H14.
 
 | Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `DELETE /api/sessions/current` | `204`, with or without a session | Anyone | REQ-006 |
 | `GET /api/me` | The profile, including email and role | Member | REQ-003.3 |
 | `PATCH /api/me` | Full name only | Member | REQ-003 |
 | `PUT /api/me/password` | `204`; ends the member's other sessions. A wrong current password counts toward the sign-in limit (4.5) | Member | REQ-049, SEC-001 |
@@ -425,8 +425,7 @@ The queries declare the contract types (3.5) as their return types. The tables g
 
 | Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/projects?archived=false\|true` | The sidebar list, or the Archived list | Member | REQ-013, REQ-015 |
-| `POST /api/projects` | `201` | Admin | REQ-009 |
+| `GET /api/projects?archived=true` | The Archived list (the sidebar reads `listProjects` on the server since H14) | Member | REQ-013, REQ-015 |
 | `GET /api/projects/{KEY}` | Includes the description's version and mentions, the issue count per status (all of the project's issues, zeros included), and when and by whom it was created (`createdBy` is `null` for projects created before the creator was recorded) | Member | REQ-046 |
 | `PATCH /api/projects/{KEY}` | Name or archived (Admin), or a description save (Member). A body with both gets `422` "Change one thing at a time" | Per field | REQ-011, REQ-012, REQ-013 |
 | `DELETE /api/projects/{KEY}` | The typed-key confirmation is checked in the browser | Admin | REQ-014 |
@@ -446,7 +445,6 @@ The queries declare the contract types (3.5) as their return types. The tables g
 | `PATCH /api/issues/{ID}` | One field per request (3.1): title, status, priority, the full assignee set (`assignees`), the full label set, or a description save | Member | REQ-016…022, REQ-027.4 |
 | `PUT /api/issues/{ID}/position` | A status and a place: top, bottom, or after a named card (2.4) | Member | REQ-026, REQ-027, REQ-030 |
 | `DELETE /api/issues/{ID}` | | Creator or Admin | REQ-023 |
-| `GET /api/my-issues` | Issues in active projects that have the member among their assignees, grouped by status in order with empty groups left out, sorted by priority from Urgent down, then most recently updated. Each row carries all its assignees, as board cards and list rows do. Done and Canceled hold only issues moved there in the last 14 days | Member | REQ-041, REQ-042 |
 
 **Comments**
 

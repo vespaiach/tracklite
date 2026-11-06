@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 function renderToaster() {
-  const store = makeStore(createMemoryRouter([{ path: "*" }]));
+  const store = makeStore(createMemoryRouter([{ path: "*" }]), () => {});
   render(
     <Provider store={store}>
       <Toaster />

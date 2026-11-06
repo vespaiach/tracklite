@@ -1,7 +1,6 @@
 import { Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { useDispatch } from "react-redux";
-import { useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
 import {
   AppBar,
   Button,
@@ -21,12 +20,12 @@ import {
 } from "../../components/ui/track-lite";
 import {
   type ApiFailure,
-  api,
   type Project,
   useDeleteProjectMutation,
   useMeQuery,
   useUpdateProjectMutation,
 } from "../api";
+import { loadPage } from "../../lib/load-page";
 import { useFailureToast } from "../failure";
 import { useRouterClick } from "../links";
 import { ProjectGate } from "../ProjectGate";
@@ -201,8 +200,6 @@ function DeleteSection({ project }: { project: Project }) {
 function DeleteDialog({ project, onCancel }: { project: Project; onCancel: () => void }) {
   const [deleteProject, { isLoading }] = useDeleteProjectMutation();
   const toastFailure = useFailureToast();
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
   const cancel = useRef<HTMLButtonElement>(null);
   const [typed, setTyped] = useState("");
 
@@ -213,8 +210,7 @@ function DeleteDialog({ project, onCancel }: { project: Project; onCancel: () =>
   async function confirm() {
     try {
       await deleteProject(project.key).unwrap();
-      await navigate("/my-issues");
-      dispatch(api.util.invalidateTags(["Projects"]));
+      loadPage("/my-issues");
     } catch (caught) {
       toastFailure(caught);
     }

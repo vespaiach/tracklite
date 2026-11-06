@@ -4,13 +4,14 @@ import { requestPathHeader } from "../../proxy";
 import { createMember } from "../../test/factories";
 import { setNextRequest } from "../../test/next-request";
 import SignedInLayout from "./layout";
+import MyIssuesPage from "./my-issues/page";
 
 function visit(path: string | undefined, cookies: Record<string, string> = {}) {
   setNextRequest({ cookies, headers: path === undefined ? {} : { [requestPathHeader]: path } });
   return SignedInLayout({ children: "the page" });
 }
 
-it("STD-1, REQ-006.2: a signed-out visitor is sent to /sign-in with the requested path and query as next; a signed-in member gets the page", async () => {
+it("STD-1, REQ-006.2: a signed-out visitor is sent to /sign-in with the requested path and query as next, by the layout and by a page; a signed-in member gets the page inside the shell", async () => {
   const sam = await createMember();
   const token = await createSession(sam.id);
 
@@ -20,7 +21,13 @@ it("STD-1, REQ-006.2: a signed-out visitor is sent to /sign-in with the requeste
   await expect(visit("/issue/WEB-42", { [sessionCookieName()]: "unknown-token" })).rejects.toMatchObject({
     url: `/sign-in?next=${encodeURIComponent("/issue/WEB-42")}`,
   });
-  expect(await visit("/issue/WEB-42", { [sessionCookieName()]: token })).toBe("the page");
+  await expect(MyIssuesPage()).rejects.toMatchObject({
+    url: `/sign-in?next=${encodeURIComponent("/issue/WEB-42")}`,
+  });
+  expect((await visit("/issue/WEB-42", { [sessionCookieName()]: token })).props).toMatchObject({
+    me: { username: sam.username, role: "member" },
+    children: "the page",
+  });
 });
 
 it("SEC-009, SEC-009.1: a requested address that isn't an in-app path, or none, sends a signed-out visitor to /sign-in without next", async () => {
