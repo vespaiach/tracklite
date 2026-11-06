@@ -30,18 +30,16 @@ Tests are named after the spec example they prove, e.g. `it("REQ-016.4: concurre
 ## Architecture
 
 ```
- browser ──HTTPS──▶ reverse proxy ──▶ tracklite-web (next start)  ──┐
-                                                                     ├──▶ PostgreSQL 18
-                                    tracklite-worker (node)  ────────┘
-                                              │
-                                              ▼
-                                      Resend (email API)
+ browser ──HTTPS──▶ reverse proxy ──▶ tracklite-web (next start) ──▶ PostgreSQL 18
+                         ▲                     │
+ scheduler ──POST /api/cron/outbox,            ▼
+             every minute                Resend (email API)
 ```
 
 - **The reverse proxy** is part of the deployment, which lives outside this repository. It terminates TLS, sends HSTS and the security headers, sets `X-Forwarded-For`, and proxies to the web process.
-- **tracklite-web** is `next start`. It serves the single-page-app shell, the JSON API under `/api`, `/health` and the email bounce webhook under `/webhooks`.
-- **tracklite-worker** is a Node entry point (`scripts/worker.ts`) from the same codebase. Every 5 seconds it sends queued notification emails using `for update skip locked`, and once an hour it deletes expired data.
-- **PostgreSQL 18** holds all state, including the notification email queue.
+- **tracklite-web** is `next start`, the only app process. It serves the single-page-app shell, the JSON API under `/api`, the outbox run at `/api/cron/outbox`, `/health`, `/health/worker` and the email bounce webhook under `/webhooks`.
+- **The scheduler** (any cron-like service, part of the deployment) calls `POST /api/cron/outbox` once a minute with `Authorization: Bearer {CRON_SECRET}`. Each run, within 50 seconds, turns the events that actions wrote to the outbox into notifications, sends the due notification emails using `for update skip locked`, and once an hour deletes expired data.
+- **PostgreSQL 18** holds all state, including the outbox and the notification email queue.
 
 ### Browser app
 
@@ -76,10 +74,10 @@ src/
   client/         the browser app: store, API slice, routes, screens
   components/ui/  the Track Lite design system
   schemas/        Valibot request body schemas
-  server/         domain functions, database schema, email, worker
+  server/         domain functions, database schema, email
   lib/markdown/   Markdown rendering and mention parsing
   test/           test harness and data factories
-scripts/          worker, migrations and seed commands
+scripts/          cron, migrations and seed commands
 migrations/       drizzle-kit migrations
 ```
 
@@ -126,10 +124,10 @@ npm run db:reset
 npm run dev
 ```
 
-Open http://localhost:3000 and sign in as one of the seeded members (the password is in `src/server/identity/seed.ts`). To send notification emails, run the worker in a second terminal:
+Open http://localhost:3000 and sign in as one of the seeded members (the password is in `src/server/identity/seed.ts`). To send notification emails, call the outbox run every minute from a second terminal (it uses `APP_URL` and `CRON_SECRET` from `.env.local`):
 
 ```bash
-npm run worker
+npm run cron
 ```
 
 ### Commands
@@ -137,7 +135,7 @@ npm run worker
 | Command | What it does |
 |---|---|
 | `npm run dev` | Start the dev server |
-| `npm run worker` | Run the notification and cleanup worker |
+| `npm run cron` | Call `POST /api/cron/outbox` every minute, as the scheduler does in production |
 | `npm test` | Run every test (needs `TEST_DATABASE_URL`) |
 | `npm run lint` | Biome check (`npx biome check --write` to fix) |
 | `npm run typecheck` | `next typegen` and `tsc --noEmit` |
