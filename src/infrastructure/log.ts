@@ -1,4 +1,5 @@
 import { DrizzleQueryError } from "drizzle-orm";
+import type { DomainErrorKind } from "../domain/shared/domain-error";
 
 type NoContext = Record<never, never>;
 
@@ -20,6 +21,9 @@ type ClientError = {
 
 type InfoEvents = {
   route: { request: { method: string; path: string; status: number; durationMs: number; actor?: string } };
+  action: {
+    call: { action: string; outcome: "ok" | DomainErrorKind | "error"; durationMs: number; actor?: string };
+  };
   worker: {
     metrics: {
       pending: number;

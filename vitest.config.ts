@@ -37,7 +37,7 @@ export default defineConfig({
           environment: "node",
           fileParallelism: false,
           globalSetup: ["src/test/migrate.ts"],
-          setupFiles: ["src/test/subscribe-notifications.ts"],
+          setupFiles: ["src/test/subscribe-notifications.ts", "src/test/next-mocks.ts"],
         },
       },
       {

@@ -25,7 +25,7 @@ Deployment (servers, the reverse proxy, the scheduler, process supervision, depl
 | **Scheduler** | Calls `POST /api/cron/outbox` once a minute with `Authorization: Bearer {CRON_SECRET}` (1.4, 1.6). Any cron-like service works; a missed or overlapping call is harmless. |
 | **PostgreSQL** | All state, including the outbox and the notification queue. |
 
-**Batch H.** The code is moving to this design one task at a time (`docs/execution-plan.md`, batch H). Until H20, the old client-rendered screens under `src/app/[[...path]]` and the `/api` routes they call (3.3) still run beside the new pages, and until H21 notifications are still sent by `scripts/worker.ts`. Where the code and this file differ, the open H row says which way the code goes.
+**Batch H.** The code is moving to this design one task at a time (`docs/execution-plan.md`, batch H). Until H20, the old client-rendered screens under `src/app/(signed-in)/[[...path]]` (and, until H13, the `(signed-out)` page stubs that load the same `ClientPage`) and the `/api` routes they call (3.3) still run beside the new pages, and until H21 notifications are still sent by `scripts/worker.ts`. Where the code and this file differ, the open H row says which way the code goes.
 
 ### 1.2 Request flow
 
@@ -33,15 +33,15 @@ There are three ways in: a page, a server action and a route handler. All three 
 
 **Pages.** A page is a React Server Component under `src/app/` (1.7):
 
-1. The `(signed-in)` layout reads the session with `requireMember` and redirects a signed-out visitor to `/sign-in?next=…` (STD-1). Pages in `(signed-out)` read the session only to send a signed-in member on (6.1).
+1. The `(signed-in)` layout reads the session cookie with `pageMember` (`src/app/_server/session.ts`) and redirects a signed-out visitor to `/sign-in?next=…` (STD-1). `pageMember` doesn't renew the session (2.2), since a server component can't set cookies; actions and, until H20, the `/api` routes do. Pages in `(signed-out)` read the session only to send a signed-in member on (6.1).
 2. The page reads its data through `src/queries` (D-64), passing the member as `actor`. An admin-only read starts with `assertAdmin(actor)`, so a member's page shows STD-2's message in the page area. A query returns `null` for a missing target, and the page calls `notFound()` (STD-4).
 3. Each data region renders inside its own `Region` (1.7, STD-11), so one failed query fails only its region.
 
 **Server actions.** Every action is a function in a route's `actions.ts`, wrapped by the adapter in `src/app/_server/action.ts` (D-63), which runs these steps in order:
 
 1. Next.js has already refused a cross-site call: it compares `Origin` with the host (4.4).
-2. Read the session with `requireMember`, which only says who is asking and checks no role. An action declared `"public"` (sign-in, password resets, invitation lookups and acceptance, sign-out, first-admin setup) skips it.
-3. Parse the input with the action's Valibot schema (D-42), failing fast with an `invalid` error. The schema checks shape and format only, with the spec's own messages, and passes the parsed, trimmed values on.
+2. Read the session with `actionMember` (`src/app/_server/session.ts`, over `requireSession` in `infrastructure/identity/session.ts`), which only says who is asking and checks no role. It renews a session idle over an hour with `cookies().set` (2.2). An action declared `"public"` (sign-in, password resets, invitation lookups and acceptance, sign-out, first-admin setup) skips it.
+3. Parse the input with the action's Valibot schema (D-42), failing fast with an `invalid` error. `FormData` input is turned into a plain object first. `parseInput` (`src/app/_server/parse-input.ts`) builds the error, and `apiRoute` uses it too. The schema checks shape and format only, with the spec's own messages, and passes the parsed, trimmed values on.
 4. Call one use case from `src/application/` (1.8) with the member as `actor`, a `UnitOfWork` wired with the repositories the use case names, and the input. The use case checks permissions (4.10), loads aggregates, runs their rules and saves them; the unit of work commits the change and its events together (spec §12).
 5. On success, call `refresh()` from `next/cache`, so the page's server components render again with current data, and return `{ ok: true, data }`. `data` is only what the client needs next, such as a new issue's ID.
 6. Turn a thrown `DomainError` into `{ ok: false, error: { kind, message, fields? } }` (3.2), and **rethrow anything else**, which Next.js reports through `onRequestError` (4.8) and the browser sees as a failed call (STD-9).
@@ -102,6 +102,7 @@ All email goes through one `sendEmail()` (5.2).
 - `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.2).
 - A production build (`next build` with `NODE_ENV=production`) loads the route modules, which read the settings, so the build step needs the same settings as the running app, `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` included, or it fails with "Missing environment variables" (found by L03).
 - Tests run against `TEST_DATABASE_URL`, which must differ from `DATABASE_URL`. Before each run its schema is dropped and the migrations applied afresh.
+- In the `unit` test project, `src/test/next-mocks.ts` mocks `next/headers` (the request's cookies and headers, set with `setNextRequest` from `src/test/next-request.ts`), `next/cache` (`refresh` is a `vi.fn()`) and `next/navigation` (`redirect` throws an error carrying `url`; `notFound` throws), so tests call actions and layouts directly.
 
 ### 1.7 Pages and client components
 
@@ -110,11 +111,11 @@ Next.js App Router with React Server Components (D-10). A page renders on the se
 **Layout.**
 - `src/app/layout.tsx` holds `<html>`, `<body>`, the fonts (`next/font/google`, served from the app so the CSP's `font-src 'self'` holds), the Track Lite stylesheet, the toast provider and the error reporter (4.8).
 - `src/app/(signed-out)/` holds `/sign-in`, `/forgot-password`, `/reset-password`, `/invite` and `/welcome`; `src/app/(signed-in)/` holds every other API-004 page, under a layout that renders the shell and sidebar (6.2). Each route folder has its `page.tsx`, an `actions.ts` for its server actions, and its client components.
-- `src/proxy.ts` only sets the Content Security Policy and `Referrer-Policy` (4.9). Redirects happen in layouts and pages.
+- `src/proxy.ts` only sets the Content Security Policy and `Referrer-Policy` (4.9), and forwards the requested path and query to the app in the `x-request-path` request header, replacing any the browser sent, since a layout isn't given the address. Redirects happen in layouts and pages.
 - Every page renders per request: it reads cookies, and the CSP nonce (4.9) needs a fresh render. Nothing is cached between requests, which matches "pages show current data when they load" (spec §12). There's no polling: REQ-041.6 and REQ-053.7 expect an open page to stay as it is until it's reloaded or the member acts.
 
 **Signed-in state (STD-1).**
-- The `(signed-in)` layout calls `requireMember`; with no valid session it redirects to `/sign-in?next={the requested path and query}`.
+- The `(signed-in)` layout calls `pageMember`; with no valid session it redirects to `/sign-in?next={the requested path and query}`, read from `x-request-path`. A path that fails the SEC-009 rule below, or a request the proxy skipped (a router prefetch), redirects to plain `/sign-in`. `isInAppPath` and `returnTarget` in `src/lib/return-to.ts` hold that rule for both ends.
 - `/sign-in`, `/forgot-password` and `/` send a signed-in member to `/my-issues`.
 - **First admin (OPS-001).** `/sign-in` checks `setupNeeded` and redirects to `/welcome` while it's true. Every signed-out visitor reaches `/sign-in`, so a blank install always lands on the welcome screen. `/welcome` goes to `/sign-in` once setup is no longer needed.
 - **Return after sign-in (SEC-009).** `next` is used only if it starts with `/` but not `//` or `/\`; anything else goes to `/my-issues`. So `?next=https://evil.example` can't send anyone off-site.
@@ -394,7 +395,7 @@ A schema failure gets `invalid` "Check the highlighted fields", with the first f
 
 ### 3.3 `/api` endpoints (until H20)
 
-The client-rendered screens under `src/app/[[...path]]` call these until H20 deletes them. As each screen moves to its own page (H13 to H19), its reads become `src/queries` calls and its writes become actions with the same rules, permissions and messages as below; the tables stay the reference for those rules until then.
+The client-rendered screens under `src/app/(signed-in)/[[...path]]` call these until H20 deletes them. As each screen moves to its own page (H13 to H19), its reads become `src/queries` calls and its writes become actions with the same rules, permissions and messages as below; the tables stay the reference for those rules until then.
 
 "Member" means any signed-in active member. Every write to something inside an archived project (its description, issues, comments, labels) gets `403` "This project is archived". Admins can still unarchive or delete an archived project; renaming it gets the same `403`.
 
@@ -668,7 +669,7 @@ In development `script-src` also gets `'unsafe-eval'`, which Next.js's dev tooli
 
 The adapter or page says who you are; the use case or query says what you may do (D-43). SEC-006's single server-side permission layer is the application layer and the queries, so a use case file shows who may call it.
 
-- **Adapters only authenticate.** The action adapter's access mode, like `apiRoute`'s, is `"public"` or `"member"`; for `"member"`, `requireMember` (`signedOut`) loads the member and passes it on. The `(signed-in)` layout does the same for pages. No page, action or route checks a role.
+- **Adapters only authenticate.** The action adapter's access mode, like `apiRoute`'s, is `"public"` or `"member"`; for `"member"`, `actionMember` (`signedOut`) loads the member and passes it on. The `(signed-in)` layout does the same for pages. No page, action or route checks a role.
 - **`actor` first.** Every use case and query called for a signed-in member takes the member as its first parameter, `actor`, even reads that don't use it yet (`_actor`). Public flows (sign-in, password reset, invitation lookup and acceptance, the email webhook), the outbox run, cleanup and helpers (log, tokens, email, limits) take none.
 - **Admin checks.** `domain/identity/actor.ts` defines `type Actor = { id, role }`, what a use case needs to know about who is asking, and `assertAdmin(actor)`, which narrows the actor's `role` to `"admin"` and otherwise throws a `forbidden` `DomainError` "You don't have permission to do that." (STD-2). It accepts any value with a `role`, so the session's member row passes as an actor.
   - Admin-only use cases and queries call `assertAdmin(actor)` first: `createProject`, `deleteProject`, `updateMember`, `listInvitations`, `createInvitation`, `resendInvitation`, `revokeInvitation` and `notificationStats`.
