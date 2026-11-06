@@ -1,13 +1,3 @@
-import type { MemberChanges } from "./schemas";
-
-export function mayLeaveNoAdmin({ role, deactivated }: MemberChanges) {
-  return role === "member" || deactivated === true;
-}
-
-export function isLastAdmin(activeAdminIds: string[], targetId: string) {
-  return activeAdminIds.length === 1 && activeAdminIds[0] === targetId;
-}
-
 export function inviteRefusal(existing: { deactivatedAt: Date | null } | undefined) {
   if (existing?.deactivatedAt) return "This person is deactivated. Reactivate them instead.";
   if (existing) return "Already a member";

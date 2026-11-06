@@ -3,10 +3,10 @@ import { afterEach, expect, it, vi } from "vitest";
 import { createMember } from "../../test/factories";
 import { moveIntoPast } from "../../test/time";
 import { DomainError } from "../../domain/shared/domain-error";
-import { db } from "../../infrastructure/db";
-import { members, sessions } from "../../infrastructure/identity/tables";
-import { createSession, requireMember, sessionCookie } from "./sessions";
-import { hashToken } from "../../infrastructure/tokens";
+import { db } from "../db";
+import { members, sessions } from "./tables";
+import { createSession, requireMember, sessionCookie } from "./session";
+import { hashToken } from "../tokens";
 
 afterEach(() => {
   vi.unstubAllEnvs();

@@ -1,12 +1,9 @@
 import "server-only";
 import { and, eq, getTableColumns, gt, isNull, sql } from "drizzle-orm";
 import { DomainError } from "../../domain/shared/domain-error";
-import { db } from "../../infrastructure/db";
-import { type Member, members, sessions } from "../../infrastructure/identity/tables";
-import { createToken, hashToken } from "../../infrastructure/tokens";
-
-export type { Member };
-export type Admin = Member & { role: "admin" };
+import { db } from "../db";
+import { createToken, hashToken } from "../tokens";
+import { type Member, members, sessions } from "./tables";
 
 const sessionMaxAgeSeconds = 30 * 24 * 60 * 60;
 
@@ -86,8 +83,4 @@ export async function requireMember(request: Request): Promise<{ member: Member;
   if (!found.needsRenewal) return { member: found.member };
   await db.update(sessions).set({ lastActiveAt: sql`now()` }).where(eq(sessions.id, found.sessionId));
   return { member: found.member, cookie: sessionCookie(token) };
-}
-
-export function assertAdmin(member: Member): asserts member is Admin {
-  if (member.role !== "admin") throw new DomainError("forbidden", "You don't have permission to do that.");
 }

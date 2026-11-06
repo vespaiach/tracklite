@@ -3,3 +3,4 @@ export { byIssueId, findIssue, issueGone, updatedIssue } from "./issue";
 export { getBoard, getIssue, getMyIssues, listIssues } from "./issue-lists";
 export { listLabels, updatedLabel } from "./labels";
 export { byProjectKey, getProject, listProjects, updatedProject } from "./project";
+export { listMembers, memberProfile, profileResponse, setupNeeded } from "./members";
