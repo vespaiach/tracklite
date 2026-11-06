@@ -1,19 +1,25 @@
+import { deleteComment } from "../../../../application/comments/delete-comment";
+import { editComment } from "../../../../application/comments/edit-comment";
 import type { ThreadComment } from "../../../../contract";
 import { tryFrom, Uuid } from "../../../../domain/shared/identifiers";
+import { commentWork } from "../../../../infrastructure/comments/comment-work";
+import { db } from "../../../../infrastructure/db";
+import { updatedComment } from "../../../../queries";
 import { apiRoute } from "../../../../server/shared/api-route";
-import { CommentEdit, deleteComment, editComment } from "../../../../server/comments";
+import { CommentEdit } from "../../../_server/schemas/comments";
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/comments/[id]">) {
   const id = tryFrom(Uuid, (await params).id);
-  return apiRoute("member", CommentEdit, async (_memberRequest, member, edit) =>
-    Response.json((await editComment(member, id, edit)) satisfies ThreadComment),
-  )(request);
+  return apiRoute("member", CommentEdit, async (_memberRequest, member, edit) => {
+    const commentId = await editComment(member, commentWork, id, edit);
+    return Response.json((await updatedComment(db, commentId)) satisfies ThreadComment);
+  })(request);
 }
 
 export async function DELETE(request: Request, { params }: RouteContext<"/api/comments/[id]">) {
   const id = tryFrom(Uuid, (await params).id);
   return apiRoute("member", async (_memberRequest, member) => {
-    await deleteComment(member, id);
+    await deleteComment(member, commentWork, id);
     return new Response(null, { status: 204 });
   })(request);
 }
