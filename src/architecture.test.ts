@@ -19,8 +19,9 @@ const allowedFileDependencies = [
 ];
 const layerRules: Record<string, { mayImport: string; allows: (target: string) => boolean }> = {
   domain: {
-    mayImport: "domain/** and valibot",
-    allows: (target) => target.startsWith("src/domain/") || target === "valibot",
+    mayImport: "domain/**, src/contract, valibot and fractional-indexing",
+    allows: (target) =>
+      target.startsWith("src/domain/") || ["src/contract", "valibot", "fractional-indexing"].includes(target),
   },
   application: {
     mayImport: "domain/**, application/** and src/contract",

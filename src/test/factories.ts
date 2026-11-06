@@ -3,7 +3,7 @@ import type { PgInsertValue } from "drizzle-orm/pg-core";
 import { generateKeyBetween } from "fractional-indexing";
 import { db } from "../infrastructure/db";
 import { comments } from "../server/comments";
-import { issueAssignees, issueLabels, issues } from "../server/issues";
+import { issueAssignees, issueLabels, issues } from "../infrastructure/issues/tables";
 import { labels, projectKeys, projects } from "../server/projects";
 import { members } from "../server/identity";
 import { notificationBatches, notificationDeliveries } from "../server/notifications";

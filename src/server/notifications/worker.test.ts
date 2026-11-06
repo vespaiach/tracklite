@@ -7,7 +7,9 @@ import { postIssueComment } from "../comments";
 import { db } from "../../infrastructure/db";
 import { outbox } from "../../infrastructure/email/outbox";
 import type { Transaction } from "../../infrastructure/transaction";
-import { updateIssue, issues } from "../issues";
+import { updateIssue } from "../../application/issues/update-issue";
+import { issueWork } from "../../infrastructure/issues/issue-work";
+import { issues } from "../../infrastructure/issues/tables";
 import { notificationSenders } from "./notification-channels";
 import { members, type Member } from "../identity";
 import {
@@ -36,7 +38,7 @@ async function website() {
 }
 
 function assign(issueRef: string, by: Member, ...assignees: Member[]) {
-  return updateIssue(by, IssueId.from(issueRef), {
+  return updateIssue(by, issueWork, IssueId.from(issueRef), {
     assignees: assignees.map((assignee) => Username.from(assignee.username)),
   });
 }

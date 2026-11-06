@@ -3,7 +3,7 @@ import { and, eq, gt, sql } from "drizzle-orm";
 import { toPlainText } from "../../../lib/markdown/parse";
 import type { DomainEvent, EventTarget } from "../../../domain/shared/events";
 import type { Transaction } from "../../../infrastructure/transaction";
-import { issues } from "../../issues";
+import { issues } from "../../../infrastructure/issues/tables";
 import { members } from "../../identity";
 import { replaceMentions } from "../descriptions";
 import {

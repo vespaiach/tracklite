@@ -1,8 +1,12 @@
+import { deleteIssue } from "../../../../application/issues/delete-issue";
+import { updateIssue } from "../../../../application/issues/update-issue";
 import type { Issue } from "../../../../contract";
 import { IssueId, tryFrom } from "../../../../domain/shared/identifiers";
+import { db } from "../../../../infrastructure/db";
+import { issueWork } from "../../../../infrastructure/issues/issue-work";
+import { getIssue, updatedIssue } from "../../../../queries";
 import { apiRoute } from "../../../../server/shared/api-route";
-import { deleteIssue, IssueChange, updateIssue } from "../../../../server/issues";
-import { getIssue } from "../../../../queries";
+import { IssueChange } from "../../../_server/schemas/issues";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/issues/[id]">) {
   const id = tryFrom(IssueId, (await params).id);
@@ -13,15 +17,16 @@ export async function GET(request: Request, { params }: RouteContext<"/api/issue
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/issues/[id]">) {
   const id = tryFrom(IssueId, (await params).id);
-  return apiRoute("member", IssueChange, async (_memberRequest, member, change) =>
-    Response.json((await updateIssue(member, id, change)) satisfies Issue),
-  )(request);
+  return apiRoute("member", IssueChange, async (_memberRequest, member, change) => {
+    const issueId = await updateIssue(member, issueWork, id, change);
+    return Response.json((await updatedIssue(db, issueId)) satisfies Issue);
+  })(request);
 }
 
 export async function DELETE(request: Request, { params }: RouteContext<"/api/issues/[id]">) {
   const id = tryFrom(IssueId, (await params).id);
   return apiRoute("member", async (_memberRequest, member) => {
-    await deleteIssue(member, id);
+    await deleteIssue(member, issueWork, id);
     return new Response(null, { status: 204 });
   })(request);
 }

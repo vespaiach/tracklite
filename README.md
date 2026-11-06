@@ -154,7 +154,7 @@ Run drizzle-kit only through these scripts; they set the `react-server` conditio
 Run part of the test suite:
 
 ```bash
-npx vitest run src/server/issues.test.ts
+npx vitest run src/domain/issues/issue.test.ts
 ```
 
 ```bash
