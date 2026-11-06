@@ -8,10 +8,11 @@ import {
   passwordResetTokens,
   sessions,
   signInAttempts,
-} from "../identity";
+} from "../../server/identity";
 import { db } from "../../infrastructure/db";
 import { createToken, hashToken } from "../../infrastructure/tokens";
-import { deleteExpiredRows } from "./cleanup";
+import { cleanUp } from "./clean-up";
+import { cleanUpServices } from "../../infrastructure/notifications/services";
 import {
   notificationBatches,
   notificationDeliveries,
@@ -150,7 +151,7 @@ it("DATA-004: invitations are deleted 30 days after being accepted, revoked or e
   const recentlyExpired = await invitation({ expiresAt: ago("29 days") });
   const pending = await invitation({ createdAt: ago("40 days") });
 
-  await deleteExpiredRows();
+  await cleanUp(cleanUpServices);
 
   const remaining = await remainingInvitations([
     accepted,
@@ -168,7 +169,7 @@ it("DATA-004.1, DATA-004: password reset links are deleted 30 days after expirin
   const usedLongAgo = await resetLink({ usedAt: ago("31 days") });
   const usedRecently = await resetLink({ usedAt: ago("29 days"), expiresAt: ago("29 days") });
 
-  await deleteExpiredRows();
+  await cleanUp(cleanUpServices);
 
   expect(await resetLinkExists(expiredLongAgo)).toBe(false);
   expect(await resetLinkExists(usedLongAgo)).toBe(false);
@@ -179,7 +180,7 @@ it("DATA-004: sessions are deleted 30 days after they end through inactivity", a
   const endedLongAgo = await session("61 days");
   const endedRecently = await session("59 days");
 
-  await deleteExpiredRows();
+  await cleanUp(cleanUpServices);
 
   expect(await sessionExists(endedLongAgo)).toBe(false);
   expect(await sessionExists(endedRecently)).toBe(true);
@@ -200,7 +201,7 @@ it("DATA-004.2, DATA-004: finished notifications are deleted 30 days after they 
   const pending = await notificationEmail("pending", { sendAfter: ago("40 days") });
   const sentRecently = await notificationEmail("sent", { sendAfter: ago("10 days"), sentAt: ago("10 days") });
 
-  await deleteExpiredRows();
+  await cleanUp(cleanUpServices);
 
   for (const id of [sent, dropped, failed, bounced]) expect(await notificationEmailExists(id)).toBe(false);
   expect(await notificationEmailExists(recentlyFailed)).toBe(true);
@@ -220,7 +221,7 @@ it("DATA-004: sign-in attempts are deleted 30 days after they're an hour old, an
     { email: recent, ip: "127.0.0.1", createdAt: ago("30 days 23 hours") },
   ]);
 
-  await deleteExpiredRows();
+  await cleanUp(cleanUpServices);
 
   const attempts = await db
     .select({ email: signInAttempts.email })
@@ -235,13 +236,13 @@ it("DATA-004: sign-in attempts are deleted 30 days after they're an hour old, an
 });
 
 it("DATA-004: cleanup deletes more than one chunk's worth of rows, at most 1,000 per statement", async () => {
-  await deleteExpiredRows();
+  await cleanUp(cleanUpServices);
   const email = uniqueEmail();
   await db.execute(sql`
     insert into sign_in_attempts (email, ip, created_at)
     select ${email}, '127.0.0.1', now() - interval '31 days' from generate_series(1, 2500)`);
 
-  const rowsPerStatement = await rowsPerDeleteFrom("sign_in_attempts", deleteExpiredRows);
+  const rowsPerStatement = await rowsPerDeleteFrom("sign_in_attempts", () => cleanUp(cleanUpServices));
 
   const remaining = await db.select().from(signInAttempts).where(eq(signInAttempts.email, email));
   expect(remaining).toEqual([]);

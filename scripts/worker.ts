@@ -1,4 +1,4 @@
-import { runWorker } from "../src/server/notifications";
+import { runWorker } from "../src/infrastructure/notifications/run-worker";
 import { logError } from "../src/infrastructure/log";
 
 const stop = new AbortController();

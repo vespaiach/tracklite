@@ -6,7 +6,7 @@ import { comments } from "../infrastructure/comments/tables";
 import { issueAssignees, issueLabels, issues } from "../infrastructure/issues/tables";
 import { labels, projectKeys, projects } from "../infrastructure/projects/tables";
 import { members } from "../server/identity";
-import { notificationBatches, notificationDeliveries } from "../server/notifications";
+import { notificationBatches, notificationDeliveries } from "../infrastructure/notifications/tables";
 import { RequestId } from "../domain/shared/identifiers";
 
 type NewMember = typeof members.$inferInsert;
