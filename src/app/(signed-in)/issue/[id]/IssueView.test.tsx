@@ -2,18 +2,16 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { ActionResult, Issue, IssueLabel, Label, Me, ProjectSummary } from "../../../../contract";
-import { loadPage } from "../../../../lib/load-page";
 import { admin, alex, issue, memberOf, sam } from "../../../../test/client-app";
 import { done, refused, renderForm } from "../../../../test/forms";
 import { type IssueChange, IssueView } from "./IssueView";
 
-const router = vi.hoisted(() => ({ refresh: vi.fn() }));
+const router = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
-vi.mock("../../../../lib/load-page", () => ({ loadPage: vi.fn() }));
 
 afterEach(() => {
   cleanup();
-  vi.mocked(loadPage).mockClear();
+  router.push.mockReset();
   router.refresh.mockReset();
 });
 
@@ -332,7 +330,7 @@ it("REQ-023, REQ-023.1: Cancel closes without deleting; confirming shows Deletin
   expect((busy as HTMLButtonElement).disabled).toBe(true);
   deletion.settle(done);
 
-  await waitFor(() => expect(loadPage).toHaveBeenCalledWith("/project/WEB"));
+  await waitFor(() => expect(router.push).toHaveBeenCalledWith("/project/WEB"));
   expect(deleteIssue.mock.calls).toEqual([[{ id: "WEB-42" }]]);
 });
 

@@ -2,7 +2,15 @@
 
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  startTransition,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { formatDate } from "../../../../client/dates";
 import { assigneeOptions, memberNames, toggled } from "../../../../client/IssueCells";
 import { priorities, statuses } from "../../../../client/issue-fields";
@@ -44,7 +52,6 @@ import {
   type MemberSummary,
   type ProjectSummary,
 } from "../../../../contract";
-import { loadPage } from "../../../../lib/load-page";
 import { Markdown } from "../../../../lib/markdown/Markdown";
 
 export type IssueChange =
@@ -551,6 +558,7 @@ function DeleteIssue(props: DeleteProps) {
 }
 
 function DeleteDialog({ issue, projectHref, deleteIssue, onCancel }: DeleteProps & { onCancel: () => void }) {
+  const router = useRouter();
   const toast = useToast();
   const [deleting, setDeleting] = useState(false);
   const cancel = useRef<HTMLButtonElement>(null);
@@ -562,7 +570,7 @@ function DeleteDialog({ issue, projectHref, deleteIssue, onCancel }: DeleteProps
   async function confirm() {
     setDeleting(true);
     const result = await deleteIssue({ id: issue.id }).catch(() => undefined);
-    if (result?.ok) return loadPage(projectHref);
+    if (result?.ok) return startTransition(() => router.push(projectHref));
 
     setDeleting(false);
     toast(result ? result.error.message : couldNotSave);
