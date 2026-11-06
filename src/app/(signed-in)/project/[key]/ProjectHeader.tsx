@@ -12,6 +12,8 @@ export function ProjectHeader({ project, admin, ...newIssue }: ProjectHeaderProp
   const view = useSelectedLayoutSegment() ?? "board";
   const base = `/project/${project.key}`;
 
+  if (view === "settings") return null;
+
   return (
     <AppBar
       end={

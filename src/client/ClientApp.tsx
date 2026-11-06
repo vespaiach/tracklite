@@ -8,11 +8,11 @@ import { makeStore } from "./store";
 import { Toaster } from "./Toaster";
 import { CreateIssueContext } from "./useNewIssue";
 
-export type ClientAppProps = { refreshServer: () => void; createIssue: CreateIssue };
+export type ClientAppProps = { createIssue: CreateIssue };
 
-export default function ClientApp({ refreshServer, createIssue }: ClientAppProps) {
+export default function ClientApp({ createIssue }: ClientAppProps) {
   const [router] = useState(() => createBrowserRouter(routes));
-  const [store] = useState(() => makeStore(router, refreshServer));
+  const [store] = useState(() => makeStore(router));
   const [report] = useState(createBrowserErrorReporter);
   useEffect(() => reportUncaughtErrors(report), [report]);
   return (

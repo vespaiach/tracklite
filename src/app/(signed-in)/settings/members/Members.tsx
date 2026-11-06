@@ -4,7 +4,6 @@ import { Ellipsis } from "lucide-react";
 import { useState } from "react";
 import { formatDate } from "../../../../client/dates";
 import { Link } from "../../../../components/leave-guard";
-import { useToast } from "../../../../components/toast";
 import {
   Avatar,
   Button,
@@ -25,6 +24,7 @@ import {
   Table,
   Tag,
 } from "../../../../components/ui/track-lite";
+import { useActionCall } from "../../../../components/useActionCall";
 import { useFormAction } from "../../../../components/useFormAction";
 import type { ActionResult, Invitation, Me } from "../../../../contract";
 
@@ -38,23 +38,6 @@ export type MembersActions = {
 };
 
 type MembersProps = MembersActions & { you: string; members: Me[]; invitations: Invitation[] };
-
-const couldNotSave = "Couldn’t save. Try again.";
-
-function useActionCall() {
-  const toast = useToast();
-
-  return async <Data,>(call: () => Promise<ActionResult<Data>>) => {
-    try {
-      const result = await call();
-      if (result.ok) return true;
-      toast(result.error.message);
-    } catch {
-      toast(couldNotSave);
-    }
-    return false;
-  };
-}
 
 export function Members({ you, members, invitations, ...actions }: MembersProps) {
   return (

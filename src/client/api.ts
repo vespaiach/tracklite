@@ -8,7 +8,6 @@ import type {
   LabelColor,
   Me,
   Project,
-  ProjectSummary,
   ThreadComment,
 } from "../contract";
 import type { StoreExtra } from "./store";
@@ -82,10 +81,6 @@ export const api = createApi({
   endpoints: (build) => ({
     me: build.query<Me, void>({ query: () => "me" }),
     members: build.query<Me[], void>({ query: () => "members" }),
-    projects: build.query<ProjectSummary[], { archived: boolean }>({
-      query: ({ archived }) => `projects?archived=${archived}`,
-      providesTags: ["Projects"],
-    }),
     project: build.query<Project, string>({
       query: (key) => `projects/${key}`,
       providesTags: ["Projects"],
@@ -96,12 +91,6 @@ export const api = createApi({
     >({
       query: ({ key, ...body }) => ({ path: `projects/${key}`, method: "PATCH", body }),
       invalidatesTags: ["Projects"],
-      async onQueryStarted(_change, { extra, queryFulfilled }) {
-        if (await queryFulfilled.catch(() => undefined)) (extra as StoreExtra).refreshServer();
-      },
-    }),
-    deleteProject: build.mutation<null, string>({
-      query: (key) => ({ path: `projects/${key}`, method: "DELETE" }),
     }),
     labels: build.query<Label[], string>({
       query: (key) => `projects/${key}/labels`,
@@ -110,14 +99,6 @@ export const api = createApi({
     createLabel: build.mutation<Label, { key: string; name: string; color: LabelColor }>({
       query: ({ key, ...body }) => ({ path: `projects/${key}/labels`, method: "POST", body }),
       invalidatesTags: (result) => (result ? ["Labels"] : []),
-    }),
-    updateLabel: build.mutation<Label, { id: string; name?: string; color?: LabelColor }>({
-      query: ({ id, ...body }) => ({ path: `labels/${id}`, method: "PATCH", body }),
-      invalidatesTags: (result, error) => (result || error?.status === 404 ? ["Labels"] : []),
-    }),
-    deleteLabel: build.mutation<null, string>({
-      query: (id) => ({ path: `labels/${id}`, method: "DELETE" }),
-      invalidatesTags: (_result, error) => (!error || error.status === 404 ? ["Labels"] : []),
     }),
     issue: build.query<Issue, string>({ query: (id) => `issues/${id}`, providesTags: ["Issue"] }),
     updateIssue: build.mutation<Issue, { id: string; change: IssueChange }>({
@@ -161,15 +142,11 @@ export const api = createApi({
 export const {
   useMeQuery,
   useMembersQuery,
-  useProjectsQuery,
   useProjectQuery,
   useLazyProjectQuery,
   useUpdateProjectMutation,
-  useDeleteProjectMutation,
   useLabelsQuery,
   useCreateLabelMutation,
-  useUpdateLabelMutation,
-  useDeleteLabelMutation,
   useIssueQuery,
   useLazyIssueQuery,
   useUpdateIssueMutation,

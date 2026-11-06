@@ -3,17 +3,13 @@
 import * as v from "valibot";
 import { createIssue as create } from "../../../../application/issues/create-issue";
 import { moveIssue as move } from "../../../../application/issues/move-issue";
-import { IssueId, ProjectKey, tryFrom } from "../../../../domain/shared/identifiers";
+import { IssueId, tryFrom } from "../../../../domain/shared/identifiers";
 import { db } from "../../../../infrastructure/db";
 import { issueWork } from "../../../../infrastructure/issues/issue-work";
 import { updatedIssue } from "../../../../queries";
 import { action } from "../../../_server/action";
 import { IssueMove, NewIssue } from "../../../_server/schemas/issues";
-
-const projectKey = v.pipe(
-  v.string(),
-  v.transform((key) => tryFrom(ProjectKey, key)),
-);
+import { ProjectAddress } from "../../../_server/schemas/projects";
 
 const issueId = v.pipe(
   v.string(),
@@ -23,7 +19,7 @@ const issueId = v.pipe(
 export const createIssue = action(
   "createIssue",
   "member",
-  v.object({ ...NewIssue.entries, key: projectKey }),
+  v.object({ ...NewIssue.entries, key: ProjectAddress }),
   async (actor, { key, ...issue }) => {
     const { issueId } = await create(actor, issueWork, key, issue);
     return { id: (await updatedIssue(db, issueId)).id };
