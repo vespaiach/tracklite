@@ -14,7 +14,10 @@ import {
   requestsTo,
   sam,
 } from "../../test/client-app";
+import { loadPage } from "../../lib/load-page";
 import type { Issue, IssueLabel, Label, Me, Project } from "../api";
+
+vi.mock("../../lib/load-page", () => ({ loadPage: vi.fn() }));
 
 afterEach(() => {
   cleanup();
@@ -356,7 +359,7 @@ it("REQ-023, REQ-023.1: Cancel closes without deleting; confirming shows Deletin
   expect((busy as HTMLButtonElement).disabled).toBe(true);
   deletion.resolve(noContent());
 
-  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB"));
+  await waitFor(() => expect(loadPage).toHaveBeenCalledWith("/project/WEB"));
   expect(requestsTo(fetchMock, "DELETE /api/issues/WEB-42")).toHaveLength(1);
 });
 

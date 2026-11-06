@@ -14,7 +14,11 @@ const old = project("OLD", "Old site", "2025-09-14T10:00:00.000Z");
 function mockProject(shown: Project, me: Me = admin) {
   return mockApi({
     "GET /api/me": () => Response.json(me),
+    "GET /api/members": () => Response.json([]),
     [`GET /api/projects/${shown.key}`]: () => Response.json(shown),
+    [`GET /api/projects/${shown.key}/labels`]: () => Response.json([]),
+    [`GET /api/projects/${shown.key}/issues`]: () =>
+      Response.json({ issues: [], hasMore: false, deactivatedAssignees: [] }),
     "GET /api/projects/NOPE": () => apiError(404, "Not found"),
   });
 }
@@ -23,17 +27,17 @@ function header() {
   return screen.getByRole("banner");
 }
 
-it("REQ-046.1: the header shows the details button, the name, the view tabs and, for admins, the settings gear", async () => {
+it("REQ-046.1: the list's header shows the details button, the name, the view tabs and, for admins, the settings gear", async () => {
   mockProject(web);
-  renderAppAt("/project/WEB");
+  renderAppAt("/project/WEB/list");
 
   expect(await screen.findByRole("heading", { name: "Website · WEB" })).toBeTruthy();
   const details = within(header()).getByRole("link", { name: "Project details" });
   expect(details.getAttribute("href")).toBe("/project/WEB/detail");
   expect(details.hasAttribute("aria-current")).toBe(false);
   const views = within(header()).getByRole("navigation", { name: "Project views" });
-  expect(within(views).getByRole("link", { name: "Board" }).getAttribute("aria-current")).toBe("page");
-  expect(within(views).getByRole("link", { name: "List" }).getAttribute("href")).toBe("/project/WEB/list");
+  expect(within(views).getByRole("link", { name: "List" }).getAttribute("aria-current")).toBe("page");
+  expect(within(views).getByRole("link", { name: "Board" }).getAttribute("href")).toBe("/project/WEB");
   expect(within(views).getByRole("link", { name: "Labels" }).getAttribute("href")).toBe(
     "/project/WEB/labels",
   );
@@ -49,7 +53,7 @@ it("REQ-046.1: the header shows the details button, the name, the view tabs and,
 
 it("STD-2, REQ-013.1: a member sees no settings gear; an archived project's header shows the Archived badge", async () => {
   mockProject(old, alex);
-  renderAppAt("/project/OLD");
+  renderAppAt("/project/OLD/list");
 
   await screen.findByRole("heading", { name: "Old site · OLD" });
   expect(within(header()).queryByRole("link", { name: "Project settings" })).toBeNull();
@@ -58,7 +62,7 @@ it("STD-2, REQ-013.1: a member sees no settings gear; an archived project's head
 
 it("STD-4: an unknown project key shows Not found", async () => {
   mockProject(web);
-  renderAppAt("/project/NOPE");
+  renderAppAt("/project/NOPE/list");
 
   expect(await screen.findByRole("heading", { name: "Not found" })).toBeTruthy();
 });
@@ -70,19 +74,10 @@ function mockLowerCaseProject() {
     "GET /api/projects/WEB": () => Response.json(web),
     "GET /api/projects/WEB/labels": () => Response.json([]),
     "GET /api/members": () => Response.json([]),
-    "GET /api/projects/WEB/board": () => Response.json([]),
     "GET /api/projects/WEB/issues?status=done": () =>
       Response.json({ issues: [], hasMore: false, deactivatedAssignees: [] }),
   });
 }
-
-it("API-004: /project/web opens WEB and the address becomes /project/WEB", async () => {
-  mockLowerCaseProject();
-  renderAppAt("/project/web");
-
-  expect(await screen.findByRole("heading", { name: "Website · WEB" })).toBeTruthy();
-  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB"));
-});
 
 it("API-004: /project/web/list?status=done keeps its path and filters when made canonical", async () => {
   mockLowerCaseProject();

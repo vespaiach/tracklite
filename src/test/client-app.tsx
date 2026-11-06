@@ -60,10 +60,18 @@ export function networkError(): never {
 
 export const refreshServer = vi.fn();
 
+export const createIssue = vi.fn();
+
 export function renderAppAt(path: string) {
   window.history.replaceState(null, "", path);
   refreshServer.mockClear();
-  return render(<ClientApp refreshServer={refreshServer} />);
+  createIssue.mockReset();
+  return render(
+    <ClientApp
+      refreshServer={refreshServer}
+      createIssue={createIssue}
+    />,
+  );
 }
 
 export function requestsTo(fetchMock: ReturnType<typeof mockApi>, key: string) {

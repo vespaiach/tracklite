@@ -1,11 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { createIssue as createIssueUseCase } from "../../../../application/issues/create-issue";
+import { IssueStatus } from "../../../../domain/issues/issue-status";
+import { IssueTitle } from "../../../../domain/issues/issue-title";
+import { ProjectKey, RequestId } from "../../../../domain/shared/identifiers";
 import { db } from "../../../../infrastructure/db";
 import { comments } from "../../../../infrastructure/comments/tables";
 import { createSession } from "../../../../infrastructure/identity/session";
 import { memberSummary } from "../../../../domain/identity/member-summary";
-import { members } from "../../../../infrastructure/identity/tables";
+import { type Member, members } from "../../../../infrastructure/identity/tables";
+import { issueWork } from "../../../../infrastructure/issues/issue-work";
 import { issueAssignees, issueLabels, issues } from "../../../../infrastructure/issues/tables";
 import { labels, projects } from "../../../../infrastructure/projects/tables";
 import {
@@ -21,8 +26,8 @@ import {
   createNotificationBatch,
   createProject,
 } from "../../../../test/factories";
+import { updatedIssue } from "../../../../queries";
 import { jsonRequest } from "../../../../test/reset-links";
-import { POST } from "../../projects/[key]/issues/route";
 import { DELETE, GET, PATCH } from "./route";
 
 beforeEach(() => {
@@ -83,6 +88,16 @@ async function deactivate(memberId: string) {
   await db.update(members).set({ deactivatedAt: sql`now()` }).where(eq(members.id, memberId));
 }
 
+async function createIssueBy(actor: Member, key: string, title: string) {
+  const { issueId } = await createIssueUseCase(actor, issueWork, ProjectKey.from(key), {
+    requestId: RequestId.from(randomUUID()),
+    title: IssueTitle.from(title),
+    status: IssueStatus.from("backlog"),
+    assignees: [],
+  });
+  return updatedIssue(db, issueId);
+}
+
 function fieldError(fields: Record<string, string>) {
   return { error: { message: "Check the highlighted fields", fields } };
 }
@@ -90,20 +105,12 @@ function fieldError(fields: Record<string, string>) {
 it("REQ-016.5: GET /api/issues/web-42 returns WEB-42", async () => {
   const cookie = await signedIn();
   const project = await createProject({ nextIssueNumber: 42 });
-  const created = await POST(
-    jsonRequest(
-      "POST",
-      `/api/projects/${project.key}/issues`,
-      { requestId: randomUUID(), title: "Fix login button" },
-      { Cookie: cookie },
-    ),
-    { params: Promise.resolve({ key: project.key }) },
-  );
+  const created = await createIssueBy(await createMember(), project.key, "Fix login button");
 
   const response = await getWith(cookie, `${project.key.toLowerCase()}-42`);
 
   expect(response.status).toBe(200);
-  expect(await response.json()).toEqual(await created.json());
+  expect(await response.json()).toEqual(created);
 });
 
 it("STD-4: an issue ID that doesn't exist gets Not found", async () => {
@@ -570,20 +577,10 @@ it("REQ-023: a deleted issue's number is not reused", async () => {
   const sam = await createMember();
   const cookie = `session=${await createSession(sam.id)}`;
   const project = await createProject({ nextIssueNumber: 42 });
-  const create = (title: string) =>
-    POST(
-      jsonRequest(
-        "POST",
-        `/api/projects/${project.key}/issues`,
-        { requestId: randomUUID(), title },
-        { Cookie: cookie },
-      ),
-      { params: Promise.resolve({ key: project.key }) },
-    );
 
-  const first = await (await create("First")).json();
+  const first = await createIssueBy(sam, project.key, "First");
   expect((await deleteWith(cookie, first.id)).status).toBe(204);
-  const second = await (await create("Second")).json();
+  const second = await createIssueBy(sam, project.key, "Second");
 
   expect(first.id).toBe(`${project.key}-42`);
   expect(second.id).toBe(`${project.key}-43`);

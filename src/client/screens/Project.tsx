@@ -1,11 +1,10 @@
 import { useParams } from "react-router";
 import { useMeQuery } from "../api";
 import { ProjectGate } from "../ProjectGate";
-import { ProjectHeader, type ProjectView } from "../ProjectHeader";
-import { BoardView } from "./Board";
+import { ProjectHeader } from "../ProjectHeader";
 import { ListView } from "./List";
 
-function ProjectPage({ view }: { view: ProjectView }) {
+export function ProjectList() {
   const { key = "" } = useParams();
   const { data: me } = useMeQuery();
   return (
@@ -14,21 +13,12 @@ function ProjectPage({ view }: { view: ProjectView }) {
         <>
           <ProjectHeader
             project={project}
-            view={view}
+            view="list"
             admin={me?.role === "admin"}
           />
-          {view === "board" && <BoardView project={project} />}
-          {view === "list" && <ListView project={project} />}
+          <ListView project={project} />
         </>
       )}
     </ProjectGate>
   );
-}
-
-export function ProjectBoard() {
-  return <ProjectPage view="board" />;
-}
-
-export function ProjectList() {
-  return <ProjectPage view="list" />;
 }

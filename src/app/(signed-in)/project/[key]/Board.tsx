@@ -1,5 +1,8 @@
+"use client";
+
 import { GripVertical, Ellipsis, Plus } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { startTransition, useOptimistic, useState } from "react";
 import {
   Button as AriaButton,
   type DropItem,
@@ -14,6 +17,9 @@ import {
   useDragAndDrop,
   Virtualizer,
 } from "react-aria-components";
+import { assignedTo } from "../../../../client/IssueCells";
+import { priorities, statuses } from "../../../../client/issue-fields";
+import { useToast } from "../../../../components/toast";
 import {
   AvatarStack,
   BoardCard,
@@ -28,57 +34,69 @@ import {
   Pill,
   Priority,
   Status,
-} from "../../components/ui/track-lite";
+} from "../../../../components/ui/track-lite";
 import {
+  type ActionResult,
+  type Board as BoardColumns,
   type BoardIssue,
+  type BoardMove,
   type BoardPlace,
   type BoardStatusColumn,
   type IssueStatus,
-  type ProjectSummary,
-  useBoardQuery,
-  useMeQuery,
-  useMoveIssueMutation,
-} from "../api";
-import { issueStatuses } from "../../contract";
-import { assignedTo } from "../IssueCells";
-import { priorities, statuses } from "../issue-fields";
-import { useRouterClick } from "../links";
-import { NewIssueDialog } from "../NewIssueDialog";
-import { Zone, zoneState } from "../Zone";
+  issueStatuses,
+} from "../../../../contract";
+import { loadPage } from "../../../../lib/load-page";
+import { NewIssueDialog, type NewIssueProps } from "./NewIssueDialog";
 
 const labelsShown = 3;
 const closedStatuses: IssueStatus[] = ["done", "canceled"];
 const issueType = "application/x-tracklite-issue";
 const cardLayout: ListLayoutOptions = { estimatedRowSize: 80, gap: 8, padding: 4, dropIndicatorThickness: 8 };
 
-export function BoardView({ project }: { project: ProjectSummary }) {
-  const query = useBoardQuery(project.key);
+export type MoveIssue = (move: BoardMove) => Promise<ActionResult<null>>;
+
+export type BoardProps = Omit<NewIssueProps, "onCreated"> & { columns: BoardColumns; moveIssue: MoveIssue };
+
+type Move = (id: string, status: IssueStatus, place: BoardPlace) => void;
+
+export function Board({ project, columns, moveIssue, ...newIssue }: BoardProps) {
+  const [shown, showMoved] = useOptimistic(columns, placed);
   const [creatingIn, setCreatingIn] = useState<IssueStatus>();
+  const toast = useToast();
+  const router = useRouter();
   const archived = project.archivedAt !== null;
+
+  function move(id: string, status: IssueStatus, place: BoardPlace) {
+    startTransition(async () => {
+      showMoved({ id, status, place });
+      const result = await moveIssue({ id, status, place }).catch(() => undefined);
+      if (result?.ok) return;
+
+      toast(result ? result.error.message : `Couldn’t move ${id}`);
+      if (result?.error.kind === "notFound") router.refresh();
+    });
+  }
+
   return (
     <>
-      <Zone
-        what="the board"
-        state={zoneState(query)}
-        retry={query.refetch}
-        page>
-        {(columns) => (
-          <BoardLayout>
-            {columns.map((column) => (
-              <StatusColumn
-                key={column.status}
-                column={column}
-                archived={archived}
-                onCreate={() => setCreatingIn(column.status)}
-              />
-            ))}
-          </BoardLayout>
-        )}
-      </Zone>
+      <BoardLayout>
+        {shown.map((column) => (
+          <StatusColumn
+            key={column.status}
+            column={column}
+            archived={archived}
+            me={newIssue.me}
+            onMove={move}
+            onCreate={() => setCreatingIn(column.status)}
+          />
+        ))}
+      </BoardLayout>
       {creatingIn && (
         <NewIssueDialog
           project={project}
+          {...newIssue}
           status={creatingIn}
+          onCreated={(id) => loadPage(`/issue/${id}`)}
           onClose={() => setCreatingIn(undefined)}
         />
       )}
@@ -86,7 +104,30 @@ export function BoardView({ project }: { project: ProjectSummary }) {
   );
 }
 
-type StatusColumnProps = { column: BoardStatusColumn; archived: boolean; onCreate: () => void };
+function placed(board: BoardColumns, { id, status, place }: BoardMove): BoardColumns {
+  const card = board.flatMap((column) => column.cards).find((each) => each.id === id);
+  if (!card) return board;
+
+  return board.map((column) => {
+    const cards = column.cards.filter((each) => each.id !== id);
+    if (column.status === status) cards.splice(insertionIndex(cards, place), 0, card);
+    return { ...column, count: column.count + cards.length - column.cards.length, cards };
+  });
+}
+
+function insertionIndex(cards: BoardIssue[], place: BoardPlace) {
+  if (place === "bottom") return cards.length;
+  if (place === "top") return 0;
+  return cards.findIndex((each) => each.id === place.after) + 1;
+}
+
+type StatusColumnProps = {
+  column: BoardStatusColumn;
+  archived: boolean;
+  me: string;
+  onMove: Move;
+  onCreate: () => void;
+};
 
 function draggedId(items: DropItem[]) {
   return (items[0] as TextDropItem).getText(issueType);
@@ -99,11 +140,10 @@ function placeAt(cards: BoardIssue[], id: string, target: DropTarget): BoardPlac
   return above ? { after: above.id } : "top";
 }
 
-function StatusColumn({ column, archived, onCreate }: StatusColumnProps) {
+function StatusColumn({ column, archived, me, onMove, onCreate }: StatusColumnProps) {
   const { name, kind } = statuses[column.status];
   const closed = closedStatuses.includes(column.status);
-  const [moveIssue] = useMoveIssueMutation();
-  const move = (id: string, place: BoardPlace) => void moveIssue({ id, status: column.status, place });
+  const move = (id: string, place: BoardPlace) => onMove(id, column.status, place);
   const { dragAndDropHooks } = useDragAndDrop({
     getItems: (keys) => [...keys].map((key) => ({ [issueType]: String(key) })),
     acceptedDragTypes: [issueType],
@@ -179,6 +219,8 @@ function StatusColumn({ column, archived, onCreate }: StatusColumnProps) {
                   last={card.id === column.cards[column.cards.length - 1].id}
                   archived={archived}
                   dragging={isDragging}
+                  me={me}
+                  onMove={onMove}
                 />
               )}
             </GridListItem>
@@ -211,12 +253,11 @@ type IssueCardProps = {
   last: boolean;
   archived: boolean;
   dragging?: boolean;
+  me: string;
+  onMove: Move;
 };
 
-function IssueCard({ card, status, first, last, archived, dragging }: IssueCardProps) {
-  const href = `/issue/${card.id}`;
-  const open = useRouterClick(href);
-  const { data: me } = useMeQuery();
+function IssueCard({ card, status, first, last, archived, dragging, me, onMove }: IssueCardProps) {
   const priorityKind = priorities[card.priority].kind;
   const hiddenLabels = card.labels.slice(labelsShown);
   return (
@@ -224,8 +265,7 @@ function IssueCard({ card, status, first, last, archived, dragging }: IssueCardP
       id={card.id}
       title={card.title}
       label={`${card.title}, ${assignedTo(card.assignees)}`}
-      href={href}
-      onOpen={open}
+      href={`/issue/${card.id}`}
       closed={closedStatuses.includes(status)}
       dragging={dragging}
       handle={
@@ -242,7 +282,7 @@ function IssueCard({ card, status, first, last, archived, dragging }: IssueCardP
         card.assignees.length > 0 && (
           <AvatarStack
             members={card.assignees}
-            me={me?.username}
+            me={me}
           />
         )
       }
@@ -273,6 +313,7 @@ function IssueCard({ card, status, first, last, archived, dragging }: IssueCardP
             status={status}
             first={first}
             last={last}
+            onMove={onMove}
           />
         )
       }
@@ -280,15 +321,13 @@ function IssueCard({ card, status, first, last, archived, dragging }: IssueCardP
   );
 }
 
-type MoveMenuProps = { id: string; status: IssueStatus; first: boolean; last: boolean };
+type MoveMenuProps = { id: string; status: IssueStatus; first: boolean; last: boolean; onMove: Move };
 
-function MoveMenu({ id, status, first, last }: MoveMenuProps) {
-  const [moveIssue] = useMoveIssueMutation();
-
+function MoveMenu({ id, status, first, last, onMove }: MoveMenuProps) {
   function move(key: Key) {
     const place: BoardPlace = key === "bottom" ? "bottom" : "top";
     const target = key === "top" || key === "bottom" ? status : (key as IssueStatus);
-    void moveIssue({ id, status: target, place });
+    onMove(id, target, place);
   }
 
   return (

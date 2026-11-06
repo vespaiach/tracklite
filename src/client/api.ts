@@ -1,6 +1,5 @@
 import { type BaseQueryFn, createApi } from "@reduxjs/toolkit/query/react";
 import type {
-  Board,
   Invitation,
   Issue,
   IssueListPage,
@@ -16,13 +15,10 @@ import type {
 } from "../contract";
 import type { StoreExtra } from "./store";
 import { loadPage } from "../lib/load-page";
-import { showToast } from "./toast";
 
 export type * from "../contract";
 
 export type ApiFailure = { status: number | "network"; message: string; fields?: Record<string, string> };
-
-export type BoardPlace = "top" | "bottom" | { after: string };
 
 const issueListPageSize = 100;
 
@@ -44,25 +40,6 @@ export type IssueChange =
 type ApiRequest = string | { path: string; method: "POST" | "PATCH" | "PUT" | "DELETE"; body?: unknown };
 
 const couldNotSave = "Couldn’t save. Try again.";
-
-function placeCard(board: Board, id: string, status: IssueStatus, place: BoardPlace) {
-  const from = board.find((column) => column.cards.some((card) => card.id === id));
-  const to = board.find((column) => column.status === status);
-  if (!from || !to) return;
-  const [card] = from.cards.splice(
-    from.cards.findIndex((each) => each.id === id),
-    1,
-  );
-  from.count -= 1;
-  const after = typeof place === "object" ? to.cards.findIndex((each) => each.id === place.after) : -1;
-  const index = place === "bottom" ? to.cards.length : after + 1;
-  to.cards.splice(index, 0, card);
-  to.count += 1;
-}
-
-function projectKeyOf(id: string) {
-  return id.slice(0, id.lastIndexOf("-"));
-}
 
 function fetchApi(request: ApiRequest, signal: AbortSignal) {
   if (typeof request === "string") return fetch(`/api/${request}`, { signal });
@@ -103,7 +80,7 @@ const baseQuery: BaseQueryFn<ApiRequest, unknown, ApiFailure> = async (request, 
 export const api = createApi({
   baseQuery,
   refetchOnMountOrArgChange: true,
-  tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels", "Issue", "Board", "Comments"],
+  tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels", "Issue", "Comments"],
   endpoints: (build) => ({
     me: build.query<Me, void>({ query: () => "me", providesTags: ["Me"] }),
     updateProfile: build.mutation<Me, { fullName: string }>({
@@ -173,12 +150,6 @@ export const api = createApi({
       invalidatesTags: (_result, error) => (!error || error.status === 404 ? ["Labels"] : []),
     }),
     issue: build.query<Issue, string>({ query: (id) => `issues/${id}`, providesTags: ["Issue"] }),
-    createIssue: build.mutation<
-      Issue,
-      { key: string; requestId: string; title: string; status?: IssueStatus; assignees: string[] }
-    >({
-      query: ({ key, ...body }) => ({ path: `projects/${key}/issues`, method: "POST", body }),
-    }),
     updateIssue: build.mutation<Issue, { id: string; change: IssueChange }>({
       query: ({ id, change }) => ({ path: `issues/${id}`, method: "PATCH", body: change }),
       invalidatesTags: (_result, error) => (error?.status === 404 ? ["Labels"] : []),
@@ -197,23 +168,6 @@ export const api = createApi({
           lastPage.hasMore ? lastOffset + issueListPageSize : undefined,
       },
       query: ({ queryArg, pageParam }) => issueListPath(queryArg.key, queryArg.query, pageParam),
-    }),
-    board: build.query<Board, string>({ query: (key) => `projects/${key}/board`, providesTags: ["Board"] }),
-    moveIssue: build.mutation<Issue, { id: string; status: IssueStatus; place: BoardPlace }>({
-      query: ({ id, ...body }) => ({ path: `issues/${id}/position`, method: "PUT", body }),
-      invalidatesTags: (result, error) => (result || error?.status === 404 ? ["Board"] : []),
-      async onQueryStarted({ id, status, place }, { dispatch, queryFulfilled }) {
-        const moved = dispatch(
-          api.util.updateQueryData("board", projectKeyOf(id), (board) => placeCard(board, id, status, place)),
-        );
-        try {
-          await queryFulfilled;
-        } catch (failure) {
-          moved.undo();
-          const { status: code, message } = (failure as { error: ApiFailure }).error;
-          dispatch(showToast(code === "network" || code >= 500 ? `Couldn’t move ${id}` : message));
-        }
-      },
     }),
     comments: build.query<ThreadComment[], string>({
       query: (threadPath) => threadPath,
@@ -256,12 +210,9 @@ export const {
   useDeleteLabelMutation,
   useIssueQuery,
   useLazyIssueQuery,
-  useCreateIssueMutation,
   useUpdateIssueMutation,
   useDeleteIssueMutation,
   useIssueListInfiniteQuery,
-  useBoardQuery,
-  useMoveIssueMutation,
   useCommentsQuery,
   usePostCommentMutation,
   useEditCommentMutation,

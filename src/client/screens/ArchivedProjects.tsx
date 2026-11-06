@@ -1,4 +1,3 @@
-import { Link } from "react-router";
 import { AppBar, AppBarTitle, IssueEmpty, SettingsLayout, Table } from "../../components/ui/track-lite";
 import { type ProjectSummary, useProjectsQuery } from "../api";
 import { formatDate } from "../dates";
@@ -51,7 +50,7 @@ function ArchivedTable({ projects }: { projects: ProjectSummary[] }) {
           {projects.map((project) => (
             <tr key={project.key}>
               <td>
-                <Link to={`/project/${project.key}`}>{`${project.name} · ${project.key}`}</Link>
+                <a href={`/project/${project.key}`}>{`${project.name} · ${project.key}`}</a>
               </td>
               <td className="tl-table__mono tl-table__muted">
                 {project.archivedAt && (

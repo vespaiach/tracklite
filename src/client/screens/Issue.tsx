@@ -1,6 +1,6 @@
 import { Trash2 } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
-import { Navigate, useLocation, useNavigate, useParams } from "react-router";
+import { Navigate, useLocation, useParams } from "react-router";
 import {
   Avatar,
   AvatarStack,
@@ -23,6 +23,7 @@ import {
   Priority,
   Status,
 } from "../../components/ui/track-lite";
+import { loadPage } from "../../lib/load-page";
 import { Markdown } from "../../lib/markdown/Markdown";
 import {
   type ApiFailure,
@@ -52,7 +53,7 @@ import { ProjectGate } from "../ProjectGate";
 import { ProjectHeader } from "../ProjectHeader";
 import { useReturnFocus } from "../useReturnFocus";
 import { Zone, zoneState } from "../Zone";
-import { NotFound } from "./NotFound";
+import NotFound from "../../app/(signed-in)/not-found";
 
 export function IssuePage() {
   const { id = "" } = useParams();
@@ -556,7 +557,6 @@ function DeleteDialog({
 }) {
   const [deleteIssue, { isLoading }] = useDeleteIssueMutation();
   const toastFailure = useFailureToast();
-  const navigate = useNavigate();
   const cancel = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -566,7 +566,7 @@ function DeleteDialog({
   async function confirm() {
     try {
       await deleteIssue(issue.id).unwrap();
-      await navigate(projectHref);
+      loadPage(projectHref);
     } catch (caught) {
       toastFailure(caught);
     }
