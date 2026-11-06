@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode, useContext } from "react";
+import { firstComponent } from "../components/region/Region";
 import { Button, FormStatus, SettingsActions, SettingsLayout } from "../components/ui/track-lite";
 import { ErrorReporterContext, type ReportError } from "./error-reporter";
 import { useShowLoading } from "./useShowLoading";
@@ -89,9 +90,4 @@ class ZoneBoundary extends Component<BoundaryProps, { crashed: boolean }> {
   render() {
     return this.state.crashed ? this.props.failed(this.reset) : this.props.children;
   }
-}
-
-function firstComponent(componentStack: string | null | undefined) {
-  const line = (componentStack ?? "").split("\n").find((each) => each.trim() !== "");
-  return line?.trim().match(/^(?:at\s+)?([^\s@(]+)/)?.[1];
 }
