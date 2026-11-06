@@ -1,7 +1,17 @@
+"use client";
+
 import { Search } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  type ReactNode,
+  startTransition,
+  useEffect,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import type { Key } from "react-aria-components";
-import { useSearchParams } from "react-router";
 import {
   Avatar,
   BoardEmpty,
@@ -17,22 +27,19 @@ import {
   SettingsLayout,
   Status,
   type TableSort,
-} from "../../components/ui/track-lite";
+} from "../../../../../components/ui/track-lite";
+import { formatExact } from "../../../../../client/dates";
+import { Assignees, assignedTo, LabelPills, memberName, UpdatedAt } from "../../../../../client/IssueCells";
+import { priorities, statuses } from "../../../../../client/issue-fields";
 import {
+  type IssueListPage,
+  issuePriorities,
+  issueStatuses,
+  type Label,
   type ListIssue,
-  type ProjectSummary,
-  useIssueListInfiniteQuery,
-  useLabelsQuery,
-  useMeQuery,
-  useMembersQuery,
-} from "../api";
-import { formatExact } from "../dates";
-import { Assignees, assignedTo, LabelPills, memberName, UpdatedAt } from "../IssueCells";
-import { issuePriorities, issueStatuses } from "../../contract";
-import { priorities, statuses } from "../issue-fields";
-import { NewIssueDialog } from "../../app/(signed-in)/project/[key]/NewIssueDialog";
-import { useNewIssue } from "../useNewIssue";
-import { Zone, zoneState } from "../Zone";
+} from "../../../../../contract";
+import { loadPage } from "../../../../../lib/load-page";
+import { NewIssueDialog, type NewIssueProps } from "../NewIssueDialog";
 
 type SortColumn = "id" | "status" | "priority" | "updated";
 type SortDir = "asc" | "desc";
@@ -67,18 +74,24 @@ function icon(content: ReactNode) {
   return <span aria-hidden="true">{content}</span>;
 }
 
-export function ListView({ project }: { project: ProjectSummary }) {
-  const [params, setParams] = useSearchParams();
-  const list = useIssueListInfiniteQuery({ key: project.key, query: params.toString() });
-  const { data: me } = useMeQuery();
-  const { data: members = [] } = useMembersQuery();
-  const { data: projectLabels = [] } = useLabelsQuery(project.key);
-  const [creating, setCreating] = useState(false);
-  const newIssue = useNewIssue();
+export type MoreIssues = (more: { key: string; query: string; offset: number }) => Promise<IssueListPage>;
 
-  const pages = list.data?.pages ?? [];
-  const issues = pages.flatMap((page) => page.issues);
-  const deactivatedAssignees = pages[0]?.deactivatedAssignees ?? [];
+export type IssueListProps = Omit<NewIssueProps, "onCreated"> & {
+  query: string;
+  page: IssueListPage;
+  labels: Label[];
+  moreIssues: MoreIssues;
+};
+
+export function IssueList({ project, query, page, labels, moreIssues, ...newIssue }: IssueListProps) {
+  const router = useRouter();
+  const [shownQuery, showQuery] = useOptimistic(query);
+  const params = new URLSearchParams(shownQuery);
+  const more = useMorePages(project.key, query, page, moreIssues);
+  const [creating, setCreating] = useState(false);
+  const { members, me } = newIssue;
+
+  const issues = [...page.issues, ...more.issues];
   const archived = project.archivedAt !== null;
   const filtering = [...filterParams, "q"].some((name) => params.has(name));
 
@@ -110,13 +123,13 @@ export function ListView({ project }: { project: ProjectSummary }) {
           name: member.fullName,
           icon: icon(<AssigneeAvatar initials={member.initials} />),
         })),
-      ...deactivatedAssignees.map((member) => ({
+      ...page.deactivatedAssignees.map((member) => ({
         key: member.username,
         name: memberName(member),
         icon: icon(<AssigneeAvatar initials={member.initials} />),
       })),
     ],
-    label: projectLabels.map((label) => ({ key: label.name, name: label.name })).sort(byName),
+    label: labels.map((label) => ({ key: label.name, name: label.name })).sort(byName),
   };
   const knownAssignees = [
     ...options.assignee,
@@ -133,9 +146,16 @@ export function ListView({ project }: { project: ProjectSummary }) {
   }
 
   function update(change: (next: URLSearchParams) => void, replace = false) {
-    const next = new URLSearchParams(window.location.search);
+    const next = new URLSearchParams(shownQuery);
     change(next);
-    setParams(next, { replace });
+    const search = next.toString();
+    const address = `/project/${project.key}/list${search ? `?${search}` : ""}`;
+
+    startTransition(() => {
+      showQuery(search);
+      if (replace) router.replace(address, { scroll: false });
+      else router.push(address, { scroll: false });
+    });
   }
 
   function toggle(param: FilterParam, key: string) {
@@ -228,93 +248,102 @@ export function ListView({ project }: { project: ProjectSummary }) {
           );
         })}
       </Filters>
-      <Zone
-        what="issues"
-        state={zoneState(list)}
-        retry={list.refetch}
-        page>
-        {() =>
-          issues.length === 0 && !filtering ? (
-            <SettingsLayout>
-              {archived ? (
-                <BoardEmpty>No issues.</BoardEmpty>
-              ) : (
-                <BoardEmpty
-                  action="Create one."
-                  onAction={() => setCreating(true)}>
-                  No issues yet.
-                </BoardEmpty>
-              )}
-            </SettingsLayout>
+      {issues.length === 0 && !filtering ? (
+        <SettingsLayout>
+          {archived ? (
+            <BoardEmpty>No issues.</BoardEmpty>
           ) : (
-            <>
-              <ListRowHead
-                columns={columns}
-                label="Sort issues">
-                <ListSortButton
-                  sort={sortOf("id")}
-                  onSort={() => sortBy("id")}>
-                  ID
-                </ListSortButton>
-                <span aria-hidden="true">Title</span>
-                <ListSortButton
-                  sort={sortOf("status")}
-                  onSort={() => sortBy("status")}>
-                  Status
-                </ListSortButton>
-                <ListSortButton
-                  sort={sortOf("priority")}
-                  onSort={() => sortBy("priority")}>
-                  Priority
-                </ListSortButton>
-                <span aria-hidden="true">Labels</span>
-                <span />
-                <ListSortButton
-                  sort={sortOf("updated")}
-                  onSort={() => sortBy("updated")}>
-                  Last updated
-                </ListSortButton>
-              </ListRowHead>
-              <main
-                aria-label="Issues"
-                className="tl-table-scroll">
-                {issues.map((issue) => (
-                  <IssueRow
-                    key={issue.id}
-                    issue={issue}
-                    me={me?.username}
-                  />
-                ))}
-                {issues.length === 0 && (
-                  <div className="tl-list-message">
-                    No issues match these filters
-                    <Button
-                      size="sm"
-                      onClick={clearAll}>
-                      Clear filters
-                    </Button>
-                  </div>
-                )}
-                {list.hasNextPage && (
-                  <MoreRows
-                    loading={list.isFetchingNextPage}
-                    onVisible={() => void list.fetchNextPage()}
-                  />
-                )}
-              </main>
-            </>
-          )
-        }
-      </Zone>
+            <BoardEmpty
+              action="Create one."
+              onAction={() => setCreating(true)}>
+              No issues yet.
+            </BoardEmpty>
+          )}
+        </SettingsLayout>
+      ) : (
+        <>
+          <ListRowHead
+            columns={columns}
+            label="Sort issues">
+            <ListSortButton
+              sort={sortOf("id")}
+              onSort={() => sortBy("id")}>
+              ID
+            </ListSortButton>
+            <span aria-hidden="true">Title</span>
+            <ListSortButton
+              sort={sortOf("status")}
+              onSort={() => sortBy("status")}>
+              Status
+            </ListSortButton>
+            <ListSortButton
+              sort={sortOf("priority")}
+              onSort={() => sortBy("priority")}>
+              Priority
+            </ListSortButton>
+            <span aria-hidden="true">Labels</span>
+            <span />
+            <ListSortButton
+              sort={sortOf("updated")}
+              onSort={() => sortBy("updated")}>
+              Last updated
+            </ListSortButton>
+          </ListRowHead>
+          <main
+            aria-label="Issues"
+            className="tl-table-scroll">
+            {issues.map((issue) => (
+              <IssueRow
+                key={issue.id}
+                issue={issue}
+                me={me}
+              />
+            ))}
+            {issues.length === 0 && (
+              <div className="tl-list-message">
+                No issues match these filters
+                <Button
+                  size="sm"
+                  onClick={clearAll}>
+                  Clear filters
+                </Button>
+              </div>
+            )}
+            {more.hasMore && (
+              <MoreRows
+                loading={more.loading}
+                onVisible={more.load}
+              />
+            )}
+          </main>
+        </>
+      )}
       {creating && (
         <NewIssueDialog
           project={project}
           {...newIssue}
+          onCreated={(id) => loadPage(`/issue/${id}`)}
           onClose={() => setCreating(false)}
         />
       )}
     </>
   );
+}
+
+function useMorePages(key: string, query: string, page: IssueListPage, moreIssues: MoreIssues) {
+  const [loaded, setLoaded] = useState({ query, issues: [] as ListIssue[], hasMore: page.hasMore });
+  const [loading, startLoading] = useTransition();
+  const current = loaded.query === query ? loaded : { query, issues: [], hasMore: page.hasMore };
+
+  function load() {
+    startLoading(async () => {
+      const offset = page.issues.length + current.issues.length;
+      const { issues, hasMore } = await moreIssues({ key, query, offset });
+      startTransition(() => setLoaded({ query, issues: [...current.issues, ...issues], hasMore }));
+    });
+  }
+
+  return { issues: current.issues, hasMore: current.hasMore, loading, load };
 }
 
 function useSearch(committed: string, commit: (q: string) => void) {

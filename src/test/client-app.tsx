@@ -1,9 +1,4 @@
-import { render } from "@testing-library/react";
-import { vi } from "vitest";
-import ClientApp from "../client/ClientApp";
-import type { Issue, Me, MemberSummary, Project, ProjectSummary } from "../client/api";
-
-type Handler = (body: unknown) => Response | Promise<Response>;
+import type { Issue, Me, MemberSummary, Project } from "../contract";
 
 export const sam: Me = {
   username: "sam",
@@ -23,55 +18,6 @@ export const alex: Me = {
   role: "member",
 };
 
-export function mockApi(routes: Record<string, Handler>) {
-  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-    const key = `${init?.method ?? "GET"} ${url}`;
-    const handler = routes[key];
-    if (!handler) throw new Error(`Unmocked request ${key}`);
-    return handler(init?.body ? JSON.parse(String(init.body)) : undefined);
-  });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
-
-export function apiError(status: number, message: string, fields?: Record<string, string>) {
-  return Response.json({ error: { message, fields } }, { status });
-}
-
-export const signedOut = () => apiError(401, "Sign in to continue.");
-
-export const noContent = () => new Response(null, { status: 204 });
-
-export function never(): Promise<Response> {
-  return new Promise(() => {});
-}
-
-export function deferred() {
-  let resolve!: (response: Response) => void;
-  const answer = new Promise<Response>((settle) => {
-    resolve = settle;
-  });
-  return { answer: () => answer, resolve };
-}
-
-export function networkError(): never {
-  throw new TypeError("Failed to fetch");
-}
-
-export const createIssue = vi.fn();
-
-export function renderAppAt(path: string) {
-  window.history.replaceState(null, "", path);
-  createIssue.mockReset();
-  return render(<ClientApp createIssue={createIssue} />);
-}
-
-export function requestsTo(fetchMock: ReturnType<typeof mockApi>, key: string) {
-  return fetchMock.mock.calls
-    .filter(([url, init]) => `${init?.method ?? "GET"} ${url}` === key)
-    .map(([, init]) => (init?.body ? JSON.parse(String(init.body)) : undefined));
-}
-
 export const admin: Me = { ...sam, role: "admin" };
 
 export function project(key: string, name: string, archivedAt: string | null = null): Project {
@@ -86,10 +32,6 @@ export function project(key: string, name: string, archivedAt: string | null = n
     createdAt: "2026-09-20T10:42:00.000Z",
     createdBy: null,
   };
-}
-
-export function summary({ key, name, archivedAt }: Project): ProjectSummary {
-  return { key, name, archivedAt };
 }
 
 export function memberOf({ username, fullName, initials, deactivated }: Me): MemberSummary {

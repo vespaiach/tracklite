@@ -1,5 +1,11 @@
-import { useState } from "react";
-import { useParams } from "react-router";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { type ReactNode, startTransition, useState } from "react";
+import { formatDay } from "../../../../../client/dates";
+import { statuses } from "../../../../../client/issue-fields";
+import { useReturnFocus } from "../../../../../client/useReturnFocus";
+import { type DescriptionDraft, DescriptionEditor } from "../../../../../components/DescriptionEditor";
 import {
   Button,
   CountRow,
@@ -8,45 +14,44 @@ import {
   DetailsSection,
   IssueEmpty,
   Status,
-} from "../../components/ui/track-lite";
-import { Markdown } from "../../lib/markdown/Markdown";
-import { type IssueStatus, issueStatuses } from "../../contract";
-import { type Project, useLazyProjectQuery, useMeQuery, useUpdateProjectMutation } from "../api";
-import { CommentThread } from "../CommentThread";
-import { formatDay } from "../dates";
-import { type DescriptionDraft, DescriptionEditor } from "../DescriptionEditor";
-import { statuses } from "../issue-fields";
-import { useRouterClick } from "../links";
-import { ProjectGate } from "../ProjectGate";
-import { ProjectHeader } from "../ProjectHeader";
-import { useReturnFocus } from "../useReturnFocus";
+} from "../../../../../components/ui/track-lite";
+import {
+  type ActionResult,
+  type IssueStatus,
+  issueStatuses,
+  type MemberSummary,
+  type Project,
+} from "../../../../../contract";
+import { Markdown } from "../../../../../lib/markdown/Markdown";
 
-export function ProjectDetail() {
-  const { key = "" } = useParams();
-  const { data: me } = useMeQuery();
+export type SaveDescription = (save: {
+  key: string;
+  description: string;
+  descriptionVersion: number;
+}) => Promise<ActionResult<null>>;
+
+export type ProjectDetailProps = {
+  project: Project;
+  members: MemberSummary[];
+  saveDescription: SaveDescription;
+};
+
+export function DetailsPage({ details, comments }: { details: ReactNode; comments: ReactNode }) {
   return (
-    <ProjectGate projectKey={key}>
-      {(project) => (
-        <>
-          <ProjectHeader
-            project={project}
-            view="detail"
-            admin={me?.role === "admin"}
-          />
-          <DetailsLayout>
-            <Description project={project} />
-            <IssueCounts project={project} />
-            <Created project={project} />
-            <DetailsSection title="Comments">
-              <CommentThread
-                threadPath={`projects/${project.key}/comments`}
-                editable={project.archivedAt === null}
-              />
-            </DetailsSection>
-          </DetailsLayout>
-        </>
-      )}
-    </ProjectGate>
+    <DetailsLayout>
+      {details}
+      <DetailsSection title="Comments">{comments}</DetailsSection>
+    </DetailsLayout>
+  );
+}
+
+export function ProjectDetail(props: ProjectDetailProps) {
+  return (
+    <>
+      <Description {...props} />
+      <IssueCounts project={props.project} />
+      <Created project={props.project} />
+    </>
   );
 }
 
@@ -54,15 +59,21 @@ function startDraft({ description, descriptionVersion }: Project): DescriptionDr
   return { text: description, startedFrom: description, version: descriptionVersion };
 }
 
-function Description({ project }: { project: Project }) {
+function Description({ project, members, saveDescription }: ProjectDetailProps) {
   const [draft, setDraft] = useState<DescriptionDraft>();
+  const [reloadingFrom, setReloadingFrom] = useState<number>();
   const editButton = useReturnFocus<HTMLButtonElement>(draft !== undefined);
-  const [updateProject] = useUpdateProjectMutation();
-  const [loadProject] = useLazyProjectQuery();
+  const router = useRouter();
   const editable = project.archivedAt === null;
 
-  async function reload() {
-    setDraft(startDraft(await loadProject(project.key).unwrap()));
+  if (reloadingFrom !== undefined && reloadingFrom !== project.descriptionVersion) {
+    setReloadingFrom(undefined);
+    setDraft(startDraft(project));
+  }
+
+  function reload() {
+    setReloadingFrom(project.descriptionVersion);
+    startTransition(() => router.refresh());
   }
 
   return (
@@ -86,10 +97,11 @@ function Description({ project }: { project: Project }) {
           draft={draft}
           onChange={(text) => setDraft({ ...draft, text })}
           onDone={() => setDraft(undefined)}
-          onReload={() => void reload()}
+          onReload={reload}
           save={(description, descriptionVersion) =>
-            updateProject({ key: project.key, description, descriptionVersion }).unwrap()
+            saveDescription({ key: project.key, description, descriptionVersion })
           }
+          members={members}
         />
       ) : project.description ? (
         <Markdown
@@ -144,17 +156,14 @@ function StatusCountRow({
   status: IssueStatus;
   count: number;
 }) {
-  const href = `/project/${projectKey}/list?status=${status}`;
-  const onClick = useRouterClick(href);
   const { name, kind } = statuses[status];
   return (
     <CountRow
-      href={href}
+      href={`/project/${projectKey}/list?status=${status}`}
       label={`${name}, ${count} ${count === 1 ? "issue" : "issues"}. Open list view`}
       icon={<Status status={kind} />}
       name={name}
       count={count}
-      onClick={onClick}
     />
   );
 }

@@ -79,7 +79,7 @@ it("STD-3: baseQuery passes a 422's field errors to the component without redire
   expect(store.getState().toast).toBeNull();
 });
 
-it("baseQuery: GET returns parsed JSON; PATCH sends a JSON body and a 204 gives null", async () => {
+it("baseQuery: GET returns parsed JSON", async () => {
   const me = {
     username: "sam",
     fullName: "Sam Lee",
@@ -94,19 +94,4 @@ it("baseQuery: GET returns parsed JSON; PATCH sends a JSON body and a 204 gives 
 
   expect(result.data).toEqual(me);
   expect(fetch).toHaveBeenCalledWith("/api/me", expect.anything());
-
-  respondWith(204);
-  const changed = await storeAt("/project/WEB/detail").store.dispatch(
-    api.endpoints.updateProject.initiate({ key: "WEB", description: "Goals", descriptionVersion: 0 }),
-  );
-
-  expect(changed.data).toBeNull();
-  expect(fetch).toHaveBeenCalledWith(
-    "/api/projects/WEB",
-    expect.objectContaining({
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ description: "Goals", descriptionVersion: 0 }),
-    }),
-  );
 });
