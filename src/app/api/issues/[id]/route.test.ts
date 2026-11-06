@@ -13,7 +13,7 @@ import {
   notificationBatches,
   notificationDeliveries,
   notifications,
-} from "../../../../server/notifications";
+} from "../../../../infrastructure/notifications/tables";
 import {
   createIssue,
   createLabel,

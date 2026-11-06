@@ -11,7 +11,7 @@ import type { Transaction } from "../../infrastructure/transaction";
 import { updateIssue } from "../../application/issues/update-issue";
 import { issueWork } from "../../infrastructure/issues/issue-work";
 import { issues } from "../../infrastructure/issues/tables";
-import { notificationSenders } from "./notification-channels";
+import { notificationSenders } from "./channels";
 import { members, type Member } from "../../infrastructure/identity/tables";
 import {
   notificationBatches,
@@ -19,7 +19,9 @@ import {
   notifications,
   workerHeartbeats,
 } from "../../infrastructure/notifications/tables";
-import { runWorker, sendDueDeliveries } from "./handlers/run-worker";
+import { runWorker } from "./run-worker";
+import { sendDueDeliveries } from "../../application/notifications/send-due-deliveries";
+import { deliveryServices } from "./services";
 import { IssueId, Username } from "../../domain/shared/identifiers";
 
 beforeEach(() => {
@@ -108,7 +110,7 @@ function mailTo(member: { email: string }) {
 }
 
 async function sendAllDue() {
-  while ((await sendDueDeliveries()) > 0) {}
+  while ((await sendDueDeliveries(deliveryServices)) > 0) {}
 }
 
 async function leaseEndsIn(member: { id: string }, interval: string) {
@@ -161,7 +163,7 @@ async function recordingSentWorks() {
 async function dropCheckQueriesOfOnePass() {
   const execute = vi.spyOn(PostgresJsPreparedQuery.prototype, "execute");
   try {
-    await sendDueDeliveries();
+    await sendDueDeliveries(deliveryServices);
     const queries = execute.mock.contexts.map((query) => (query as { queryString: string }).queryString);
     return queries.filter((query) =>
       /^select [\s\S]* from "(members|notifications|issues|projects|mentions)"/.test(query),
@@ -436,7 +438,7 @@ it("OPS-007.6, §1.4: an unexpected error in one delivery logs one delivery-fail
 
   await recordingSentFails(samEmail.id);
   try {
-    await sendDueDeliveries();
+    await sendDueDeliveries(deliveryServices);
   } finally {
     await recordingSentWorks();
   }
@@ -515,7 +517,7 @@ it("§1.4: a pass whose lease was taken over doesn't overwrite the newer pass's 
     return send(...args);
   });
 
-  await sendDueDeliveries();
+  await sendDueDeliveries(deliveryServices);
 
   expect(await emailsOf(sam)).toEqual([expect.objectContaining({ state: "pending", attempts: 0 })]);
 });
