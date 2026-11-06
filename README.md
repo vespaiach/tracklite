@@ -45,9 +45,9 @@ Tests are named after the spec example they prove, e.g. `it("REQ-016.4: concurre
 
 ### Browser app
 
-The app is a strict single-page app. Every page address returns the same HTML shell (`src/app/(signed-in)/[[...path]]/page.tsx`, behind a layout that sends a signed-out visitor to `/sign-in?next=…`), which loads `<ClientApp />` in the browser only. From there:
+The signed-out pages (`/sign-in`, `/forgot-password`, `/reset-password`, `/invite`, `/welcome`) render on the server from `src/app/(signed-out)/` and post their forms to server actions. Every other page address returns the same HTML shell (`src/app/(signed-in)/[[...path]]/page.tsx`, behind a layout that sends a signed-out visitor to `/sign-in?next=…`), which loads `<ClientApp />` in the browser only. From there:
 
-- **React Router** (data mode, lazy routes) does the routing and the signed-out redirect to `/sign-in?next=…`.
+- **React Router** (data mode, lazy routes) does the routing; a `401` loads `/sign-in?next=…` as a new page.
 - **RTK Query** holds all server data and loads it through `/api`. Screens refetch when opened; there is no polling. Board moves are optimistic and roll back on failure.
 - **Redux** has one UI slice, for toasts. List filters live in the URL and form drafts in component state.
 
