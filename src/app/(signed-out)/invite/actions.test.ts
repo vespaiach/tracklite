@@ -5,7 +5,7 @@ import { db } from "../../../infrastructure/db";
 import { outbox } from "../../../infrastructure/email/outbox";
 import { sessionCookieName } from "../../../infrastructure/identity/session";
 import { members, sessions } from "../../../infrastructure/identity/tables";
-import { fromNewIp, sessionCookieWritten } from "../../../test/actions";
+import { fromNewIp, sessionCookieWritten, signedInWith } from "../../../test/actions";
 import { createMember } from "../../../test/factories";
 import {
   invitedBy,
@@ -17,7 +17,6 @@ import {
   signedInAdmin,
   uniqueEmail,
 } from "../../../test/invitations";
-import { GET as getMe } from "../../api/me/route";
 import { acceptInvitation } from "./actions";
 
 beforeEach(() => {
@@ -70,11 +69,12 @@ it("REQ-002.1, REQ-003.1: Sam accepts on day 3 with username Sam, saved as sam, 
 
   expect(await accept(profileFor(token, username.replace("sam", "Sam")))).toEqual({ ok: true, data: null });
 
-  const me = await getMe(
-    new Request("http://localhost:3000/api/me", { headers: { Cookie: sessionCookieWritten() ?? "" } }),
-  );
-  expect(me.status).toBe(200);
-  expect(await me.json()).toMatchObject({ username, email, fullName: "Sam Lee", role: "member" });
+  expect(await signedInWith(sessionCookieWritten())).toMatchObject({
+    username,
+    email,
+    fullName: "Sam Lee",
+    role: "member",
+  });
   expect(await lookUp(token)).toHaveProperty("expired");
 });
 

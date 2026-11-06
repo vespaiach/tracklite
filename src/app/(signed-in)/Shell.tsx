@@ -3,6 +3,7 @@
 import { Archive, CircleUser, Folder, Inbox, LogOut, Plus, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { confirmLeave } from "../../components/leave-guard";
 import { useToast } from "../../components/toast";
 import {
   AppShell,
@@ -204,10 +205,16 @@ export function ProjectLinks({
 
 const couldNotSignOut = "Couldn’t save. Try again.";
 
+function openProfile() {
+  if (confirmLeave()) loadPage("/settings/profile");
+}
+
 function MemberMenu({ me, signOut }: { me: Me; signOut: FormAction }) {
   const toast = useToast();
 
   async function signOutAndLeave() {
+    if (!confirmLeave()) return;
+
     try {
       await signOut(new FormData());
     } catch {
@@ -230,7 +237,7 @@ function MemberMenu({ me, signOut }: { me: Me; signOut: FormAction }) {
           <Lbl>{me.fullName}</Lbl>
         </>
       }
-      onAction={(key) => (key === "profile" ? loadPage("/settings/profile") : signOutAndLeave())}>
+      onAction={(key) => (key === "profile" ? openProfile() : signOutAndLeave())}>
       <MenuItem
         id="profile"
         icon={<CircleUser size={14} />}>

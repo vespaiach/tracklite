@@ -15,22 +15,6 @@ export function sessionCookieName() {
   return isProduction() ? "__Host-session" : "session";
 }
 
-function cookieWith(value: string, maxAgeSeconds: number) {
-  const attributes = [
-    `${sessionCookieName()}=${value}`,
-    "Path=/",
-    `Max-Age=${maxAgeSeconds}`,
-    "HttpOnly",
-    "SameSite=Lax",
-  ];
-  if (isProduction()) attributes.push("Secure");
-  return attributes.join("; ");
-}
-
-export function sessionCookie(token: string) {
-  return cookieWith(token, sessionMaxAgeSeconds);
-}
-
 export function sessionCookieOptions() {
   return {
     path: "/",
@@ -83,12 +67,6 @@ export async function signedInMember(request: Request) {
 
 export async function signedInMemberBy(token: string | undefined) {
   return (await findSession(token))?.member;
-}
-
-export async function requireMember(request: Request): Promise<{ member: Member; cookie?: string }> {
-  const token = readSessionToken(request);
-  const { member, renewed } = await requireSession(token);
-  return { member, cookie: renewed && token ? sessionCookie(token) : undefined };
 }
 
 export async function requireSession(

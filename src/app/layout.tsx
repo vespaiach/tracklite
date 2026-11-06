@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
+import { ErrorReporting } from "../components/ErrorReporting";
 import { ToastProvider } from "../components/toast";
 import "../components/ui/track-lite/styles/index.css";
 
@@ -19,7 +20,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       lang="en"
       className={`${text.variable} ${mono.variable}`}>
       <body>
-        <ToastProvider>{children}</ToastProvider>
+        <ErrorReporting>
+          <ToastProvider>{children}</ToastProvider>
+        </ErrorReporting>
       </body>
     </html>
   );

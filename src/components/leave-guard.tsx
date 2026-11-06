@@ -13,13 +13,20 @@ export function useLeaveGuard(message: string | null) {
     window.addEventListener("beforeunload", holdForPrompt);
     return () => {
       activeGuards.delete(guard);
-      window.removeEventListener("beforeunload", holdForPrompt);
     };
   }, [message]);
 }
 
 function holdForPrompt(event: BeforeUnloadEvent) {
-  event.preventDefault();
+  if (activeGuards.size > 0) event.preventDefault();
+}
+
+export function confirmLeave() {
+  const [guard] = activeGuards;
+  if (guard && !window.confirm(guard.message)) return false;
+
+  activeGuards.clear();
+  return true;
 }
 
 export function Link({ onNavigate, ...props }: ComponentProps<typeof NextLink>) {
@@ -27,8 +34,7 @@ export function Link({ onNavigate, ...props }: ComponentProps<typeof NextLink>) 
     <NextLink
       {...props}
       onNavigate={(event) => {
-        const [guard] = activeGuards;
-        if (guard && !window.confirm(guard.message)) return event.preventDefault();
+        if (!confirmLeave()) return event.preventDefault();
         onNavigate?.(event);
       }}
     />

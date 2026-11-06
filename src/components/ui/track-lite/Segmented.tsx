@@ -1,5 +1,6 @@
 import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import { cx } from "./cx";
+import { Link } from "../../leave-guard";
 
 export type ChoiceProps = Omit<ComponentProps<"input">, "type"> & { label?: ReactNode };
 
@@ -91,7 +92,7 @@ export function LinkTabs({ label, options, variant = "solid", className }: LinkT
       aria-label={label}
       className={cx("tl-seg", "tl-seg--compact", variant === "soft" && "tl-seg--soft", className)}>
       {options.map((option) => (
-        <a
+        <Link
           key={option.href}
           href={option.href}
           onClick={option.onClick}
@@ -106,7 +107,7 @@ export function LinkTabs({ label, options, variant = "solid", className }: LinkT
             </span>
           )}
           {option.label}
-        </a>
+        </Link>
       ))}
     </nav>
   );

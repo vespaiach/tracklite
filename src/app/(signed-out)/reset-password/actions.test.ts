@@ -2,10 +2,9 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { outbox } from "../../../infrastructure/email/outbox";
 import { createSession } from "../../../infrastructure/identity/session";
 import { hashPassword } from "../../../infrastructure/passwords";
-import { fromNewIp, outcome, sessionCookieWritten, signInAs } from "../../../test/actions";
+import { fromNewIp, outcome, sessionCookieWritten, signedInWith, signInAs } from "../../../test/actions";
 import { createMember } from "../../../test/factories";
 import { ageResetLink, resetTokenFor } from "../../../test/reset-links";
-import { GET as getMe } from "../../api/me/route";
 import { resetPassword } from "./actions";
 
 const oldPassword = "correct horse battery";
@@ -32,13 +31,6 @@ async function signInOutcome(email: string, password: string) {
   return outcome(await signInAs(email, password));
 }
 
-async function meStatus(cookie: string | undefined) {
-  const response = await getMe(
-    new Request("http://localhost:3000/api/me", { headers: cookie ? { Cookie: cookie } : {} }),
-  );
-  return response.status;
-}
-
 const expired = { ok: false, error: { kind: "expired", message: "This link has expired" } };
 
 async function expectExpired(result: Promise<unknown>) {
@@ -55,8 +47,8 @@ it("REQ-050.3, REQ-050.4, REQ-050.6, REQ-050.7: a valid new password 10 minutes 
 
   expect(await reset(token)).toEqual({ ok: true, data: null });
 
-  expect(await meStatus(sessionCookieWritten())).toBe(200);
-  expect(await meStatus(otherComputer)).toBe(401);
+  expect(await signedInWith(sessionCookieWritten())).toBeDefined();
+  expect(await signedInWith(otherComputer)).toBeUndefined();
   expect(await signInOutcome(sam.email, oldPassword)).toBe("invalid");
   expect(await signInOutcome(sam.email, newPassword)).toBe("ok");
   await expectExpired(reset(first, "yet another new password"));

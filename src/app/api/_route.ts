@@ -3,8 +3,6 @@ import { parseInput, unreadableInput } from "../_server/parse-input";
 import { DomainError, type DomainErrorKind } from "../../domain/shared/domain-error";
 import { readConfig } from "../../infrastructure/config";
 import { logError, logInfo } from "../../infrastructure/log";
-import type { Member } from "../../infrastructure/identity/tables";
-import { requireMember } from "../../infrastructure/identity/session";
 
 const statusOfKind: Record<DomainErrorKind, number> = {
   signedOut: 401,
@@ -53,29 +51,18 @@ async function readJsonObject(request: Request) {
 }
 
 type Outcome = { response: Response; failure?: { error: unknown } };
-type Caller = { username?: string; renewedCookie?: string };
+type Caller = { username?: string };
 type NameActor = (username: string) => void;
 type Handler<Args extends unknown[]> = (...args: Args) => Response | Promise<Response>;
 type AnyHandler = Handler<never[]>;
 type Route = (request: Request) => Promise<Response>;
 
-export function apiRoute(access: "public", handler: Handler<[Request, NameActor]>): Route;
+export function apiRoute(handler: Handler<[Request, NameActor]>): Route;
 export function apiRoute<Schema extends v.GenericSchema>(
-  access: "public",
   schema: Schema,
   handler: Handler<[Request, v.InferOutput<Schema>, NameActor]>,
 ): Route;
-export function apiRoute(access: "member", handler: Handler<[Request, Member]>): Route;
-export function apiRoute<Schema extends v.GenericSchema>(
-  access: "member",
-  schema: Schema,
-  handler: Handler<[Request, Member, v.InferOutput<Schema>]>,
-): Route;
-export function apiRoute(
-  access: "public" | "member",
-  schemaOrHandler: v.GenericSchema | AnyHandler,
-  schemaHandler?: AnyHandler,
-) {
+export function apiRoute(schemaOrHandler: v.GenericSchema | AnyHandler, schemaHandler?: AnyHandler) {
   const schema = schemaHandler ? (schemaOrHandler as v.GenericSchema) : undefined;
   const handler = (schemaHandler ?? schemaOrHandler) as Handler<unknown[]>;
 
@@ -85,18 +72,10 @@ export function apiRoute(
     if (isCrossSiteWrite(request))
       throw new DomainError("forbidden", "You don't have permission to do that.");
 
-    if (access === "public") {
-      const nameActor: NameActor = (username) => {
-        caller.username = username;
-      };
-      return handler(request, ...(await inputOf(request)), nameActor);
-    }
-
-    const session = await requireMember(request);
-    caller.username = session.member.username;
-    caller.renewedCookie = session.cookie;
-
-    return handler(request, session.member, ...(await inputOf(request)));
+    const nameActor: NameActor = (username) => {
+      caller.username = username;
+    };
+    return handler(request, ...(await inputOf(request)), nameActor);
   };
 
   return async (request: Request) => {
@@ -107,8 +86,6 @@ export function apiRoute(
       (response): Outcome => ({ response }),
       errorOutcome,
     );
-
-    if (caller.renewedCookie) response.headers.append("set-cookie", caller.renewedCookie);
 
     const method = request.method;
     const path = new URL(request.url).pathname;

@@ -1,5 +1,5 @@
 import { Avatar, AvatarStack, PickerItem, Pill } from "../components/ui/track-lite";
-import type { IssueLabel, MemberSummary } from "./api";
+import type { IssueLabel, MemberSummary } from "../contract";
 import { formatExact, formatUpdated } from "./dates";
 
 const labelsShown = 2;

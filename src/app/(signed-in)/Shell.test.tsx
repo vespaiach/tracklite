@@ -1,5 +1,7 @@
-import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { useLeaveGuard } from "../../components/leave-guard";
 import type { ActionResult, Me, ProjectSummary } from "../../contract";
 import { loadPage } from "../../lib/load-page";
 import { answering, done, pendingAction, refused, renderForm, sentFields } from "../../test/forms";
@@ -8,9 +10,28 @@ import { ProjectLinks, Shell } from "./Shell";
 const navigation = vi.hoisted(() => ({ pathname: "/my-issues" }));
 vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname }));
 vi.mock("../../lib/load-page", () => ({ loadPage: vi.fn() }));
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    onNavigate,
+    ...props
+  }: ComponentProps<"a"> & { href: string; onNavigate: (event: object) => void }) => (
+    <a
+      {...props}
+      href={href}
+      onClick={(event) => {
+        event.preventDefault();
+        onNavigate({ preventDefault: () => {} });
+      }}>
+      {children}
+    </a>
+  ),
+}));
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.mocked(loadPage).mockClear();
   navigation.pathname = "/my-issues";
 });
@@ -219,4 +240,29 @@ it("REQ-006, STD-9.3: Sign out in the member menu ends the session and loads /si
 
   expect(await screen.findByText("Couldn’t save. Try again.")).toBeTruthy();
   expect(loadPage).not.toHaveBeenCalled();
+});
+
+const unsentComment = "You have an unsent comment. Leave anyway?";
+
+function UnsentComment() {
+  useLeaveGuard(unsentComment);
+  return null;
+}
+
+it("REQ-035.1, REQ-035.3: with unsent text, another project, My issues, Profile and Sign out ask first, and Cancel stays", async () => {
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  const signOut = answering();
+  const sidebar = renderShell({ signOut });
+  render(<UnsentComment />);
+
+  fireEvent.click(sidebar.getByRole("link", { name: "API · API" }));
+  fireEvent.click(sidebar.getByRole("link", { name: "My issues" }));
+  fireEvent.click(sidebar.getByRole("button", { name: "Sam Lee" }));
+  fireEvent.click(within(await screen.findByRole("menu")).getByRole("menuitem", { name: "Profile" }));
+  fireEvent.click(sidebar.getByRole("button", { name: "Sam Lee" }));
+  fireEvent.click(within(await screen.findByRole("menu")).getByRole("menuitem", { name: "Sign out" }));
+
+  expect(confirm.mock.calls).toEqual(Array(4).fill([unsentComment]));
+  expect(loadPage).not.toHaveBeenCalled();
+  expect(signOut).not.toHaveBeenCalled();
 });

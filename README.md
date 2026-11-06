@@ -37,19 +37,20 @@ Tests are named after the spec example they prove, e.g. `it("REQ-016.4: concurre
 ```
 
 - **The reverse proxy** is part of the deployment, which lives outside this repository. It terminates TLS, sends HSTS and the security headers, sets `X-Forwarded-For`, and proxies to the web process.
-- **tracklite-web** is `next start`, the only app process. It serves the single-page-app shell, the JSON API under `/api`, the outbox run at `/api/cron/outbox`, `/health`, `/health/worker` and the email bounce webhook under `/webhooks`.
+- **tracklite-web** is `next start`, the only app process. It serves the server-rendered pages and their server actions, the browser error reports at `/api/client-errors`, the outbox run at `/api/cron/outbox`, `/health`, `/health/worker` and the email bounce webhook under `/webhooks`.
 - **The scheduler** (any cron-like service, part of the deployment) calls `POST /api/cron/outbox` once a minute with `Authorization: Bearer {CRON_SECRET}`. Each run, within 50 seconds, turns the events that actions wrote to the outbox into notifications, sends the due notification emails using `for update skip locked`, and once an hour deletes expired data.
 - **PostgreSQL 18** holds all state, including the outbox and the notification email queue.
 
 ### Browser app
 
-The signed-out pages (`/sign-in`, `/forgot-password`, `/reset-password`, `/invite`, `/welcome`) render on the server from `src/app/(signed-out)/` and post their forms to server actions. Signed-in pages sit in `src/app/(signed-in)/`, under a layout that sends a signed-out visitor to `/sign-in?next=…` and renders the shell and sidebar on the server. `/my-issues`, the settings pages (`/settings/profile`, `/settings/members`, `/settings/notifications`), the project board, list, details, labels and settings (`/project/{KEY}`, `/project/{KEY}/list`, `/project/{KEY}/detail`, `/project/{KEY}/labels`, `/project/{KEY}/settings`, under a project layout that renders the project header), `/projects/archived` and the issue page (`/issue/{ID}`) are server pages; every other address (`src/app/(signed-in)/[...path]/page.tsx`) loads `<ClientApp />` in the browser only. From there:
+The signed-out pages (`/sign-in`, `/forgot-password`, `/reset-password`, `/invite`, `/welcome`) render on the server from `src/app/(signed-out)/` and post their forms to server actions. Signed-in pages sit in `src/app/(signed-in)/`, under a layout that sends a signed-out visitor to `/sign-in?next=…` and renders the shell and sidebar on the server. `/my-issues`, the settings pages (`/settings/profile`, `/settings/members`, `/settings/notifications`), the project board, list, details, labels and settings (`/project/{KEY}`, `/project/{KEY}/list`, `/project/{KEY}/detail`, `/project/{KEY}/labels`, `/project/{KEY}/settings`, under a project layout that renders the project header), `/projects/archived` and the issue page (`/issue/{ID}`) are server pages; any other address (`src/app/(signed-in)/[...path]/page.tsx`) is Not found. Then:
 
-- **React Router** (data mode, lazy routes) does the routing; a `401` loads `/sign-in?next=…` as a new page.
-- **RTK Query** holds all server data and loads it through `/api`. Screens refetch when opened; there is no polling.
-- **Redux** has one UI slice, for toasts. List filters live in the URL and form drafts in component state.
+- Pages read on the server through `src/queries` and pass plain data to client components; each data region loads and fails on its own.
+- Writes are server actions that call one use case each and re-render the page with `refresh()`. There is no client-side data store and no polling.
+- Links use the App Router (`next/link`, through the leave-guard `Link`). List filters live in the URL, form drafts in component state, and toasts in a small React context.
+- `src/proxy.ts` sets the CSP and renews a session idle over an hour.
 
-There is no server-side data fetching in pages, so every read and write passes through the same API and the same permission checks.
+Pages and actions call the same use cases and queries, so every read and write passes the same permission checks.
 
 ### API
 
@@ -88,8 +89,8 @@ migrations/       drizzle-kit migrations
 | Area | Choice |
 |---|---|
 | Runtime | Node.js ≥ 24, TypeScript |
-| Web framework | Next.js 16 (App Router, used as an SPA host and API server) |
-| UI | React 19, React Router, Redux Toolkit and RTK Query, React Aria Components, Lucide icons (`lucide-react`), Tailwind CSS 4 with the Track Lite `tl-*` classes and tokens |
+| Web framework | Next.js 16 (App Router with React Server Components and server actions) |
+| UI | React 19, React Aria Components, Lucide icons (`lucide-react`), Tailwind CSS 4 with the Track Lite `tl-*` classes and tokens |
 | Validation | Valibot |
 | Database | PostgreSQL 18, Drizzle ORM over postgres.js, drizzle-kit migrations, `pg_trgm` for search |
 | Auth | Argon2id passwords (`@node-rs/argon2`), session cookies, tokens stored as sha256 hashes |

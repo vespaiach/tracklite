@@ -1,5 +1,6 @@
 import { signIn } from "../app/(signed-out)/sign-in/actions";
 import type { ActionResult } from "../contract";
+import { signedInMember } from "../infrastructure/identity/session";
 import { setNextRequest, writtenCookies } from "./next-request";
 import { uniqueIp } from "./reset-links";
 
@@ -14,6 +15,10 @@ export function fromNewIp(cookies: Record<string, string> = {}) {
 export async function signInAs(email: string, password: string) {
   fromNewIp();
   return signIn({ email, password });
+}
+
+export function signedInWith(cookie: string | undefined) {
+  return signedInMember(new Request("http://localhost:3000/", cookie ? { headers: { Cookie: cookie } } : {}));
 }
 
 export function sessionCookieWritten() {

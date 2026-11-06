@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { requireSession, sessionCookieName, sessionCookieOptions } from "./infrastructure/identity/session";
 
 export const requestPathHeader = "x-request-path";
 
@@ -17,7 +18,7 @@ function contentSecurityPolicy(nonce: string) {
   ].join("; ");
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const policy = contentSecurityPolicy(nonce);
 
@@ -28,7 +29,17 @@ export function proxy(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("content-security-policy", policy);
   response.headers.set("referrer-policy", "no-referrer");
+
+  await renewSession(request, response);
   return response;
+}
+
+async function renewSession(request: NextRequest, response: NextResponse) {
+  const token = request.cookies.get(sessionCookieName())?.value;
+  if (!token) return;
+
+  const { renewed } = await requireSession(token).catch(() => ({ renewed: false }));
+  if (renewed) response.cookies.set(sessionCookieName(), token, sessionCookieOptions());
 }
 
 export const config = {
