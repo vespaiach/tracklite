@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Version | v1.9 |
+| Version | v1.10 |
 | Date | 2026-11-06 |
 | Inputs | [`tracklite-spec.md`](tracklite-spec.md) (v0.40) · [`tech-design.md`](tech-design.md) · [`design-system.md`](design-system.md) · [DDD part 8: Next.js in practice](https://vespaiach.com/posts/ddd-part-8-nextjs-in-practice) |
 | Checks | `npm run lint` → `npm run typecheck` → `npm test` → `npm run build` |
