@@ -1,7 +1,7 @@
 import { revokeInvitation } from "../../../../application/identity/revoke-invitation";
 import { tryFrom, Uuid } from "../../../../domain/shared/identifiers";
 import { identityWork } from "../../../../infrastructure/identity/repositories";
-import { apiRoute } from "../../../../server/shared/api-route";
+import { apiRoute } from "../../_route";
 
 export async function DELETE(request: Request, { params }: RouteContext<"/api/invitations/[id]">) {
   const id = tryFrom(Uuid, (await params).id);

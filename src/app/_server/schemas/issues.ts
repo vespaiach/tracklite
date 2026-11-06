@@ -5,7 +5,7 @@ import { IssuePriority } from "../../../domain/issues/issue-priority";
 import { IssueStatus } from "../../../domain/issues/issue-status";
 import { IssueTitle } from "../../../domain/issues/issue-title";
 import { IssueId, RequestId, tryFrom, Username } from "../../../domain/shared/identifiers";
-import { descriptionText, descriptionVersion } from "../../../server/shared/schemas";
+import { descriptionText, descriptionVersion } from "./shared";
 
 const maxLabels = 10;
 const editableFields = ["title", "status", "priority", "assignees", "labelIds"];

@@ -4,7 +4,7 @@ import { LabelColor } from "../../../domain/projects/label-color";
 import { LabelName } from "../../../domain/projects/label-name";
 import { ProjectName } from "../../../domain/projects/project-name";
 import { ProjectKey } from "../../../domain/shared/identifiers";
-import { descriptionText, descriptionVersion } from "../../../server/shared/schemas";
+import { descriptionText, descriptionVersion } from "./shared";
 
 export const NewProject = v.object({ name: ProjectName.schema, key: ProjectKey.schema });
 

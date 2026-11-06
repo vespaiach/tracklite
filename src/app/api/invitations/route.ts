@@ -2,7 +2,7 @@ import { createInvitation } from "../../../application/identity/create-invitatio
 import type { Invitation } from "../../../contract";
 import { identityWork } from "../../../infrastructure/identity/repositories";
 import { listInvitations, openInvitation } from "../../../queries";
-import { apiRoute } from "../../../server/shared/api-route";
+import { apiRoute } from "../_route";
 import { NewInvitation } from "../../_server/schemas/identity";
 
 export const GET = apiRoute("member", async (_request, member) =>

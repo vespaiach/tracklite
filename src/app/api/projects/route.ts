@@ -3,7 +3,7 @@ import type { Project, ProjectSummary } from "../../../contract";
 import { db } from "../../../infrastructure/db";
 import { projectWork } from "../../../infrastructure/projects/project-work";
 import { listProjects, updatedProject } from "../../../queries";
-import { apiRoute } from "../../../server/shared/api-route";
+import { apiRoute } from "../_route";
 import { NewProject } from "../../_server/schemas/projects";
 
 export const GET = apiRoute("member", async (request, member) => {

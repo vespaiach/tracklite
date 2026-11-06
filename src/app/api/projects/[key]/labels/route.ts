@@ -4,7 +4,7 @@ import { ProjectKey, tryFrom } from "../../../../../domain/shared/identifiers";
 import { db } from "../../../../../infrastructure/db";
 import { projectWork } from "../../../../../infrastructure/projects/project-work";
 import { listLabels, updatedLabel } from "../../../../../queries";
-import { apiRoute } from "../../../../../server/shared/api-route";
+import { apiRoute } from "../../../_route";
 import { NewLabel } from "../../../../_server/schemas/projects";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]/labels">) {

@@ -4,7 +4,7 @@ import { Username } from "../../../domain/shared/identifiers";
 import { identityWork } from "../../../infrastructure/identity/repositories";
 import { memberProfile, profileResponse } from "../../../queries";
 import { ProfileChanges } from "../../_server/schemas/identity";
-import { apiRoute } from "../../../server/shared/api-route";
+import { apiRoute } from "../_route";
 
 export const GET = apiRoute("member", (_request, member) =>
   Response.json(profileResponse(member) satisfies Me),

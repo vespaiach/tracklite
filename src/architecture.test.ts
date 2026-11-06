@@ -13,10 +13,7 @@ const allowedDependencies: Record<string, string[]> = {
   identity: ["shared"],
   shared: [],
 };
-const allowedFileDependencies = [
-  "src/server/shared/api-route.ts -> identity",
-  "src/infrastructure/unit-of-work.ts -> notifications",
-];
+const allowedFileDependencies = ["src/infrastructure/unit-of-work.ts -> notifications"];
 const layerRules: Record<string, { mayImport: string; allows: (target: string) => boolean }> = {
   domain: {
     mayImport: "domain/**, src/contract, valibot and fractional-indexing",
@@ -36,12 +33,6 @@ const layerRules: Record<string, { mayImport: string; allows: (target: string) =
       (!target.startsWith("src/") && !/^next(?:\/|$)/.test(target)),
   },
 };
-const modelImportBans = [/^drizzle-orm(?:\/|$)/, /^next(?:\/|$)/];
-const modelModuleBans = [
-  "src/infrastructure/db",
-  "src/infrastructure/transaction",
-  "src/server/shared/api-route",
-];
 const tableWrite = /\.(?:insert|update|delete)\((\w+)\)/g;
 const importSpecifier = /(?:\bfrom|\bimport\(?|\bvi\.mock\()\s*["']([^"']+)["']/g;
 
@@ -50,7 +41,6 @@ const sourceFiles = execFileSync(
   [
     "ls-files",
     "-z",
-    "src/server",
     "src/domain",
     "src/application",
     "src/infrastructure",
@@ -82,7 +72,7 @@ function modulePath(path: string) {
 }
 
 function contextOf(path: string) {
-  const folder = /^src\/(?:server|domain|application|infrastructure)(?:\/([^/]+))?/.exec(path);
+  const folder = /^src\/(?:domain|application|infrastructure)(?:\/([^/]+))?/.exec(path);
   if (!folder) return undefined;
   return folder[1] !== undefined && folder[1] in allowedDependencies ? folder[1] : "shared";
 }
@@ -93,16 +83,6 @@ function layerOf(path: string) {
 
 function isTestCode(file: string) {
   return /\.test\.tsx?$/.test(file) || file.startsWith("src/test/");
-}
-
-function reachesPastIndex({ file, target }: Import) {
-  const context = /^src\/server\/([^/.]+)(?:\/|$)/.exec(target)?.[1];
-  return (
-    context !== undefined &&
-    context !== "shared" &&
-    context !== contextOf(file) &&
-    target !== `src/server/${context}`
-  );
 }
 
 function breaksContextMap({ file, target }: Import) {
@@ -140,23 +120,9 @@ function foreignTableWrites(owners: Map<string, string>) {
     .map(({ file, write, owner }) => `${file} calls ${write} on a table ${owner} owns`);
 }
 
-function bannedModelImports() {
-  return imports.filter(
-    ({ file, specifier, target }) =>
-      /^src\/server\/.+\/(?:model|rules)\.ts$/.test(file) &&
-      (specifier.startsWith(".")
-        ? modelModuleBans.includes(target)
-        : modelImportBans.some((ban) => ban.test(specifier))),
-  );
-}
-
 function describeImport({ file, specifier }: Pick<Import, "file" | "specifier">) {
   return `${file} imports "${specifier}"`;
 }
-
-it("M15: a context imports another only through its index.ts", () => {
-  expect(imports.filter(reachesPastIndex).map(describeImport)).toEqual([]);
-});
 
 it("M15: context dependencies follow the context map", () => {
   expect(imports.filter(breaksContextMap).map(describeImport)).toEqual([]);
@@ -167,10 +133,6 @@ it("M16: a context writes only its own tables", () => {
 
   expect(owners.size).toBe(20);
   expect(foreignTableWrites(owners)).toEqual([]);
-});
-
-it("G02: model and rules files import no database, HTTP or framework code", () => {
-  expect(bannedModelImports().map(describeImport)).toEqual([]);
 });
 
 for (const [layer, { mayImport }] of Object.entries(layerRules)) {

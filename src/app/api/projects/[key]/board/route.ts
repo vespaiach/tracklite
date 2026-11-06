@@ -1,6 +1,6 @@
 import type { Board } from "../../../../../contract";
 import { ProjectKey, tryFrom } from "../../../../../domain/shared/identifiers";
-import { apiRoute } from "../../../../../server/shared/api-route";
+import { apiRoute } from "../../../_route";
 import { getBoard } from "../../../../../queries";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]/board">) {

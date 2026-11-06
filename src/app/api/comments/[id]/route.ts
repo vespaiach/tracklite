@@ -5,7 +5,7 @@ import { tryFrom, Uuid } from "../../../../domain/shared/identifiers";
 import { commentWork } from "../../../../infrastructure/comments/comment-work";
 import { db } from "../../../../infrastructure/db";
 import { updatedComment } from "../../../../queries";
-import { apiRoute } from "../../../../server/shared/api-route";
+import { apiRoute } from "../../_route";
 import { CommentEdit } from "../../../_server/schemas/comments";
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/comments/[id]">) {

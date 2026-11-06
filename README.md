@@ -53,16 +53,16 @@ There is no server-side data fetching in pages, so every read and write passes t
 
 ### API
 
-Each route handler is wrapped in `apiRoute` ([src/server/shared/api-route.ts](src/server/shared/api-route.ts)), which:
+Each remaining `/api` route handler is wrapped in `apiRoute` ([src/app/api/_route.ts](src/app/api/_route.ts)), which:
 
 1. rejects cross-site writes with `403`;
 2. authenticates the session (`401`), unless the route is public;
-3. validates the JSON body against a Valibot schema from the context's `schemas.ts` (`422`);
-4. calls one domain function in `src/server/`, passing the signed-in member as `actor`;
+3. validates the JSON body against a Valibot schema from `src/app/_server/schemas/<context>.ts` (`422`);
+4. calls one use case in `src/application/`, passing the signed-in member as `actor`;
 5. maps a thrown `DomainError` by its kind to `{ error: { message, fields? } }`;
 6. writes one JSON log line, without bodies or tokens.
 
-Routes never check roles. The domain functions are the only permission layer: admin-only functions start with `assertAdmin(actor)`, and ownership checks run once the row is loaded (`docs/tech-design.md` §4.10). Each domain function opens its own transaction, so an action and the notification rows it creates commit together.
+Routes never check roles. The use cases and entities are the only permission layer: admin-only use cases start with `assertAdmin(actor)`, and ownership checks run once the row is loaded (`docs/tech-design.md` §4.10). Each use case runs in one unit of work, so an action and the outbox events it records commit together.
 
 Every expiry and time-window check uses the database's `now()`, never the app server's clock.
 
@@ -70,11 +70,13 @@ Every expiry and time-window check uses the database's `now()`, never the app se
 
 ```
 src/
-  app/            Next.js routes: the page shell, /api, /health, /webhooks
+  app/            Next.js routes: pages, actions, /api, /health, /webhooks
   client/         the browser app: store, API slice, routes, screens
   components/ui/  the Track Lite design system
-  schemas/        Valibot request body schemas
-  server/         domain functions, database schema, email
+  domain/         entities, value objects, repository interfaces, events
+  application/    use cases
+  infrastructure/ database, tables, repositories, outbox, email
+  queries/        read-only SQL behind pages
   lib/markdown/   Markdown rendering and mention parsing
   test/           test harness and data factories
 scripts/          cron, migrations and seed commands
@@ -124,7 +126,7 @@ npm run db:reset
 npm run dev
 ```
 
-Open http://localhost:3000 and sign in as one of the seeded members (the password is in `src/server/identity/seed.ts`). To send notification emails, call the outbox run every minute from a second terminal (it uses `APP_URL` and `CRON_SECRET` from `.env.local`):
+Open http://localhost:3000 and sign in as one of the seeded members (the password is in `src/infrastructure/identity/seed.ts`). To send notification emails, call the outbox run every minute from a second terminal (it uses `APP_URL` and `CRON_SECRET` from `.env.local`):
 
 ```bash
 npm run cron
