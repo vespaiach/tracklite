@@ -1,13 +1,10 @@
 import "server-only";
 import { isIP } from "node:net";
 import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
-import { DomainError } from "../../domain/shared/domain-error";
-import { db } from "../../infrastructure/db";
-import {
-  clientErrorReports,
-  passwordResetRequests,
-  signInAttempts,
-} from "../../infrastructure/identity/tables";
+import type { SignInLimits } from "../../application/identity/ports";
+import { db } from "../db";
+import type { Executor } from "../transaction";
+import { clientErrorReports, passwordResetRequests, signInAttempts } from "./tables";
 
 const failedSignInsPerEmail = 10;
 const failedSignInsPerIp = 30;
@@ -20,16 +17,13 @@ export function clientIp(request: Request) {
   return rightmost && isIP(rightmost) ? rightmost : "127.0.0.1";
 }
 
-export function tooManyAttempts() {
-  return new DomainError("limited", "Too many attempts. Try again later.");
-}
-
 async function lastHourCounts(
+  executor: Executor,
   table: typeof signInAttempts | typeof passwordResetRequests,
   email: string,
   ip: string,
 ) {
-  const [counts] = await db
+  const [counts] = await executor
     .select({
       byEmail: sql<number>`(count(*) filter (where ${table.email} = ${email}))::int`,
       byIp: sql<number>`(count(*) filter (where ${table.ip} = ${ip}))::int`,
@@ -41,17 +35,20 @@ async function lastHourCounts(
   return counts;
 }
 
-export async function signInLimitReached(email: string, ip: string) {
-  const counts = await lastHourCounts(signInAttempts, email, ip);
-  return counts.byEmail >= failedSignInsPerEmail || counts.byIp >= failedSignInsPerIp;
-}
-
-export async function recordFailedSignIn(email: string, ip: string) {
-  await db.insert(signInAttempts).values({ email, ip });
+export function signInLimits(executor: Executor): SignInLimits {
+  return {
+    async reached(email, ip) {
+      const counts = await lastHourCounts(executor, signInAttempts, email, ip);
+      return counts.byEmail >= failedSignInsPerEmail || counts.byIp >= failedSignInsPerIp;
+    },
+    async recordFailure(email, ip) {
+      await executor.insert(signInAttempts).values({ email, ip });
+    },
+  };
 }
 
 export async function resetRequestLimitReached(email: string, ip: string) {
-  const counts = await lastHourCounts(passwordResetRequests, email, ip);
+  const counts = await lastHourCounts(db, passwordResetRequests, email, ip);
   return counts.byEmail >= resetRequestsPerEmail || counts.byIp >= resetRequestsPerIp;
 }
 

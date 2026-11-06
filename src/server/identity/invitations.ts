@@ -7,7 +7,7 @@ import { invitationEmail } from "../../infrastructure/email/templates";
 import type { Invitation } from "../../contract";
 import { memberSummary } from "./members";
 import { invitations, members } from "../../infrastructure/identity/tables";
-import type { Member } from "./sessions";
+import type { Member } from "../../infrastructure/identity/tables";
 import { createToken, hashToken } from "../../infrastructure/tokens";
 import type { Executor } from "../../infrastructure/transaction";
 import { checkInvitationLink } from "./rules";

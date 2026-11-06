@@ -1,7 +1,8 @@
 import "server-only";
 import { db } from "../../../infrastructure/db";
 import { invitations } from "../../../infrastructure/identity/tables";
-import { assertAdmin, type Member } from "../sessions";
+import { assertAdmin } from "../../../domain/identity/actor";
+import type { Member } from "../../../infrastructure/identity/tables";
 import { invitationResponse, isOpen, openInvitations } from "../invitations";
 
 export async function listInvitations(actor: Member) {

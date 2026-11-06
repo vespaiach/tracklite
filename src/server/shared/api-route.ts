@@ -2,7 +2,8 @@ import * as v from "valibot";
 import { DomainError, type DomainErrorKind } from "../../domain/shared/domain-error";
 import { readConfig } from "../../infrastructure/config";
 import { logError, logInfo } from "../../infrastructure/log";
-import { type Member, requireMember } from "../identity";
+import type { Member } from "../../infrastructure/identity/tables";
+import { requireMember } from "../../infrastructure/identity/session";
 import "../notifications";
 
 const statusOfKind: Record<DomainErrorKind, number> = {

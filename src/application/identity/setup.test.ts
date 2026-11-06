@@ -4,12 +4,13 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { GET as getMe } from "../../app/api/me/route";
 import { POST as signIn } from "../../app/api/sessions/route";
 import { POST as postSetup } from "../../app/api/setup/route";
-import { jsonRequest } from "../../test/reset-links";
 import { db } from "../../infrastructure/db";
-import { FirstAdmin } from "./schemas";
+import { identityWork } from "../../infrastructure/identity/repositories";
 import { members } from "../../infrastructure/identity/tables";
-import { checkSetupSecret } from "./commands/check-setup-secret";
-import { createFirstAdmin } from "./commands/create-first-admin";
+import { FirstAdmin } from "../../server/identity";
+import { jsonRequest } from "../../test/reset-links";
+import { checkSetupSecret as checkSecret } from "./check-setup-secret";
+import { createFirstAdmin } from "./create-first-admin";
 
 const secret = "s3tup-secret-that-is-long-enough-to-pass";
 
@@ -37,15 +38,22 @@ async function memberCount() {
 }
 
 function firstAdmin(changes: Partial<typeof admin> = {}) {
-  return createFirstAdmin(v.parse(FirstAdmin, { ...admin, ...changes }));
+  return createFirstAdmin(identityWork, v.parse(FirstAdmin, { ...admin, ...changes }));
+}
+
+function checkSetupSecret(secret: string) {
+  return checkSecret(identityWork, secret);
 }
 
 it('OPS-001.1, REQ-003.1: the right secret creates admin "Sam" as "sam", signed in, and the email and password sign in again', async () => {
   await expect(checkSetupSecret(secret)).resolves.toBeUndefined();
 
-  const { member, sessionToken } = await firstAdmin({ username: "Sam" });
+  const { username, sessionToken } = await firstAdmin({ username: "Sam" });
 
-  expect(member).toMatchObject({ email: "owner@x.com", fullName: "Sam Lee", username: "sam", role: "admin" });
+  expect(username.value).toBe("sam");
+  expect(await db.select().from(members)).toMatchObject([
+    { email: "owner@x.com", fullName: "Sam Lee", username: "sam", role: "admin" },
+  ]);
   const me = await getMe(
     new Request("http://localhost:3000/api/me", { headers: { Cookie: `session=${sessionToken}` } }),
   );
