@@ -1,3 +1,5 @@
+"use client";
+
 import { Ellipsis } from "lucide-react";
 import {
   type FormEvent,
@@ -8,6 +10,12 @@ import {
   useRef,
   useState,
 } from "react";
+import { formatExact, formatUpdated } from "../client/dates";
+import { useReturnFocus } from "../client/useReturnFocus";
+import type { ActionError, ActionResult, MemberSummary, ThreadComment } from "../contract";
+import { Markdown } from "../lib/markdown/Markdown";
+import { useLeaveGuard } from "./leave-guard";
+import { useToast } from "./toast";
 import {
   Avatar,
   Button,
@@ -20,35 +28,33 @@ import {
   Menu,
   MenuItem,
   SettingsActions,
-} from "../components/ui/track-lite";
-import { Markdown } from "../lib/markdown/Markdown";
-import { useLeaveGuard } from "../components/leave-guard";
-import { useToast } from "../components/toast";
-import type { ActionError, ActionResult, MemberSummary, ThreadComment } from "../contract";
-import { settled } from "./action-result";
-import { formatExact, formatUpdated } from "./dates";
+} from "./ui/track-lite";
 import { useMentions } from "./useMentions";
-import { useReturnFocus } from "./useReturnFocus";
+import { useRequestId } from "./useRequestId";
 
-type Saved = Promise<ActionResult<unknown>>;
+type Outcome = Promise<ActionResult<unknown>>;
 
 export type CommentActions = {
-  postComment: (comment: { requestId: string; body: string }) => Saved;
-  editComment: (change: { id: string; body: string; version: number }) => Saved;
-  deleteComment: (id: string) => Saved;
+  postComment: (comment: { id: string; requestId: string; body: string }) => Outcome;
+  editComment: (edit: { id: string; body: string; version: number }) => Outcome;
+  deleteComment: (comment: { id: string }) => Outcome;
 };
 
 export type CommentThreadProps = CommentActions & {
+  threadId: string;
   comments: ThreadComment[];
-  editable: boolean;
-  me: string;
-  admin: boolean;
+  me: { username: string; admin: boolean };
   members: MemberSummary[];
+  editable: boolean;
 };
 
-type Viewer = Omit<CommentThreadProps, "comments" | "editable">;
+const couldNotSave = "Couldn’t save. Try again.";
 
-export function CommentThread({ comments, editable, ...viewer }: CommentThreadProps) {
+function bodyError({ kind, message, fields }: ActionError) {
+  return kind === "invalid" ? (fields?.body ?? message) : undefined;
+}
+
+export function CommentThread({ threadId, comments, editable, ...shared }: CommentThreadProps) {
   const linked = useLinkedComment();
   return (
     <CommentList>
@@ -61,10 +67,16 @@ export function CommentThread({ comments, editable, ...viewer }: CommentThreadPr
           comment={comment}
           editable={editable}
           highlighted={comment.id === linked}
-          viewer={viewer}
+          {...shared}
         />
       ))}
-      {editable && <CommentBox viewer={viewer} />}
+      {editable && (
+        <CommentBox
+          threadId={threadId}
+          members={shared.members}
+          postComment={shared.postComment}
+        />
+      )}
     </CommentList>
   );
 }
@@ -80,6 +92,7 @@ function useLinkedComment() {
     const id = hash.slice(linkPrefix.length);
     const target = document.getElementById(`comment-${id}`);
     if (!target) return;
+
     target.scrollIntoView({ block: "center" });
     setHighlighted(id);
     const fade = setTimeout(() => setHighlighted(undefined), 2000);
@@ -93,29 +106,33 @@ function authorName({ author }: ThreadComment) {
   return author.deactivated ? `${author.fullName} (deactivated)` : author.fullName;
 }
 
+type CommentItemProps = Omit<CommentThreadProps, "threadId" | "comments"> & {
+  comment: ThreadComment;
+  highlighted: boolean;
+};
+
 function CommentItem({
   comment,
   editable,
   highlighted,
-  viewer,
-}: {
-  comment: ThreadComment;
-  editable: boolean;
-  highlighted: boolean;
-  viewer: Viewer;
-}) {
+  me,
+  members,
+  editComment,
+  deleteComment,
+}: CommentItemProps) {
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const options = useReturnFocus<HTMLButtonElement>(editing);
-  const own = viewer.me === comment.author.username;
+  const own = me.username === comment.author.username;
   const canEdit = editable && own;
-  const canDelete = editable && (own || viewer.admin);
+  const canDelete = editable && (own || me.admin);
 
   if (editing) {
     return (
       <EditComment
         comment={comment}
-        viewer={viewer}
+        members={members}
+        editComment={editComment}
         onDone={() => setEditing(false)}
       />
     );
@@ -164,7 +181,7 @@ function CommentItem({
       {confirming && (
         <DeleteComment
           comment={comment}
-          deleteComment={viewer.deleteComment}
+          deleteComment={deleteComment}
           onCancel={() => setConfirming(false)}
         />
       )}
@@ -181,8 +198,8 @@ function DeleteComment({
   deleteComment: CommentActions["deleteComment"];
   onCancel: () => void;
 }) {
-  const [isLoading, setLoading] = useState(false);
   const toast = useToast();
+  const [deleting, setDeleting] = useState(false);
   const cancel = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -190,12 +207,12 @@ function DeleteComment({
   }, []);
 
   async function confirm() {
-    setLoading(true);
-    const result = await settled(deleteComment(comment.id));
-    setLoading(false);
-    if (result.ok) return;
+    setDeleting(true);
+    const result = await deleteComment({ id: comment.id }).catch(() => undefined);
+    if (result?.ok) return;
 
-    toast(result.error.message);
+    setDeleting(false);
+    toast(result ? result.error.message : couldNotSave);
     onCancel();
   }
 
@@ -214,8 +231,8 @@ function DeleteComment({
           </Button>
           <Button
             variant="danger"
-            disabled={isLoading}
-            aria-busy={isLoading || undefined}
+            disabled={deleting}
+            aria-busy={deleting || undefined}
             onClick={confirm}>
             Delete
           </Button>
@@ -226,33 +243,33 @@ function DeleteComment({
   );
 }
 
-function bodyError(error: ActionError) {
-  return error.kind === "invalid" ? (error.fields?.body ?? error.message) : undefined;
-}
-
 function EditComment({
   comment,
-  viewer,
+  members,
+  editComment,
   onDone,
 }: {
   comment: ThreadComment;
-  viewer: Viewer;
+  members: MemberSummary[];
+  editComment: CommentActions["editComment"];
   onDone: () => void;
 }) {
-  const [isLoading, setLoading] = useState(false);
   const toast = useToast();
   const [text, setText] = useState(comment.body);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
   const [conflict, setConflict] = useState<string>();
 
   async function save() {
     setError(undefined);
     setConflict(undefined);
-    setLoading(true);
-    const result = await settled(
-      viewer.editComment({ id: comment.id, body: text, version: comment.version }),
+    setSaving(true);
+
+    const result = await editComment({ id: comment.id, body: text, version: comment.version }).catch(
+      () => undefined,
     );
-    setLoading(false);
+    setSaving(false);
+    if (!result) return toast(couldNotSave);
     if (result.ok) return onDone();
 
     const fieldError = bodyError(result.error);
@@ -264,12 +281,12 @@ function EditComment({
   return (
     <CommentForm
       label="Edit comment (Markdown)"
-      members={viewer.members}
       text={text}
+      members={members}
       onChange={setText}
       onSubmit={save}
       onEscape={onDone}
-      saving={isLoading}
+      saving={saving}
       error={error}
       notice={
         conflict && (
@@ -290,9 +307,9 @@ function EditComment({
             size="sm"
             variant="primary"
             type="submit"
-            disabled={isLoading}
-            aria-busy={isLoading || undefined}>
-            {isLoading ? "Saving…" : "Save"}
+            disabled={saving}
+            aria-busy={saving || undefined}>
+            {saving ? "Saving…" : "Save"}
           </Button>
         </SettingsActions>
       }
@@ -300,48 +317,58 @@ function EditComment({
   );
 }
 
-function CommentBox({ viewer }: { viewer: Viewer }) {
-  const [isLoading, setLoading] = useState(false);
+function CommentBox({
+  threadId,
+  members,
+  postComment,
+}: {
+  threadId: string;
+  members: MemberSummary[];
+  postComment: CommentActions["postComment"];
+}) {
   const toast = useToast();
   const [text, setText] = useState("");
-  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  const [requestId, renewRequestId] = useRequestId();
+  const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string>();
   useLeaveGuard(text.trim() !== "" ? "You have an unsent comment. Leave anyway?" : null);
 
   async function post() {
     setError(undefined);
-    setLoading(true);
-    const result = await settled(viewer.postComment({ requestId, body: text }));
-    setLoading(false);
+    setPosting(true);
 
+    const result = await postComment({ id: threadId, requestId, body: text }).catch(() => undefined);
+    setPosting(false);
+    if (!result) return toast(couldNotSave);
     if (result.ok) {
       setText("");
-      setRequestId(crypto.randomUUID());
-    } else {
-      const fieldError = bodyError(result.error);
-      if (fieldError) setError(fieldError);
-      else toast(result.error.message);
+      renewRequestId();
+      return;
     }
+
+    const fieldError = bodyError(result.error);
+    if (fieldError) setError(fieldError);
+    else toast(result.error.message);
   }
 
   return (
     <CommentForm
       label="Comment (Markdown)"
-      members={viewer.members}
       placeholder="Leave a comment…"
       text={text}
+      members={members}
       onChange={setText}
       onSubmit={post}
-      saving={isLoading}
+      saving={posting}
       error={error}
       actions={
         <Button
           size="sm"
           variant="primary"
           type="submit"
-          disabled={isLoading || text.trim() === ""}
-          aria-busy={isLoading || undefined}>
-          {isLoading ? "Posting…" : "Post"}
+          disabled={posting || text.trim() === ""}
+          aria-busy={posting || undefined}>
+          {posting ? "Posting…" : "Post"}
         </Button>
       }
     />
@@ -350,9 +377,9 @@ function CommentBox({ viewer }: { viewer: Viewer }) {
 
 function CommentForm({
   label,
-  members,
   placeholder,
   text,
+  members,
   onChange,
   onSubmit,
   onEscape,
@@ -363,9 +390,9 @@ function CommentForm({
   actions,
 }: {
   label: string;
-  members: MemberSummary[];
   placeholder?: string;
   text: string;
+  members: MemberSummary[];
   onChange: (text: string) => void;
   onSubmit: () => Promise<void>;
   onEscape?: () => void;

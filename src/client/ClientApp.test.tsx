@@ -2,11 +2,15 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import ClientApp from "./ClientApp";
 
-vi.mock("./screens/Issue", () => ({
-  IssuePage: () => {
-    throw new Error("render failed");
-  },
-}));
+vi.mock("../app/(signed-in)/not-found", async (importOriginal) => {
+  const { default: NotFound } = await importOriginal<typeof import("../app/(signed-in)/not-found")>();
+  return {
+    default: () => {
+      if (window.location.pathname === "/crashing") throw new Error("render failed");
+      return <NotFound />;
+    },
+  };
+});
 
 const sam = {
   username: "sam",
@@ -31,7 +35,7 @@ afterEach(() => {
 
 function renderAt(path: string) {
   window.history.replaceState(null, "", path);
-  return render(<ClientApp createIssue={vi.fn()} />);
+  return render(<ClientApp />);
 }
 
 it("M0.4, STD-4: an unknown address shows Not found, with a “Go to My issues” link that loads /my-issues", async () => {
@@ -58,12 +62,12 @@ it("OPS-008.1: an uncaught error or unhandled rejection on the page is reported 
 });
 
 it("STD-10.1: a page that crashes while rendering shows the crash screen and reports page-crashed", async () => {
-  renderAt("/issue/WEB-42");
+  renderAt("/crashing");
 
   expect(await screen.findByRole("heading", { name: "Something went wrong" })).toBeTruthy();
   const reports = vi
     .mocked(fetch)
     .mock.calls.filter(([, init]) => init?.method === "POST")
     .map(([, init]) => JSON.parse(init?.body as string));
-  expect(reports).toMatchObject([{ event: "page-crashed", message: "render failed", page: "/issue/WEB-42" }]);
+  expect(reports).toMatchObject([{ event: "page-crashed", message: "render failed", page: "/crashing" }]);
 });

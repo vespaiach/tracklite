@@ -13,7 +13,7 @@ import { notificationBatches, notifications } from "../../../../infrastructure/n
 import type { Member } from "../../../../infrastructure/identity/tables";
 import { projects } from "../../../../infrastructure/projects/tables";
 import type { issueStatus } from "../../../../infrastructure/schema";
-import { getBoard, getIssue } from "../../../../queries";
+import { findIssueById, getBoard } from "../../../../queries";
 import { createIssue as createStored, createMember, createProject } from "../../../../test/factories";
 import { recordEvents } from "../../../../test/outbox";
 import { setNextRequest } from "../../../../test/next-request";
@@ -89,7 +89,7 @@ it("REQ-016.1: the first issue in WEB is WEB-1, Backlog, No priority, unassigned
 
   expect(id).toBe(`${project.key}-1`);
   expect(refresh).toHaveBeenCalledOnce();
-  expect(await getIssue(sam, IssueId.from(id))).toEqual({
+  expect(await findIssueById(sam, IssueId.from(id))).toEqual({
     id,
     title: "Fix login button",
     description: "",
@@ -123,7 +123,7 @@ it("REQ-016.6, REQ-019.5: Sam creates an issue with Alex and Jo as assignees →
     }),
   );
 
-  expect((await getIssue(sam, IssueId.from(id))).assignees).toEqual([
+  expect((await findIssueById(sam, IssueId.from(id)))?.assignees).toEqual([
     memberSummary(alex),
     memberSummary(jo),
     memberSummary(sam),

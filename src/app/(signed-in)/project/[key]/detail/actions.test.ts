@@ -13,7 +13,7 @@ import { getProject, listIssueComments, listProjectComments } from "../../../../
 import { outcome } from "../../../../../test/actions";
 import { createIssue, createMember, createProject } from "../../../../../test/factories";
 import { setNextRequest } from "../../../../../test/next-request";
-import { deleteComment, editComment, postComment, saveDescription } from "./actions";
+import { postComment, saveDescription } from "./actions";
 
 async function signedIn(overrides: Parameters<typeof createMember>[0] = {}) {
   const member = await createMember(overrides);
@@ -37,10 +37,6 @@ async function mentionedMemberIds(projectId: string) {
 
 function refusal(kind: string, message: string) {
   return { ok: false, error: { kind, message } };
-}
-
-function bodiesOf(thread: { body: string }[]) {
-  return thread.map((comment) => comment.body);
 }
 
 it("REQ-012.1, REQ-012.3, REQ-012: a member's description is stored as sent, whether markdown, <script>alert(1)</script> or empty, and the page is refreshed", async () => {
@@ -133,7 +129,7 @@ it("REQ-013.4, REQ-032.3: on an archived project, a description save and a comme
     description: "New text",
     descriptionVersion: 0,
   });
-  const posted = await postComment({ key: project.key, requestId: randomUUID(), body: "Too late" });
+  const posted = await postComment({ id: project.key, requestId: randomUUID(), body: "Too late" });
 
   for (const result of [described, posted])
     expect(result).toEqual(refusal("forbidden", "This project is archived"));
@@ -148,7 +144,7 @@ it("STD-4: a description save or a comment on an unknown project is Not found", 
     expect(await saveDescription({ key, description: "Hi", descriptionVersion: 0 })).toEqual(
       refusal("notFound", "Not found"),
     );
-    expect(await postComment({ key, requestId: randomUUID(), body: "Hi" })).toEqual(
+    expect(await postComment({ id: key, requestId: randomUUID(), body: "Hi" })).toEqual(
       refusal("notFound", "Not found"),
     );
   }
@@ -184,7 +180,7 @@ it("REQ-032.2, REQ-046.1: Alex comments on project WEB → it's in WEB's thread,
   const issue = await createIssue(project.id);
 
   const posted = await postComment({
-    key: project.key.toLowerCase(),
+    id: project.key.toLowerCase(),
     requestId: randomUUID(),
     body: "Kickoff notes",
   });
@@ -204,39 +200,10 @@ it("REQ-031.3: a blank or too-long project comment gets a field error and nothin
     ["   ", "Comment required"],
     ["x".repeat(10_001), "Too long (max 10,000)"],
   ]) {
-    expect(await postComment({ key: project.key, requestId: randomUUID(), body })).toMatchObject({
+    expect(await postComment({ id: project.key, requestId: randomUUID(), body })).toMatchObject({
       ok: false,
       error: { kind: "invalid", fields: { body: message } },
     });
   }
   expect(await db.select().from(comments).where(eq(comments.projectId, project.id))).toEqual([]);
-});
-
-it("REQ-033.1, REQ-034.1: the author edits a project comment and then deletes it, refreshing the page each time", async () => {
-  const sam = await signedIn();
-  const project = await createProject();
-  await postComment({ key: project.key, requestId: randomUUID(), body: "First draft" });
-  const [posted] = await listProjectComments(sam, ProjectKey.from(project.key));
-
-  expect(await editComment({ id: posted.id, body: "Second draft", version: posted.version })).toEqual({
-    ok: true,
-    data: null,
-  });
-  const [edited] = await listProjectComments(sam, ProjectKey.from(project.key));
-  expect(bodiesOf([edited])).toEqual(["Second draft"]);
-  expect(edited.editedAt).not.toBeNull();
-
-  expect(await deleteComment({ id: posted.id })).toEqual({ ok: true, data: null });
-  expect(await listProjectComments(sam, ProjectKey.from(project.key))).toEqual([]);
-  expect(refresh).toHaveBeenCalledTimes(3);
-});
-
-it("STD-4: editing or deleting a comment that's gone, or with a malformed id, says This comment was deleted", async () => {
-  await signedIn();
-  const gone = refusal("notFound", "This comment was deleted");
-
-  for (const id of [randomUUID(), "not-a-uuid"]) {
-    expect(await editComment({ id, body: "Hi", version: 0 })).toEqual(gone);
-    expect(await deleteComment({ id })).toEqual(gone);
-  }
 });

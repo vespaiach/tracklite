@@ -1,32 +1,48 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { type ReactNode, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import {
-  admin,
-  alex,
-  apiError,
-  issue,
-  memberOf,
-  mockApi,
-  networkError,
-  never,
-  noContent,
-  project,
-  renderAppAt,
-  requestsTo,
-  sam,
-} from "../test/client-app";
-import type { Me, Project, ThreadComment } from "./api";
-import { formatExact } from "./dates";
+import { formatExact } from "../client/dates";
+import type { ActionResult, Me, ThreadComment } from "../contract";
+import { admin, alex, memberOf, sam } from "../test/client-app";
+import { done, renderForm } from "../test/forms";
+import { CommentThread } from "./CommentThread";
+import { Link } from "./leave-guard";
+
+const navigate = vi.hoisted(() => vi.fn());
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    onNavigate,
+    children,
+  }: {
+    href: string;
+    onNavigate: (event: { preventDefault: () => void }) => void;
+    children: ReactNode;
+  }) => (
+    <a
+      href={href}
+      onClick={(event) => {
+        event.preventDefault();
+        let prevented = false;
+        onNavigate({ preventDefault: () => (prevented = true) });
+        if (!prevented) navigate(href);
+      }}>
+      {children}
+    </a>
+  ),
+}));
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  navigate.mockClear();
+  window.history.replaceState(null, "", "/");
 });
 
-type Answer = (body: unknown) => Response | Promise<Response>;
+type Answer = ActionResult<unknown> | Promise<ActionResult<unknown>>;
+type Post = { id: string; requestId: string; body: string };
+type Edit = { id: string; body: string; version: number };
 
-const web = project("WEB", "Website");
-const archivedWeb = project("WEB", "Website", "2026-10-01T09:00:00.000Z");
 const priya: Me = { ...alex, username: "priya", fullName: "Priya Shah", initials: "PS", role: "admin" };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -47,68 +63,91 @@ function comment(overrides: Partial<ThreadComment> = {}): ThreadComment {
   };
 }
 
-function mockThread({
+function refusal(kind: string, message: string, fields?: Record<string, string>) {
+  return { ok: false, error: { kind, message, ...(fields ? { fields } : {}) } } as ActionResult<unknown>;
+}
+
+function invalidBody(message: string) {
+  return refusal("invalid", "Check the highlighted fields", { body: message });
+}
+
+function renderThread({
   me = sam,
-  inProject = web,
+  editable = true,
   comments = [],
-  list,
   post,
-  patch,
+  edit,
   remove,
 }: {
   me?: Me;
-  inProject?: Project;
+  editable?: boolean;
   comments?: ThreadComment[];
-  list?: Answer;
-  post?: Answer;
-  patch?: Answer;
-  remove?: Answer;
+  post?: (comment: Post) => Answer;
+  edit?: (edit: Edit) => Answer;
+  remove?: () => Answer;
 } = {}) {
-  let current = comments;
-  const listPath = "/api/issues/WEB-42/comments";
-  const routes: Record<string, Answer> = {
-    "GET /api/me": () => Response.json(me),
-    "GET /api/members": () => Response.json([alex, sam]),
-    "GET /api/projects/WEB": () => Response.json(inProject),
-    "GET /api/projects/WEB/labels": () => Response.json([]),
-    "GET /api/issues/WEB-42": () => Response.json(issue({ archived: inProject.archivedAt !== null })),
-    [`GET ${listPath}`]: list ?? (() => Response.json(current)),
-    [`POST ${listPath}`]:
-      post ??
-      ((body) => {
-        const { body: text } = body as { body: string };
-        const made = comment({
-          id: `c-${current.length + 1}`,
-          body: text,
-          author: memberOf(me),
-          createdAt: new Date().toISOString(),
-          mentions: text.includes("@alex") ? [memberOf(alex)] : [],
-        });
-        current = [...current, made];
-        return Response.json(made, { status: 201 });
-      }),
-  };
-  for (const each of comments) {
-    routes[`PATCH /api/comments/${each.id}`] =
-      patch ??
-      ((body) => {
-        const { body: text } = body as { body: string };
-        const edited = { ...each, body: text, version: each.version + 1, editedAt: new Date().toISOString() };
-        current = current.map((one) => (one.id === each.id ? edited : one));
-        return Response.json(edited);
-      });
-    routes[`DELETE /api/comments/${each.id}`] =
-      remove ??
-      (() => {
-        current = current.filter((one) => one.id !== each.id);
-        return noContent();
-      });
+  const server = { comments };
+  const page = { refresh: () => {} };
+
+  async function answered(answer: Answer) {
+    const result = await answer;
+    if (result.ok) page.refresh();
+    return result;
   }
-  return mockApi(routes);
+
+  function posted({ body }: Post) {
+    const made = comment({
+      id: `c-${server.comments.length + 1}`,
+      body,
+      author: memberOf(me),
+      createdAt: new Date().toISOString(),
+      mentions: body.includes("@alex") ? [memberOf(alex)] : [],
+    });
+    server.comments = [...server.comments, made];
+    return { ok: true, data: made } as const;
+  }
+
+  function edited({ id, body }: Edit) {
+    server.comments = server.comments.map((one) =>
+      one.id === id ? { ...one, body, version: one.version + 1, editedAt: new Date().toISOString() } : one,
+    );
+    return done;
+  }
+
+  const postComment = vi.fn(async (input: Post) => answered(post ? post(input) : posted(input)));
+  const editComment = vi.fn(async (input: Edit) => answered(edit ? edit(input) : edited(input)));
+  const deleteComment = vi.fn(async ({ id }: { id: string }) => {
+    if (remove) return answered(remove());
+    server.comments = server.comments.filter((one) => one.id !== id);
+    return answered(done);
+  });
+
+  function RefreshingThread() {
+    const [, setRefreshes] = useState(0);
+    page.refresh = () => setRefreshes((count) => count + 1);
+    return (
+      <section aria-label="Comments">
+        <CommentThread
+          threadId="WEB-42"
+          comments={server.comments}
+          me={{ username: me.username, admin: me.role === "admin" }}
+          members={[alex, sam]}
+          editable={editable}
+          postComment={postComment}
+          editComment={editComment}
+          deleteComment={deleteComment}
+        />
+        <Link href="/project/WEB">Website · WEB</Link>
+      </section>
+    );
+  }
+
+  renderForm(<RefreshingThread />);
+  return { postComment, editComment, deleteComment };
 }
 
-function openIssue() {
-  renderAppAt("/issue/WEB-42");
+function sent<Input extends { id: string }>(action: { mock: { calls: [Input][] } }) {
+  return action.mock.calls.map(([input]) => input);
 }
 
 async function thread() {
@@ -162,22 +201,24 @@ async function deleteConfirmed(text: string) {
   fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 }
 
+function projectLink() {
+  return screen.getByRole("link", { name: "Website · WEB" });
+}
+
 it("REQ-032.1: comments on an issue are shown oldest first", async () => {
-  mockThread({
+  renderThread({
     comments: [
       comment({ id: "c-1", body: "Posted at nine", createdAt: minutesAgo(65) }),
       comment({ id: "c-2", body: "Posted at five past", createdAt: minutesAgo(60) }),
     ],
   });
-  openIssue();
 
   await screen.findByText("Posted at nine");
   expect((await shownComments()).map((each) => each.textContent?.includes("nine"))).toEqual([true, false]);
 });
 
 it("REQ-031.1: a posted comment shows “Sam Lee · just now” with @alex highlighted", async () => {
-  const fetchMock = mockThread();
-  openIssue();
+  const actions = renderThread();
 
   await type("Looks good. @alex can you review?");
   post();
@@ -186,15 +227,14 @@ it("REQ-031.1: a posted comment shows “Sam Lee · just now” with @alex highl
   expect(within(posted).getByText("Sam Lee")).toBeTruthy();
   expect(within(posted).getByText("just now")).toBeTruthy();
   expect(within(posted).getByText("@alex").getAttribute("title")).toBe("Alex Kim");
-  expect(requestsTo(fetchMock, "POST /api/issues/WEB-42/comments")).toEqual([
-    { requestId: expect.stringMatching(uuid), body: "Looks good. @alex can you review?" },
+  expect(sent(actions.postComment)).toEqual([
+    { id: "WEB-42", requestId: expect.stringMatching(uuid), body: "Looks good. @alex can you review?" },
   ]);
   expect((await commentBox()).value).toBe("");
 });
 
 it("REQ-031.2: Post is disabled while the box is empty or only spaces", async () => {
-  mockThread();
-  openIssue();
+  renderThread();
 
   await commentBox();
   expect((screen.getByRole("button", { name: "Post" }) as HTMLButtonElement).disabled).toBe(true);
@@ -205,10 +245,9 @@ it("REQ-031.2: Post is disabled while the box is empty or only spaces", async ()
 });
 
 it("REQ-031.3: a too-long comment shows “Too long (max 10,000)” and keeps the text", async () => {
-  mockThread({
-    post: () => apiError(422, "Check the highlighted fields", { body: "Too long (max 10,000)" }),
+  renderThread({
+    post: () => invalidBody("Too long (max 10,000)"),
   });
-  openIssue();
   const long = "a".repeat(10_001);
 
   await type(long);
@@ -220,9 +259,11 @@ it("REQ-031.3: a too-long comment shows “Too long (max 10,000)” and keeps th
 });
 
 it("STD-5, STD-9: a failed post keeps the text; the retry reuses the requestId and shows Posting… disabled", async () => {
-  const answers: Answer[] = [networkError, never];
-  const fetchMock = mockThread({ post: (body) => (answers.shift() as Answer)(body) });
-  openIssue();
+  const answers = [
+    () => Promise.reject(new TypeError("Failed to fetch")),
+    () => new Promise<ActionResult<unknown>>(() => {}),
+  ];
+  const actions = renderThread({ post: () => (answers.shift() as () => Answer)() });
 
   await type("Merged on staging.");
   post();
@@ -234,36 +275,34 @@ it("STD-5, STD-9: a failed post keeps the text; the retry reuses the requestId a
 
   const posting = (await screen.findByRole("button", { name: "Posting…" })) as HTMLButtonElement;
   expect(posting.disabled).toBe(true);
-  await waitFor(() => expect(requestsTo(fetchMock, "POST /api/issues/WEB-42/comments")).toHaveLength(2));
-  const [first, retry] = requestsTo(fetchMock, "POST /api/issues/WEB-42/comments");
+  await waitFor(() => expect(actions.postComment).toHaveBeenCalledTimes(2));
+  const [first, retry] = sent(actions.postComment);
   expect(retry.requestId).toBe(first.requestId);
 });
 
 it("REQ-033.1: the author's edit is saved with its version and marked “(edited)”", async () => {
-  const fetchMock = mockThread({
+  const actions = renderThread({
     comments: [comment({ id: "c-7", body: "Consle output", author: memberOf(sam), version: 2 })],
   });
-  openIssue();
 
   await editTo("Consle output", "Console output");
 
   const edited = await commentWith("Console output");
   expect(within(edited).getByText("(edited)")).toBeTruthy();
   expect(screen.queryByRole("textbox", { name: "Edit comment (Markdown)" })).toBeNull();
-  expect(requestsTo(fetchMock, "PATCH /api/comments/c-7")).toEqual([{ body: "Console output", version: 2 }]);
+  expect(sent(actions.editComment)).toEqual([{ id: "c-7", body: "Console output", version: 2 }]);
 });
 
 it("REQ-033, REQ-033.3, STD-8: a failed edit save shows the server's message under the editor and keeps the text", async () => {
   const answers = [
-    apiError(422, "Check the highlighted fields", { body: "Too long (max 10,000)" }),
-    apiError(409, "This was changed by Sam Lee. Copy your text and reload."),
-    apiError(404, "This comment was deleted"),
+    invalidBody("Too long (max 10,000)"),
+    refusal("conflict", "This was changed by Sam Lee. Copy your text and reload."),
+    refusal("notFound", "This comment was deleted"),
   ];
-  mockThread({
+  renderThread({
     comments: [comment({ body: "Short note", author: memberOf(sam) })],
-    patch: () => answers.shift() as Response,
+    edit: () => answers.shift() as ActionResult<unknown>,
   });
-  openIssue();
   const long = "b".repeat(10_001);
 
   const editor = await editTo("Short note", long);
@@ -287,14 +326,13 @@ it("REQ-033, REQ-033.3, STD-8: a failed edit save shows the server's message und
 });
 
 it("REQ-033.2, REQ-034.2, REQ-034.4: an admin can delete but not edit others' comments, including a deactivated author's", async () => {
-  const fetchMock = mockThread({
+  const actions = renderThread({
     me: priya,
     comments: [
       comment({ id: "c-4", body: "Alex's note" }),
       comment({ id: "c-5", body: "Old note", author: { ...memberOf(sam), deactivated: true } }),
     ],
   });
-  openIssue();
 
   const menu = await openOptions("Alex's note");
   expect(within(menu).queryByRole("menuitem", { name: "Edit" })).toBeNull();
@@ -303,40 +341,38 @@ it("REQ-033.2, REQ-034.2, REQ-034.4: an admin can delete but not edit others' co
   fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
   await waitFor(() => expect(screen.queryByText("Alex's note")).toBeNull());
-  expect(requestsTo(fetchMock, "DELETE /api/comments/c-4")).toHaveLength(1);
+  expect(sent(actions.deleteComment)).toEqual([{ id: "c-4" }]);
 
   expect(within(await commentWith("Old note")).getByText("Sam Lee (deactivated)")).toBeTruthy();
   await deleteConfirmed("Old note");
 
-  await waitFor(() => expect(requestsTo(fetchMock, "DELETE /api/comments/c-5")).toHaveLength(1));
+  await waitFor(() => expect(sent(actions.deleteComment)).toEqual([{ id: "c-4" }, { id: "c-5" }]));
 });
 
 it("REQ-034.1: the author deletes a comment after confirming", async () => {
-  const fetchMock = mockThread({
+  const actions = renderThread({
     comments: [
       comment({ id: "c-3", body: "Remove me", author: memberOf(sam) }),
       comment({ body: "Keep me" }),
     ],
   });
-  openIssue();
 
   fireEvent.click(within(await openOptions("Remove me")).getByRole("menuitem", { name: "Delete" }));
   const dialog = await screen.findByRole("alertdialog", { name: "Delete this comment?" });
   expect(within(dialog).getByText("It’s removed for everyone and can’t be restored.")).toBeTruthy();
   fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
   expect(screen.getByText("Remove me")).toBeTruthy();
-  expect(requestsTo(fetchMock, "DELETE /api/comments/c-3")).toEqual([]);
+  expect(actions.deleteComment).not.toHaveBeenCalled();
 
   await deleteConfirmed("Remove me");
 
   await waitFor(() => expect(screen.queryByText("Remove me")).toBeNull());
   expect(screen.getByText("Keep me")).toBeTruthy();
-  expect(requestsTo(fetchMock, "DELETE /api/comments/c-3")).toHaveLength(1);
+  expect(sent(actions.deleteComment)).toEqual([{ id: "c-3" }]);
 });
 
 it("REQ-034.3: a member sees no options on someone else's comment", async () => {
-  mockThread({ me: alex, comments: [comment({ body: "Sam's note", author: memberOf(sam) })] });
-  openIssue();
+  renderThread({ me: alex, comments: [comment({ body: "Sam's note", author: memberOf(sam) })] });
 
   const theirs = await commentWith("Sam's note");
 
@@ -344,12 +380,11 @@ it("REQ-034.3: a member sees no options on someone else's comment", async () => 
 });
 
 it("REQ-032.3: an archived project's thread has no comment box and no options", async () => {
-  mockThread({
+  renderThread({
     me: admin,
-    inProject: archivedWeb,
+    editable: false,
     comments: [comment({ body: "Archived note", author: memberOf(sam) })],
   });
-  openIssue();
 
   const archived = await commentWith("Archived note");
 
@@ -358,43 +393,30 @@ it("REQ-032.3: an archived project's thread has no comment box and no options", 
 });
 
 it("REQ-032.4: all 200 comments are shown", async () => {
-  mockThread({
+  renderThread({
     comments: Array.from({ length: 200 }, (_, index) =>
       comment({ id: `c-${index}`, body: `Comment number ${index + 1}` }),
     ),
   });
-  openIssue();
 
   await screen.findByText("Comment number 200");
   expect(await shownComments()).toHaveLength(200);
 });
 
-it("STD-11.1, STD-11.2: failed comments show “Couldn’t load comments.” while the fields stay editable, and Try again loads them", async () => {
-  let failing = true;
-  mockThread({
-    comments: [comment()],
-    list: () => (failing ? apiError(500, "Internal error") : Response.json([comment()])),
-  });
-  openIssue();
+it("REQ-035.1: leaving with an unsent comment asks first; Cancel keeps the text", async () => {
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  renderThread();
+  await type("Half a thought");
 
-  const section = await thread();
+  fireEvent.click(projectLink());
 
-  expect(await within(section).findByText("Couldn’t load comments.")).toBeTruthy();
-  expect(screen.queryByRole("textbox", { name: "Comment (Markdown)" })).toBeNull();
-  expect(((await screen.findByRole("textbox", { name: "Title" })) as HTMLTextAreaElement).value).toBe(
-    "Fix login button",
-  );
-
-  failing = false;
-  fireEvent.click(within(section).getByRole("button", { name: "Try again" }));
-
-  expect(await within(section).findByText("Reproduced on Safari 17.4.")).toBeTruthy();
-  expect(within(section).queryByText("Couldn’t load comments.")).toBeNull();
+  expect(confirm).toHaveBeenCalledWith("You have an unsent comment. Leave anyway?");
+  expect(navigate).not.toHaveBeenCalled();
+  expect((await commentBox()).value).toBe("Half a thought");
 });
 
-it("REQ-035.1, REQ-035: leaving or closing the tab with an unsent comment asks the browser to confirm", async () => {
-  mockThread();
-  openIssue();
+it("REQ-035: closing the tab with an unsent comment asks the browser to confirm", async () => {
+  renderThread();
   await commentBox();
 
   const empty = new Event("beforeunload", { cancelable: true });
@@ -408,23 +430,23 @@ it("REQ-035.1, REQ-035: leaving or closing the tab with an unsent comment asks t
 });
 
 it("REQ-035.2, REQ-035: a posted comment or a blank box doesn't hold back leaving", async () => {
-  mockThread();
-  openIssue();
+  renderThread();
   await type("Verified on staging.");
   post();
   await commentWith("Verified on staging.");
   await type("   ");
+  const confirm = vi.spyOn(window, "confirm");
 
-  const leaving = new Event("beforeunload", { cancelable: true });
-  window.dispatchEvent(leaving);
-  expect(leaving.defaultPrevented).toBe(false);
+  fireEvent.click(projectLink());
+
+  expect(confirm).not.toHaveBeenCalled();
+  expect(navigate).toHaveBeenCalledWith("/project/WEB");
 });
 
 it("REQ-031, REQ-033: hovering the time or “(edited)” shows the exact time", async () => {
   const createdAt = minutesAgo(180);
   const editedAt = minutesAgo(20);
-  mockThread({ comments: [comment({ body: "Console output", createdAt, editedAt })] });
-  openIssue();
+  renderThread({ comments: [comment({ body: "Console output", createdAt, editedAt })] });
 
   const shown = await commentWith("Console output");
   expect(within(shown).getByText("3 hours ago").getAttribute("title")).toBe(formatExact(createdAt));
@@ -434,10 +456,10 @@ it("REQ-031, REQ-033: hovering the time or “(edited)” shows the exact time",
 it("§6.1: an address ending in #comment-{id} scrolls to that comment and highlights it briefly", async () => {
   const scrollIntoView = vi.fn();
   Element.prototype.scrollIntoView = scrollIntoView;
-  mockThread({
+  window.history.replaceState(null, "", "/issue/WEB-42#comment-c-7");
+  renderThread({
     comments: [comment({ id: "c-1", body: "First" }), comment({ id: "c-7", body: "Linked from email" })],
   });
-  renderAppAt("/issue/WEB-42#comment-c-7");
 
   const linked = await commentWith("Linked from email");
   expect(linked.id).toBe("comment-c-7");
@@ -452,8 +474,8 @@ it("§6.1: an address ending in #comment-{id} scrolls to that comment and highli
 it("§6.1: a #comment-{id} for a comment that's gone leaves the page at the top", async () => {
   const scrollIntoView = vi.fn();
   Element.prototype.scrollIntoView = scrollIntoView;
-  mockThread({ comments: [comment({ id: "c-1", body: "First" })] });
-  renderAppAt("/issue/WEB-42#comment-c-9");
+  window.history.replaceState(null, "", "/issue/WEB-42#comment-c-9");
+  renderThread({ comments: [comment({ id: "c-1", body: "First" })] });
 
   await commentWith("First");
   expect(scrollIntoView).not.toHaveBeenCalled();
@@ -461,8 +483,7 @@ it("§6.1: a #comment-{id} for a comment that's gone leaves the page at the top"
 });
 
 it("NFR-007: Edit moves focus into the comment editor; Escape and Save return it to Comment options", async () => {
-  mockThread({ comments: [comment({ body: "Short note", author: memberOf(sam) })] });
-  openIssue();
+  renderThread({ comments: [comment({ body: "Short note", author: memberOf(sam) })] });
 
   const escaping = await startEditing("Short note");
   await waitFor(() => expect(document.activeElement).toBe(escaping));
@@ -483,8 +504,7 @@ it("NFR-007: Edit moves focus into the comment editor; Escape and Save return it
 });
 
 it("NFR-007: focus stays in the comment box after Post", async () => {
-  mockThread();
-  openIssue();
+  renderThread();
 
   await type("Ship it");
   screen.getByRole("button", { name: "Post" }).focus();

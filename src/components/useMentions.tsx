@@ -1,3 +1,5 @@
+"use client";
+
 import {
   type CSSProperties,
   type KeyboardEvent,
@@ -8,8 +10,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { MentionList } from "../components/ui/track-lite";
 import type { MemberSummary } from "../contract";
+import { MentionList } from "./ui/track-lite";
 
 const typedMention = /(?<![A-Za-z0-9._%+@-])@([a-z0-9-]{0,20})$/i;
 

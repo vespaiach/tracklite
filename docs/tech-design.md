@@ -131,7 +131,7 @@ Next.js App Router with React Server Components (D-10). A page renders on the se
 - **Request IDs (STD-5).** `useRequestId()` (`src/components/useRequestId.ts`) returns `[requestId, renew]`: it generates `crypto.randomUUID()` once, when a create form opens, and reuses it for every retry of that submit; the form calls `renew()` when it is reset.
 - **URL state.** List filters, search and sort live in the URL (REQ-040), and the list page reads them from `searchParams`. The parameters use enum values as their keys, such as `status=in_progress`. `listIssues` (`src/queries/issue-lists.ts`) reads `status`, `priority`, `assignee` (a username, or `-` for Unassigned; an issue matches if any of its assignees is chosen, and `-` matches an issue with none) and `label` (name, ignoring capitals), each repeatable; `q`; `sort` (default `updated`) and `dir` (default `desc` for `updated`, `asc` otherwise). Ties sort most recently updated first, and unknown values are ignored. It returns up to 100 rows, plus the deactivated members still assigned in the project, for the assignee filter. A filter or sort change pushes a history entry with `router.push`; search uses `router.replace`, so Back doesn't step through each typed word. Both pass `{ scroll: false }`, and the list shows the new filters at once with `useOptimistic` while the page renders again. Form drafts live in component state.
 - **List paging (REQ-036.1).** The list page renders the first 100 rows. Scrolling to the end calls `moreIssues` (`list/actions.ts`) with the query and an `offset`; it reads the next rows through `listIssues` after `actionMember()`, and the list keeps them in state until the query changes. It is a read, so it isn't wrapped in `action()`: it calls no `refresh()`, which would read the first page again on every scroll. A failed call reaches the list's `Region`.
-- **Description saves (STD-8).** The details page's `saveDescription` action returns a `conflict` refusal for a stale version; the editor shows it, and **Reload** calls `router.refresh()` and restarts the draft from the saved text once the page brings a newer version. `DescriptionEditor` and `CommentThread` (`src/client/`) take their data and actions as props, so the details page and the single-page app's issue page (through `SpaCommentThread` and `asActionResult` in `src/client/action-result.ts`) share them until H17.
+- **Description saves (STD-8).** The details page's `saveDescription` action returns a `conflict` refusal for a stale version; the editor shows it, and **Reload** calls `router.refresh()` and restarts the draft from the saved text once the page brings a newer version. The details page and the issue page share the props-only `DescriptionEditor` and `CommentThread` (`src/components/`), and the comment edit and delete actions (`issue/[id]/actions.ts`).
 
 **Loading states (STD-7).** Each `Region`'s Suspense fallback is `DelayedFallback` (`src/components/region/`), which renders nothing for 300 ms and then "Loading…" (D-65). Navigations between pages show the same fallback from each route's `loading.tsx`.
 
@@ -420,30 +420,11 @@ The queries declare the contract types (3.5) as their return types. The tables g
 
 **Projects and labels**
 
-Since H18 `/project/{KEY}/labels` reads `listLabels` (sorted by name ignoring capitals, each with its issue count) and changes labels with `createLabel`, `updateLabel` (name or colour) and `deleteLabel` (`project/[key]/labels/actions.ts`); `/project/{KEY}/settings` (admin) uses `renameProject`, `archiveProject` and `deleteProject` (`project/[key]/settings/actions.ts`; the typed-key confirmation is checked in the browser, REQ-014); and `/projects/archived` reads `listProjects(member, true)`. Since H16 the list and details pages read through `listIssues`, `getProject` and `listProjectComments`, and the details page saves through `saveDescription`, `postComment`, `editComment` and `deleteComment` (`project/[key]/detail/actions.ts`). The endpoints below still serve the issue screen.
-
-| Method and path | Notes | Who | Spec |
-|---|---|---|---|
-| `GET /api/projects/{KEY}` | Includes the description's version and mentions, the issue count per status (all of the project's issues, zeros included), and when and by whom it was created (`createdBy` is `null` for projects created before the creator was recorded) | Member | REQ-046 |
-| `GET /api/projects/{KEY}/labels` | Sorted by name ignoring capitals, each with its issue count | Member | REQ-021, REQ-021.5 |
-| `POST /api/projects/{KEY}/labels` | `201` | Member | REQ-020.2, REQ-021 |
+Since H18 `/project/{KEY}/labels` reads `listLabels` (sorted by name ignoring capitals, each with its issue count) and changes labels with `createLabel`, `updateLabel` (name or colour) and `deleteLabel` (`project/[key]/labels/actions.ts`); `/project/{KEY}/settings` (admin) uses `renameProject`, `archiveProject` and `deleteProject` (`project/[key]/settings/actions.ts`; the typed-key confirmation is checked in the browser, REQ-014); and `/projects/archived` reads `listProjects(member, true)`. Since H16 the list and details pages read through `listIssues`, `getProject` and `listProjectComments`, and the details page saves through `saveDescription` and `postComment` (`project/[key]/detail/actions.ts`) and the issue page's `editComment` and `deleteComment`. No `/api` endpoint for projects, labels, issues or comments is left.
 
 **Issues and views**
 
-| Method and path | Notes | Who | Spec |
-|---|---|---|---|
-| `GET /api/issues/{ID}` | Includes the description's version and mentions | Member | REQ-016 |
-| `PATCH /api/issues/{ID}` | One field per request (3.1): title, status, priority, the full assignee set (`assignees`), the full label set, or a description save | Member | REQ-016…022, REQ-027.4 |
-| `DELETE /api/issues/{ID}` | | Creator or Admin | REQ-023 |
-
-**Comments**
-
-| Method and path | Notes | Who | Spec |
-|---|---|---|---|
-| `GET /api/issues/{ID}/comments` | Oldest first, each with its mentions. A project's thread is read by the details page since H16 | Member | REQ-032 |
-| `POST /api/issues/{ID}/comments` | `201`; a repeated `requestId` gets `200` and the original (STD-5). A project comment is the details page's `postComment` action since H16 | Member | REQ-031 |
-| `PATCH /api/comments/{id}` | A stale version gets `409` (STD-8) | Author | REQ-033 |
-| `DELETE /api/comments/{id}` | | Author or Admin | REQ-034 |
+Since H17 `/issue/{ID}` (`src/app/(signed-in)/issue/[id]/page.tsx`) reads the issue with `findIssueById` (unknown or malformed → `notFound()`; an ID typed in another case redirects to the canonical one, keeping the query from `x-request-path`, while the browser keeps the `#comment-{id}` fragment), and the labels, members and comments (`listIssueComments`) below it. Its actions are in `issue/[id]/actions.ts`: `updateIssue` takes `{ id, …one field }` with the same one-field rule as before (3.1), `deleteIssue`, `createLabel` (from the label picker, REQ-020.2), and `postComment`, `editComment` and `deleteComment`. A repeated `requestId` returns the original comment (STD-5).
 
 **Operations.** `notificationStats` (`src/queries/notifications.ts`, admin only) is the status page's data; **Refresh** calls `router.refresh()`. Counts and the recent list go by `state_changed_at`, and all windows use `now()`. A delivery's issue ID or project key comes from its batch's newest notification. A bounced delivery's attempts include the send that bounced. `outboxStaleMinutes` is the whole minutes since the last outbox run once that is 2 minutes or more (OPS-005), worked out with `now()`, else null. No emails and no excerpts (REQ-053, SEC-007).
 
@@ -783,6 +764,7 @@ The spec gives the copy for these pages; these are the layout choices it leaves 
   - the comments below it (REQ-032), then the comment box.
 - **Side panel:** Status, Priority, Assignees and Labels pickers (Assignees is a multi-select listing active members, filtered by name or username, where Enter adds the first match and each toggle saves the whole set; deactivated assignees are shown but not offered), each saving as soon as a value is chosen. A picker shows the new value once the server accepts it; on a failure it keeps the old value. Then "Created by {name}, {date}", and **Delete issue** for the creator or an admin. After a delete, the app goes to the project's board.
 - **Mention suggestions (DATA-001):** typing `@` in the description editor or comment box opens a list of active members, filtered by username or name as the member types. Choosing one inserts `@username`.
+- **Server rendering (H17):** the project header (with the issue breadcrumb, whose project link is the leave-guard `Link`) renders above a `Region` for the issue; the comments are a `Region` of their own inside it, so a failed comment read leaves the fields editable (STD-11.1). `IssueView` and the shared `CommentThread` and `DescriptionEditor` (`src/components/`) get their data and actions as props; every successful action redraws the page through `refresh()`. A label save refused as `notFound` (REQ-020.4) and the description editor's **Reload** (STD-8) call `router.refresh()`; Reload takes the description once a newer version arrives. After a delete the page goes to the board with `router.push`, so the deleted issue's Not found never shows. `#comment-{id}` is read from `location.hash` once the thread mounts.
 - **Unsaved text (REQ-035):** a comment box holding text, or a description editor (issue or project) with unsaved changes, asks before in-app links with `useLeaveGuard` and its REQ-035 message, and before closing or reloading the tab with `beforeunload` (1.7).
 
 ### 6.5 Board details

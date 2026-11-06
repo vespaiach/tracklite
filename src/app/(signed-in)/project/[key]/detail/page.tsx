@@ -1,3 +1,4 @@
+import { CommentThread } from "../../../../../components/CommentThread";
 import { Region } from "../../../../../components/region/Region";
 import type { ProjectSummary } from "../../../../../contract";
 import { ProjectKey } from "../../../../../domain/shared/identifiers";
@@ -5,8 +6,8 @@ import type { Member } from "../../../../../infrastructure/identity/tables";
 import { getProject, listProjectComments } from "../../../../../queries";
 import { signedInPageMember } from "../../../../_server/session";
 import { assignableMembers, projectAt } from "../project";
-import { deleteComment, editComment, postComment, saveDescription } from "./actions";
-import { ProjectComments } from "./ProjectComments";
+import { deleteComment, editComment } from "../../../issue/[id]/actions";
+import { postComment, saveDescription } from "./actions";
 import { DetailsPage, ProjectDetail } from "./ProjectDetail";
 
 type RegionProps = { member: Member; project: ProjectSummary };
@@ -59,13 +60,12 @@ async function Comments({ member, project }: RegionProps) {
   ]);
 
   return (
-    <ProjectComments
-      projectKey={project.key}
+    <CommentThread
+      threadId={project.key}
       comments={comments}
-      editable={project.archivedAt === null}
-      me={member.username}
-      admin={member.role === "admin"}
+      me={{ username: member.username, admin: member.role === "admin" }}
       members={members}
+      editable={project.archivedAt === null}
       postComment={postComment}
       editComment={editComment}
       deleteComment={deleteComment}

@@ -1,27 +1,32 @@
+"use client";
+
 import { type FormEvent, type KeyboardEvent, useId, useState } from "react";
-import { Button, Editor, EditorNotice, FieldError, SettingsActions } from "../components/ui/track-lite";
-import { useLeaveGuard } from "../components/leave-guard";
-import { useToast } from "../components/toast";
 import type { ActionResult, MemberSummary } from "../contract";
-import { settled } from "./action-result";
+import { useLeaveGuard } from "./leave-guard";
+import { useToast } from "./toast";
+import { Button, Editor, EditorNotice, FieldError, SettingsActions } from "./ui/track-lite";
 import { useMentions } from "./useMentions";
 
 export type DescriptionDraft = { text: string; startedFrom: string; version: number };
 
+type SaveDescription = (description: string, descriptionVersion: number) => Promise<ActionResult<unknown>>;
+
+const couldNotSave = "Couldn’t save. Try again.";
+
 export function DescriptionEditor({
   draft,
+  members,
   onChange,
   onDone,
   onReload,
   save,
-  members,
 }: {
   draft: DescriptionDraft;
+  members: MemberSummary[];
   onChange: (text: string) => void;
   onDone: () => void;
   onReload: () => void;
-  save: (description: string, descriptionVersion: number) => Promise<ActionResult<unknown>>;
-  members: MemberSummary[];
+  save: SaveDescription;
 }) {
   const toast = useToast();
   const [saving, setSaving] = useState(false);
@@ -36,10 +41,12 @@ export function DescriptionEditor({
     setError(undefined);
     setConflict(undefined);
     setSaving(true);
-    const result = await settled(save(draft.text, draft.version));
+
+    const result = await save(draft.text, draft.version).catch(() => undefined);
     setSaving(false);
 
-    if (result.ok) onDone();
+    if (!result) toast(couldNotSave);
+    else if (result.ok) onDone();
     else if (result.error.kind === "invalid")
       setError(result.error.fields?.description ?? result.error.message);
     else if (result.error.kind === "conflict") setConflict(result.error.message);

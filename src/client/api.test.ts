@@ -60,9 +60,7 @@ it("STD-9.3, STD-6: any other failure (403, 503) shows the server's message", as
   expect(router.state.location.pathname).toBe("/my-issues");
 
   respondWith(503, { error: { message: "We couldn’t send the email. Try again." } });
-  const unavailable = await storeAt("/project/WEB/labels").store.dispatch(
-    api.endpoints.createLabel.initiate({ key: "WEB", name: "bug", color: "red" }),
-  );
+  const unavailable = await storeAt("/project/WEB/list").store.dispatch(api.endpoints.me.initiate());
 
   expect(unavailable.error).toEqual({ status: 503, message: "We couldn’t send the email. Try again." });
 });
@@ -81,7 +79,7 @@ it("STD-3: baseQuery passes a 422's field errors to the component without redire
   expect(store.getState().toast).toBeNull();
 });
 
-it("baseQuery: GET returns parsed JSON; PATCH sends a JSON body and a 204 gives null", async () => {
+it("baseQuery: GET returns parsed JSON", async () => {
   const me = {
     username: "sam",
     fullName: "Sam Lee",
@@ -96,22 +94,4 @@ it("baseQuery: GET returns parsed JSON; PATCH sends a JSON body and a 204 gives 
 
   expect(result.data).toEqual(me);
   expect(fetch).toHaveBeenCalledWith("/api/me", expect.anything());
-
-  respondWith(204);
-  const changed = await storeAt("/issue/WEB-42").store.dispatch(
-    api.endpoints.updateIssue.initiate({
-      id: "WEB-42",
-      change: { description: "Goals", descriptionVersion: 0 },
-    }),
-  );
-
-  expect(changed.data).toBeNull();
-  expect(fetch).toHaveBeenCalledWith(
-    "/api/issues/WEB-42",
-    expect.objectContaining({
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ description: "Goals", descriptionVersion: 0 }),
-    }),
-  );
 });

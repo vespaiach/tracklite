@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { type ReactNode, startTransition, useState } from "react";
 import { formatDay } from "../../../../../client/dates";
-import { type DescriptionDraft, DescriptionEditor } from "../../../../../client/DescriptionEditor";
 import { statuses } from "../../../../../client/issue-fields";
 import { useReturnFocus } from "../../../../../client/useReturnFocus";
+import { type DescriptionDraft, DescriptionEditor } from "../../../../../components/DescriptionEditor";
 import {
   Button,
   CountRow,
