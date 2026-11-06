@@ -19,18 +19,18 @@ export async function signIn(work: UnitOfWork<Repositories>, { email, password, 
     if (await signInLimits.reached(email, ip)) throw tooManyAttempts();
 
     const member = await members.activeByEmail(email);
-    const passwordMatches = await passwords.verify(member?.passwordHash, password);
+    const passwordMatches = await passwords.verify(member?.props.passwordHash, password);
     if (!member || !passwordMatches) {
       await signInLimits.recordFailure(email, ip);
       return undefined;
     }
 
-    if (passwords.needsRehash(member.passwordHash)) {
+    if (passwords.needsRehash(member.props.passwordHash)) {
       member.changePasswordHash(await passwords.hash(password));
       await members.save(member);
     }
 
-    return { token: await sessions.start(member.id), username: member.username.value };
+    return { token: await sessions.start(member.props.id), username: member.props.username.value };
   });
 
   if (!signedIn) throw new DomainError("invalid", "Incorrect email or password.");

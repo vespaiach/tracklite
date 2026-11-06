@@ -1,21 +1,15 @@
 import "server-only";
 import * as v from "valibot";
-import { issuePriorities, issueStatuses } from "../../contract";
-import { descriptionText, descriptionVersion, maxCharacters } from "../shared/schemas";
-import { IssueId, RequestId, tryFrom, Username } from "../../domain/shared/identifiers";
+import { issueStatuses } from "../../../contract";
+import { IssuePriority } from "../../../domain/issues/issue-priority";
+import { IssueStatus } from "../../../domain/issues/issue-status";
+import { IssueTitle } from "../../../domain/issues/issue-title";
+import { IssueId, RequestId, tryFrom, Username } from "../../../domain/shared/identifiers";
+import { descriptionText, descriptionVersion } from "../../../server/shared/schemas";
 
-const maxTitleLength = 200;
 const maxLabels = 10;
 const editableFields = ["title", "status", "priority", "assignees", "labelIds"];
 const descriptionFields = ["description", "descriptionVersion"];
-
-const title = v.pipe(
-  v.string("Title required"),
-  v.trim(),
-  v.nonEmpty("Title required"),
-  maxCharacters(maxTitleLength, `Too long (max ${maxTitleLength})`),
-);
-const status = v.picklist(issueStatuses, "Choose a status");
 
 const assignees = v.pipe(
   v.custom<string[]>(
@@ -29,11 +23,13 @@ const assignees = v.pipe(
 
 export const NewIssue = v.object({
   requestId: RequestId.schema,
-  title,
-  status: v.optional(v.fallback(v.picklist(issueStatuses), "backlog"), "backlog"),
+  title: IssueTitle.schema,
+  status: v.pipe(
+    v.optional(v.fallback(v.picklist(issueStatuses), "backlog"), "backlog"),
+    v.transform((status) => IssueStatus.from(status)),
+  ),
   assignees: v.optional(assignees, []),
 });
-export type NewIssue = v.InferOutput<typeof NewIssue>;
 
 function isDescriptionSave(body: Record<string, unknown>) {
   const keys = Object.keys(body);
@@ -49,9 +45,9 @@ export const IssueChange = v.pipe(
   v.looseObject({}),
   v.check((body) => isDescriptionSave(body) || isOneField(body), "Change one field at a time"),
   v.object({
-    title: v.optional(title),
-    status: v.optional(status),
-    priority: v.optional(v.picklist(issuePriorities, "Choose a priority")),
+    title: v.optional(IssueTitle.schema),
+    status: v.optional(IssueStatus.schema),
+    priority: v.optional(IssuePriority.schema),
     assignees: v.optional(assignees),
     labelIds: v.optional(
       v.pipe(
@@ -83,10 +79,9 @@ export const IssueChange = v.pipe(
     ["description"],
   ),
 );
-export type IssueChange = v.InferOutput<typeof IssueChange>;
 
 export const IssueMove = v.object({
-  status,
+  status: IssueStatus.schema,
   place: v.union(
     [
       v.literal("top"),
@@ -101,4 +96,3 @@ export const IssueMove = v.object({
     "Choose a place",
   ),
 });
-export type IssueMove = v.InferOutput<typeof IssueMove>;

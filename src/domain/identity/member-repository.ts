@@ -8,6 +8,5 @@ export type MemberRepository = {
   lockActiveAdminIds(): Promise<string[]>;
   lockAgainstNewMembers(): Promise<void>;
   count(): Promise<number>;
-  add(member: Member): Promise<void>;
   save(member: Member): Promise<void>;
 };

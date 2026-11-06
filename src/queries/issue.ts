@@ -3,7 +3,7 @@ import { and, asc, eq, inArray, notInArray, or, type SQL, sql } from "drizzle-or
 import { alias } from "drizzle-orm/pg-core";
 import { DomainError } from "../domain/shared/domain-error";
 import { db } from "../infrastructure/db";
-import type { Executor, Transaction } from "../infrastructure/transaction";
+import type { Executor } from "../infrastructure/transaction";
 import { memberSummary } from "../domain/identity/member-summary";
 import { members } from "../infrastructure/identity/tables";
 import { labels, projects } from "../infrastructure/projects/tables";
@@ -98,8 +98,8 @@ export function byIssueId(id: IssueId | undefined) {
   return and(eq(projects.key, id.key.value), eq(issues.number, id.number));
 }
 
-export async function updatedIssue(tx: Transaction, issueId: string) {
-  const updated = await findIssue(tx, eq(issues.id, issueId));
+export async function updatedIssue(executor: Executor, issueId: string) {
+  const updated = await findIssue(executor, eq(issues.id, issueId));
   if (!updated) throw issueGone();
   return updated;
 }

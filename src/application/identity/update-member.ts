@@ -25,8 +25,8 @@ export async function updateMember(
     applyChanges(target, changes, activeAdminIds);
     await members.save(target);
 
-    if (changes.deactivated === true) await sessions.endAllOf(target.id);
-    return target.username;
+    if (changes.deactivated === true) await sessions.endAllOf(target.props.id);
+    return target.props.username;
   });
 }
 

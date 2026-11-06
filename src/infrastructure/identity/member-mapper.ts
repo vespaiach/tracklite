@@ -1,5 +1,5 @@
 import { FullName } from "../../domain/identity/full-name";
-import { Member } from "../../domain/identity/member";
+import { Member, type MemberProps } from "../../domain/identity/member";
 import { Role } from "../../domain/identity/role";
 import { Username } from "../../domain/shared/identifiers";
 import type { members } from "./tables";
@@ -18,14 +18,6 @@ export function toMember(row: MemberRow) {
   });
 }
 
-export function toRow(member: Member) {
-  return {
-    id: member.id,
-    email: member.email,
-    fullName: member.fullName.value,
-    username: member.username.value,
-    role: member.role.value,
-    passwordHash: member.passwordHash,
-    deactivatedAt: member.deactivatedAt,
-  };
+export function toRow({ fullName, username, role, ...fields }: MemberProps) {
+  return { ...fields, fullName: fullName.value, username: username.value, role: role.value };
 }

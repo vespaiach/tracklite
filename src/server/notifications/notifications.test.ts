@@ -6,7 +6,9 @@ import { editComment, postIssueComment, postProjectComment } from "../comments";
 import { db } from "../../infrastructure/db";
 import type { DomainEvent } from "../../domain/shared/events";
 import { publish } from "../../infrastructure/events";
-import { updateIssue, issues } from "../issues";
+import { updateIssue } from "../../application/issues/update-issue";
+import { issueWork } from "../../infrastructure/issues/issue-work";
+import { issues } from "../../infrastructure/issues/tables";
 import { updateProject } from "../projects";
 import { members, type Member } from "../identity";
 import {
@@ -62,7 +64,7 @@ function deliveriesFor(member: { id: string }) {
 }
 
 function assign(issueRef: string, by: Member, ...assignees: Member[]) {
-  return updateIssue(by, IssueId.from(issueRef), {
+  return updateIssue(by, issueWork, IssueId.from(issueRef), {
     assignees: assignees.map((assignee) => Username.from(assignee.username)),
   });
 }
@@ -256,7 +258,7 @@ it("REQ-044: a mention in an issue description emails the member, linking to the
   const sam = await createMember();
   const { issue, issueRef } = await website();
 
-  await updateIssue(alex, IssueId.from(issueRef), {
+  await updateIssue(alex, issueWork, IssueId.from(issueRef), {
     description: `Ask @${sam.username}`,
     descriptionVersion: 0,
   });

@@ -29,8 +29,8 @@ export async function createFirstAdmin(
     if ((await members.count()) > 0) throw setupDone();
 
     const admin = Member.create({ email, fullName, username, role: Role.admin, passwordHash });
-    await members.add(admin);
+    await members.save(admin);
 
-    return { username: admin.username, sessionToken: await sessions.start(admin.id) };
+    return { username: admin.props.username, sessionToken: await sessions.start(admin.props.id) };
   });
 }

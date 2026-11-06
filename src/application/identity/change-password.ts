@@ -23,17 +23,17 @@ export async function changePassword(
 ) {
   const changed = await work.run(async ({ members, sessions, signInLimits, passwords }) => {
     const member = await loadActor(members, actor);
-    const email = member.email.trim().toLowerCase();
+    const email = member.props.email.trim().toLowerCase();
     if (await signInLimits.reached(email, ip)) throw tooManyAttempts();
 
-    if (!(await passwords.verify(member.passwordHash, currentPassword))) {
+    if (!(await passwords.verify(member.props.passwordHash, currentPassword))) {
       await signInLimits.recordFailure(email, ip);
       return false;
     }
 
     member.changePasswordHash(await passwords.hash(newPassword));
     await members.save(member);
-    await sessions.endOthersOf(member.id, sessionToken);
+    await sessions.endOthersOf(member.props.id, sessionToken);
     return true;
   });
 

@@ -19,35 +19,35 @@ const lastAdmin = { kind: "invalid", message: "There must be at least one admin.
 it("REQ-007.3, REQ-052.3: the one active admin left can't lose the admin role or be deactivated", () => {
   const sam = member();
 
-  expect(() => sam.removeAdmin([sam.id])).toThrow(expect.objectContaining(lastAdmin));
-  expect(() => sam.deactivate([sam.id])).toThrow(expect.objectContaining(lastAdmin));
-  expect(sam.role).toBe(Role.admin);
-  expect(sam.deactivatedAt).toBeNull();
+  expect(() => sam.removeAdmin([sam.props.id])).toThrow(expect.objectContaining(lastAdmin));
+  expect(() => sam.deactivate([sam.props.id])).toThrow(expect.objectContaining(lastAdmin));
+  expect(sam.props.role).toBe(Role.admin);
+  expect(sam.props.deactivatedAt).toBeNull();
 });
 
 it("REQ-052.1, REQ-052, REQ-007: with another active admin, an admin can be made a member or deactivated; a member can be made admin", () => {
   const sam = member();
   const alex = member(Role.member);
 
-  sam.removeAdmin([sam.id, "jo"]);
+  sam.removeAdmin([sam.props.id, "jo"]);
   alex.makeAdmin();
   alex.deactivate([]);
 
-  expect(sam.role).toBe(Role.member);
-  expect(alex.role).toBe(Role.admin);
-  expect(alex.deactivatedAt).toBeInstanceOf(Date);
+  expect(sam.props.role).toBe(Role.member);
+  expect(alex.props.role).toBe(Role.admin);
+  expect(alex.props.deactivatedAt).toBeInstanceOf(Date);
 });
 
 it("REQ-007, REQ-008: deactivating twice keeps the first time, and reactivating clears it", () => {
   const alex = member(Role.member);
   alex.deactivate([]);
-  const firstTime = alex.deactivatedAt;
+  const firstTime = alex.props.deactivatedAt;
 
   alex.deactivate([]);
-  expect(alex.deactivatedAt).toBe(firstTime);
+  expect(alex.props.deactivatedAt).toBe(firstTime);
 
   alex.reactivate();
-  expect(alex.deactivatedAt).toBeNull();
+  expect(alex.props.deactivatedAt).toBeNull();
 });
 
 it("REQ-003, REQ-052: a full name is trimmed, required and at most 60 characters; a role is admin or member", () => {

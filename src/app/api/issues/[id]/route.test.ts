@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../../infrastructure/db";
 import { createSession, memberSummary, members } from "../../../../server/identity";
 import { comments } from "../../../../server/comments";
-import { issueAssignees, issueLabels, issues } from "../../../../server/issues";
+import { issueAssignees, issueLabels, issues } from "../../../../infrastructure/issues/tables";
 import { labels, projects } from "../../../../server/projects";
 import {
   mentions,

@@ -17,23 +17,15 @@ export type MemberProps = {
 type NewMember = Omit<MemberProps, "id" | "deactivatedAt">;
 
 export class Member extends AggregateRoot {
-  readonly id: string;
-  readonly email: string;
-  readonly username: Username;
-  fullName: FullName;
-  role: Role;
-  passwordHash: string;
-  deactivatedAt: Date | null;
+  #props: Readonly<MemberProps>;
 
   private constructor(props: MemberProps) {
     super();
-    this.id = props.id;
-    this.email = props.email;
-    this.username = props.username;
-    this.fullName = props.fullName;
-    this.role = props.role;
-    this.passwordHash = props.passwordHash;
-    this.deactivatedAt = props.deactivatedAt;
+    this.#props = props;
+  }
+
+  get props() {
+    return this.#props;
   }
 
   static create(member: NewMember) {
@@ -45,33 +37,34 @@ export class Member extends AggregateRoot {
   }
 
   rename(fullName: FullName) {
-    this.fullName = fullName;
+    this.#props = { ...this.#props, fullName };
   }
 
   changePasswordHash(passwordHash: string) {
-    this.passwordHash = passwordHash;
+    this.#props = { ...this.#props, passwordHash };
   }
 
   makeAdmin() {
-    this.role = Role.admin;
+    this.#props = { ...this.#props, role: Role.admin };
   }
 
   removeAdmin(activeAdminIds: readonly string[]) {
     this.#keepAnAdmin(activeAdminIds);
-    this.role = Role.member;
+    this.#props = { ...this.#props, role: Role.member };
   }
 
   deactivate(activeAdminIds: readonly string[]) {
     this.#keepAnAdmin(activeAdminIds);
-    this.deactivatedAt ??= new Date();
+    if (this.#props.deactivatedAt) return;
+    this.#props = { ...this.#props, deactivatedAt: new Date() };
   }
 
   reactivate() {
-    this.deactivatedAt = null;
+    this.#props = { ...this.#props, deactivatedAt: null };
   }
 
   #keepAnAdmin(activeAdminIds: readonly string[]) {
-    if (activeAdminIds.length === 1 && activeAdminIds[0] === this.id) {
+    if (activeAdminIds.length === 1 && activeAdminIds[0] === this.#props.id) {
       throw new DomainError("invalid", "There must be at least one admin.");
     }
   }
