@@ -52,10 +52,13 @@ export const InvitationAcceptance = v.object({ token: linkToken, fullName, usern
 export type InvitationAcceptance = v.InferOutput<typeof InvitationAcceptance>;
 
 export const MemberChanges = v.object({
+  username: v.string(),
   role: v.optional(Role.schema),
   deactivated: v.optional(v.boolean("Choose true or false")),
 });
 export type MemberChanges = v.InferOutput<typeof MemberChanges>;
+
+export const InvitationRef = v.object({ id: v.string() });
 
 export const SetupCheck = v.object({ secret: linkToken });
 

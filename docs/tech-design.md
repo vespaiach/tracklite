@@ -111,6 +111,7 @@ Next.js App Router with React Server Components (D-10). A page renders on the se
 **Layout.**
 - `src/app/layout.tsx` holds `<html>`, `<body>`, the fonts (`next/font/google`, served from the app so the CSP's `font-src 'self'` holds), the Track Lite stylesheet, the toast provider and the error reporter (4.8).
 - `src/app/(signed-out)/` holds `/sign-in`, `/forgot-password`, `/reset-password`, `/invite` and `/welcome`; `src/app/(signed-in)/` holds every other API-004 page, under a layout that renders the shell and sidebar (6.2): `Shell` (`src/app/(signed-in)/Shell.tsx`) gets the member, the sidebar projects as a `Region` and the **New project** (`createProject` in `(signed-in)/actions.ts`) and **Sign out** actions as props, and marks the current item from `usePathname()`. Each route folder has its `page.tsx`, an `actions.ts` for its server actions, and its client components. A layout and its page render in parallel, so each page also calls `signedInPageMember()` (`src/app/_server/session.ts`, cached per request with React `cache`), which redirects as the layout does.
+- `/my-issues` (H14) and the three settings pages (H19, `src/app/(signed-in)/settings/`) are server pages; the settings pages share a `SettingsTitle` and the no-permission state. Links between two server pages use the leave-guard `Link` (`src/components/leave-guard.tsx`), such as Members' **Notification status**.
 - `src/app/(signed-in)/project/[key]/layout.tsx` resolves the project with `projectAt(key)` (`project/[key]/project.ts`, cached per request so the layout and its pages share one read): an unknown or malformed key calls `notFound()`, which renders `src/app/(signed-in)/not-found.tsx` inside the shell with a `404` (STD-4), and a key typed in another case redirects to the canonical address read from `x-request-path` (6.1). The layout renders `ProjectHeader` (client) above the page, which marks the current view from `useSelectedLayoutSegment()` and holds **New issue** (`createIssue` in `project/[key]/actions.ts`). The board page is the layout's only page until H16–H18 move the others; the list, details, labels and settings screens still render their own header in the single-page app.
 - Until H20, links between a server page and a screen still in the single-page app are plain anchors that load a new document (and so trigger its `beforeunload` guard); the single-page app reaches server pages with `loadPage` (`src/lib/load-page.ts`). The single-page app's **New issue** dialog is the same component as the layout's, calling the same `createIssue` action, which `[...path]/page.tsx` passes to `ClientApp`. It calls Next's `router.refresh()` after a project rename, archive or unarchive, so the server-rendered sidebar is read again; deleting a project loads `/my-issues`.
 - `src/proxy.ts` only sets the Content Security Policy and `Referrer-Policy` (4.9), and forwards the requested path and query to the app in the `x-request-path` request header, replacing any the browser sent, since a layout isn't given the address. Redirects happen in layouts and pages.
@@ -403,24 +404,17 @@ The client-rendered screens under `src/app/(signed-in)/[...path]` call these unt
 
 The queries declare the contract types (3.5) as their return types. The tables give only what the types can't say.
 
-**Sign-in and account** (no session needed unless noted). Signing in, password resets, accepting an invitation and first-admin setup are the `(signed-out)` pages' actions since H13 (6.1); signing out is the shell's `signOut` action since H14.
+**Sign-in and account** (no session needed unless noted). Signing in, password resets, accepting an invitation and first-admin setup are the `(signed-out)` pages' actions since H13 (6.1); signing out is the shell's `signOut` action since H14. Since H19 the settings pages are server pages: `/settings/profile` saves the full name and changes the password with `updateProfile` and `changePassword` (a wrong current password counts toward the sign-in limit, 4.5, and a change ends the member's other sessions), `/settings/members` reads `listMembers` and `listInvitations` and changes them with `createInvitation` (a resend if the email has an open invitation), `resendInvitation`, `revokeInvitation` and `updateMember` (role or deactivated), and `/settings/notifications` reads `notificationStats` (below). A member who isn't an admin gets "You don't have permission to do that." on the two admin pages, and nothing is read.
 
 | Method and path | Notes | Who | Spec |
 |---|---|---|---|
 | `GET /api/me` | The profile, including email and role | Member | REQ-003.3 |
-| `PATCH /api/me` | Full name only | Member | REQ-003 |
-| `PUT /api/me/password` | `204`; ends the member's other sessions. A wrong current password counts toward the sign-in limit (4.5) | Member | REQ-049, SEC-001 |
 
-**Members and invitations**
+**Members**
 
 | Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/members` | All members, active and deactivated, for the assignee picker (it offers only active ones), the @mention suggestions and the members page; with about 15 people the browser filters the list itself | Member (emails only for admins) | DATA-001, REQ-037 |
-| `PATCH /api/members/{username}` | Role or deactivated; returns the full profile | Admin | REQ-007, REQ-008, REQ-052 |
-| `GET /api/invitations` | Pending, Bounced and Expired invitations | Admin | REQ-001, REQ-051 |
-| `POST /api/invitations` | `201`; works as a resend if the email has an open invitation | Admin | REQ-001 |
-| `POST /api/invitations/{id}/resend` | A new link | Admin | REQ-001.3 |
-| `DELETE /api/invitations/{id}` | Revokes | Admin | REQ-001.4 |
+| `GET /api/members` | All members, active and deactivated, for the assignee picker (it offers only active ones) and the @mention suggestions; with about 15 people the browser filters the list itself | Member (emails only for admins) | DATA-001, REQ-037 |
 
 **Projects and labels**
 
@@ -453,11 +447,7 @@ The queries declare the contract types (3.5) as their return types. The tables g
 | `PATCH /api/comments/{id}` | A stale version gets `409` (STD-8) | Author | REQ-033 |
 | `DELETE /api/comments/{id}` | | Author or Admin | REQ-034 |
 
-**Operations**
-
-| Method and path | Notes | Who | Spec |
-|---|---|---|---|
-| `GET /api/notification-stats` | The status page's data. Counts and the recent list go by `state_changed_at`, and all windows use `now()`. A delivery's issue ID or project key comes from its batch's newest notification. A bounced delivery's attempts include the send that bounced. `outboxStaleMinutes` is the whole minutes since the last outbox run once that is 2 minutes or more (OPS-005), worked out with `now()`, else null. No emails and no excerpts | Admin | REQ-053, SEC-007 |
+**Operations.** `notificationStats` (`src/queries/notifications.ts`, admin only) is the status page's data; **Refresh** calls `router.refresh()`. Counts and the recent list go by `state_changed_at`, and all windows use `now()`. A delivery's issue ID or project key comes from its batch's newest notification. A bounced delivery's attempts include the send that bounced. `outboxStaleMinutes` is the whole minutes since the last outbox run once that is 2 minutes or more (OPS-005), worked out with `now()`, else null. No emails and no excerpts (REQ-053, SEC-007).
 
 ### 3.4 Route handlers
 

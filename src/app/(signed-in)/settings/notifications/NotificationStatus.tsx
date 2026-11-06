@@ -1,10 +1,14 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { formatExact, formatUpdated, formatWait } from "../../../../client/dates";
 import {
   AppBar,
   AppBarTitle,
   Button,
   Fact,
   FactList,
-  FormStatus,
   Mono,
   SettingsEmpty,
   SettingsGrid,
@@ -12,17 +16,13 @@ import {
   SettingsSection,
   Table,
   WarningNote,
-} from "../../components/ui/track-lite";
-import {
-  type ChannelStats,
-  type NotificationChannel,
-  type NotificationStats,
-  type ProblemDelivery,
-  useMeQuery,
-  useNotificationStatsQuery,
-} from "../api";
-import { formatExact, formatUpdated, formatWait } from "../dates";
-import { Zone, zoneState } from "../Zone";
+} from "../../../../components/ui/track-lite";
+import type {
+  ChannelStats,
+  NotificationChannel,
+  NotificationStats,
+  ProblemDelivery,
+} from "../../../../contract";
 
 const channelNames: Record<NotificationChannel, string> = { email: "Email" };
 
@@ -42,52 +42,27 @@ const problemColumns = {
   when: "140px",
 };
 
-export function NotificationStatus() {
-  const { data: me } = useMeQuery();
-  if (me?.role === "admin") return <NotificationStatusAdmin />;
+export function NotificationStatusBar() {
+  const router = useRouter();
+  const [refreshing, startRefresh] = useTransition();
+
   return (
-    <>
-      <AppBar>
-        <AppBarTitle>Notification status</AppBarTitle>
-      </AppBar>
-      <SettingsLayout>
-        <FormStatus>You don't have permission to do that.</FormStatus>
-      </SettingsLayout>
-    </>
+    <AppBar
+      end={
+        <Button
+          size="sm"
+          disabled={refreshing}
+          aria-busy={refreshing || undefined}
+          onClick={() => startRefresh(() => router.refresh())}>
+          {refreshing ? "Refreshing…" : "Refresh"}
+        </Button>
+      }>
+      <AppBarTitle>Notification status</AppBarTitle>
+    </AppBar>
   );
 }
 
-function NotificationStatusAdmin() {
-  const stats = useNotificationStatsQuery();
-  const { isLoading, isFetching, refetch } = stats;
-  const refreshing = isFetching && !isLoading;
-
-  return (
-    <>
-      <AppBar
-        end={
-          <Button
-            size="sm"
-            disabled={isFetching}
-            aria-busy={refreshing || undefined}
-            onClick={refetch}>
-            {refreshing ? "Refreshing…" : "Refresh"}
-          </Button>
-        }>
-        <AppBarTitle>Notification status</AppBarTitle>
-      </AppBar>
-      <Zone
-        what="notification status"
-        state={zoneState(stats)}
-        retry={refetch}
-        page>
-        {(loaded) => <StatsReport stats={loaded} />}
-      </Zone>
-    </>
-  );
-}
-
-function StatsReport({ stats }: { stats: NotificationStats }) {
+export function StatsReport({ stats }: { stats: NotificationStats }) {
   return (
     <SettingsLayout wide>
       <SettingsGrid>

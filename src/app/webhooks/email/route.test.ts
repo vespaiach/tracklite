@@ -1,14 +1,13 @@
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { NotificationStats } from "../../../contract";
 import { db } from "../../../infrastructure/db";
 import { outbox } from "../../../infrastructure/email/outbox";
-import { invitations } from "../../../infrastructure/identity/tables";
+import { invitations, type Member } from "../../../infrastructure/identity/tables";
 import { notificationDeliveries } from "../../../infrastructure/notifications/tables";
 import { createMember, createNotificationBatch } from "../../../test/factories";
 import { invitedBy, listedInvitation, signedInAdmin, uniqueEmail } from "../../../test/invitations";
-import { GET as getNotificationStats } from "../../api/notification-stats/route";
+import { notificationStats } from "../../../queries";
 import { POST } from "./route";
 
 const secretBytes = randomBytes(24);
@@ -80,11 +79,8 @@ async function sentNotificationEmail() {
   return { id: delivery.id, providerMessageId };
 }
 
-async function emailCounts(cookie: string) {
-  const response = await getNotificationStats(
-    new Request("http://localhost:3000/api/notification-stats", { headers: { Cookie: cookie } }),
-  );
-  const stats: NotificationStats = await response.json();
+async function emailCounts(admin: Member) {
+  const stats = await notificationStats(admin);
   return stats.channels.find((row) => row.channel === "email");
 }
 
@@ -102,8 +98,8 @@ it("API-003.1, REQ-053: a bounce for a notification email marks it Bounced, reco
     .update(notificationDeliveries)
     .set({ stateChangedAt: sql`now() - interval '1 hour'` })
     .where(eq(notificationDeliveries.id, email.id));
-  const { cookie } = await signedInAdmin();
-  const before = await emailCounts(cookie);
+  const { member: admin } = await signedInAdmin();
+  const before = await emailCounts(admin);
 
   const response = await signedWebhook(event("email.bounced", email.providerMessageId));
 
@@ -119,14 +115,14 @@ it("API-003.1, REQ-053: a bounce for a notification email marks it Bounced, reco
     .from(notificationDeliveries)
     .where(eq(notificationDeliveries.id, email.id));
   expect(bounced.changedJustNow).toBe(true);
-  expect(await emailCounts(cookie)).toEqual({
+  expect(await emailCounts(admin)).toEqual({
     ...before,
     sent: (before?.sent ?? 0) - 1,
     bounced: (before?.bounced ?? 0) + 1,
   });
 });
 
-it("API-003.2: a bounce for an invitation email shows it as Bounced in the list API", async () => {
+it("API-003.2: a bounce for an invitation email shows it as Bounced in the list", async () => {
   const { cookie } = await signedInAdmin();
   const email = uniqueEmail();
   const { invitation } = await invitedBy(cookie, email);

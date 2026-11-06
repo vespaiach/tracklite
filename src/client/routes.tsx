@@ -8,20 +8,6 @@ export const routes: RouteObject[] = [
       {
         children: [
           {
-            path: "settings/profile",
-            lazy: async () => ({ Component: (await import("./screens/Profile")).Profile }),
-          },
-          {
-            path: "settings/members",
-            lazy: async () => ({ Component: (await import("./screens/Members")).Members }),
-          },
-          {
-            path: "settings/notifications",
-            lazy: async () => ({
-              Component: (await import("./screens/NotificationStatus")).NotificationStatus,
-            }),
-          },
-          {
             path: "project/:key/list",
             lazy: async () => ({ Component: (await import("./screens/Project")).ProjectList }),
           },
