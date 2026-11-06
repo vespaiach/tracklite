@@ -14,8 +14,8 @@ export function answering(...results: ActionResult<null>[]) {
 
 export const done: ActionResult<null> = { ok: true, data: null };
 
-export function refused(kind: string, message: string, fields?: Record<string, string>) {
-  return { ok: false, error: { kind, message, ...(fields ? { fields } : {}) } } as ActionResult<null>;
+export function refused<Data = null>(kind: string, message: string, fields?: Record<string, string>) {
+  return { ok: false, error: { kind, message, ...(fields ? { fields } : {}) } } as ActionResult<Data>;
 }
 
 export function pendingAction() {

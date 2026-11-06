@@ -64,3 +64,19 @@ it("STD-2, REQ-013.1, REQ-013.4: a member sees no settings gear; an archived pro
   expect(header.getByText("Archived")).toBeTruthy();
   expect(header.queryByRole("button", { name: "New issue" })).toBeNull();
 });
+
+it("design §6.2: the settings page has no project header", () => {
+  navigation.segment = "settings";
+  renderForm(
+    <ProjectHeader
+      project={web}
+      admin
+      members={[]}
+      me="sam"
+      createIssue={vi.fn()}
+    />,
+  );
+
+  expect(screen.queryByRole("banner")).toBeNull();
+  expect(screen.queryByRole("heading")).toBeNull();
+});

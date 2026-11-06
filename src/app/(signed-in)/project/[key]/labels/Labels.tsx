@@ -1,13 +1,17 @@
+"use client";
+
 import { Ellipsis, Plus } from "lucide-react";
-import { type FormEvent, type KeyboardEvent, type Ref, useEffect, useRef, useState } from "react";
-import { useParams } from "react-router";
+import { useRouter } from "next/navigation";
+import { type KeyboardEvent, type Ref, useEffect, useRef, useState } from "react";
 import type { Key } from "react-aria-components";
+import { useReturnFocus } from "../../../../../client/useReturnFocus";
+import { useActionCall } from "../../../../../components/useActionCall";
+import { useFormAction } from "../../../../../components/useFormAction";
 import {
   Button,
   Dialog,
   Field,
   FieldError,
-  FormStatus,
   Input,
   IssueEmpty,
   Menu,
@@ -23,26 +27,27 @@ import {
   SettingsRow,
   SettingsRowActions,
   SettingsSection,
-} from "../../components/ui/track-lite";
-import { labelColors } from "../../contract";
+} from "../../../../../components/ui/track-lite";
 import {
-  type ApiFailure,
+  type ActionError,
+  type ActionResult,
   type Label,
   type LabelColor,
-  type Project,
-  useCreateLabelMutation,
-  useDeleteLabelMutation,
-  useLabelsQuery,
-  useMeQuery,
-  useUpdateLabelMutation,
-} from "../api";
-import { useFailureToast } from "../failure";
-import { ProjectGate } from "../ProjectGate";
-import { ProjectHeader } from "../ProjectHeader";
-import { Zone, zoneState } from "../Zone";
-import { useReturnFocus } from "../useReturnFocus";
+  labelColors,
+  type ProjectSummary,
+} from "../../../../../contract";
 
-type FieldErrors = { name?: string; color?: string };
+type LabelChange = { id: string; name?: string; color?: LabelColor };
+
+type LabelAction<Input> = (input: Input) => Promise<ActionResult<null>>;
+
+export type LabelsActions = {
+  createLabel: LabelAction<FormData>;
+  updateLabel: LabelAction<FormData | LabelChange>;
+  deleteLabel: LabelAction<{ id: string }>;
+};
+
+type LabelsProps = LabelsActions & { project: ProjectSummary; labels: Label[] };
 
 function colorName(color: LabelColor) {
   return color[0].toUpperCase() + color.slice(1);
@@ -56,9 +61,19 @@ function issueCount(count: number) {
   );
 }
 
-function fieldErrors(failure: ApiFailure): FieldErrors | undefined {
-  if (failure.status !== 422) return undefined;
-  return failure.fields ?? { name: failure.message };
+function fieldErrors(error: ActionError | null): { name?: string; color?: string } {
+  if (!error) return {};
+  return error.fields ?? { name: error.message };
+}
+
+function useRefreshWhenGone<Input>(act: LabelAction<Input>): LabelAction<Input> {
+  const router = useRouter();
+
+  return async (input) => {
+    const result = await act(input);
+    if (!result.ok && result.error.kind === "notFound") router.refresh();
+    return result;
+  };
 }
 
 function ColorMenu({
@@ -89,27 +104,7 @@ function ColorMenu({
   );
 }
 
-export function Labels() {
-  const { key = "" } = useParams();
-  const { data: me } = useMeQuery();
-  return (
-    <ProjectGate projectKey={key}>
-      {(project) => (
-        <>
-          <ProjectHeader
-            project={project}
-            view="labels"
-            admin={me?.role === "admin"}
-          />
-          <LabelsPage project={project} />
-        </>
-      )}
-    </ProjectGate>
-  );
-}
-
-function LabelsPage({ project }: { project: Project }) {
-  const labels = useLabelsQuery(project.key);
+export function Labels({ project, labels, ...actions }: LabelsProps) {
   const canEdit = project.archivedAt === null;
   const [creating, setCreating] = useState(false);
   const newLabel = useReturnFocus<HTMLButtonElement>(creating);
@@ -120,7 +115,6 @@ function LabelsPage({ project }: { project: Project }) {
         title="Labels"
         action={
           canEdit &&
-          labels.data &&
           !creating && (
             <Button
               ref={newLabel}
@@ -134,76 +128,68 @@ function LabelsPage({ project }: { project: Project }) {
         <p className="tl-field__help">
           Renaming or deleting a label changes every issue in this project that has it.
         </p>
-        <Zone
-          what="labels"
-          state={zoneState(labels)}
-          retry={labels.refetch}>
-          {(loaded) => (
-            <>
-              {creating && (
-                <CreateForm
-                  projectKey={project.key}
-                  onClose={() => setCreating(false)}
-                />
-              )}
-              {loaded.length === 0 ? (
-                !creating && (
-                  <IssueEmpty
-                    action={canEdit ? "Create one." : undefined}
-                    onAction={() => setCreating(true)}>
-                    No labels yet.
-                  </IssueEmpty>
-                )
-              ) : (
-                <SettingsList label="Labels">
-                  {loaded.map((label) => (
-                    <LabelRow
-                      key={label.id}
-                      label={label}
-                      canEdit={canEdit}
-                    />
-                  ))}
-                </SettingsList>
-              )}
-            </>
-          )}
-        </Zone>
+        {creating && (
+          <CreateForm
+            projectKey={project.key}
+            createLabel={actions.createLabel}
+            onClose={() => setCreating(false)}
+          />
+        )}
+        {labels.length === 0 ? (
+          !creating && (
+            <IssueEmpty
+              action={canEdit ? "Create one." : undefined}
+              onAction={() => setCreating(true)}>
+              No labels yet.
+            </IssueEmpty>
+          )
+        ) : (
+          <SettingsList label="Labels">
+            {labels.map((label) => (
+              <LabelRow
+                key={label.id}
+                label={label}
+                canEdit={canEdit}
+                {...actions}
+              />
+            ))}
+          </SettingsList>
+        )}
       </SettingsSection>
     </SettingsLayout>
   );
 }
 
-function CreateForm({ projectKey, onClose }: { projectKey: string; onClose: () => void }) {
-  const [createLabel, { isLoading: saving }] = useCreateLabelMutation();
-  const toastFailure = useFailureToast();
+function CreateForm({
+  projectKey,
+  createLabel,
+  onClose,
+}: Pick<LabelsActions, "createLabel"> & { projectKey: string; onClose: () => void }) {
   const nameInput = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
   const [color, setColor] = useState<LabelColor>("gray");
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const { error, submit, pending } = useFormAction(createLabel, onClose, ["invalid"]);
+  const errors = fieldErrors(error);
 
   useEffect(() => {
     nameInput.current?.focus();
   }, []);
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setErrors({});
-    try {
-      await createLabel({ key: projectKey, name, color }).unwrap();
-      onClose();
-    } catch (caught) {
-      const failure = caught as ApiFailure;
-      const fields = fieldErrors(failure);
-      if (fields) setErrors(fields);
-      else toastFailure(failure);
-    }
-  }
 
   return (
     <SettingsForm
       aria-label="New label"
       onSubmit={submit}
       onKeyDown={(event: KeyboardEvent) => event.key === "Escape" && onClose()}>
+      <input
+        type="hidden"
+        name="key"
+        value={projectKey}
+      />
+      <input
+        type="hidden"
+        name="color"
+        value={color}
+      />
       <SettingsInline>
         <Field
           label="Name"
@@ -212,6 +198,7 @@ function CreateForm({ projectKey, onClose }: { projectKey: string; onClose: () =
             <Input
               {...props}
               ref={nameInput}
+              name="name"
               placeholder="Label name"
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -234,9 +221,9 @@ function CreateForm({ projectKey, onClose }: { projectKey: string; onClose: () =
             variant="primary"
             size="sm"
             type="submit"
-            disabled={saving}
-            aria-busy={saving || undefined}>
-            {saving ? "Creating…" : "Create label"}
+            disabled={pending}
+            aria-busy={pending || undefined}>
+            {pending ? "Creating…" : "Create label"}
           </Button>
           <Button
             size="sm"
@@ -249,26 +236,24 @@ function CreateForm({ projectKey, onClose }: { projectKey: string; onClose: () =
   );
 }
 
-function LabelRow({ label, canEdit }: { label: Label; canEdit: boolean }) {
-  const [updateLabel] = useUpdateLabelMutation();
-  const toastFailure = useFailureToast();
+function LabelRow({
+  label,
+  canEdit,
+  updateLabel,
+  deleteLabel,
+}: Omit<LabelsActions, "createLabel"> & { label: Label; canEdit: boolean }) {
+  const call = useActionCall();
+  const update = useRefreshWhenGone(updateLabel);
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const actions = useReturnFocus<HTMLButtonElement>(renaming);
-
-  async function recolor(color: LabelColor) {
-    try {
-      await updateLabel({ id: label.id, color }).unwrap();
-    } catch (caught) {
-      toastFailure(caught);
-    }
-  }
 
   if (renaming) {
     return (
       <SettingsRow>
         <RenameForm
           label={label}
+          updateLabel={update}
           onClose={() => setRenaming(false)}
         />
       </SettingsRow>
@@ -288,7 +273,7 @@ function LabelRow({ label, canEdit }: { label: Label; canEdit: boolean }) {
             ref={actions}
             label={label}
             onRename={() => setRenaming(true)}
-            onRecolor={recolor}
+            onRecolor={(color) => call(() => update({ id: label.id, color }))}
             onDelete={() => setDeleting(true)}
           />
         </SettingsRowActions>
@@ -296,6 +281,7 @@ function LabelRow({ label, canEdit }: { label: Label; canEdit: boolean }) {
       {deleting && (
         <DeleteDialog
           label={label}
+          deleteLabel={deleteLabel}
           onClose={() => setDeleting(false)}
         />
       )}
@@ -348,31 +334,20 @@ function LabelActions({
   );
 }
 
-function RenameForm({ label, onClose }: { label: Label; onClose: () => void }) {
-  const [updateLabel, { isLoading: saving }] = useUpdateLabelMutation();
-  const toastFailure = useFailureToast();
+function RenameForm({
+  label,
+  updateLabel,
+  onClose,
+}: Pick<LabelsActions, "updateLabel"> & { label: Label; onClose: () => void }) {
   const nameInput = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(label.name);
-  const [error, setError] = useState<string>();
+  const { error, submit, pending } = useFormAction(updateLabel, onClose, ["invalid"]);
+  const errorText = fieldErrors(error).name;
 
   useEffect(() => {
     nameInput.current?.focus();
     nameInput.current?.select();
   }, []);
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(undefined);
-    try {
-      await updateLabel({ id: label.id, name }).unwrap();
-      onClose();
-    } catch (caught) {
-      const failure = caught as ApiFailure;
-      const fields = fieldErrors(failure);
-      if (fields) setError(fields.name);
-      else toastFailure(failure);
-    }
-  }
 
   const errorId = `rename-${label.id}-error`;
   return (
@@ -380,26 +355,32 @@ function RenameForm({ label, onClose }: { label: Label; onClose: () => void }) {
       aria-label={`Rename ${label.name}`}
       onSubmit={submit}
       onKeyDown={(event: KeyboardEvent) => event.key === "Escape" && onClose()}>
+      <input
+        type="hidden"
+        name="id"
+        value={label.id}
+      />
       <SettingsInline>
         <div>
           <Input
             ref={nameInput}
+            name="name"
             aria-label="Name"
-            readOnly={saving}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? errorId : undefined}
+            readOnly={pending}
+            aria-invalid={errorText ? true : undefined}
+            aria-describedby={errorText ? errorId : undefined}
             value={name}
             onChange={(event) => setName(event.target.value)}
           />
-          {error && <FieldError id={errorId}>{error}</FieldError>}
+          {errorText && <FieldError id={errorId}>{errorText}</FieldError>}
         </div>
         <SettingsActions>
           <Button
             variant="primary"
             size="sm"
             type="submit"
-            disabled={saving}
-            aria-busy={saving || undefined}>
+            disabled={pending}
+            aria-busy={pending || undefined}>
             Save
           </Button>
           <Button
@@ -413,21 +394,23 @@ function RenameForm({ label, onClose }: { label: Label; onClose: () => void }) {
   );
 }
 
-function DeleteDialog({ label, onClose }: { label: Label; onClose: () => void }) {
-  const [deleteLabel, { isLoading }] = useDeleteLabelMutation();
-  const toastFailure = useFailureToast();
+function DeleteDialog({
+  label,
+  deleteLabel,
+  onClose,
+}: Pick<LabelsActions, "deleteLabel"> & { label: Label; onClose: () => void }) {
+  const call = useActionCall();
+  const remove = useRefreshWhenGone(deleteLabel);
   const cancel = useRef<HTMLButtonElement>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     cancel.current?.focus();
   }, []);
 
   async function confirm() {
-    try {
-      await deleteLabel(label.id).unwrap();
-    } catch (caught) {
-      toastFailure(caught);
-    }
+    setBusy(true);
+    await call(() => remove({ id: label.id }));
     onClose();
   }
 
@@ -445,8 +428,8 @@ function DeleteDialog({ label, onClose }: { label: Label; onClose: () => void })
           </Button>
           <Button
             variant="danger"
-            busy={isLoading ? "Deleting…" : undefined}
-            aria-busy={isLoading || undefined}
+            busy={busy ? "Deleting…" : undefined}
+            aria-busy={busy || undefined}
             onClick={confirm}>
             Delete
           </Button>

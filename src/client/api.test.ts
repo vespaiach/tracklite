@@ -12,7 +12,7 @@ afterEach(() => {
 
 function storeAt(path: string) {
   const router = createMemoryRouter([{ path: "*" }], { initialEntries: [path] });
-  return { router, store: makeStore(router, () => {}) };
+  return { router, store: makeStore(router) };
 }
 
 function respondWith(status: number, body?: unknown) {
@@ -98,17 +98,17 @@ it("baseQuery: GET returns parsed JSON; PATCH sends a JSON body and a 204 gives 
   expect(fetch).toHaveBeenCalledWith("/api/me", expect.anything());
 
   respondWith(204);
-  const changed = await storeAt("/project/WEB/labels").store.dispatch(
-    api.endpoints.updateLabel.initiate({ id: "label-1", name: "bug" }),
+  const changed = await storeAt("/project/WEB/detail").store.dispatch(
+    api.endpoints.updateProject.initiate({ key: "WEB", description: "Goals", descriptionVersion: 0 }),
   );
 
   expect(changed.data).toBeNull();
   expect(fetch).toHaveBeenCalledWith(
-    "/api/labels/label-1",
+    "/api/projects/WEB",
     expect.objectContaining({
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "bug" }),
+      body: JSON.stringify({ description: "Goals", descriptionVersion: 0 }),
     }),
   );
 });

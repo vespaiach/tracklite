@@ -1,6 +1,9 @@
+"use client";
+
 import { Trash2 } from "lucide-react";
-import { type FormEvent, useEffect, useRef, useState } from "react";
-import { useParams } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { useActionCall } from "../../../../../components/useActionCall";
+import { useFormAction } from "../../../../../components/useFormAction";
 import {
   AppBar,
   Button,
@@ -17,43 +20,36 @@ import {
   SettingsLayout,
   SettingsSection,
   Tag,
-} from "../../components/ui/track-lite";
-import {
-  type ApiFailure,
-  type Project,
-  useDeleteProjectMutation,
-  useMeQuery,
-  useUpdateProjectMutation,
-} from "../api";
-import { loadPage } from "../../lib/load-page";
-import { useFailureToast } from "../failure";
-import { ProjectGate } from "../ProjectGate";
+} from "../../../../../components/ui/track-lite";
+import type { ActionResult, FormAction, ProjectSummary } from "../../../../../contract";
+import { loadPage } from "../../../../../lib/load-page";
 
-export function ProjectSettings() {
-  const { key = "" } = useParams();
-  const { data: me } = useMeQuery();
-  if (me?.role !== "admin") {
-    return (
-      <SettingsLayout>
-        <FormStatus>You don't have permission to do that.</FormStatus>
-      </SettingsLayout>
-    );
-  }
-  return <ProjectGate projectKey={key}>{(project) => <SettingsPage project={project} />}</ProjectGate>;
-}
+export type ProjectSettingsActions = {
+  renameProject: FormAction<{ name: string }>;
+  archiveProject: (change: { key: string; archived: boolean }) => Promise<ActionResult<null>>;
+  deleteProject: (project: { key: string }) => Promise<ActionResult<null>>;
+};
 
-function SettingsPage({ project }: { project: Project }) {
-  const full = `${project.name} · ${project.key}`;
-  const projectHref = `/project/${project.key}`;
+type ProjectSettingsProps = ProjectSettingsActions & { project: ProjectSummary };
+
+export function ProjectSettings({
+  project,
+  renameProject,
+  archiveProject,
+  deleteProject,
+}: ProjectSettingsProps) {
   const archived = project.archivedAt !== null;
+
   return (
     <>
-      <AppBar>
-        <Crumbs items={[{ label: full, href: projectHref }, { label: "Settings" }]} />
-        {archived && <Tag variant="neutral">Archived</Tag>}
-      </AppBar>
+      <SettingsTitleBar project={project} />
       <SettingsLayout medium>
-        {!archived && <RenameForm project={project} />}
+        {!archived && (
+          <RenameForm
+            project={project}
+            renameProject={renameProject}
+          />
+        )}
         <FactList
           stacked
           note={
@@ -69,49 +65,68 @@ function SettingsPage({ project }: { project: Project }) {
             {project.key}
           </Fact>
         </FactList>
-        <ArchiveSection project={project} />
-        <DeleteSection project={project} />
+        <ArchiveSection
+          project={project}
+          archiveProject={archiveProject}
+        />
+        <DeleteSection
+          project={project}
+          deleteProject={deleteProject}
+        />
       </SettingsLayout>
     </>
   );
 }
 
-function RenameForm({ project }: { project: Project }) {
-  const [updateProject, { isLoading: saving }] = useUpdateProjectMutation();
-  const toastFailure = useFailureToast();
-  const [name, setName] = useState(project.name);
-  const [error, setError] = useState<string>();
-  const [saved, setSaved] = useState(false);
+function SettingsTitleBar({ project }: { project: ProjectSummary }) {
+  return (
+    <AppBar>
+      <Crumbs
+        items={[
+          { label: `${project.name} · ${project.key}`, href: `/project/${project.key}` },
+          { label: "Settings" },
+        ]}
+      />
+      {project.archivedAt !== null && <Tag variant="neutral">Archived</Tag>}
+    </AppBar>
+  );
+}
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(undefined);
-    setSaved(false);
-    try {
-      const renamed = await updateProject({ key: project.key, name }).unwrap();
+function RenameForm({
+  project,
+  renameProject,
+}: Pick<ProjectSettingsActions, "renameProject"> & { project: ProjectSummary }) {
+  const [name, setName] = useState(project.name);
+  const [saved, setSaved] = useState(false);
+  const { error, submit, pending } = useFormAction(
+    renameProject,
+    (renamed) => {
       setName(renamed.name);
       setSaved(true);
-    } catch (caught) {
-      const failure = caught as ApiFailure;
-      if (failure.status === 422) {
-        setError(failure.fields?.name ?? failure.message);
-      } else {
-        toastFailure(failure);
-      }
-    }
-  }
+    },
+    ["invalid"],
+  );
 
   return (
     <SettingsForm
       aria-label="Rename project"
-      onSubmit={submit}>
+      onSubmit={(event) => {
+        setSaved(false);
+        submit(event);
+      }}>
+      <input
+        type="hidden"
+        name="key"
+        value={project.key}
+      />
       <SettingsInline>
         <Field
           label="Name"
-          error={error}>
+          error={error ? (error.fields?.name ?? error.message) : undefined}>
           {(props) => (
             <Input
               {...props}
+              name="name"
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
@@ -121,8 +136,8 @@ function RenameForm({ project }: { project: Project }) {
           <Button
             variant="primary"
             type="submit"
-            busy={saving ? "Saving…" : undefined}
-            aria-busy={saving || undefined}>
+            busy={pending ? "Saving…" : undefined}
+            aria-busy={pending || undefined}>
             Save
           </Button>
           {saved && <FormStatus>Saved.</FormStatus>}
@@ -132,18 +147,19 @@ function RenameForm({ project }: { project: Project }) {
   );
 }
 
-function ArchiveSection({ project }: { project: Project }) {
-  const [updateProject, { isLoading }] = useUpdateProjectMutation();
-  const toastFailure = useFailureToast();
+function ArchiveSection({
+  project,
+  archiveProject,
+}: Pick<ProjectSettingsActions, "archiveProject"> & { project: ProjectSummary }) {
+  const call = useActionCall();
+  const [busy, setBusy] = useState(false);
   const archived = project.archivedAt !== null;
   const action = archived ? "Unarchive project" : "Archive project";
 
   async function toggle() {
-    try {
-      await updateProject({ key: project.key, archived: !archived }).unwrap();
-    } catch (caught) {
-      toastFailure(caught);
-    }
+    setBusy(true);
+    await call(() => archiveProject({ key: project.key, archived: !archived }));
+    setBusy(false);
   }
 
   return (
@@ -157,8 +173,8 @@ function ArchiveSection({ project }: { project: Project }) {
       </p>
       <SettingsActions>
         <Button
-          disabled={isLoading}
-          aria-busy={isLoading || undefined}
+          disabled={busy}
+          aria-busy={busy || undefined}
           onClick={toggle}>
           {action}
         </Button>
@@ -167,8 +183,12 @@ function ArchiveSection({ project }: { project: Project }) {
   );
 }
 
-function DeleteSection({ project }: { project: Project }) {
+function DeleteSection({
+  project,
+  deleteProject,
+}: Pick<ProjectSettingsActions, "deleteProject"> & { project: ProjectSummary }) {
   const [confirming, setConfirming] = useState(false);
+
   return (
     <SettingsSection
       title="Delete project"
@@ -188,6 +208,7 @@ function DeleteSection({ project }: { project: Project }) {
       {confirming && (
         <DeleteDialog
           project={project}
+          deleteProject={deleteProject}
           onCancel={() => setConfirming(false)}
         />
       )}
@@ -195,23 +216,24 @@ function DeleteSection({ project }: { project: Project }) {
   );
 }
 
-function DeleteDialog({ project, onCancel }: { project: Project; onCancel: () => void }) {
-  const [deleteProject, { isLoading }] = useDeleteProjectMutation();
-  const toastFailure = useFailureToast();
+function DeleteDialog({
+  project,
+  deleteProject,
+  onCancel,
+}: Pick<ProjectSettingsActions, "deleteProject"> & { project: ProjectSummary; onCancel: () => void }) {
+  const call = useActionCall();
   const cancel = useRef<HTMLButtonElement>(null);
   const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     cancel.current?.focus();
   }, []);
 
   async function confirm() {
-    try {
-      await deleteProject(project.key).unwrap();
-      loadPage("/my-issues");
-    } catch (caught) {
-      toastFailure(caught);
-    }
+    setBusy(true);
+    if (await call(() => deleteProject({ key: project.key }))) loadPage("/my-issues");
+    else setBusy(false);
   }
 
   return (
@@ -228,8 +250,8 @@ function DeleteDialog({ project, onCancel }: { project: Project; onCancel: () =>
           </Button>
           <Button
             variant="danger"
-            disabled={typed !== project.key || isLoading}
-            aria-busy={isLoading || undefined}
+            disabled={typed !== project.key || busy}
+            aria-busy={busy || undefined}
             onClick={confirm}>
             Delete project
           </Button>
