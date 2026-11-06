@@ -2,7 +2,7 @@ import "server-only";
 import { db } from "../../../infrastructure/db";
 import { assertAdmin, type Member } from "../../identity";
 import { deleteProjectRow, loadProject } from "../repository";
-import type { ProjectKey } from "../schemas";
+import type { ProjectKey } from "../../../domain/shared/identifiers";
 
 export async function deleteProject(actor: Member, key: ProjectKey | undefined) {
   assertAdmin(actor);

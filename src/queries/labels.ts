@@ -6,9 +6,9 @@ import type { Executor } from "../infrastructure/transaction";
 import type { Member } from "../infrastructure/identity/tables";
 import { issueLabels } from "../infrastructure/issues/tables";
 import { labels, projects } from "../infrastructure/projects/tables";
-import type { ProjectKey } from "../domain/shared/identifiers";
 import type { Label } from "../contract";
 import { byProjectKey } from "./project";
+import type { ProjectKey } from "../domain/shared/identifiers";
 
 const labelResponse = {
   id: labels.id,

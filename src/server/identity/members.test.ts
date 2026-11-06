@@ -5,7 +5,7 @@ import { db } from "../../infrastructure/db";
 import { updateMember } from "./commands/update-member";
 import { initials } from "./members";
 import { members } from "../../infrastructure/identity/tables";
-import { parseUsername } from "./schemas";
+import { Username } from "../../domain/shared/identifiers";
 
 it("REQ-003.4: initials of long, single, bracketed, numeric and CJK names", () => {
   expect(initials("Alexandria Catherine Montgomery-Fitzwilliam van der Bergholt")).toBe("AB");
@@ -21,10 +21,10 @@ it("STD-2: a member can't change a role or deactivate", async () => {
   const forbidden = { kind: "forbidden", message: "You don't have permission to do that." };
 
   await expect(
-    updateMember(member, parseUsername(target.username), { role: "member" }),
+    updateMember(member, Username.from(target.username), { role: "member" }),
   ).rejects.toMatchObject(forbidden);
   await expect(
-    updateMember(member, parseUsername(target.username), { deactivated: true }),
+    updateMember(member, Username.from(target.username), { deactivated: true }),
   ).rejects.toMatchObject(forbidden);
 
   const [stored] = await db.select().from(members).where(eq(members.id, target.id));

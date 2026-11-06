@@ -20,7 +20,7 @@ export async function createFirstAdmin({ secret, email, fullName, username, pass
 
     const [member] = await tx
       .insert(members)
-      .values({ email, fullName, username, passwordHash, role: "admin" })
+      .values({ email, fullName, username: username.value, passwordHash, role: "admin" })
       .returning();
 
     return { member, sessionToken: await createSession(member.id, tx) };

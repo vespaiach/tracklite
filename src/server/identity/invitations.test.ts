@@ -3,7 +3,6 @@ import { expect, it } from "vitest";
 import { createMember } from "../../test/factories";
 import { uniqueEmail } from "../../test/invitations";
 import { db } from "../../infrastructure/db";
-import { parseUuid } from "../../infrastructure/ids";
 import { outbox } from "../../infrastructure/email/outbox";
 import { createInvitation } from "./commands/create-invitation";
 import { listInvitations } from "./commands/list-invitations";
@@ -11,6 +10,7 @@ import { resendInvitation } from "./commands/resend-invitation";
 import { revokeInvitation } from "./commands/revoke-invitation";
 import { invitations } from "../../infrastructure/identity/tables";
 import { createToken, hashToken } from "../../infrastructure/tokens";
+import { Uuid } from "../../domain/shared/identifiers";
 
 const forbidden = { kind: "forbidden", message: "You don't have permission to do that." };
 
@@ -53,7 +53,7 @@ it("STD-2: a member can't resend an invitation", async () => {
   const member = await createMember();
   const invitation = await openInvitation();
 
-  await expect(resendInvitation(member, parseUuid(invitation.id))).rejects.toMatchObject(forbidden);
+  await expect(resendInvitation(member, Uuid.from(invitation.id))).rejects.toMatchObject(forbidden);
 
   expect((await storedInvitation(invitation.id)).tokenHash).toEqual(invitation.tokenHash);
   expect(outbox.sent).toEqual([]);
@@ -63,7 +63,7 @@ it("STD-2: a member can't revoke an invitation", async () => {
   const member = await createMember();
   const invitation = await openInvitation();
 
-  await expect(revokeInvitation(member, parseUuid(invitation.id))).rejects.toMatchObject(forbidden);
+  await expect(revokeInvitation(member, Uuid.from(invitation.id))).rejects.toMatchObject(forbidden);
 
   expect((await storedInvitation(invitation.id)).revokedAt).toBeNull();
 });

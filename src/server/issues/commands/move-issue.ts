@@ -3,9 +3,10 @@ import { db } from "../../../infrastructure/db";
 import { publishAll } from "../../../infrastructure/events";
 import type { Member } from "../../identity";
 import { updatedIssue } from "../../../queries";
-import type { IssueId, IssueMove } from "../schemas";
+import type { IssueMove } from "../schemas";
 import { move } from "../model";
 import { loadIssue, neighboursAt, saveIssue } from "../repository";
+import type { IssueId } from "../../../domain/shared/identifiers";
 
 export async function moveIssue(_actor: Member, id: IssueId | undefined, { status, place }: IssueMove) {
   return db.transaction(async (tx) => {

@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import { check, integer, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, id, labelColor, timestamptz } from "../schema";
 import { members } from "../identity/tables";
-import type { ProjectKey } from "../../server/projects/schemas";
 
 export const projectKeys = pgTable("project_keys", {
   key: text("key").primaryKey(),
@@ -13,7 +12,6 @@ export const projects = pgTable(
   {
     id: id(),
     key: text("key")
-      .$type<ProjectKey>()
       .notNull()
       .unique()
       .references(() => projectKeys.key),

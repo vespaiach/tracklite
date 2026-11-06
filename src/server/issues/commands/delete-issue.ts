@@ -2,9 +2,9 @@ import "server-only";
 import { DomainError } from "../../../domain/shared/domain-error";
 import { db } from "../../../infrastructure/db";
 import type { Member } from "../../identity";
-import type { IssueId } from "../schemas";
 import { mayDeleteIssue } from "../model";
 import { deleteIssueRow, loadIssue } from "../repository";
+import type { IssueId } from "../../../domain/shared/identifiers";
 
 export async function deleteIssue(actor: Member, id: IssueId | undefined) {
   await db.transaction(async (tx) => {

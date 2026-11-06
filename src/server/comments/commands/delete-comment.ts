@@ -1,9 +1,9 @@
 import "server-only";
 import { db } from "../../../infrastructure/db";
-import type { Uuid } from "../../../infrastructure/ids";
 import type { Member } from "../../identity";
 import { mayDeleteComment, notAllowed } from "../model";
 import { deleteCommentRow, loadComment } from "../repository";
+import type { Uuid } from "../../../domain/shared/identifiers";
 
 export async function deleteComment(actor: Member, id: Uuid | undefined) {
   await db.transaction(async (tx) => {

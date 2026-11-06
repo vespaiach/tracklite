@@ -1,5 +1,4 @@
 import { expect, it } from "vitest";
-import type { Username } from "../identity";
 import {
   assigneeChange,
   descriptionSaveOf,
@@ -8,6 +7,7 @@ import {
   positionBetween,
   sameLabels,
 } from "./model";
+import { Username } from "../../domain/shared/identifiers";
 
 const issue = { title: "Fix login", status: "backlog", priority: "none" } as const;
 
@@ -40,10 +40,9 @@ it("REQ-016.3, REQ-017, REQ-018.1: saving the title, status or priority an issue
 });
 
 it("REQ-019.1, REQ-019.2, REQ-020.1: an assignee or label save is passed on as an edit of that field", () => {
-  expect(editOf(issue, { assignees: ["alex" as Username] })).toEqual({
-    field: "assignees",
-    assignees: ["alex"],
-  });
+  const alex = Username.from("alex");
+
+  expect(editOf(issue, { assignees: [alex] })).toEqual({ field: "assignees", assignees: [alex] });
   expect(editOf(issue, { assignees: [] })).toEqual({ field: "assignees", assignees: [] });
   expect(editOf(issue, { labelIds: ["l1"] })).toEqual({ field: "labels", labelIds: ["l1"] });
 });

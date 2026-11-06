@@ -7,7 +7,7 @@ import { deleteProject } from "./commands/delete-project";
 import { updateProject } from "./commands/update-project";
 import { writableProject } from "./repository";
 import { projects } from "../../infrastructure/projects/tables";
-import { parseProjectKey } from "./schemas";
+import { ProjectKey } from "../../domain/shared/identifiers";
 
 const forbidden = { kind: "forbidden", message: "You don't have permission to do that." };
 
@@ -36,7 +36,7 @@ it("REQ-013.4: archiving waits for a write already under way, so that write can'
     writeChecked = resolve;
   });
   const write = db.transaction(async (tx) => {
-    await writableProject(tx, project.key);
+    await writableProject(tx, ProjectKey.from(project.key));
     writeChecked();
     await new Promise<void>((resolve) => {
       finishWrite = resolve;
@@ -45,7 +45,7 @@ it("REQ-013.4: archiving waits for a write already under way, so that write can'
   });
   await checked;
 
-  const archive = updateProject(admin, project.key, { archived: true });
+  const archive = updateProject(admin, ProjectKey.from(project.key), { archived: true });
   await waitForLockWaiters(1);
   finishWrite();
   await write;
@@ -54,7 +54,9 @@ it("REQ-013.4: archiving waits for a write already under way, so that write can'
   const [stored] = await db.select().from(projects).where(eq(projects.id, project.id));
   expect(stored.description).toBe("Saved");
   expect(stored.archivedAt).not.toBeNull();
-  await expect(db.transaction((tx) => writableProject(tx, project.key))).rejects.toMatchObject({
+  await expect(
+    db.transaction((tx) => writableProject(tx, ProjectKey.from(project.key))),
+  ).rejects.toMatchObject({
     kind: "forbidden",
   });
 });
@@ -63,8 +65,8 @@ it("SEC-006.1: a member deleting project WEB, or a missing project, gets 403 and
   const member = await createMember();
   const project = await createProject();
 
-  await expect(deleteProject(member, project.key)).rejects.toMatchObject(forbidden);
-  await expect(deleteProject(member, parseProjectKey("NOPE"))).rejects.toMatchObject(forbidden);
+  await expect(deleteProject(member, ProjectKey.from(project.key))).rejects.toMatchObject(forbidden);
+  await expect(deleteProject(member, ProjectKey.from("NOPE"))).rejects.toMatchObject(forbidden);
 
   expect(await storedProject(project.id)).toBeDefined();
 });
@@ -73,7 +75,9 @@ it("STD-2: a member can't create a project", async () => {
   const member = await createMember();
   const key = uniqueProjectKey();
 
-  await expect(create(member, { name: "Website", key })).rejects.toMatchObject(forbidden);
+  await expect(create(member, { name: "Website", key: ProjectKey.from(key) })).rejects.toMatchObject(
+    forbidden,
+  );
 
   expect(await db.select().from(projects).where(eq(projects.key, key))).toHaveLength(0);
 });
@@ -82,8 +86,12 @@ it("STD-2: a member can't rename or archive a project", async () => {
   const member = await createMember();
   const project = await createProject({ name: "Website" });
 
-  await expect(updateProject(member, project.key, { name: "Renamed" })).rejects.toMatchObject(forbidden);
-  await expect(updateProject(member, project.key, { archived: true })).rejects.toMatchObject(forbidden);
+  await expect(
+    updateProject(member, ProjectKey.from(project.key), { name: "Renamed" }),
+  ).rejects.toMatchObject(forbidden);
+  await expect(updateProject(member, ProjectKey.from(project.key), { archived: true })).rejects.toMatchObject(
+    forbidden,
+  );
 
   expect(await storedProject(project.id)).toMatchObject({ name: "Website", archivedAt: null });
 });

@@ -4,6 +4,7 @@ import { createMember, createProject } from "../../test/factories";
 import { db } from "../../infrastructure/db";
 import { createLabel } from "./commands/create-label";
 import { labels } from "../../infrastructure/projects/tables";
+import { ProjectKey } from "../../domain/shared/identifiers";
 
 async function waitForLockWaiters(count: number) {
   for (;;) {
@@ -33,7 +34,7 @@ it("REQ-021.2: two concurrent creates of bug and BUG leave one label", async () 
   });
   await firstInserted;
 
-  const second = createLabel(member, project.key, { name: "BUG", color: "blue" });
+  const second = createLabel(member, ProjectKey.from(project.key), { name: "BUG", color: "blue" });
   await waitForLockWaiters(1);
   finishFirst();
   await first;

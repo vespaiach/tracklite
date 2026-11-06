@@ -2,11 +2,11 @@ import "server-only";
 import * as v from "valibot";
 import { roles } from "../../contract";
 import { emailAddress, linkToken, maxCharacters } from "../shared/schemas";
+import { Username, usernameRule } from "../../domain/shared/identifiers";
 
 const minPasswordLength = 12;
 const maxPasswordLength = 128;
 const maxFullNameLength = 60;
-const usernameRule = "Use 2 to 20 letters, digits or hyphens";
 
 export const newPassword = v.pipe(
   v.string(`At least ${minPasswordLength} characters`),
@@ -21,23 +21,7 @@ const fullName = v.pipe(
   maxCharacters(maxFullNameLength, `Too long (max ${maxFullNameLength})`),
 );
 
-export function usernameFormat(message: string) {
-  return v.pipe(
-    v.string(message),
-    v.toLowerCase(),
-    v.regex(/^[a-z0-9-]{2,20}$/, message),
-    v.brand("Username"),
-  );
-}
-
-export type Username = v.InferOutput<ReturnType<typeof usernameFormat>>;
-
-export function parseUsername(text: string): Username | undefined {
-  const result = v.safeParse(usernameFormat(usernameRule), text);
-  return result.success ? result.output : undefined;
-}
-
-const username = v.pipe(v.string(usernameRule), v.trim(), usernameFormat(usernameRule));
+const username = v.pipe(v.string(usernameRule), v.trim(), Username.schema);
 
 export const SignIn = v.object({ email: emailAddress, password: v.string("Incorrect password") });
 export type SignIn = v.InferOutput<typeof SignIn>;

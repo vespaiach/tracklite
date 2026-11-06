@@ -1,13 +1,13 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { DomainError } from "../../domain/shared/domain-error";
-import type { Uuid } from "../../infrastructure/ids";
 import type { Executor, Transaction } from "../../infrastructure/transaction";
 import { issues } from "../issues";
 import { projects, writableProject } from "../projects";
 import { findComments } from "../../queries";
 import { comments } from "../../infrastructure/comments/tables";
 import { type Comment, parentOf } from "./model";
+import { ProjectKey, type Uuid } from "../../domain/shared/identifiers";
 
 export function commentGone() {
   return new DomainError("notFound", "This comment was deleted");
@@ -32,10 +32,10 @@ export async function loadComment(tx: Transaction, id: Uuid | undefined) {
     .from(comments)
     .leftJoin(issues, eq(issues.id, comments.issueId))
     .innerJoin(projects, eq(projects.id, sql`coalesce(${comments.projectId}, ${issues.projectId})`))
-    .where(eq(comments.id, id));
+    .where(eq(comments.id, id.value));
   if (!target) throw commentGone();
 
-  await writableProject(tx, target.projectKey);
+  await writableProject(tx, ProjectKey.from(target.projectKey));
 
   const [row] = await tx.select().from(comments).where(eq(comments.id, target.id)).for("update");
   if (!row) throw commentGone();

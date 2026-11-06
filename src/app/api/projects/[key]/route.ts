@@ -1,24 +1,25 @@
 import type { Project } from "../../../../contract";
+import { ProjectKey, tryFrom } from "../../../../domain/shared/identifiers";
 import { apiRoute } from "../../../../server/shared/api-route";
-import { deleteProject, parseProjectKey, ProjectChanges, updateProject } from "../../../../server/projects";
+import { deleteProject, ProjectChanges, updateProject } from "../../../../server/projects";
 import { getProject } from "../../../../queries";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]">) {
-  const key = parseProjectKey((await params).key);
+  const key = tryFrom(ProjectKey, (await params).key);
   return apiRoute("member", async (_memberRequest, member) =>
     Response.json((await getProject(member, key)) satisfies Project),
   )(request);
 }
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/projects/[key]">) {
-  const key = parseProjectKey((await params).key);
+  const key = tryFrom(ProjectKey, (await params).key);
   return apiRoute("member", ProjectChanges, async (_memberRequest, member, changes) =>
     Response.json((await updateProject(member, key, changes)) satisfies Project),
   )(request);
 }
 
 export async function DELETE(request: Request, { params }: RouteContext<"/api/projects/[key]">) {
-  const key = parseProjectKey((await params).key);
+  const key = tryFrom(ProjectKey, (await params).key);
   return apiRoute("member", async (_memberRequest, member) => {
     await deleteProject(member, key);
     return new Response(null, { status: 204 });

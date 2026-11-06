@@ -2,13 +2,13 @@ import type { LabelColor } from "../../contract";
 import { DomainError } from "../../domain/shared/domain-error";
 import type { DomainEvent } from "../../domain/shared/events";
 import type { Member } from "../identity";
-import type { LabelChanges, ProjectChanges, ProjectKey } from "./schemas";
+import type { LabelChanges, ProjectChanges } from "./schemas";
 
 export type ProjectLabel = Readonly<{ id: string; name: string; color: LabelColor }>;
 
 export type Project = Readonly<{
   id: string;
-  key: ProjectKey;
+  key: string;
   name: string;
   description: string;
   descriptionVersion: number;

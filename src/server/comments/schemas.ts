@@ -1,6 +1,7 @@
 import "server-only";
 import * as v from "valibot";
-import { maxCharacters, requestId, version } from "../shared/schemas";
+import { maxCharacters, version } from "../shared/schemas";
+import { RequestId } from "../../domain/shared/identifiers";
 
 const commentBody = v.pipe(
   v.string("Comment required"),
@@ -8,7 +9,7 @@ const commentBody = v.pipe(
   maxCharacters(10_000, "Too long (max 10,000)"),
 );
 
-export const NewComment = v.object({ requestId, body: commentBody });
+export const NewComment = v.object({ requestId: RequestId.schema, body: commentBody });
 export type NewComment = v.InferOutput<typeof NewComment>;
 
 export const CommentEdit = v.object({ body: commentBody, version });

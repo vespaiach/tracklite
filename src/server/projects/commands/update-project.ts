@@ -6,7 +6,8 @@ import { assertAdmin, editConflict, type Member } from "../../identity";
 import { updatedProject } from "../../../queries";
 import { changeSettings, descriptionSaveOf, needsAdmin, type Project, saveDescription } from "../model";
 import { loadProject, saveProject } from "../repository";
-import type { ProjectChanges, ProjectKey } from "../schemas";
+import type { ProjectChanges } from "../schemas";
+import type { ProjectKey } from "../../../domain/shared/identifiers";
 
 async function describedChange(
   tx: Transaction,
