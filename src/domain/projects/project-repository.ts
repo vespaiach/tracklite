@@ -1,6 +1,11 @@
-import type { ProjectKey } from "../shared/identifiers";
+import type { ProjectKey, Uuid } from "../shared/identifiers";
+import type { Project } from "./project";
 
 export interface ProjectRepository {
-  writable(key: ProjectKey | undefined): Promise<{ id: string }>;
+  get(key: ProjectKey | undefined): Promise<Project>;
+  hold(key: ProjectKey | undefined): Promise<Project | undefined>;
+  withLabel(labelId: Uuid | undefined): Promise<{ project: Project; labelId: string }>;
   labelIdsOf(projectId: string, labelIds: string[]): Promise<string[]>;
+  save(project: Project): Promise<void>;
+  remove(project: Project): Promise<void>;
 }

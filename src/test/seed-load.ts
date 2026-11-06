@@ -6,7 +6,7 @@ import { issuePriorities, issueStatuses } from "../contract";
 import { comments } from "../server/comments";
 import { members, seedMembers } from "../server/identity";
 import { issueAssignees, issues } from "../infrastructure/issues/tables";
-import { projectKeys, projects } from "../server/projects";
+import { projectKeys, projects } from "../infrastructure/projects/tables";
 import { db } from "../infrastructure/db";
 import type { Transaction } from "../infrastructure/transaction";
 

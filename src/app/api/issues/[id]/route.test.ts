@@ -5,7 +5,7 @@ import { db } from "../../../../infrastructure/db";
 import { createSession, memberSummary, members } from "../../../../server/identity";
 import { comments } from "../../../../server/comments";
 import { issueAssignees, issueLabels, issues } from "../../../../infrastructure/issues/tables";
-import { labels, projects } from "../../../../server/projects";
+import { labels, projects } from "../../../../infrastructure/projects/tables";
 import {
   mentions,
   notificationBatches,

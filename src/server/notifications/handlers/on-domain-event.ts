@@ -12,7 +12,7 @@ import {
   notifications,
 } from "../../../infrastructure/notifications/tables";
 import type { notificationKind } from "../../../infrastructure/schema";
-import { projects } from "../../projects";
+import { projects } from "../../../infrastructure/projects/tables";
 
 type NotificationKind = (typeof notificationKind.enumValues)[number];
 type Notice = {

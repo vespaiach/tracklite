@@ -1,8 +1,11 @@
+import { createLabel } from "../../../../../application/projects/create-label";
 import type { Label } from "../../../../../contract";
 import { ProjectKey, tryFrom } from "../../../../../domain/shared/identifiers";
-import { createLabel, NewLabel } from "../../../../../server/projects";
-import { listLabels } from "../../../../../queries";
+import { db } from "../../../../../infrastructure/db";
+import { projectWork } from "../../../../../infrastructure/projects/project-work";
+import { listLabels, updatedLabel } from "../../../../../queries";
 import { apiRoute } from "../../../../../server/shared/api-route";
+import { NewLabel } from "../../../../_server/schemas/projects";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/projects/[key]/labels">) {
   const key = tryFrom(ProjectKey, (await params).key);
@@ -13,7 +16,8 @@ export async function GET(request: Request, { params }: RouteContext<"/api/proje
 
 export async function POST(request: Request, { params }: RouteContext<"/api/projects/[key]/labels">) {
   const key = tryFrom(ProjectKey, (await params).key);
-  return apiRoute("member", NewLabel, async (_memberRequest, member, label) =>
-    Response.json((await createLabel(member, key, label)) satisfies Label, { status: 201 }),
-  )(request);
+  return apiRoute("member", NewLabel, async (_memberRequest, member, label) => {
+    const labelId = await createLabel(member, projectWork, key, label);
+    return Response.json((await updatedLabel(db, labelId)) satisfies Label, { status: 201 });
+  })(request);
 }

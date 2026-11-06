@@ -4,7 +4,7 @@ import { generateKeyBetween } from "fractional-indexing";
 import { db } from "../infrastructure/db";
 import { comments } from "../server/comments";
 import { issueAssignees, issueLabels, issues } from "../infrastructure/issues/tables";
-import { labels, projectKeys, projects } from "../server/projects";
+import { labels, projectKeys, projects } from "../infrastructure/projects/tables";
 import { members } from "../server/identity";
 import { notificationBatches, notificationDeliveries } from "../server/notifications";
 import { RequestId } from "../domain/shared/identifiers";

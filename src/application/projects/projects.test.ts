@@ -2,10 +2,12 @@ import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createMember, createProject, uniqueProjectKey } from "../../test/factories";
 import { db } from "../../infrastructure/db";
-import { createProject as create } from "./commands/create-project";
-import { deleteProject } from "./commands/delete-project";
-import { updateProject } from "./commands/update-project";
-import { writableProject } from "./repository";
+import { ProjectName } from "../../domain/projects/project-name";
+import { writableProject } from "../../infrastructure/projects/drizzle-project-repository";
+import { projectWork } from "../../infrastructure/projects/project-work";
+import { createProject as create } from "./create-project";
+import { deleteProject } from "./delete-project";
+import { updateProject } from "./update-project";
 import { projects } from "../../infrastructure/projects/tables";
 import { ProjectKey } from "../../domain/shared/identifiers";
 
@@ -45,7 +47,7 @@ it("REQ-013.4: archiving waits for a write already under way, so that write can'
   });
   await checked;
 
-  const archive = updateProject(admin, ProjectKey.from(project.key), { archived: true });
+  const archive = updateProject(admin, projectWork, ProjectKey.from(project.key), { archived: true });
   await waitForLockWaiters(1);
   finishWrite();
   await write;
@@ -65,8 +67,10 @@ it("SEC-006.1: a member deleting project WEB, or a missing project, gets 403 and
   const member = await createMember();
   const project = await createProject();
 
-  await expect(deleteProject(member, ProjectKey.from(project.key))).rejects.toMatchObject(forbidden);
-  await expect(deleteProject(member, ProjectKey.from("NOPE"))).rejects.toMatchObject(forbidden);
+  await expect(deleteProject(member, projectWork, ProjectKey.from(project.key))).rejects.toMatchObject(
+    forbidden,
+  );
+  await expect(deleteProject(member, projectWork, ProjectKey.from("NOPE"))).rejects.toMatchObject(forbidden);
 
   expect(await storedProject(project.id)).toBeDefined();
 });
@@ -75,9 +79,9 @@ it("STD-2: a member can't create a project", async () => {
   const member = await createMember();
   const key = uniqueProjectKey();
 
-  await expect(create(member, { name: "Website", key: ProjectKey.from(key) })).rejects.toMatchObject(
-    forbidden,
-  );
+  await expect(
+    create(member, projectWork, { name: ProjectName.from("Website"), key: ProjectKey.from(key) }),
+  ).rejects.toMatchObject(forbidden);
 
   expect(await db.select().from(projects).where(eq(projects.key, key))).toHaveLength(0);
 });
@@ -87,11 +91,11 @@ it("STD-2: a member can't rename or archive a project", async () => {
   const project = await createProject({ name: "Website" });
 
   await expect(
-    updateProject(member, ProjectKey.from(project.key), { name: "Renamed" }),
+    updateProject(member, projectWork, ProjectKey.from(project.key), { name: ProjectName.from("Renamed") }),
   ).rejects.toMatchObject(forbidden);
-  await expect(updateProject(member, ProjectKey.from(project.key), { archived: true })).rejects.toMatchObject(
-    forbidden,
-  );
+  await expect(
+    updateProject(member, projectWork, ProjectKey.from(project.key), { archived: true }),
+  ).rejects.toMatchObject(forbidden);
 
   expect(await storedProject(project.id)).toMatchObject({ name: "Website", archivedAt: null });
 });

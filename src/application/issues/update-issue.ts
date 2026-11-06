@@ -47,6 +47,8 @@ export async function updateIssue(
   change: IssueChange,
 ) {
   return work.run(async (repositories) => {
+    (await repositories.projects.hold(id?.key))?.assertWritable();
+
     const issue = await repositories.issues.get(id);
 
     await applyEdit(actor, repositories, issue, editOf(change));
