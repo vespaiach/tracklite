@@ -65,27 +65,26 @@ Always run drizzle-kit through the npm scripts. They set `NODE_OPTIONS=--conditi
 
 **Processes (§1.1).** `tracklite-web` is `next start` behind a reverse proxy. Deployment (servers, proxy, deploys, backups) is maintained outside this repository. There is no worker process: a scheduler calls `POST /api/cron/outbox` every minute with `Authorization: Bearer {CRON_SECRET}` (§1.4). The app uses PostgreSQL 18 and nothing else; there is no Redis and no paid queue.
 
-**Strict single-page app (§1.7).** Every page address not yet moved to the server serves the same HTML shell. `src/app/(signed-in)/[...path]/page.tsx` renders `<ClientApp />` through `src/client/ClientPage.tsx` with `next/dynamic` and `ssr: false`. The browser does all of these:
-- routing, with React Router in data mode and lazy routes;
-- signed-out redirects (`GET /api/me`, then `/sign-in?next=…`);
-- all data loading, through `/api`.
+**Server-rendered pages (§1.7).** Every API-004 address is a server page under `src/app/`. The signed-out pages (`/sign-in`, `/forgot-password`, `/reset-password`, `/invite`, `/welcome`) are in `src/app/(signed-out)/`, each with an `actions.ts` and a client form built on `useFormAction` (`src/components/useFormAction.ts`). Every other page is in `src/app/(signed-in)/`, under a layout that redirects a signed-out visitor to `/sign-in?next=…` and renders the shell and sidebar (`Shell.tsx`, sidebar projects in a `Region`, **New project** and **Sign out** as actions). `/project/[key]/layout.tsx` resolves the project (`notFound()`, canonical-key redirect) and renders the project header with **New issue**; its pages are the board (moves through `useOptimistic`), list, details, labels and settings. An address that matches no page reaches `(signed-in)/[...path]/page.tsx`, which calls `notFound()`. Pages read through `src/queries` inside `Region`s and call `signedInPageMember()` themselves, since a layout and its page render in parallel. `src/app/error.tsx` and `global-error.tsx` show the STD-10 crash screen.
 
-There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks` are more specific routes, so the catch-all never handles them. `src/proxy.ts` only sets the nonce-based CSP and `Referrer-Policy`, and forwards the requested path in `x-request-path`. The `(signed-in)` layout redirects a signed-out visitor to `/sign-in?next=…` on the server; server actions are wrapped by `action()` in `src/app/_server/action.ts` (tech design §1.2). The signed-out pages (`/sign-in`, `/forgot-password`, `/reset-password`, `/invite`, `/welcome`) are server pages in `src/app/(signed-out)/`, each with an `actions.ts` and a client form built on `useFormAction` (`src/components/useFormAction.ts`); the single-page app reaches them, and a `401`, with a full page load (`src/lib/load-page.ts`). Since H14 the `(signed-in)` layout renders the shell and sidebar on the server (`src/app/(signed-in)/Shell.tsx`, sidebar projects in a `Region`, **New project** and **Sign out** as actions), and `/my-issues` is a server page; since H19 so are `/settings/profile`, `/settings/members` and `/settings/notifications` (`src/app/(signed-in)/settings/`). Since H15 `/project/[key]/layout.tsx` resolves the project (`notFound()`, canonical-key redirect) and renders the project header with **New issue**, and the board is a server page whose moves call the `moveIssue` action through `useOptimistic`; since H18 `/project/[key]/labels`, `/project/[key]/settings` and `/projects/archived` are server pages too, and project settings' actions redraw the sidebar through `refresh()`; since H17 `/issue/[id]` is a server page with per-field and comment actions, built from the shared `CommentThread` and `DescriptionEditor` in `src/components/`; since H16 `/project/[key]/list` (filters, search and sort from `searchParams`, more rows through the `moreIssues` read) and `/project/[key]/detail` (description and comment actions) are server pages, so the single-page app shows only Not found; pages call `signedInPageMember()` themselves, since a layout and its page render in parallel. Links between the server pages and the single-page app load a new document.
+`src/proxy.ts` sets the nonce-based CSP and `Referrer-Policy`, forwards the requested path in `x-request-path`, and renews a session idle over an hour (REQ-006), since pages can't set cookies; actions renew through `actionMember`. `/api`, `/health` and `/webhooks` are route handlers the proxy skips.
 
-**Client state (§1.7).** Redux Toolkit:
-- RTK Query holds all server data, in one `api` slice with a shared `baseQuery` that redirects on `401`.
-- Board moves are optimistic on the server-rendered board (`useOptimistic`), not in RTK Query.
-- Board moves are optimistic.
-- The only UI slice is `toast`.
+**Client state (§1.7).** There is no client-side data store and no client router beyond the App Router.
+- Server data comes from the page as props; an action's `refresh()` re-renders the page.
+- Board moves are optimistic (`useOptimistic`).
+- Toasts come from `ToastProvider` (`src/components/toast.tsx`); browser error reports from `ErrorReporting` (`src/components/ErrorReporting.tsx`), both in the root layout.
 - List filters, search and sort live in the URL. Form drafts live in component state.
+- In-app links use the leave-guard `Link` (`src/components/leave-guard.tsx`, also inside the kit's `RailItem`, `LinkTabs` and `CountRow`), so unsaved text asks before leaving (REQ-035).
 
-**Server actions and API request flow (§1.2).** Pages change data through server actions: each route's `actions.ts` wraps its functions in `action()` (`src/app/_server/action.ts`, D-63), which reads the session, parses the input with Valibot, runs one use case, refreshes, and returns `{ ok: true, data }` or `{ ok: false, error: { kind, message, fields? } }`. Until H20 the remaining `/api` handlers are wrapped in `apiRoute` (`src/app/api/_route.ts`), which in order:
-1. rejects cross-site writes with `403`;
-2. runs `requireMember`, which only authenticates (`401`). Routes never check roles. A route declared `"public"` (sign-in, password resets, invitation lookups and acceptance, sign-out) skips this step;
-3. parses the JSON body against the route's Valibot schema from `src/app/_server/schemas/<context>.ts`, if it declares one, and fails fast with `422` (D-42). Schemas check shape and format only;
-4. calls one use case from `src/application/<context>/` with the member as its first argument, `actor`, and the context's wired unit of work (`issueWork`, `projectWork`, `commentWork`), then reads its response through `src/queries/`. `apiRoute` opens no transaction; the unit of work does. The use case and its entities are the only permission layer (D-43): admin-only use cases call `assertAdmin(actor)` before any lookup, and ownership checks run once the row is loaded;
-5. maps a thrown `DomainError` by its kind (§3.2) to `{ error: { message, fields? } }` with 401/403/404/409/410/422/429/503, and anything else to 500;
-6. writes one JSON log line, with no bodies, tokens or query strings. A signed-in request names its `actor` by username.
+**Server actions and request flow (§1.2).** Pages change data through server actions: each route's `actions.ts` wraps its functions in `action()` (`src/app/_server/action.ts`, D-63), which reads the session, parses the input with Valibot, runs one use case, refreshes, and returns `{ ok: true, data }` or `{ ok: false, error: { kind, message, fields? } }`. Each action:
+1. relies on Next.js's own cross-site check (D-69);
+2. reads the session with `actionMember`, which only authenticates (`signedOut`) and renews an idle session. Actions never check roles. An action declared `"public"` (sign-in, password resets, invitation lookups and acceptance, sign-out, first-admin setup) skips this step;
+3. parses its input against a Valibot schema from `src/app/_server/schemas/<context>.ts` and fails fast with `invalid` (D-42). Schemas check shape and format only;
+4. calls one use case from `src/application/<context>/` with the member as its first argument, `actor`, and the context's wired unit of work (`issueWork`, `projectWork`, `commentWork`), then reads its response through `src/queries/`. The unit of work opens the transaction. The use case and its entities are the only permission layer (D-43): admin-only use cases call `assertAdmin(actor)` before any lookup, and ownership checks run once the row is loaded;
+5. turns a thrown `DomainError` (§3.2) into `{ ok: false, error }` and rethrows anything else;
+6. writes one JSON `action/call` log line, with no inputs or tokens. A signed-in call names its `actor` by username.
+
+The only route a page's browser code calls is `POST /api/client-errors`, wrapped in `apiRoute` (`src/app/api/_route.ts`): it rejects cross-site writes with `403`, parses the body (`422`), maps a `DomainError` to its status and logs one `route/request` line.
 
 The browser shows `message` as-is, so all user-facing copy for server outcomes lives on the server.
 
@@ -103,19 +102,19 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 
 **Outbox (§1.4, D-62).** Entities record domain events; before commit the unit of work hands them to the outbox writer, which mirrors mentions and writes one `outbox_events` row per event (recipients and snapshot included) in the action's transaction. `POST /api/cron/outbox` turns them into notifications and deliveries (see Email below).
 
-**API conventions (§3.1).**
+**Action conventions (§3.1).**
 - Issues are addressed by ID (`WEB-42`), projects by key, members by username, all matched ignoring case.
-- Issue edits are per-field `PATCH`es.
-- Creates carry a `requestId`. A repeat returns the original with `200` (STD-5).
+- Issue edits are per-field: `updateIssue` takes the ID and one field.
+- Creates carry a `requestId`. A repeat returns the original (STD-5).
 - Tokens never go in paths.
 - A member in a response is `{ username, fullName, initials, deactivated }`.
 
-**Page and API task pairs.** A page task writes its response types into `src/contract/` (§3.5) and its own RTK Query endpoints, typed from the shapes §3.3 holds for endpoints not wired yet, and tests against mocks. Whichever task merges second wires them up: the domain function returns the contract type (a route's `satisfies` is optional), and those shapes are removed from §3.3. Wired-up shapes live only in the code: request bodies in `src/app/_server/schemas/<context>.ts`, responses in `src/contract/`.
+Response types live in `src/contract/` (§3.5) and request schemas in `src/app/_server/schemas/<context>.ts`; §3.3 lists what each page reads and calls.
 
 **Time (§1.3).** Every expiry and time-window check uses the database's `now()` inside SQL, never the app clock. Tests move stored timestamps into the past (`expires_at = now() - interval '1 minute'`). They never fake the clock.
 
 **Email (§1.5, §1.4).**
-- Invitations and password resets are sent synchronously inside the request transaction. If the send fails, the transaction rolls back and the API answers `503`.
+- Invitations and password resets are sent synchronously inside the request transaction. If the send fails, the transaction rolls back and the action returns `unavailable` (STD-6).
 - Notifications are grouped in `notification_batches`, with one `notification_deliveries` row per channel the recipient chose (only `email` in R1). Each outbox run (`src/app/api/cron/outbox/route.ts`, `infrastructure/notifications/run-outbox.ts`, at most 50 s) records the heartbeat in `job_runs`, turns due `outbox_events` into notifications (`record-notifications`, idempotent through `notifications (event_id, recipient_id)`), claims deliveries with `for update skip locked`, hands them to the channel's sender in `src/infrastructure/notifications/channels/`, and uses the delivery id as Resend's `Idempotency-Key`.
 - All mail goes through one `sendEmail()` with three backends: Resend in production, Mailpit (`:8025`) in development, and an in-memory outbox in tests.
 
@@ -130,14 +129,14 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 ## Coding rules
 
 - **No comments in code under `src/`.** That includes line comments, block comments and JSDoc. Say what the code means through names, types and test titles; spec IDs belong in test names, not comments.
-- **Domain functions take `actor` first and own every role and ownership check; routes never check roles.** An admin-only function's first statement is `assertAdmin(actor)`, and each one has a 403 test that calls it directly. Reading a domain file must show who may call it (`docs/tech-design.md` §4.10).
-- **Component-driven development first.** Build UI from the bottom up. Each element starts as an isolated component that holds no app state and gets its data and callbacks through props. Develop it on its own in the design sandbox, then compose it into larger layouts and finally connect it to the store and the router.
+- **Domain functions take `actor` first and own every role and ownership check; actions and routes never check roles.** An admin-only function's first statement is `assertAdmin(actor)`, and each one has a 403 test that calls it directly. Reading a domain file must show who may call it (`docs/tech-design.md` §4.10).
+- **Component-driven development first.** Build UI from the bottom up. Each element starts as an isolated component that holds no app state and gets its data and callbacks through props. Develop it on its own in the design sandbox, then compose it into larger layouts and finally connect it to its page's data and actions.
 - **Test-driven development.** Write a failing test first, run it to confirm it fails for the expected reason, then write the minimum code to make it pass, then refactor with the tests green. Two owner checkpoints apply in every coding session:
    - **Before writing tests**, list the test cases you plan to write (name, what it asserts, which R-ID it closes) and ask the owner whether to add or change any. Do not write test code until the owner confirms the list.
    - **After writing the tests** (and confirming they fail for the expected reason), stop and wait for the owner to review and approve them. Do not write implementation code until the owner approves.
 - **Test each rule once, at the layer that owns it.** Before adding a test, check whether another test already covers the behaviour; if one does, extend it instead.
-   - A route test covers only that route's own rules. `api-route.test.ts` alone covers what `apiRoute` does: the signed-out 401, the 422 for a body that isn't JSON, and the cross-site 403.
-   - A permission rule is tested once, by calling the domain function directly (the 403 test above). Routes don't repeat it.
+   - An action or route test covers only its own rules. `src/app/_server/action.test.ts` alone covers what `action()` does (signed out, field errors, each `DomainError` kind), and `src/app/api/_route.test.ts` what `apiRoute` does (the 422 for a body that isn't JSON, the cross-site 403).
+   - A permission rule is tested once, by calling the domain function directly (the 403 test above). Actions don't repeat it.
    - Write one test per code path, not one per message or input. Several server messages that reach the same branch, or several invalid inputs to one schema, go in one test that checks each in turn and whose name lists every example ID it covers.
    - Shared client code (loading and load-failure states, toasts, `DescriptionEditor`) is tested in its own test or in one representative screen, not again on every screen. Each design-system component keeps at least one test of its own, of behaviour we add (focus return, default `type="button"`), not react-aria's.
    - Don't test a library's own behaviour (react-aria, Valibot, Drizzle) or the test helpers.
