@@ -29,13 +29,14 @@ import {
   useCommentsQuery,
   useDeleteCommentMutation,
   useEditCommentMutation,
+  useMembersQuery,
   useMeQuery,
   usePostCommentMutation,
 } from "./api";
 import { formatExact, formatUpdated } from "./dates";
 import { useFailureToast } from "./failure";
 import { LeaveGuard } from "./LeaveGuard";
-import { useMentions } from "./useMentions";
+import { useMentions } from "../components/useMentions";
 import { useReturnFocus } from "./useReturnFocus";
 import { Zone, zoneState } from "./Zone";
 
@@ -352,7 +353,8 @@ function CommentForm({
   actions: ReactNode;
 }) {
   const errorId = useId();
-  const mentions = useMentions({ value: text, onChange });
+  const { data: members = [] } = useMembersQuery();
+  const mentions = useMentions({ value: text, onChange, members });
   const textarea = mentions.textarea.ref;
 
   useEffect(() => {

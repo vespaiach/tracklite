@@ -1,3 +1,5 @@
+"use client";
+
 import {
   type CSSProperties,
   type KeyboardEvent,
@@ -8,8 +10,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { MentionList } from "../components/ui/track-lite";
-import { useMembersQuery } from "./api";
+import type { MemberSummary } from "../contract";
+import { MentionList } from "./ui/track-lite";
 
 const typedMention = /(?<![A-Za-z0-9._%+@-])@([a-z0-9-]{0,20})$/i;
 
@@ -52,7 +54,15 @@ function caretPosition(textarea: HTMLTextAreaElement, index: number): CSSPropert
   return position;
 }
 
-export function useMentions({ value, onChange }: { value: string; onChange: (value: string) => void }): {
+export function useMentions({
+  value,
+  onChange,
+  members,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  members: MemberSummary[];
+}): {
   textarea: {
     ref: RefObject<HTMLTextAreaElement | null>;
     onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
@@ -64,7 +74,6 @@ export function useMentions({ value, onChange }: { value: string; onChange: (val
   onChange: (value: string) => void;
   list: ReactNode;
 } {
-  const { data: members = [] } = useMembersQuery();
   const listId = useId();
   const ref = useRef<HTMLTextAreaElement>(null);
   const [caret, setCaret] = useState<number>();

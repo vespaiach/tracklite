@@ -9,7 +9,8 @@ import { mentions } from "../../../../infrastructure/notifications/tables";
 import { projects } from "../../../../infrastructure/projects/tables";
 import { createComment, createIssue, createMember, createProject } from "../../../../test/factories";
 import { jsonRequest } from "../../../../test/reset-links";
-import { GET as listIssueComments } from "../../issues/[id]/comments/route";
+import { IssueId } from "../../../../domain/shared/identifiers";
+import { listIssueComments } from "../../../../queries";
 import { DELETE, PATCH } from "./route";
 
 beforeEach(() => {
@@ -157,13 +158,7 @@ it("REQ-034.1: Sam deletes their own comment → it's gone for everyone, with it
   expect(response.status).toBe(204);
   expect(await stored(comment.id)).toBeUndefined();
   expect(await db.select().from(mentions).where(eq(mentions.commentId, comment.id))).toEqual([]);
-  const thread = await listIssueComments(
-    new Request(`http://localhost:3000/api/issues/${displayId}/comments`, {
-      headers: { Cookie: await cookieOf(alex) },
-    }),
-    { params: Promise.resolve({ id: displayId }) },
-  );
-  expect(await thread.json()).toEqual([]);
+  expect(await listIssueComments(alex, IssueId.from(displayId))).toEqual([]);
 });
 
 it("REQ-034.4, REQ-034.2: Sam is deactivated → Sam's comments show (deactivated), and an admin can still delete them", async () => {
@@ -172,13 +167,8 @@ it("REQ-034.4, REQ-034.2: Sam is deactivated → Sam's comments show (deactivate
   const admin = await createMember({ role: "admin" });
   const adminCookie = await cookieOf(admin);
 
-  const thread = await listIssueComments(
-    new Request(`http://localhost:3000/api/issues/${displayId}/comments`, {
-      headers: { Cookie: adminCookie },
-    }),
-    { params: Promise.resolve({ id: displayId }) },
-  );
-  expect((await thread.json())[0].author).toEqual({
+  const thread = await listIssueComments(admin, IssueId.from(displayId));
+  expect(thread[0].author).toEqual({
     username: author.username,
     fullName: "Sam Lee",
     initials: "SL",

@@ -7,7 +7,8 @@ import { projects } from "../../../../../infrastructure/projects/tables";
 import { createSession } from "../../../../../infrastructure/identity/session";
 import { createIssue, createMember, createProject } from "../../../../../test/factories";
 import { jsonRequest } from "../../../../../test/reset-links";
-import { GET as listIssueComments } from "../../../issues/[id]/comments/route";
+import { IssueId } from "../../../../../domain/shared/identifiers";
+import { listIssueComments } from "../../../../../queries";
 import { GET, POST } from "./route";
 
 beforeEach(() => {
@@ -38,7 +39,8 @@ function postWith(cookie: string, key: string, body: unknown) {
 }
 
 it("REQ-032.2, REQ-046.1: Alex comments on project WEB → it's in WEB's thread, not on any issue", async () => {
-  const cookie = await cookieOf(await createMember({ fullName: "Alex Kim" }));
+  const alex = await createMember({ fullName: "Alex Kim" });
+  const cookie = await cookieOf(alex);
   const project = await createProject();
   const issue = await createIssue(project.id);
   const displayId = `${project.key}-${issue.number}`;
@@ -52,11 +54,7 @@ it("REQ-032.2, REQ-046.1: Alex comments on project WEB → it's in WEB's thread,
 
   const thread = await (await listWith(cookie, project.key)).json();
   expect(thread.map((comment: { body: string }) => comment.body)).toEqual(["Kickoff notes"]);
-  const issueThread = await listIssueComments(
-    new Request(`http://localhost:3000/api/issues/${displayId}/comments`, { headers: { Cookie: cookie } }),
-    { params: Promise.resolve({ id: displayId }) },
-  );
-  expect(await issueThread.json()).toEqual([]);
+  expect(await listIssueComments(alex, IssueId.from(displayId))).toEqual([]);
 });
 
 it("REQ-032.3: an archived project's thread still loads, but posting gets This project is archived", async () => {

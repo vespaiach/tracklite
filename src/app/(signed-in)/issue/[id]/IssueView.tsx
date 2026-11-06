@@ -1,6 +1,22 @@
+"use client";
+
 import { Trash2 } from "lucide-react";
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
-import { Navigate, useLocation, useParams } from "react-router";
+import { useRouter } from "next/navigation";
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  startTransition,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
+import { formatDate } from "../../../../client/dates";
+import { assigneeOptions, memberNames, toggled } from "../../../../client/IssueCells";
+import { priorities, statuses } from "../../../../client/issue-fields";
+import { useReturnFocus } from "../../../../client/useReturnFocus";
+import { type DescriptionDraft, DescriptionEditor } from "../../../../components/DescriptionEditor";
+import { useToast } from "../../../../components/toast";
 import {
   Avatar,
   AvatarStack,
@@ -22,130 +38,93 @@ import {
   Pill,
   Priority,
   Status,
-} from "../../components/ui/track-lite";
-import { loadPage } from "../../lib/load-page";
-import { Markdown } from "../../lib/markdown/Markdown";
+} from "../../../../components/ui/track-lite";
 import {
-  type ApiFailure,
+  type ActionError,
+  type ActionResult,
   type Issue,
-  type IssueChange,
   type IssuePriority,
   type IssueStatus,
+  issuePriorities,
+  issueStatuses,
+  type Label,
+  type LabelColor,
   type MemberSummary,
-  type Project,
-  useCreateLabelMutation,
-  useDeleteIssueMutation,
-  useIssueQuery,
-  useLabelsQuery,
-  useLazyIssueQuery,
-  useMeQuery,
-  useMembersQuery,
-  useUpdateIssueMutation,
-} from "../api";
-import { CommentThread } from "../CommentThread";
-import { formatDate } from "../dates";
-import { type DescriptionDraft, DescriptionEditor } from "../DescriptionEditor";
-import { useFailureToast } from "../failure";
-import { assigneeOptions, memberNames, toggled } from "../IssueCells";
-import { issuePriorities, issueStatuses } from "../../contract";
-import { priorities, statuses } from "../issue-fields";
-import { ProjectGate } from "../ProjectGate";
-import { ProjectHeader } from "../ProjectHeader";
-import { useReturnFocus } from "../useReturnFocus";
-import { Zone, zoneState } from "../Zone";
-import NotFound from "../../app/(signed-in)/not-found";
+  type ProjectSummary,
+} from "../../../../contract";
+import { Markdown } from "../../../../lib/markdown/Markdown";
 
-export function IssuePage() {
-  const { id = "" } = useParams();
-  const { search, hash } = useLocation();
-  const canonical = id.toUpperCase();
-  if (id !== canonical) {
-    return (
-      <Navigate
-        to={{ pathname: `/issue/${canonical}`, search, hash }}
-        replace
-      />
-    );
-  }
-  return <IssueGate id={canonical} />;
-}
+export type IssueChange =
+  | { title: string }
+  | { status: IssueStatus }
+  | { priority: IssuePriority }
+  | { assignees: string[] }
+  | { labelIds: string[] }
+  | { description: string; descriptionVersion: number };
 
-function IssueGate({ id }: { id: string }) {
-  const query = useIssueQuery(id);
-  const { data: me } = useMeQuery();
-  if ((query.error as ApiFailure | undefined)?.status === 404) return <NotFound />;
-  return (
-    <ProjectGate projectKey={id.split("-")[0]}>
-      {(project) => (
-        <>
-          <ProjectHeader
-            project={project}
-            issue={query.data ?? { id }}
-            admin={me?.role === "admin"}
-          />
-          <IssueLoad
-            query={query}
-            project={project}
-          />
-        </>
-      )}
-    </ProjectGate>
-  );
-}
+export type IssueActions = {
+  updateIssue: (change: { id: string } & IssueChange) => Promise<ActionResult<Issue>>;
+  deleteIssue: (issue: { id: string }) => Promise<ActionResult<null>>;
+  createLabel: (label: { key: string; name: string; color: LabelColor }) => Promise<ActionResult<Label>>;
+};
 
-type IssueQuery = { data?: Issue; isError: boolean; refetch: () => void };
+export type IssueViewProps = IssueActions & {
+  issue: Issue;
+  project: ProjectSummary;
+  labels: Label[];
+  members: MemberSummary[];
+  me: { username: string; admin: boolean };
+  comments: ReactNode;
+};
 
-function IssueLoad({ query, project }: { query: IssueQuery; project: Project }) {
-  return (
-    <Zone
-      what="this issue"
-      state={zoneState(query)}
-      retry={query.refetch}
-      page>
-      {(issue) => (
-        <IssueView
-          issue={issue}
-          project={project}
-        />
-      )}
-    </Zone>
-  );
-}
+type SaveOutcome = { saved?: Issue; fieldError?: string; refusal?: ActionError };
 
-function useIssueSave(id: string) {
-  const [updateIssue] = useUpdateIssueMutation();
-  const toastFailure = useFailureToast();
-  return async (change: IssueChange): Promise<{ saved?: Issue; fieldError?: string }> => {
-    try {
-      return { saved: await updateIssue({ id, change }).unwrap() };
-    } catch (caught) {
-      const failure = caught as ApiFailure;
-      const fieldError = failure.status === 422 ? Object.values(failure.fields ?? {})[0] : undefined;
-      if (!fieldError) toastFailure(failure);
-      return { fieldError };
+type Save = (change: IssueChange) => Promise<SaveOutcome>;
+
+const couldNotSave = "Couldn’t save. Try again.";
+
+function useIssueSave(id: string, updateIssue: IssueActions["updateIssue"]): Save {
+  const toast = useToast();
+  return async (change) => {
+    const result = await updateIssue({ id, ...change }).catch(() => undefined);
+    if (!result) {
+      toast(couldNotSave);
+      return {};
     }
+    if (result.ok) return { saved: result.data };
+
+    const { kind, fields, message } = result.error;
+    const fieldError = kind === "invalid" ? Object.values(fields ?? {})[0] : undefined;
+    if (!fieldError) toast(message);
+    return { fieldError, refusal: result.error };
   };
 }
 
-function IssueView({ issue, project }: { issue: Issue; project: Project }) {
-  const { data: me } = useMeQuery();
+export function IssueView({ issue, project, labels, members, me, comments, ...actions }: IssueViewProps) {
+  const save = useIssueSave(issue.id, actions.updateIssue);
   const editable = !issue.archived;
-  const canDelete = editable && (me?.role === "admin" || me?.username === issue.createdBy.username);
+  const canDelete = editable && (me.admin || me.username === issue.createdBy.username);
   return (
     <IssueLayout
-      title={editable ? <TitleEditor issue={issue} /> : <IssueTitle>{issue.title}</IssueTitle>}
+      title={
+        editable ? (
+          <TitleEditor
+            issue={issue}
+            save={save}
+          />
+        ) : (
+          <IssueTitle>{issue.title}</IssueTitle>
+        )
+      }
       main={
         <>
           <Description
             issue={issue}
+            members={members}
             editable={editable}
+            updateIssue={actions.updateIssue}
           />
-          <IssueSection title="Comments">
-            <CommentThread
-              threadPath={`issues/${issue.id}/comments`}
-              editable={editable}
-            />
-          </IssueSection>
+          <IssueSection title="Comments">{comments}</IssueSection>
         </>
       }
       side={
@@ -153,20 +132,27 @@ function IssueView({ issue, project }: { issue: Issue; project: Project }) {
           <StatusField
             issue={issue}
             editable={editable}
+            save={save}
           />
           <PriorityField
             issue={issue}
             editable={editable}
+            save={save}
           />
           <AssigneesField
             issue={issue}
-            me={me?.username}
+            members={members}
+            me={me.username}
             editable={editable}
+            save={save}
           />
           <LabelsField
             issue={issue}
+            labels={labels}
             projectKey={project.key}
             editable={editable}
+            save={save}
+            createLabel={actions.createLabel}
           />
           <IssueSideFoot>
             <FormStatus>
@@ -181,6 +167,7 @@ function IssueView({ issue, project }: { issue: Issue; project: Project }) {
               <DeleteIssue
                 issue={issue}
                 projectHref={`/project/${project.key}`}
+                deleteIssue={actions.deleteIssue}
               />
             )}
           </IssueSideFoot>
@@ -190,8 +177,9 @@ function IssueView({ issue, project }: { issue: Issue; project: Project }) {
   );
 }
 
-function TitleEditor({ issue }: { issue: Issue }) {
-  const save = useIssueSave(issue.id);
+type FieldProps = { issue: Issue; save: Save };
+
+function TitleEditor({ issue, save }: FieldProps) {
   const errorId = useId();
   const [draft, setDraft] = useState(issue.title);
   const [error, setError] = useState<string>();
@@ -236,8 +224,7 @@ function Glyph({ children }: { children: ReactNode }) {
   return <span aria-hidden="true">{children}</span>;
 }
 
-function StatusField({ issue, editable }: { issue: Issue; editable: boolean }) {
-  const save = useIssueSave(issue.id);
+function StatusField({ issue, editable, save }: FieldProps & { editable: boolean }) {
   const { name, kind } = statuses[issue.status];
   const value = (
     <>
@@ -274,8 +261,7 @@ function StatusField({ issue, editable }: { issue: Issue; editable: boolean }) {
   );
 }
 
-function PriorityField({ issue, editable }: { issue: Issue; editable: boolean }) {
-  const save = useIssueSave(issue.id);
+function PriorityField({ issue, editable, save }: FieldProps & { editable: boolean }) {
   const { name, kind } = priorities[issue.priority];
   const value = (
     <>
@@ -338,9 +324,13 @@ function AssigneesValue({ assignees, me }: { assignees: MemberSummary[]; me?: st
   );
 }
 
-function AssigneesField({ issue, me, editable }: { issue: Issue; me?: string; editable: boolean }) {
-  const save = useIssueSave(issue.id);
-  const { data: members } = useMembersQuery(undefined, { skip: !editable });
+function AssigneesField({
+  issue,
+  members,
+  me,
+  editable,
+  save,
+}: FieldProps & { members: MemberSummary[]; me: string; editable: boolean }) {
   const errorId = useId();
   const [error, setError] = useState<string>();
   const selected = issue.assignees.map((member) => member.username);
@@ -358,7 +348,7 @@ function AssigneesField({ issue, me, editable }: { issue: Issue; me?: string; ed
 
   return (
     <Meta label="Assignees">
-      {editable && members ? (
+      {editable ? (
         <MultiPicker
           label="Assignees"
           selectedKeys={selected}
@@ -381,14 +371,31 @@ function startDraft({ description, descriptionVersion }: Issue): DescriptionDraf
   return { text: description, startedFrom: description, version: descriptionVersion };
 }
 
-function Description({ issue, editable }: { issue: Issue; editable: boolean }) {
+function Description({
+  issue,
+  members,
+  editable,
+  updateIssue,
+}: {
+  issue: Issue;
+  members: MemberSummary[];
+  editable: boolean;
+  updateIssue: IssueActions["updateIssue"];
+}) {
+  const router = useRouter();
   const [draft, setDraft] = useState<DescriptionDraft>();
+  const [reloading, setReloading] = useState(false);
   const editButton = useReturnFocus<HTMLButtonElement>(draft !== undefined);
-  const [updateIssue] = useUpdateIssueMutation();
-  const [loadIssue] = useLazyIssueQuery();
 
-  async function reload() {
-    setDraft(startDraft(await loadIssue(issue.id).unwrap()));
+  useEffect(() => {
+    if (!reloading || issue.descriptionVersion === draft?.version) return;
+    setDraft(startDraft(issue));
+    setReloading(false);
+  }, [reloading, issue, draft?.version]);
+
+  function reload() {
+    setReloading(true);
+    router.refresh();
   }
 
   return (
@@ -410,11 +417,12 @@ function Description({ issue, editable }: { issue: Issue; editable: boolean }) {
       {draft ? (
         <DescriptionEditor
           draft={draft}
+          members={members}
           onChange={(text) => setDraft({ ...draft, text })}
           onDone={() => setDraft(undefined)}
-          onReload={() => void reload()}
+          onReload={reload}
           save={(description, descriptionVersion) =>
-            updateIssue({ id: issue.id, change: { description, descriptionVersion } }).unwrap()
+            updateIssue({ id: issue.id, description, descriptionVersion })
           }
         />
       ) : issue.description ? (
@@ -435,17 +443,19 @@ function Description({ issue, editable }: { issue: Issue; editable: boolean }) {
 
 function LabelsField({
   issue,
+  labels,
   projectKey,
   editable,
-}: {
-  issue: Issue;
+  save,
+  createLabel,
+}: FieldProps & {
+  labels: Label[];
   projectKey: string;
   editable: boolean;
+  createLabel: IssueActions["createLabel"];
 }) {
-  const save = useIssueSave(issue.id);
-  const { data: labels } = useLabelsQuery(projectKey, { skip: !editable });
-  const [createLabel] = useCreateLabelMutation();
-  const toastFailure = useFailureToast();
+  const router = useRouter();
+  const toast = useToast();
   const errorId = useId();
   const [error, setError] = useState<string>();
   const selected = issue.labels.map((label) => label.id);
@@ -461,12 +471,13 @@ function LabelsField({
       : "None";
 
   async function saveLabels(labelIds: string[]) {
-    const { fieldError } = await save({ labelIds });
+    const { fieldError, refusal } = await save({ labelIds });
     setError(fieldError);
+    if (refusal?.kind === "notFound") router.refresh();
   }
 
   function existing(name: string) {
-    return labels?.find((label) => label.name.toLowerCase() === name.toLowerCase());
+    return labels.find((label) => label.name.toLowerCase() === name.toLowerCase());
   }
 
   function createText(input: string) {
@@ -475,20 +486,19 @@ function LabelsField({
   }
 
   async function create(input: string) {
-    try {
-      const made = await createLabel({ key: projectKey, name: input.trim(), color: "gray" }).unwrap();
-      await saveLabels([...selected, made.id]);
-    } catch (caught) {
-      const failure = caught as ApiFailure;
-      const fieldError = failure.status === 422 ? failure.fields?.name : undefined;
-      if (fieldError) setError(fieldError);
-      else toastFailure(failure);
-    }
+    const result = await createLabel({ key: projectKey, name: input.trim(), color: "gray" }).catch(
+      () => undefined,
+    );
+    if (result?.ok) return saveLabels([...selected, result.data.id]);
+
+    const fieldError = result?.error.kind === "invalid" ? result.error.fields?.name : undefined;
+    if (fieldError) setError(fieldError);
+    else toast(result ? result.error.message : couldNotSave);
   }
 
   return (
     <Meta label="Labels">
-      {editable && labels ? (
+      {editable ? (
         <MultiPicker
           label="Labels"
           selectedKeys={selected}
@@ -523,7 +533,9 @@ function LabelsField({
   );
 }
 
-function DeleteIssue({ issue, projectHref }: { issue: Issue; projectHref: string }) {
+type DeleteProps = { issue: Issue; projectHref: string; deleteIssue: IssueActions["deleteIssue"] };
+
+function DeleteIssue(props: DeleteProps) {
   const [confirming, setConfirming] = useState(false);
   return (
     <div>
@@ -537,8 +549,7 @@ function DeleteIssue({ issue, projectHref }: { issue: Issue; projectHref: string
       </Button>
       {confirming && (
         <DeleteDialog
-          issue={issue}
-          projectHref={projectHref}
+          {...props}
           onCancel={() => setConfirming(false)}
         />
       )}
@@ -546,17 +557,10 @@ function DeleteIssue({ issue, projectHref }: { issue: Issue; projectHref: string
   );
 }
 
-function DeleteDialog({
-  issue,
-  projectHref,
-  onCancel,
-}: {
-  issue: Issue;
-  projectHref: string;
-  onCancel: () => void;
-}) {
-  const [deleteIssue, { isLoading }] = useDeleteIssueMutation();
-  const toastFailure = useFailureToast();
+function DeleteDialog({ issue, projectHref, deleteIssue, onCancel }: DeleteProps & { onCancel: () => void }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [deleting, setDeleting] = useState(false);
   const cancel = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -564,12 +568,12 @@ function DeleteDialog({
   }, []);
 
   async function confirm() {
-    try {
-      await deleteIssue(issue.id).unwrap();
-      loadPage(projectHref);
-    } catch (caught) {
-      toastFailure(caught);
-    }
+    setDeleting(true);
+    const result = await deleteIssue({ id: issue.id }).catch(() => undefined);
+    if (result?.ok) return startTransition(() => router.push(projectHref));
+
+    setDeleting(false);
+    toast(result ? result.error.message : couldNotSave);
   }
 
   return (
@@ -587,8 +591,8 @@ function DeleteDialog({
           </Button>
           <Button
             variant="danger"
-            busy={isLoading ? "Deleting…" : undefined}
-            aria-busy={isLoading || undefined}
+            busy={deleting ? "Deleting…" : undefined}
+            aria-busy={deleting || undefined}
             onClick={confirm}>
             Delete issue
           </Button>

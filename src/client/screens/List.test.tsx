@@ -304,8 +304,7 @@ it("REQ-039, REQ-036.4, REQ-025.3: default columns and row cells; 5 assignees sh
   sortBy("Last updated");
   await waitFor(() => expect(window.location.search).toBe("?sort=updated&dir=desc"));
 
-  fireEvent.click(r42);
-  await waitFor(() => expect(window.location.pathname).toBe("/issue/WEB-42"));
+  expect(r42.getAttribute("href")).toBe("/issue/WEB-42");
 });
 
 it("REQ-036.1: 120 issues → 100 rows, and the other 20 load on scrolling down", async () => {

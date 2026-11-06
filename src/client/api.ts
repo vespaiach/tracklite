@@ -1,15 +1,5 @@
 import { type BaseQueryFn, createApi } from "@reduxjs/toolkit/query/react";
-import type {
-  Issue,
-  IssueListPage,
-  IssuePriority,
-  IssueStatus,
-  Label,
-  LabelColor,
-  Me,
-  Project,
-  ThreadComment,
-} from "../contract";
+import type { IssueListPage, Label, Me, Project, ThreadComment } from "../contract";
 import type { StoreExtra } from "./store";
 import { loadPage } from "../lib/load-page";
 
@@ -25,14 +15,6 @@ function issueListPath(key: string, query: string, offset: number) {
   const search = params.toString();
   return `projects/${key}/issues${search ? `?${search}` : ""}`;
 }
-
-export type IssueChange =
-  | { title: string }
-  | { status: IssueStatus }
-  | { priority: IssuePriority }
-  | { assignees: string[] }
-  | { labelIds: string[] }
-  | { description: string; descriptionVersion: number };
 
 type ApiRequest = string | { path: string; method: "POST" | "PATCH" | "PUT" | "DELETE"; body?: unknown };
 
@@ -77,7 +59,7 @@ const baseQuery: BaseQueryFn<ApiRequest, unknown, ApiFailure> = async (request, 
 export const api = createApi({
   baseQuery,
   refetchOnMountOrArgChange: true,
-  tagTypes: ["Projects", "Labels", "Issue", "Comments"],
+  tagTypes: ["Projects", "Labels", "Comments"],
   endpoints: (build) => ({
     me: build.query<Me, void>({ query: () => "me" }),
     members: build.query<Me[], void>({ query: () => "members" }),
@@ -95,22 +77,6 @@ export const api = createApi({
     labels: build.query<Label[], string>({
       query: (key) => `projects/${key}/labels`,
       providesTags: ["Labels"],
-    }),
-    createLabel: build.mutation<Label, { key: string; name: string; color: LabelColor }>({
-      query: ({ key, ...body }) => ({ path: `projects/${key}/labels`, method: "POST", body }),
-      invalidatesTags: (result) => (result ? ["Labels"] : []),
-    }),
-    issue: build.query<Issue, string>({ query: (id) => `issues/${id}`, providesTags: ["Issue"] }),
-    updateIssue: build.mutation<Issue, { id: string; change: IssueChange }>({
-      query: ({ id, change }) => ({ path: `issues/${id}`, method: "PATCH", body: change }),
-      invalidatesTags: (_result, error) => (error?.status === 404 ? ["Labels"] : []),
-      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
-        const saved = await queryFulfilled.catch(() => undefined);
-        if (saved) dispatch(api.util.upsertQueryData("issue", id, saved.data));
-      },
-    }),
-    deleteIssue: build.mutation<null, string>({
-      query: (id) => ({ path: `issues/${id}`, method: "DELETE" }),
     }),
     issueList: build.infiniteQuery<IssueListPage, { key: string; query: string }, number>({
       infiniteQueryOptions: {
@@ -146,11 +112,6 @@ export const {
   useLazyProjectQuery,
   useUpdateProjectMutation,
   useLabelsQuery,
-  useCreateLabelMutation,
-  useIssueQuery,
-  useLazyIssueQuery,
-  useUpdateIssueMutation,
-  useDeleteIssueMutation,
   useIssueListInfiniteQuery,
   useCommentsQuery,
   usePostCommentMutation,

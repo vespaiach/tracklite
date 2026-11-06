@@ -60,9 +60,7 @@ it("STD-9.3, STD-6: any other failure (403, 503) shows the server's message", as
   expect(router.state.location.pathname).toBe("/my-issues");
 
   respondWith(503, { error: { message: "We couldn’t send the email. Try again." } });
-  const unavailable = await storeAt("/project/WEB/labels").store.dispatch(
-    api.endpoints.createLabel.initiate({ key: "WEB", name: "bug", color: "red" }),
-  );
+  const unavailable = await storeAt("/project/WEB/list").store.dispatch(api.endpoints.me.initiate());
 
   expect(unavailable.error).toEqual({ status: 503, message: "We couldn’t send the email. Try again." });
 });

@@ -1,29 +1,46 @@
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { alex, issue, mockApi, project, renderAppAt, requestsTo, sam } from "../test/client-app";
-import type { Me } from "./api";
+import type { Me } from "../contract";
+import { alex, sam } from "../test/client-app";
+import { done, renderForm } from "../test/forms";
+import { type DescriptionDraft, DescriptionEditor } from "./DescriptionEditor";
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
 });
 
 const jordan: Me = { ...alex, username: "jordan", fullName: "Jordan Diaz", initials: "JD" };
 const priya: Me = { ...alex, username: "priya", fullName: "Priya Shah", initials: "PS", deactivated: true };
 
-function mockIssuePage() {
-  return mockApi({
-    "GET /api/me": () => Response.json(sam),
-    "GET /api/members": () => Response.json([alex, jordan, priya, sam]),
-    "GET /api/projects/WEB": () => Response.json(project("WEB", "Website")),
-    "GET /api/projects/WEB/labels": () => Response.json([]),
-    "GET /api/issues/WEB-42": () => Response.json(issue()),
-  });
-}
+function openEditor() {
+  const save = vi.fn(async () => done);
 
-async function openEditor() {
-  fireEvent.click(await screen.findByRole("button", { name: "Edit description" }));
-  return (await screen.findByRole("textbox", { name: "Description (Markdown)" })) as HTMLTextAreaElement;
+  function Editing() {
+    const [draft, setDraft] = useState<DescriptionDraft | undefined>({
+      text: "",
+      startedFrom: "",
+      version: 0,
+    });
+    return (
+      draft && (
+        <DescriptionEditor
+          draft={draft}
+          members={[alex, jordan, priya, sam]}
+          onChange={(text) => setDraft({ ...draft, text })}
+          onDone={() => setDraft(undefined)}
+          onReload={() => {}}
+          save={save}
+        />
+      )
+    );
+  }
+
+  renderForm(<Editing />);
+  return {
+    editor: screen.getByRole("textbox", { name: "Description (Markdown)" }) as HTMLTextAreaElement,
+    save,
+  };
 }
 
 function type(editor: HTMLTextAreaElement, value: string) {
@@ -45,10 +62,7 @@ function suggestedUsernames() {
 }
 
 it("DATA-001, DATA-001.5: @ suggests active members, filtered by username or name, says No results, and ignores an @ inside a word", async () => {
-  mockIssuePage();
-  renderAppAt("/issue/WEB-42");
-
-  const editor = await openEditor();
+  const { editor } = openEditor();
   type(editor, "Pairing with @");
   expect(await screen.findByRole("listbox", { name: "Mention a member" })).toBeTruthy();
   expect(suggestedUsernames()).toEqual(["alex", "jordan", "sam"]);
@@ -67,10 +81,7 @@ it("DATA-001, DATA-001.5: @ suggests active members, filtered by username or nam
 });
 
 it("DATA-001: Enter or a click on a suggestion inserts @username and keeps focus in the editor", async () => {
-  const fetchMock = mockIssuePage();
-  renderAppAt("/issue/WEB-42");
-
-  const editor = await openEditor();
+  const { editor, save } = openEditor();
   editor.focus();
   type(editor, "Pairing with @al");
   fireEvent.keyDown(editor, { key: "Enter" });
@@ -86,14 +97,11 @@ it("DATA-001: Enter or a click on a suggestion inserts @username and keeps focus
 
   expect(editor.value).toBe("Pairing with @alex and @sam ");
   expect(document.activeElement).toBe(editor);
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([]);
+  expect(save).not.toHaveBeenCalled();
 });
 
 it("DATA-001, NFR-007: the arrow keys move the highlighted suggestion, announced without aria-expanded on the textarea", async () => {
-  mockIssuePage();
-  renderAppAt("/issue/WEB-42");
-
-  const editor = await openEditor();
+  const { editor } = openEditor();
   type(editor, "@");
   const options = within(suggestions() as HTMLElement).getAllByRole("option");
   expect(editor.getAttribute("aria-controls")).toBe(suggestions()?.id);
@@ -109,10 +117,7 @@ it("DATA-001, NFR-007: the arrow keys move the highlighted suggestion, announced
 });
 
 it("DATA-001: Escape closes the suggestions before it cancels the edit", async () => {
-  mockIssuePage();
-  renderAppAt("/issue/WEB-42");
-
-  const editor = await openEditor();
+  const { editor } = openEditor();
   type(editor, "Pairing with @al");
   fireEvent.keyDown(editor, { key: "Escape" });
 
@@ -121,4 +126,17 @@ it("DATA-001: Escape closes the suggestions before it cancels the edit", async (
 
   fireEvent.keyDown(editor, { key: "Escape" });
   expect(screen.queryByRole("textbox", { name: "Description (Markdown)" })).toBeNull();
+});
+
+it("REQ-035.4, REQ-035: unsaved description changes hold back closing the tab; an unchanged editor doesn't", () => {
+  const { editor } = openEditor();
+
+  const unchanged = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(unchanged);
+  expect(unchanged.defaultPrevented).toBe(false);
+
+  type(editor, "Half a thought");
+  const changed = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(changed);
+  expect(changed.defaultPrevented).toBe(true);
 });

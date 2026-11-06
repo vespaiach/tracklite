@@ -1,9 +1,9 @@
 import { type FormEvent, type KeyboardEvent, useId, useState } from "react";
 import { Button, Editor, EditorNotice, FieldError, SettingsActions } from "../components/ui/track-lite";
-import type { ApiFailure } from "./api";
+import { type ApiFailure, useMembersQuery } from "./api";
 import { useFailureToast } from "./failure";
 import { LeaveGuard } from "./LeaveGuard";
-import { useMentions } from "./useMentions";
+import { useMentions } from "../components/useMentions";
 
 export type DescriptionDraft = { text: string; startedFrom: string; version: number };
 
@@ -25,7 +25,8 @@ export function DescriptionEditor({
   const [error, setError] = useState<string>();
   const [conflict, setConflict] = useState<string>();
   const messageId = useId();
-  const mentions = useMentions({ value: draft.text, onChange });
+  const { data: members = [] } = useMembersQuery();
+  const mentions = useMentions({ value: draft.text, onChange, members });
   const unsaved = draft.text !== draft.startedFrom;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
