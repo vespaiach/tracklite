@@ -1,9 +1,9 @@
 ---
 product: "Tracklite"
-version: "0.39"
+version: "0.40"
 release: "R1"
 status: Ready to build
-updated: "2026-10-30"
+updated: "2026-11-05"
 ---
 
 # Tracklite: Spec
@@ -123,7 +123,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 - **REQ-003** The system shall store each profile as a full name, a unique username and the invited email. The full name is 1 to 60 characters after trimming whitespace at either end; empty gets the field error "Name required", longer "Too long (max 60)" (STD-3). The username, used for @mentions, is 2 to 20 lowercase letters, digits or hyphens; capitals are lowercased, and anything else gets "Use 2 to 20 letters, digits or hyphens". The avatar is the member's initials. Username and email can't be changed in R1.
   - REQ-003.1: Sam enters username `Sam` → saved as `sam`.
   - REQ-003.2: Username `sam` is already taken → field error "Username taken" (STD-3).
-  - REQ-003.3: Sam opens their profile → the full name can be edited and the password changed (REQ-049); username and email are shown but can't be edited, and an API request that changes them is refused.
+  - REQ-003.3: Sam opens their profile → the full name can be edited and the password changed (REQ-049); username and email are shown but can't be edited, and a request that changes them is refused.
   - REQ-003.4: The initials are the first character of the first word and the first character of the last word of the full name, whatever that character is (a letter in any script, a digit or punctuation), uppercased where uppercasing applies: "Alexandria Catherine Montgomery-Fitzwilliam van der Bergholt" → "AB"; a one-word name such as "Sam" → "S"; "(Contractor) Lee" → "(L"; "3M Team" → "3T"; "李 小龙" → "李小".
 - **REQ-047** On the sign-in page, the system shall sign someone in only if the email, compared ignoring capitals, belongs to an active member and the password matches, then send them to the page they were trying to reach (STD-1) or to My issues. Otherwise, whether the email is unknown, the password wrong or the member deactivated, it shows "Incorrect email or password." beside the form, keeps the email and clears the password. Attempts are limited by SEC-001.
   - REQ-047.1: `sam@acme.com` (active member) with the right password → signed in, lands on My issues.
@@ -196,7 +196,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-009.4: Key `W`, `WEB1` or `ÉQ` → field error "Key must be 2 to 5 letters".
   - REQ-009.5: Admin creates a second project named "Website" with key `SITE` → created.
 - **REQ-010** The system shall not let anyone change a project's key after the project is created. A request that changes it gets the field error "Key can't be changed" (STD-3). Admins rename, archive and delete a project on its settings page, `/project/{KEY}/settings`.
-  - REQ-010.1: Admin opens project settings → the key is shown but can't be edited; an API request that changes it is refused and the key stays `WEB`.
+  - REQ-010.1: Admin opens project settings → the key is shown but can't be edited; a request that changes it is refused and the key stays `WEB`.
 - **REQ-011** When an admin renames a project, the system shall keep its key and every issue ID unchanged.
   - REQ-011.1: "Website" is renamed to "Marketing site" → `WEB-42` is still `WEB-42`, and old links still work.
 - **REQ-012** When any member edits a project description, the system shall save it as Markdown of up to 20,000 characters (empty allowed) and show it formatted (DEC-001, SEC-002). @mentions follow DATA-001, and two members editing at once is handled by STD-8.
@@ -414,7 +414,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-034.2: An admin deletes Alex's comment → it's gone.
   - REQ-034.3: Alex, a member, views Sam's comment → no Delete option (STD-2).
   - REQ-034.4: Sam is deactivated → Sam's comments show "Sam Lee (deactivated)", and an admin can still delete them.
-- **REQ-035** Leaving a page shall first ask "You have an unsent comment. Leave anyway?" if the comment box holds text, or "You have unsaved changes. Leave anyway?" if an issue or project description editor holds unsaved changes. Closing or reloading the tab shows the browser's own prompt instead.
+- **REQ-035** Leaving a page shall first ask "You have an unsent comment. Leave anyway?" if the comment box holds text, or "You have unsaved changes. Leave anyway?" if an issue or project description editor holds unsaved changes. Closing or reloading the tab shows the browser's own prompt instead. The browser's Back and Forward buttons don't ask.
   - REQ-035.1: Sam types a comment on `WEB-42`, then clicks another project → the prompt appears; Cancel keeps Sam on `WEB-42` with the text intact.
   - REQ-035.2: The comment box is empty → Sam leaves with no prompt.
   - REQ-035.3: Sam edits the `WEB` project description without saving, then clicks My issues → "You have unsaved changes. Leave anyway?".
@@ -478,7 +478,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-044.5: Alex mentions `@sam` in a comment on project `WEB` → the email links to the `WEB` project details page.
   - REQ-044.6: Alex mentions `@sam` in the `WEB` project description → Sam gets the email, linking to the `WEB` project details page.
   - REQ-044.7: Alex mentions `@sam` in a comment, edits the mention out, then adds it back → Sam gets a second email.
-- **REQ-045** The system shall send a notification 2 minutes after it's created. Later notifications for the same member about the same issue or project join that email if created before it goes out, without restarting the wait. A notification is dropped if, before sending, the recipient is removed from the issue's assignees, the mention is edited out, its comment is deleted, or the recipient is deactivated; it's still sent if its issue or project is deleted. Failed sends retry as in STD-6. A bounce reported by the email service is logged, not retried, and doesn't affect the action in the app.
+- **REQ-045** The system shall send a notification 2 to 3 minutes after it's created. Later notifications for the same member about the same issue or project join that email if created before it goes out, without restarting the wait. A notification is dropped if, before sending, the recipient is removed from the issue's assignees, the mention is edited out, its comment is deleted, or the recipient is deactivated; it's still sent if its issue or project is deleted. Failed sends retry as in STD-6. A bounce reported by the email service is logged, not retried, and doesn't affect the action in the app.
   - REQ-045.1: Within 1 minute, Alex assigns `WEB-42` to Sam and mentions `@sam` in a comment on it → Sam gets one email covering both.
   - REQ-045.2: Alex assigns `WEB-42` to Sam, then reassigns it to Jo 30 seconds later → Sam gets nothing; Jo gets one email.
   - REQ-045.3: Alex mentions `@sam`, then edits the mention out within a minute → Sam gets nothing.
@@ -486,24 +486,24 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - REQ-045.5: Sam is deactivated during the wait → Sam's email isn't sent.
   - REQ-045.6: The email service reports that Sam's mailbox doesn't exist → the bounce is logged; nothing is resent.
   - REQ-045.7: Alex assigns `WEB-42` to Sam, and `WEB-42` is deleted a minute later → Sam still gets the email, and its link shows Not found (STD-4).
-  - REQ-045.8: Alex mentions `@sam` on `WEB-42` at 10:00 and again at 10:01:30, then at 10:02:30 → one email at about 10:02 covers the first two; the third goes in a new email at about 10:04:30.
+  - REQ-045.8: Alex mentions `@sam` on `WEB-42` at 10:00 and again at 10:01:30, then at 10:02:30 → one email between 10:02 and 10:03 covers the first two; the third goes in a new email between 10:04:30 and 10:05:30.
 - **REQ-053** The system shall give admins a read-only notification status page, `/settings/notifications`, which other members can't open (STD-2). It shows:
-  - when the background worker was last seen;
+  - when the outbox last ran;
   - how many deliveries are pending, how many of those are due, and how long the oldest due one has waited: seconds under a minute, then minutes, hours or days ("40 seconds", "14 min"), or "None" when nothing is due;
   - per channel, the deliveries sent, dropped, failed and bounced in the last 24 hours, each counted once under its current state (sent then bounced counts as bounced);
   - the 20 most recent failed or bounced deliveries, newest first, with the recipient's username, channel, issue ID or project key, attempts and when it failed or bounced.
 
-  It never shows email addresses or notification text (SEC-007). If the worker hasn't finished a pass in the last 2 minutes (OPS-005), it warns "No pass for {N} min. Notifications wait in the queue until the worker runs." ({N} is whole minutes since the last pass), or "The worker has never run. No notifications are sent until it does." if it never has. It loads when opened and when the admin clicks **Refresh**, never by itself.
-  - REQ-053.1: The worker finished a pass 4 seconds ago, and 3 notifications are pending, 1 of them due for 40 seconds → the page shows the worker last seen "just now", 3 pending, 1 due, and 40 seconds for the oldest due.
+  It never shows email addresses or notification text (SEC-007). If the outbox hasn't run in the last 2 minutes (OPS-005), it warns "No outbox run for {N} min. Notifications wait in the queue until it runs." ({N} is whole minutes since the last run), or "The outbox has never run. No notifications are sent until it does." if it never has. It loads when opened and when the admin clicks **Refresh**, never by itself.
+  - REQ-053.1: The outbox ran 4 seconds ago, and 3 notifications are pending, 1 of them due for 40 seconds → the page shows the last outbox run "just now", 3 pending, 1 due, and 40 seconds for the oldest due.
   - REQ-053.2: In the last 24 hours, 12 emails were sent, 2 dropped, 1 failed and 1 bounced, and one more failed 2 days ago → the Email row shows 12 sent, 2 dropped, 1 failed and 1 bounced.
-  - REQ-053.3: Sam's email about `WEB-42` failed after 4 attempts → the recent list shows `sam`, Email, `WEB-42`, 4 and when it failed. Sam's email address and the excerpt appear nowhere on the page or in what the API returns.
+  - REQ-053.3: Sam's email about `WEB-42` failed after 4 attempts → the recent list shows `sam`, Email, `WEB-42`, 4 and when it failed. Sam's email address and the excerpt appear nowhere on the page or in what the server sends.
   - REQ-053.4: 25 deliveries have failed or bounced → the 20 most recent are listed, newest first.
-  - REQ-053.5: The worker has never run → it shows as last seen "Never", with the warning "The worker has never run. No notifications are sent until it does."
+  - REQ-053.5: The outbox has never run → the last run shows "Never", with the warning "The outbox has never run. No notifications are sent until it does."
   - REQ-053.6: Nothing has failed or bounced → the recent list shows "No failed or bounced notifications."
   - REQ-053.7: An admin has the page open while another notification is sent → the numbers don't change until they click **Refresh**, then the sent count goes up by one.
   - REQ-053.8: Alex, a member, opens `/settings/notifications` → "You don't have permission to do that."
   - REQ-053.9: 2 notifications are pending and neither is due yet → the page shows 2 pending, 0 due, and "None" for the oldest due.
-  - REQ-053.10: The worker last finished a pass 3 minutes ago → the page warns "No pass for 3 min. Notifications wait in the queue until the worker runs."; after a pass 4 seconds ago, as in REQ-053.1, there's no warning.
+  - REQ-053.10: The outbox last ran 3 minutes ago → the page warns "No outbox run for 3 min. Notifications wait in the queue until it runs."; after a run 4 seconds ago, as in REQ-053.1, there's no warning.
 
 **Uses:** Notification, Issue, Project, Comment, Member · DATA-001 (mentions) · STD-6 · REQ-007 · API-002, API-003, API-004 · SEC-007 · OPS-005
 
@@ -513,24 +513,24 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
 
 | ID | Situation | What happens |
 |---|---|---|
-| STD-1 | Not signed in | The page redirects to sign-in, then returns to the page the member asked for once they've signed in, as long as it's a page in this app (SEC-009). API: `401`. |
-| STD-2 | Not allowed | Actions the member can't take are hidden. If reached anyway, the message is "You don't have permission to do that." API: `403`. |
-| STD-3 | Invalid input | The error shows next to the field, the form keeps everything typed, and nothing is saved. API: `422` with an error per field. |
-| STD-4 | Item not found | A "Not found" page with a link to My issues. This also covers a project key or issue ID that doesn't exist, such as `WEB-999`. API: `404`. |
+| STD-1 | Not signed in | The page redirects to sign-in, then returns to the page the member asked for once they've signed in, as long as it's a page in this app (SEC-009). Server: a page redirects; an action or route is refused as signed out (`401`). |
+| STD-2 | Not allowed | Actions the member can't take are hidden. If reached anyway, the message is "You don't have permission to do that." Server: a page shows that message; an action or route is refused (`403`). |
+| STD-3 | Invalid input | The error shows next to the field, the form keeps everything typed, and nothing is saved. Server: an action or route is refused with an error per field (`422`). |
+| STD-4 | Item not found | A "Not found" page with a link to My issues. This also covers a project key or issue ID that doesn't exist, such as `WEB-999`. Server: a page renders Not found (`404`); an action or route is refused (`404`). |
 | STD-5 | Same action sent twice | The submit button is disabled while saving. Creating an issue or comment carries a request ID, so a retry or double-click never creates two. |
 | STD-6 | A service we depend on fails | The only outside service is email. If an invitation or password reset email fails, nothing is saved and the person sees "We couldn’t send the email. Try again." If a notification email fails, the app retries 3 times over about 15 minutes, then logs the failure; the action that caused it still succeeds. |
 | STD-7 | Every screen | A loading indicator shows if loading takes more than 300 ms. Empty states name the next action ("No issues yet. Create one."). A region that fails to load shows STD-11's failed state. Speed targets are in section 11. |
 | STD-8 | Two members edit the same thing | Single fields such as status, priority, the issue's set of assignees and its set of labels: the last save wins, replacing the whole set. Descriptions: if someone else saved since you opened the editor, nothing is saved. You see "This was changed by [name]. Copy your text and reload.", and your text stays in the editor. |
 | STD-9 | A form submission fails | For failures not tied to one field, such as a network or server error, a `403` (STD-2) or a failed invitation or reset email (STD-6), a toast appears for 5 seconds with no dismiss or pause control, and the form keeps everything typed (DEC-006). A network or server error reads "Couldn’t save. Try again." Field errors stay by their fields (STD-3) and the STD-8 conflict message in the editor. |
 | STD-10 | The page crashes | A fault in the browser app that leaves nothing usable on the page shows a crash screen in its place: "Something went wrong", "Reloading in {N} s." counting down from 60, and a **Reload** button. At 0 the page reloads by itself. The crash is reported to the server (OPS-008). If this is the 3rd crash in the same browser tab within 10 minutes, the screen shows "Reload to try again." instead of the countdown, and only the button reloads. Anything typed but not saved is lost. |
-| STD-11 | Part of a page fails | Each data region of a page loads and fails on its own. A region whose data can't be loaded, or whose display crashes, shows "Couldn’t load {what}." beside a **Try again** button, which loads it again (DEC-006); the rest of the page keeps working. A region that already shows data keeps showing it if a later refresh fails. A region's display crashing is reported to the server (OPS-008). {what} names the region: |
+| STD-11 | Part of a page fails | Each data region of a page loads and fails on its own. A region whose data can't be loaded, or whose display crashes, shows "Couldn’t load {what}." beside a **Try again** button, which loads it again (DEC-006); the rest of the page keeps working. A region's display crashing is reported to the server (OPS-008). {what} names the region: |
 
 **STD-10 examples**
   - STD-10.1: The issue page crashes while Sam reads `WEB-42` → the crash screen shows "Something went wrong" and "Reloading in 60 s.", and the crash is reported once, however long the screen stays.
   - STD-10.2: Sam waits 60 seconds on the crash screen → the page reloads.
   - STD-10.3: Sam clicks **Reload** before the countdown ends → the page reloads at once.
   - STD-10.4: The page crashes for the 3rd time in the same tab within 10 minutes → the screen shows "Reload to try again." with no countdown, and the page reloads only when Sam clicks **Reload**.
-  - STD-10.5: A crash while the server renders the page shell → the same crash screen, and the report carries the server's error reference so the two log lines can be matched.
+  - STD-10.5: A crash while the server renders a page → the same crash screen, and the report carries the server's error reference so the two log lines can be matched.
 
 **STD-11 regions**
 
@@ -549,7 +549,7 @@ No question is open. DEC-002 (API endpoints), DEC-003 (email provider) and DEC-0
   - STD-11.1: The comments on `WEB-42` fail to load → the comments region shows "Couldn’t load comments." with **Try again**, while the title, status and other fields show and can be edited.
   - STD-11.2: Sam clicks **Try again** and the comments load → they replace the failed state.
   - STD-11.3: The comments region crashes while showing a comment → only that region shows "Couldn’t load comments.", and the crash is reported once, naming the component that failed.
-  - STD-11.4: The board shows its cards and a later reload of its data fails → the cards stay, with no failed state.
+  - STD-11.4: The board shows its cards, Sam moves one, and reloading the board's data after the save fails → the board shows "Couldn’t load the board." with **Try again**; the move stays saved and the rest of the page keeps working.
 
 **STD-9 examples**
   - STD-9.1: Sam's save fails → one error toast shows, and 5 seconds later it's gone; it has no dismiss or pause control.
@@ -617,7 +617,7 @@ There are no private projects. Nobody, including admins, can see or set another 
 
 | ID | Call or system | Used for |
 |---|---|---|
-| API-001 | The app's own HTTP API, under `/api/…`, used only by its own web front end | Every feature. It isn't public or documented for outside use. Errors follow STD-1 to STD-4 (`401`, `403`, `422`, `404`) and STD-8 (`409`); an expired, used or revoked invitation or reset link gets `410` (REQ-002, REQ-050). The exact list of endpoints is the agent's choice (DEC-002). |
+| API-001 | The app's own server actions and route handlers, used only by its own pages | Every feature. They aren't public or documented for outside use. Refusals follow STD-1 to STD-4 (`401`, `403`, `422`, `404`) and STD-8 (`409`); an expired, used or revoked invitation or reset link gets `410` (REQ-002, REQ-050). The exact list of actions and routes is the agent's choice (DEC-002). |
 | API-002 | Outgoing email service (a transactional email provider, DEC-003) | Invitations (REQ-001), password reset links (REQ-050) and notifications (F-008). If it fails, see STD-6: a password reset request shows "We couldn’t send the email", and notifications are retried 3 times. |
 | API-003 | `POST /webhooks/email` (bounce reports from the email service) | Marking notifications as Bounced (REQ-045.6). It accepts only requests signed by the email service; anything else gets `401`. |
 | API-004 | Page addresses: `/sign-in`, `/forgot-password`, `/reset-password?token=…`, `/invite?token=…`, `/welcome`, `/my-issues`, `/project/{KEY}` (board), `/project/{KEY}/list`, `/project/{KEY}/detail`, `/project/{KEY}/labels`, `/project/{KEY}/settings`, `/projects/archived`, `/issue/{ID}`, `/settings/profile`, `/settings/members`, `/settings/notifications` | Links in emails and between members. Keys and IDs are matched ignoring capitals (REQ-016.5). The list view's filters go in the query string (REQ-040). |
@@ -685,11 +685,11 @@ All emails are plain text. `{…}` are filled in when the email is sent, `{APP_U
 - **SEC-003** The system shall create invitation, password reset and session tokens from at least 128 random bits, and store only a hash of each.
   - SEC-003.1: Someone reads the database → none of the stored values works as a link or session, and none reveals a password (SEC-008).
 - **SEC-004** The system shall keep the session in a cookie that page scripts can't read, that's sent only over HTTPS outside local development (local development is any run whose `NODE_ENV` isn't `production`), and that's sent on top-level link clicks from other sites but never on cross-site form posts or background requests. It shall reject requests that change data if they come from another site.
-  - SEC-004.1: A page on another site submits a form to delete `WEB-42` → rejected with `403`; nothing changes.
+  - SEC-004.1: A page on another site submits a form to delete `WEB-42` → rejected; nothing changes.
 - **SEC-005** The system shall serve everything over HTTPS, redirecting plain HTTP to HTTPS and telling browsers to use HTTPS only.
   - SEC-005.1: A member opens `http://…/my-issues` → redirected to `https://…/my-issues`. (Verify: ops)
 - **SEC-006** The system shall check permissions on the server for every request, not only by hiding buttons (STD-2, section 7).
-  - SEC-006.1: A member sends the API request that deletes project `WEB` → `403`; nothing changes.
+  - SEC-006.1: A member sends the request that deletes project `WEB` → refused with "You don't have permission to do that."; nothing changes.
 - **SEC-007** The system shall never write passwords, tokens, invitation or password reset links, or the text of descriptions and comments into logs. This includes the web server's and reverse proxy's access logs, which leave out the query string of `/invite` and `/reset-password`.
   - SEC-007.1: Sam signs in → the log records "sign-in, member sam", with no password or token.
   - SEC-007.2: Sam opens a password reset link → the access log shows `/reset-password` with no token. (Verify: ops)
@@ -742,20 +742,20 @@ There's no uptime target. Hosting, backups and redundancy belong to the deployme
 
 ### 12. Stack and constraints
 
-- **Stack:** Next.js (TypeScript), PostgreSQL via Drizzle ORM (its query builder, with raw SQL only where the builder can't express a query). Deployment is maintained outside this repository. The front end is a single-page app: Next.js serves one HTML shell for every page address, and routing, page transitions and data fetching all happen in the browser, using React Router and Redux Toolkit (RTK Query for server data). Email goes through a transactional email service (API-002). Automated tests are unit and component tests only, using Vitest with React Testing Library on jsdom, run through npm scripts; there are no browser end-to-end tests (DEC-005). Lint uses Biome. UI uses the Track Lite design system (React components styled by its own CSS classes and design tokens), with React Aria Components for complex interactive widgets.
+- **Stack:** Next.js (TypeScript), PostgreSQL via Drizzle ORM (its query builder, with raw SQL only where the builder can't express a query). Deployment is maintained outside this repository. Pages use Next.js's App Router: each page is rendered on the server with current data, changes go through server actions, and client components handle interaction, with no client-side data store. Server code is layered (domain, application, infrastructure and read queries) around the bounded contexts of the tech design. Email goes through a transactional email service (API-002). Automated tests are unit and component tests only, using Vitest with React Testing Library on jsdom, run through npm scripts; there are no browser end-to-end tests (DEC-005). Lint uses Biome. UI uses the Track Lite design system (React components styled by its own CSS classes and design tokens), with React Aria Components for complex interactive widgets.
 - **Commands:** build, test and lint commands live in the npm scripts in `package.json`. `CLAUDE.md` lists them for agents.
 - **Boundaries:**
   - This spec is the source of truth for product behavior.
   - Permission checks live in one server-side layer used by every read and write (SEC-006).
-  - Each user action is saved in one database transaction together with any notification records it creates. Emails are sent afterwards by a background job, which also handles the 2-minute wait (REQ-045).
+  - Each user action is saved in one database transaction together with the events it records for notifications (an outbox). Emails are sent afterwards by the outbox run, a route of the app that the deployment calls every minute, which also handles the wait (REQ-045).
   - Issues, project descriptions and comments carry a version number, used to detect stale saves (STD-8).
   - Markdown is rendered by one shared, sanitising renderer (SEC-002) and nowhere else.
   - There are no real-time updates; pages show current data when they load.
   - There are two environments: local development and production. No feature flags.
 - **Agent's choices:**
-  - DEC-002 (API endpoints): JSON over HTTPS, resource-style paths such as `/api/issues/WEB-42`, the STD-1 to STD-4 status codes, and a request ID on creates (STD-5). Also: `429` from sign-in (`POST /api/sessions` with email and password) and reset-link requests past a SEC-001 limit, and `503` from reset-link requests and sending or resending an invitation when the email couldn't be sent (STD-6). Every endpoint needs a session except sign-in, sign-out (which succeeds either way), requesting and using a reset link, looking up and accepting an invitation, the first-admin setup (OPS-001), the webhook (API-003) and the health checks (OPS-005). Reset-link requests and sending or resending an invitation are exempt from NFR-003's 500 ms write limit, since STD-6 needs the email service's result before answering.
+  - DEC-002 (actions and routes): one server action per user action, and route handlers only for callers that aren't the app's pages (the outbox run, the webhook, the health checks, browser error reports); refusals with the STD-1 to STD-4 meanings, and a request ID on creates (STD-5). Also: a `429`-style refusal from sign-in and reset-link requests past a SEC-001 limit, and a `503`-style refusal from reset-link requests and sending or resending an invitation when the email couldn't be sent (STD-6). Everything needs a session except sign-in, sign-out (which succeeds either way), requesting and using a reset link, looking up and accepting an invitation, the first-admin setup (OPS-001), browser error reports (OPS-008), the webhook (API-003), the health checks (OPS-005) and the outbox run, which needs its own secret instead. Reset-link requests and sending or resending an invitation are exempt from NFR-003's 500 ms write limit, since STD-6 needs the email service's result before answering.
   - DEC-003 (email provider): it must have an HTTP API and bounce webhooks (API-003), fit within NFR-009's budget, send from the team's domain with SPF and DKIM, and keep its API key only in server config (OPS-006). If no provider fits, stop and ask.
-  - DEC-004 (background jobs): run alongside the app with no paid queue service, and survive a restart without losing pending notifications.
+  - DEC-004 (background jobs): no separate worker process and no paid queue service. Pending work is kept in PostgreSQL and done by a route of the app that the deployment calls every minute, so a restart loses no pending notification.
 
 ### 13. Release and operations
 
@@ -769,24 +769,25 @@ Deploys, rollbacks, backups, log retention and uptime monitoring are part of the
   - OPS-001.5: Fresh install, someone opens `/projects` → the welcome screen is shown instead of sign-in.
   - OPS-001.6: `SETUP_SECRET` is 20 characters → the app refuses to start, naming `SETUP_SECRET`.
   - OPS-001.7: Two setup requests with the right secret arrive at the same moment → one admin is created; the other gets "Setup already done".
-- **OPS-005** The app shall provide `/health` and `/health/worker` for an external uptime check. `/health` answers `200` only when the database responds. `/health/worker` answers `503` when the background worker hasn't finished a pass in the last 2 minutes (or never has), or when the oldest due pending notification delivery has waited more than 10 minutes; otherwise it answers `200`. Neither shows anything about members or notifications.
+- **OPS-005** The app shall provide `/health` and `/health/worker` for an external uptime check. `/health` answers `200` only when the database responds. `/health/worker` answers `503` when the outbox hasn't run in the last 2 minutes (or never has), when the oldest due pending notification delivery has waited more than 10 minutes, or when an event has waited more than 10 minutes to become notifications; otherwise it answers `200`. Neither shows anything about members or notifications.
   - OPS-005.1: The database stops → `/health` returns `503`.
-  - OPS-005.2: The worker's last pass was 3 minutes ago → `/health/worker` returns `503`.
-  - OPS-005.3: The worker has never finished a pass → `/health/worker` returns `503`.
-  - OPS-005.4: The worker finished a pass 10 seconds ago, but the oldest due pending delivery has waited 11 minutes → `/health/worker` returns `503`.
-  - OPS-005.5: The worker finished a pass 10 seconds ago, and the oldest due pending delivery has waited 1 minute, or nothing is due → `/health/worker` returns `200`. A delivery waiting for a retry isn't due yet, so it doesn't count.
+  - OPS-005.2: The last outbox run was 3 minutes ago → `/health/worker` returns `503`.
+  - OPS-005.3: The outbox has never run → `/health/worker` returns `503`.
+  - OPS-005.4: The outbox ran 10 seconds ago, but the oldest due pending delivery has waited 11 minutes → `/health/worker` returns `503`.
+  - OPS-005.5: The outbox ran 10 seconds ago, and the oldest due pending delivery has waited 1 minute, or nothing is due → `/health/worker` returns `200`. A delivery waiting for a retry isn't due yet, so it doesn't count.
+  - OPS-005.6: The outbox ran 10 seconds ago, but an event recorded 11 minutes ago still hasn't become notifications, because turning it into them keeps failing → `/health/worker` returns `503`.
 - **OPS-006** Secrets, such as the email API key and the database password, shall live in server config, never in the repository.
   - OPS-006.1: A search of the repository for the email API key → no match.
-- **OPS-007** The system shall log each unexpected server error once, as one JSON line on the process's standard error, at the place that turns the fault into an answer: a failed API request, a failed worker step, a script that can't start, or a failed email send. Each line names where it happened (`source`) and what failed (`event`), and follows SEC-007. The tech design (4.8) lists every source and event. Expected outcomes, such as a `404` or a wrong password, aren't errors and get no error line.
+- **OPS-007** The system shall log each unexpected server error once, as one JSON line on the process's standard error, at the place that turns the fault into an answer: a failed page, action or route, a failed step of the outbox run, a script that can't start, or a failed email send. Each line names where it happened (`source`) and what failed (`event`), and follows SEC-007. The tech design (4.8) lists every source and event. Expected outcomes, such as a `404` or a wrong password, aren't errors and get no error line.
   - OPS-007.1: Any error line → one line of JSON whose keys start `level`, `time`, `source`, `event`, and end with `error`.
   - OPS-007.2: Code throws a string or a plain object instead of an error → the line still has an `error` with a name and message.
   - OPS-007.3: An error has a cause, which has a cause, which has a cause → the line keeps the first 2 levels of causes.
-  - OPS-007.4: An API request fails unexpectedly → one `request-failed` line with the method, path (no query string) and the member's username, and the API answers `500`.
+  - OPS-007.4: An action fails unexpectedly → one `request-failed` line with the method and route (no query string), the action's own `call` line names the member's username, and the browser shows STD-9's toast.
   - OPS-007.5: Rendering a page, `/health` or `/webhooks/email` fails unexpectedly → one `request-failed` line with the method, the route and the error reference.
-  - OPS-007.6: One notification delivery fails unexpectedly → one `delivery-failed` line with the delivery's id and no recipient or text, and the worker goes on with the next delivery.
+  - OPS-007.6: One notification delivery fails unexpectedly → one `delivery-failed` line with the delivery's id and no recipient or text, and the outbox run goes on with the next delivery.
   - OPS-007.7: The email service answers `503` → one `bad-status` line with its host and status, and no address, key or email text; an invitation then answers `503` with nothing saved (STD-6).
   - OPS-007.8: The email service doesn't answer within 10 seconds → one `fetch-failed` line.
-  - OPS-007.9: The worker or another script fails to start → one `start-failed` line, and it exits with status 1.
+  - OPS-007.9: A script, such as the migrations, fails to start → one `start-failed` line, and it exits with status 1.
 - **OPS-008** The browser app shall report its own errors to the server, which logs each report as one error line (OPS-007) with source `client`. It reports uncaught errors, page crashes (STD-10) and region crashes (STD-11). A report is accepted from the app's own pages whether or not someone is signed in; another site's report is refused (SEC-004). The line holds the error, the page path without its query string, the app build, the failing component, the browser and device type, the time zone, the time of the error, the masked IP address (SEC-007.7), and the member's username, taken only from the session. Nothing is stored in the database. The server always answers `204` for a well-formed report, even past the limit: at most 30 reports in 10 minutes per member, or per IP address when signed out, are logged, and later ones are dropped. The browser sends each distinct error once and at most 20 reports an hour per tab, holds reports while offline and sends them when back online, and never shows the member anything about a report or its failure.
   - OPS-008.1: Sam's page throws an uncaught error → one `client` line, event `uncaught`, naming member `sam`, the page path, browser and device, and the server answers `204`.
   - OPS-008.2: A report names another member in its body → the line names the member from the session, or nobody when signed out.
@@ -809,6 +810,7 @@ Deploys, rollbacks, backups, log retention and uptime monitoring are part of the
 
 **Changelog**
 
+- **0.40 (2026-11-05):** Server-rendered pages and an outbox (owner decision, 2026-11-05; H01). Section 12's stack line drops the client-side router and data store for the App Router with server actions and layered server code; its boundaries send emails from the outbox run. API-001 is the app's own server actions and route handlers; STD-1 to STD-4 say what a page, an action and a route do; DEC-002 lists actions and routes instead of endpoints. DEC-004: no worker process; a route the deployment calls every minute does the background work. REQ-045 sends 2 to 3 minutes after a notification is created (REQ-045.8's times widened). REQ-053 and OPS-005 name the outbox run instead of the worker, with new copy ("No outbox run for {N} min…", "The outbox has never run…"); OPS-005 also fails on an event stuck for 10 minutes (new OPS-005.6). STD-11 drops "keeps showing data if a later refresh fails" (STD-11.4 rewritten), since a server-rendered region has no old copy. REQ-035: Back and Forward don't ask. SEC-004.1 and SEC-006.1 no longer name a status code; OPS-007 names pages, actions and the outbox run (OPS-007.4, OPS-007.6, OPS-007.9); STD-10.5 says a page instead of the page shell.
 - **0.39 (2026-10-30):** OPS-001 names the welcome screen's copy for a mismatched second password: the field error "Passwords don’t match", checked in the browser before anything is sent (W02).
 - **0.38 (2026-10-30):** First-admin setup moves from a command to a welcome screen (owner decision, 2026-10-30). OPS-001 is rewritten: while no members exist, signed-out visitors see a welcome screen that asks for the `SETUP_SECRET` from server config, then the profile and password, and signs the new admin in (new OPS-001.1 to OPS-001.7, now automated instead of `(Verify: ops)`). The setup command is removed. DEC-002 lists the setup endpoints as needing no session; API-004 adds `/welcome`; section 7 and the Member entity now name the welcome screen.
 - **0.37 (2026-10-29):** Error handling (owner's Glance error-handling rules, 2026-10-29). SEC-007 extends to error lines and client reports (new SEC-007.3 to SEC-007.7). New OPS-007 (one JSON error line per fault, at the boundary that answers it) and OPS-008 (the browser reports its errors to the server). New STD-10 (crash screen with a 60-second reload) and STD-11 (each data region fails on its own); STD-7 and DEC-006 now point to STD-11, whose button reads **Try again** and whose message names the region instead of "Couldn’t load this." beside Retry.

@@ -7,165 +7,201 @@ Companion to `docs/tracklite-spec.md`. The spec says *what* the product does; th
 ### 1.1 What runs where
 
 ```
- browser ──HTTPS──▶ reverse proxy ──▶ tracklite-web (next start)  ──┐
-                                                                     ├──▶ PostgreSQL 18
-                                    tracklite-worker (node)  ────────┘
+ browser ──HTTPS──▶ reverse proxy ──▶ tracklite-web (next start) ──▶ PostgreSQL 18
                                               │
                                               ▼
                                    email provider HTTP API
+ scheduler ──POST /api/cron/outbox, every minute──▶ (through the proxy)
  uptime checker ──GET /health, /health/worker──▶ (through the proxy)
  email provider ──POST /webhooks/email──▶ (through the proxy)
 ```
 
-Deployment (servers, the reverse proxy, process supervision, deploys, rollbacks, backups and log retention) is maintained outside this repository. The app expects the following from it.
+Deployment (servers, the reverse proxy, the scheduler, process supervision, deploys, rollbacks, backups and log retention) is maintained outside this repository. The app expects the following from it.
 
-| Process | What it does |
+| Part | What it does |
 |---|---|
-| **Reverse proxy** | Terminates TLS, redirects HTTP to HTTPS and sends HSTS and the 4.9 headers (SEC-005). It also overwrites `X-Forwarded-For` with the client's address, and the app reads the rightmost entry for SEC-001's per-IP limit, so a client can't choose the address that limit counts. Its access log drops the `token` query parameter (SEC-007). |
-| **tracklite-web** | `next start`: the single-page-app shell (1.7), `/api/…`, `/health`, `/health/worker`, `/webhooks/email`. Restarted if it exits. |
-| **tracklite-worker** | A small Node entry point, `scripts/worker.ts`, run with `tsx` from the same codebase. It sends notification emails and runs cleanup (1.4). Restarted if it exits. |
-| **PostgreSQL** | All state, including the notification queue. |
+| **Reverse proxy** | Terminates TLS, redirects HTTP to HTTPS and sends HSTS and the 4.9 headers (SEC-005). It passes the original `Host` (or sets `X-Forwarded-Host`), which Next.js compares with `Origin` on every server action (4.4). It also overwrites `X-Forwarded-For` with the client's address, and the app reads the rightmost entry for SEC-001's per-IP limit, so a client can't choose the address that limit counts. Its access log drops the `token` query parameter (SEC-007). Its upstream timeout is over 60 seconds, so an outbox run (1.4) isn't cut off. |
+| **tracklite-web** | `next start`: the server-rendered pages and their server actions (1.7), `/api/cron/outbox`, `/api/client-errors`, `/health`, `/health/worker`, `/webhooks/email`. Restarted if it exits. It is the only app process. |
+| **Scheduler** | Calls `POST /api/cron/outbox` once a minute with `Authorization: Bearer {CRON_SECRET}` (1.4, 1.6). Any cron-like service works; a missed or overlapping call is harmless. |
+| **PostgreSQL** | All state, including the outbox and the notification queue. |
+
+**Batch H.** The code is moving to this design one task at a time (`docs/execution-plan.md`, batch H). Until H20, the old client-rendered screens under `src/app/[[...path]]` and the `/api` routes they call (3.3) still run beside the new pages, and until H21 notifications are still sent by `scripts/worker.ts`. Where the code and this file differ, the open H row says which way the code goes.
 
 ### 1.2 Request flow
 
-**Pages.** Every page address returns the same HTML shell. The browser app then does the routing, the signed-out redirects (STD-1) and all data loading, through the API (1.7). Every read and write therefore goes through the same API code and the same permission checks (SEC-006).
+There are three ways in: a page, a server action and a route handler. All three call the same use cases and queries (1.8), so every read and write goes through the same permission checks (SEC-006).
 
-**API.** Each handler is wrapped in `apiRoute`, which runs these steps in order:
+**Pages.** A page is a React Server Component under `src/app/` (1.7):
 
-1. Reject cross-site writes with `403` (4.4).
-2. Validate the session with `requireMember`. This step only says who is asking; it checks no role. A route declared `"public"` (sign-in, password resets, invitation lookups and acceptance, sign-out) skips it.
-3. If the route declares a body schema, parse the JSON body and validate it with Valibot (D-42), failing fast with `422`. The schema checks shape and format only, with the spec's own messages, and passes the parsed, trimmed values on.
-4. Call one domain function under `src/server/` (1.8), a command from its context's `index.ts` or a read from `queries/`, passing the signed-in member as its first argument, `actor`. `apiRoute` opens no transaction; the domain function opens its own with `db.transaction`. The domain function checks permissions (4.10), then the rules that need the database (a key already used, the last admin), and writes. The action and any notification rows it creates commit together (spec §12).
-5. Map a thrown `DomainError` by its kind (3.2) to `401`/`403`/`404`/`409`/`410`/`422`/`429`/`503` with `{ error: { message, fields? } }`; `apiRoute` is the only code that names these statuses (D-47). Map anything else to `500` and log it as `route/request-failed` (4.8).
-6. Write one JSON `route/request` line per request, without bodies or tokens (SEC-007, 4.8). A signed-in request's line names the member as `actor` by username. `/health`, `/health/worker` and `/webhooks/email` don't go through `apiRoute`, so they write no line; the reverse proxy's access log records them.
+1. The `(signed-in)` layout reads the session with `requireMember` and redirects a signed-out visitor to `/sign-in?next=…` (STD-1). Pages in `(signed-out)` read the session only to send a signed-in member on (6.1).
+2. The page reads its data through `src/queries` (D-64), passing the member as `actor`. An admin-only read starts with `assertAdmin(actor)`, so a member's page shows STD-2's message in the page area. A query returns `null` for a missing target, and the page calls `notFound()` (STD-4).
+3. Each data region renders inside its own `Region` (1.7, STD-11), so one failed query fails only its region.
+
+**Server actions.** Every action is a function in a route's `actions.ts`, wrapped by the adapter in `src/app/_server/action.ts` (D-63), which runs these steps in order:
+
+1. Next.js has already refused a cross-site call: it compares `Origin` with the host (4.4).
+2. Read the session with `requireMember`, which only says who is asking and checks no role. An action declared `"public"` (sign-in, password resets, invitation lookups and acceptance, sign-out, first-admin setup) skips it.
+3. Parse the input with the action's Valibot schema (D-42), failing fast with an `invalid` error. The schema checks shape and format only, with the spec's own messages, and passes the parsed, trimmed values on.
+4. Call one use case from `src/application/` (1.8) with the member as `actor`, a `UnitOfWork` wired with the repositories the use case names, and the input. The use case checks permissions (4.10), loads aggregates, runs their rules and saves them; the unit of work commits the change and its events together (spec §12).
+5. On success, call `refresh()` from `next/cache`, so the page's server components render again with current data, and return `{ ok: true, data }`. `data` is only what the client needs next, such as a new issue's ID.
+6. Turn a thrown `DomainError` into `{ ok: false, error: { kind, message, fields? } }` (3.2), and **rethrow anything else**, which Next.js reports through `onRequestError` (4.8) and the browser sees as a failed call (STD-9).
+7. Write one JSON `action/call` line, without inputs or tokens (SEC-007, 4.8), also before rethrowing. A signed-in call names the member as `actor` by username, so an unexpected error's `route/request-failed` line can be matched to the member (OPS-007.4).
+
+**Route handlers.** Only callers that aren't the app's own pages use routes: the scheduler (`/api/cron/outbox`), the uptime checker (`/health`, `/health/worker`), the email provider (`/webhooks/email`), and the browser's error reporter (`/api/client-errors`, which must work after a page has crashed, 4.8). Each checks its own caller (a bearer secret, a signature, or the origin check of 4.4) and calls one use case. Until H20, the `/api` routes of 3.3 also run, through `apiRoute`, which keeps the same steps with HTTP statuses.
 
 ### 1.3 Time
 
 Every expiry and time-window check uses the database's `now()` inside the query (`expires_at > now()`, `send_after <= now()`). The app server's clock is never used for these, so there's only one clock to trust. The app's connection sets the session time zone to UTC, so a window such as `interval '7 days'` is always exactly 168 hours, even across a daylight-saving change. The one exception is the webhook's 5-minute signature window (5.4), which compares the provider's timestamp with the app's clock, since there's no row to compare in SQL. Tests move stored timestamps into the past rather than faking the clock. For example, a test for REQ-050.4 sets `expires_at = now() - interval '1 minute'`.
 
-### 1.4 Background worker (DEC-004)
+### 1.4 Outbox and cron route (DEC-004)
 
-`scripts/worker.ts` runs `runWorker` until `SIGTERM`, in **passes**. A pass never holds a transaction open during a provider call, and no single delivery's failure ends the process.
+Work that happens after an action, sending notifications and cleanup, runs in `POST /api/cron/outbox`, which the scheduler calls every minute (D-70). There is no long-running worker process.
 
-1. **Heartbeat.** Upsert the `worker_heartbeats` row named `worker` with `last_pass_at = now()` (2.6), read by `/health/worker` and the status page (OPS-005, REQ-053).
-2. **Claim.** One short transaction picks up to 10 deliveries that are `pending`, due (`coalesce(next_attempt_at, send_after) <= now()`, `send_after` from the batch) and not leased (`locked_until is null or locked_until <= now()`), `order by send_after for update of notification_deliveries skip locked`, sets `locked_until = now() + interval '2 minutes'`, returns that value as the pass's **lease**, and commits. Two minutes covers a full pass at the provider's 10-second timeout (5.2): 10 × 10 s.
-3. **Each claimed delivery**, one at a time (sends are never concurrent):
-   - **Drop checks** (2.6) in one short transaction: mark unwanted notifications dropped and, if none is left, record `dropped`. Their data is loaded once per pass, before the first delivery (2.6).
-   - **Send** outside any transaction: the delivery's channel gets the kept notifications and the delivery's `id` (2.6).
-   - **Record** in one statement: `sent` (with `provider_message_id` and `sent_at`), a retry (`attempts + 1`, `next_attempt_at`, `locked_until = null`), or `failed`. This write and the drop step's apply only while the delivery is `pending` with `locked_until = <the pass's lease>` (the drop step locks the delivery row first to check), so a pass whose lease ran out and was taken over can't overwrite the newer pass's result. The lease is compared in SQL as the exact database value, never as a JavaScript `Date`, which loses microseconds.
-4. **Errors stay with their delivery.** Step 3 runs inside one `try` per delivery. A failed send (the channel's sender returns `err`) or an unexpected error (a drop-check bug, a dropped connection) counts as a failed attempt with the usual retries (2.6: 1, 4 and 10 minutes, then `failed`), and the pass moves on. An unexpected error logs one `worker/delivery-failed` line (4.8) with the delivery's `id` and channel, never the recipient or text (SEC-007), on each failed attempt; a failed send adds no worker line, because `sendEmail` already logged its `mail/*` line (one line per fault, OPS-007). Giving up after the last retry adds no line either. If recording the failure fails too, the lease runs out and a later pass retries. An error outside any delivery (heartbeat, claim, loading drop-check data), such as during a PostgreSQL restart, logs `worker/pass-failed` and ends the pass; claimed deliveries return when their lease runs out, and the worker waits 5 seconds. A metrics or cleanup error logs `worker/metrics-failed` or `worker/cleanup-failed` and the worker carries on. If `runWorker` itself throws, `scripts/worker.ts` logs `boot/start-failed` and exits `1`.
-5. **Next pass.** After a full claim of 10, the next pass starts at once, so a backlog drains at the provider's pace; otherwise the worker sleeps 5 seconds.
-6. **Metrics.** At most once a minute, after a pass, one `worker/metrics` info line (4.8): `pending`, `due`, `oldestDueSeconds` (both counted in SQL against `now()`), and the `sent`, `failed` and `dropped` counts since the previous line. No recipients, no text.
-7. **Cleanup (DATA-004)** runs hourly between passes, in chunks (2.7).
+**Writing the outbox.** When a use case's unit of work commits (1.8), it first hands the events pulled from every saved aggregate to the outbox writer, `notifications`' infrastructure, on the same transaction. For each event the writer:
+- mirrors the text's mentions into `mentions` (2.5), since pages show them at once;
+- decides the recipients: the newly added assignees (REQ-043) or the newly mentioned members (REQ-044), minus the actor;
+- takes the snapshot each message needs (2.6), so the email can still be built if the issue or project is deleted before the run (REQ-045.7);
+- inserts one `outbox_events` row (2.6) holding all of that, unless there are no recipients.
 
-**Where the code lives (1.8).** `scripts/worker.ts` is the entry point, like a route. `notifications/handlers/run-worker.ts` keeps the loop, the heartbeat, metrics, the claim and lease SQL and the record writes; the lease keeps two workers from clashing and is not a product rule. The decisions are the Delivery model in `notifications/model.ts`, pure functions tested without a database: which of a batch's notifications are still wanted (the drop checks, 2.6) and what a failed attempt leads to (a retry after 1, 4 or 10 minutes, then `failed`). The senders in `notification-channels/` are the adapters, one per channel (2.6).
+So the action, its mentions and its event commit or roll back together.
 
-**New background work.** Work that must happen after an action is a row its owning context writes on the action's `tx`, from a domain event or the command itself, which the worker claims with `skip locked` and a lease, as it does deliveries. Periodic housekeeping is another interval check in `runWorker`, like cleanup. The web process never defers work past its response (no `after()`, timers or unawaited promises), and there is no generic outbox table or cron route (D-58).
+**A run.** The route answers `401` unless `Authorization` is `Bearer {CRON_SECRET}`, compared in constant time like `SETUP_SECRET` (4.6). It then works for at most **50 seconds**, checking the time before each step, so it ends before the next call is due, and answers `204`. A run never holds a transaction open during a provider call, and no single event's or delivery's failure ends it.
+
+1. **Heartbeat.** Upsert the `job_runs` row named `outbox` with `last_run_at = now()` (2.6), read by `/health/worker` and the status page (OPS-005, REQ-053).
+2. **Events.** Repeatedly, in one transaction each: claim the oldest unpublished, due event (`published_at is null and next_attempt_at <= now()`, `order by occurred_at for update skip locked limit 1`), run `record-notifications` for it (2.6), and set `published_at = now()`. If the handler throws, the transaction rolls back, and a second short one sets `attempts + 1` and `next_attempt_at` 1, 4 and 10 minutes ahead, then hourly; it logs `outbox/event-failed` with the event's `id` and `type` (4.8). An event is never given up on. The step ends when no event is due.
+3. **Deliveries.** Run `send-due-deliveries` passes while a pass claims a full 10 and time is left. A pass works as before batch H: claim up to 10 pending, due, unleased deliveries with a 2-minute lease (D-46), then for each one, the drop checks, the send outside any transaction, and the record, guarded by the lease (2.6). Two minutes covers a full pass at the provider's 10-second timeout (5.2): 10 × 10 s.
+4. **Cleanup (DATA-004).** If the `job_runs` row named `cleanup` is missing or older than an hour, claim it (`update … where last_run_at <= now() - interval '1 hour' returning`, or an insert `on conflict do nothing`), so two overlapping runs never both clean, then delete in chunks (2.7) while time is left. Unfinished chunks wait for the next hour.
+5. **Metrics.** One `outbox/metrics` info line (4.8): `events` (unpublished), `pending`, `due` and `oldestDueSeconds` (counted in SQL against `now()`), and the `sent`, `failed` and `dropped` counts of this run. No recipients, no text.
+
+**Errors stay where they happen.** Each event, each delivery and the cleanup run inside their own `try`. A delivery's unexpected error counts as a failed attempt (2.6) and logs `outbox/delivery-failed` with the delivery's `id` and channel, never the recipient or text (SEC-007); a failed send logs nothing more, because `sendEmail` already logged its `mail/*` line (D-53). An error outside them (heartbeat, claim, loading drop-check data), such as during a PostgreSQL restart, logs `outbox/run-failed`, and the route answers `500`; claimed deliveries return when their lease runs out, and the next run retries.
+
+**Where the code lives (1.8).** `src/app/api/cron/outbox/route.ts` checks the secret and the time budget and calls the use cases in `src/application/notifications/`: `record-notifications`, `send-due-deliveries` and `clean-up`. The Delivery entity (`domain/notifications/`) decides which notifications are still wanted and what a failed attempt leads to. The claim, lease and `skip locked` SQL is in `infrastructure/notifications/`, with the channels' senders (2.6). In development, `npm run cron` calls the route every minute.
+
+**New background work** is an event type with a handler in step 2, or a step of the run with its own `job_runs` row, like cleanup. The web process never defers work past its response (no `after()`, timers or unawaited promises).
 
 How it meets DEC-004:
 
-- **Survives a restart.** The queue is the `notification_deliveries` table, so pending notifications survive a crash or deploy, and the worker is restarted. A delivery the crashed process claimed is retaken once its lease runs out, at most 2 minutes later.
-- **No paid queue.** Postgres plus one Node process.
-- **Delivered at least once.** A delivery is sent again after its lease runs out if the worker dies between the provider accepting it and the record, or if a send outlasts its lease and another pass reclaims it. Both sends carry the delivery's `id` as Resend's `Idempotency-Key`, so Resend drops the duplicate (section 5).
-- **Safe to run twice.** `skip locked` and the lease stop a second worker (say, mid-deploy) from claiming a delivery whose lease is still running.
-- **Shutdown.** On `SIGTERM` or `SIGINT` the worker claims nothing more, finishes and records the current pass's deliveries, then exits; a sleep ends at once. If the supervisor cuts off a slow pass, its deliveries return when the lease runs out, as after a crash.
+- **Survives a restart.** Events and deliveries are table rows, so nothing is lost in a crash or deploy. A run cut off mid-way leaves its unpublished events for the next run, and its claimed deliveries are retaken once their lease runs out, at most 2 minutes later.
+- **No paid queue and no extra process.** PostgreSQL plus a route of the web app, called by the deployment's scheduler.
+- **Handled once, delivered at least once.** An event's notifications and its `published_at` commit in one transaction, and `notifications` is unique on `(event_id, recipient_id)`, so replaying an event adds nothing (2.6). A delivery is sent again if a run dies between the provider accepting it and the record, or if a send outlasts its lease; both sends carry the delivery's `id` as Resend's `Idempotency-Key`, so Resend drops the duplicate (section 5).
+- **Safe to run twice.** `skip locked`, the lease and the `cleanup` claim let two runs overlap (a slow run and the next call) without doing anything twice.
 
 ### 1.5 Emails sent during the request
 
-Invitations (REQ-001) and password reset links (REQ-050) are **not** queued. They're sent inside the request, because STD-6 needs to know whether the send worked before answering.
+Invitations (REQ-001) and password reset links (REQ-050) are **not** queued. They're sent inside the action, because STD-6 needs to know whether the send worked before answering.
 - The token row is written first, then the email is sent, all in one transaction.
-- If the send fails, the transaction rolls back, so no working link exists that nobody received, and the API answers `503`.
+- If the send fails, the transaction rolls back, so no working link exists that nobody received, and the action returns the `unavailable` error (STD-6).
 
 All email goes through one `sendEmail()` (5.2).
 
 ### 1.6 Configuration
 
 - Settings come from environment variables: `.env.local` in development, and the deployment's server config in production (OPS-006).
-- Both processes check them at startup and refuse to start if any are missing.
-- Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5). `MAILPIT_HOST` and `MAILPIT_PORT` are optional and default to `localhost` and `8025`. `SETUP_SECRET` is optional; when set it must be at least 32 characters (OPS-001.6), and without it the welcome screen can't create the first admin (4.6).
+- The app checks them at startup and refuses to start if any are missing.
+- Settings: `DATABASE_URL`, `APP_URL` (for links in emails), `CRON_SECRET` (1.4), `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `EMAIL_FROM` (section 5). `CRON_SECRET` must be at least 32 characters, like `SETUP_SECRET`, and the scheduler sends it. `MAILPIT_HOST` and `MAILPIT_PORT` are optional and default to `localhost` and `8025`. `SETUP_SECRET` is optional; when set it must be at least 32 characters (OPS-001.6), and without it the welcome screen can't create the first admin (4.6).
 - `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are required only when `NODE_ENV` is `production`; development sends through Mailpit and tests through the in-memory outbox (5.2).
 - A production build (`next build` with `NODE_ENV=production`) loads the route modules, which read the settings, so the build step needs the same settings as the running app, `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` included, or it fails with "Missing environment variables" (found by L03).
 - Tests run against `TEST_DATABASE_URL`, which must differ from `DATABASE_URL`. Before each run its schema is dropped and the migrations applied afresh.
 
-### 1.7 Browser app (single-page app)
+### 1.7 Pages and client components
 
-Strict single-page app, as the Next.js docs define it: the app is served by one HTML document, and every route change, page transition and data fetch happens in the browser, with no full-page reloads.
+Next.js App Router with React Server Components (D-10). A page renders on the server with current data; client components handle what needs the browser: forms, pickers, the board's drag and drop, toasts. There is no client-side data store.
 
-**The shell.**
-- `src/app/layout.tsx` holds `<html>`, `<body>`, the fonts (`next/font/google`, served from the app so the CSP's `font-src 'self'` holds) and the Track Lite stylesheet.
-- One optional catch-all page, `src/app/[[...path]]/page.tsx`, renders `<ClientApp />` through `next/dynamic` with `ssr: false`. It's the same document for every address.
-- `/api`, `/health` and `/webhooks` are more specific routes, so they're never caught by it.
-- `src/proxy.ts` only sets the Content Security Policy and `Referrer-Policy` (4.9). It doesn't redirect pages; the browser app does.
-
-**Routing.** React Router in data mode (`createBrowserRouter`), with routes lazy-loaded so each screen's code is downloaded on first visit.
-- The route table is the API-004 list (6.1).
-- `useBlocker` provides the unsaved-text prompts (REQ-035, 6.4). That's the main reason to use React Router rather than hand-rolled `history.pushState`.
+**Layout.**
+- `src/app/layout.tsx` holds `<html>`, `<body>`, the fonts (`next/font/google`, served from the app so the CSP's `font-src 'self'` holds), the Track Lite stylesheet, the toast provider and the error reporter (4.8).
+- `src/app/(signed-out)/` holds `/sign-in`, `/forgot-password`, `/reset-password`, `/invite` and `/welcome`; `src/app/(signed-in)/` holds every other API-004 page, under a layout that renders the shell and sidebar (6.2). Each route folder has its `page.tsx`, an `actions.ts` for its server actions, and its client components.
+- `src/proxy.ts` only sets the Content Security Policy and `Referrer-Policy` (4.9). Redirects happen in layouts and pages.
+- Every page renders per request: it reads cookies, and the CSP nonce (4.9) needs a fresh render. Nothing is cached between requests, which matches "pages show current data when they load" (spec §12). There's no polling: REQ-041.6 and REQ-053.7 expect an open page to stay as it is until it's reloaded or the member acts.
 
 **Signed-in state (STD-1).**
-- On startup the app calls `GET /api/me`:
-  - `401` → go to `/sign-in?next={current address}`;
-  - success → the member is kept in the RTK Query cache and the requested route renders.
-- `/sign-in` and `/` send a signed-in member to `/my-issues`.
-- **First admin (OPS-001).** `/sign-in` calls `GET /api/setup` and goes to `/welcome` while `needed` is true. Every signed-out visitor reaches `/sign-in` through the `401` redirect, so a blank install always lands on the welcome screen. `/welcome` goes to `/sign-in` once setup is no longer needed.
+- The `(signed-in)` layout calls `requireMember`; with no valid session it redirects to `/sign-in?next={the requested path and query}`.
+- `/sign-in`, `/forgot-password` and `/` send a signed-in member to `/my-issues`.
+- **First admin (OPS-001).** `/sign-in` checks `setupNeeded` and redirects to `/welcome` while it's true. Every signed-out visitor reaches `/sign-in`, so a blank install always lands on the welcome screen. `/welcome` goes to `/sign-in` once setup is no longer needed.
 - **Return after sign-in (SEC-009).** `next` is used only if it starts with `/` but not `//` or `/\`; anything else goes to `/my-issues`. So `?next=https://evil.example` can't send anyone off-site.
-- Any `401` later, such as an expired session or a deactivated member mid-edit (REQ-007.4), does the same redirect from the shared `baseQuery`, except on the signed-out pages (`/sign-in`, `/forgot-password`, `/reset-password`, `/invite`, `/welcome`).
+- **Mid-edit (REQ-007.4).** An action whose session has ended returns the `signedOut` error, and the client's action helper sends the browser to `/sign-in?next={current address}`, except on the signed-out pages.
 
-**Redux Toolkit.** One store, created once in `ClientApp` and provided through `react-redux`.
+**Reads.** A page or layout calls `src/queries` (D-64) and passes plain contract types (3.5) to client components as props. Each data region is its own async server component inside a `Region`, so regions load and fail independently.
 
-- **RTK Query** (`createApi`, one `api` slice) holds all server data. The `baseQuery`:
-  - wraps `fetch`, sends JSON and parses `{ error: { message, fields? } }`;
-  - on `401`, redirects to sign-in;
-  - leaves every other error to the component, which shows field errors (STD-3), an editor conflict (`409`, STD-8), or a toast.
-- **Fresh data on every visit.** Queries use `refetchOnMountOrArgChange: true`, so each screen loads current data when opened. That matches "pages show current data when they load" (spec §12). There's no `refetchOnFocus` and no polling: no live updates in R1, and REQ-041.6 expects an open page to stay as it is.
-- **Tags drive refreshing.** One tag per type, no IDs: `Me`, `Members`, `Invitations`, `Projects`, `Labels`, `Issue`, `Board`, `Comments`. A successful mutation invalidates the type it changes (`updateMember` also `Me`), so mounted screens showing it refetch. Label updates and deletes, comment deletes and board moves also invalidate on a `404` (row deleted meanwhile). `updateIssue` instead writes the saved issue into the `issue` cache and invalidates `Labels` only on a `404` (label deleted meanwhile). Creating or deleting an issue and deleting a project invalidate nothing, since the app then navigates to a screen that refetches on mount (a project delete also invalidates `Projects` for the sidebar). The list, My issues and the notification status have no tags and rely on the refetch on every visit.
-- **Optimistic board moves (NFR-005, REQ-026).** `moveIssue` updates the cached board in `onQueryStarted` before the request. On failure it undoes the change and toasts the server's message, or "Couldn’t move WEB-42" for a network error or `5xx`. On success, or a `404` for a card deleted meanwhile (REQ-026.5), it invalidates `Board`.
-- **UI slice:** one `toast` slice (STD-9: one message at a time, 5 seconds, no dismiss).
-- **Kept out of Redux on purpose:**
-  - list-view filters, search and sort live in the URL (`useSearchParams`), since REQ-040 already makes the URL their home. The parameters are the list endpoint's (3.3), with enum values as their keys, such as `status=in_progress`. A filter or sort change adds a history entry; search replaces the current one, so Back doesn't step through each typed word;
-  - form drafts live in component state.
+**Writes.** A client component calls its route's server action, through `useActionState` for forms and `startTransition` for single controls (a picker, a board move). The action's `refresh()` (1.2) re-renders the page's server components, so whatever the page shows is read again; there are no cache tags to keep in step. A result with `ok: false` is shown by the component: field errors next to their fields (STD-3), a conflict in the editor (STD-8), and anything else as a toast (STD-9). A thrown call (network, a `500`, or an action ID from an older build after a deploy) toasts "Couldn’t save. Try again."
+- **Optimistic board moves (NFR-005, REQ-026).** The board keeps its columns in `useOptimistic`; a drop updates them inside the action's transition. On `ok: false` or a thrown call, the transition ends without the new data, so the card returns to where it was, and the board toasts the server's message, or "Couldn’t move WEB-42" for a network error or `5xx`. A `404` for a card deleted meanwhile (REQ-026.5) needs nothing more: the refresh drops it.
+- **Request IDs (STD-5).** `useRequestId()` generates `crypto.randomUUID()` once, when a create form opens or is reset, and reuses it for every retry of that submit.
+- **URL state.** List filters, search and sort live in the URL (REQ-040), and the list page reads them from `searchParams`. The parameters use enum values as their keys, such as `status=in_progress`. A filter or sort change pushes a history entry with `router.push`; search uses `router.replace`, so Back doesn't step through each typed word. Form drafts live in component state.
 
-**Request IDs (STD-5).** A create form generates `crypto.randomUUID()` once, when the form opens or is reset, and reuses it for every retry of that submit.
+**Loading states (STD-7).** Each `Region`'s Suspense fallback is `DelayedFallback`, which renders nothing for 300 ms and then "Loading…" (D-65). Navigations between pages show the same fallback from each route's `loading.tsx`.
 
-**Loading states (STD-7).** One shared hook shows the loading indicator only after a request has been pending for 300 ms.
+**Regions (STD-11).** `Region` (`src/components/region/`) wraps a data region in Suspense and an error boundary made with `catchError` from `next/error` (D-66). The failed view reads "Couldn’t load {what}." with **Try again**, which calls the boundary's `retry()`: it re-fetches the route's server data, like `router.refresh()`, and re-renders the region. A render crash in the region shows the same view and reports `zone-crashed` with the first component name of React's `componentStack` (4.8). `redirect()` and `notFound()` pass through the boundary. A region that showed data and fails on a later render (after an action's `refresh()`) shows the failed view, since a server-rendered region keeps no copy of its old data (STD-11.4). Regions: sidebar projects, board, list, My issues, issue fields, project details, comments, labels, project settings, archived projects, profile, members (members and invitations together), notification status. Empty states stay in each region's component, since each has its own copy.
 
-**Zones (STD-11).** Each data region renders through `<Zone what state retry page?>{(data) => …}</Zone>` in `src/client/Zone.tsx`. `zoneState(result)` is a pure function of an RTK Query result: any data → `ready` (data wins over a failed refetch, STD-11.4); no data and an error → `failed`; otherwise `loading`, whose "Loading…" shows after the 300 ms delay above. The failed view reads "Couldn’t load {what}." with **Try again**, which calls `retry` (the query's `refetch`). The ready view sits in an error boundary that shows the same failed view on a render crash, reports `zone-crashed` with the first component name of React's `componentStack`, and resets when the data changes or **Try again** is clicked. `page` wraps the loading and failed views in `SettingsLayout` for zones that fill the page. Zones: sidebar projects, project (`ProjectGate`), board, list, My issues, issue fields, comments, labels, archived projects, profile, members (members and invitations together), notification status. Empty states stay in each zone's render function, since each has its own copy.
+**Unsaved text (REQ-035).** `useLeaveGuard(message)` (D-67) is active while a comment box holds text or a description editor has unsaved changes. It registers with a client context that the app's link component reads: `next/link`'s `onNavigate` asks with `window.confirm(message)` and calls `preventDefault()` on Cancel. It also listens for `beforeunload`, so closing or reloading the tab shows the browser's prompt. The browser's Back and Forward buttons aren't caught, since the App Router has no blocking API (REQ-035).
 
-### 1.8 Bounded contexts
+**Toasts (STD-9).** A small client context in the root layout shows one message at a time for 5 seconds with no dismiss; a new one replaces it.
 
-`src/server/` is split into bounded contexts. Each context is a folder with a public `index.ts`, and other contexts, routes (`src/app/`) and `scripts/` import it only through that file. Writes go through aggregates, and reads for screens go straight to SQL in `src/server/queries/` (D-55, D-57). Domain functions keep the style of 1.2 and 4.10: `actor` first, their own transaction. A context's request schemas live in its `schemas.ts` (D-42), and each test sits next to its source. The client is out of scope.
+### 1.8 Layers and bounded contexts
 
-| Context | Holds |
-|---|---|
-| `src/server/identity/` | one file per use case in `commands/` (sign-in, sessions, profile, setup, invitations, password resets, members, client error reports, expired account rows); sessions, members, sign-in and reset limits, rules and the dev seed as shared helpers; the account, invitation, member, password and profile schemas |
-| `src/server/notifications/` | the Delivery model (`model.ts`); `handlers/` for what events, the worker and webhooks start (`on-domain-event.ts`, `run-worker.ts`, `receive-email-event.ts`); `commands/` for notification stats and the worker health check; the notification queue, `notification-channels/`, expired-row cleanup, mentions (`descriptions.ts`) |
-| `src/server/projects/` | the Project aggregate with its labels (`model.ts`, `repository.ts`) and its commands in `commands/`, one file per use case (`create-project.ts`, `update-label.ts`, …); their schemas |
-| `src/server/issues/` | the Issue aggregate (`model.ts`, `repository.ts`) and its commands in `commands/`, one file per use case (`create-issue.ts`, `update-issue.ts`, `delete-issue.ts`, `move-issue.ts`); its schema |
-| `src/server/comments/` | the Comment aggregate (`model.ts`, `repository.ts`) and its commands in `commands/` (`post-comment.ts`, `edit-comment.ts`, `delete-comment.ts`); its schema |
-| `src/server/shared/` (infrastructure) | db, schema (enums and column helpers), config, log, domain errors (`domain-error.ts`), api-route, `email/`, tokens, passwords, chunked-delete, domain events (`events.ts`); the schema helpers every context uses (`schemas.ts`, including the description schema) |
-| `src/server/queries/` (read side) | the reads behind screens and the response a command returns: issue list, My issues, board, one issue, project summaries and details with issue counts, labels with their counts, comment threads, who a text mentions |
+The server code is split two ways: into **layers**, by what a file may depend on (D-60), and inside each layer into the five **bounded contexts**, `identity`, `projects`, `issues`, `comments` and `notifications`, by what part of the product it is about.
 
-**Layers in a context (D-55, D-56).** A context with an aggregate (Issue, Project, Comment) splits its write path into four kinds of file, in the order a request reaches them:
-- `schemas.ts`: request shapes and branded identifiers (D-42), checking shape and format only.
-- **Commands** (`commands/create-issue.ts`, …): the domain functions `index.ts` exports, one per use case, each in a file named after it. A helper two commands share goes in `repository.ts` (or, without an aggregate, a file named for its area, such as `identity/invitations.ts`); a helper one command uses stays in its file. A command calls `assertAdmin(actor)` first if it is admin-only (4.10), then opens one `db.transaction`: load the aggregate through the repository, load what a rule needs from other aggregates (the members being assigned, the project's labels, whether the project is archived), call the model, save, publish the model's events on the same `tx`, and return the response from `queries/`. A command holds no rule and no SQL of its own.
-- `model.ts`: the aggregate as a readonly type and pure functions over it. `new<Aggregate>(…)` runs the rules for a new one; each change (`retitle`, `assign`, `move`, …) takes the aggregate and its input and returns `{ <aggregate>, events }`, the changed aggregate and the `DomainEvent`s to publish, or throws a `DomainError` (3.2). A refusal whose message needs a read returns instead of throwing: an issue's stale description save returns `{ conflictWith }`, the member who saved last, and the command throws `editConflict` with their name. It holds only rules the spec states, and leaves to the database the rules it can hold (unique issue numbers, keys and label names). It may use `src/contract/` enum types, the words server and client share (D-44), but imports no `drizzle-orm`, `shared/db`, `shared/transaction`, `shared/api-route` or `next/*`; `architecture.test.ts` fails on one in a `model.ts` or `rules.ts`. Its tests are in `model.test.ts`, with no database.
-- `repository.ts`: `load<Aggregate>(tx, …)` reads the root with `select … for update` and its parts, and maps the rows with `to<Aggregate>(…)`, which trusts stored data and runs no rules, so a rule added later never makes an old row unloadable. `save<Aggregate>(tx, before, after)` writes only what changed. Repository functions take the command's `tx` and never open a transaction.
+```
+src/
+├── app/                 pages, layouts, actions.ts per route, client components; route handlers:
+│                        /api/cron/outbox, /api/client-errors, /health, /webhooks; _server/action.ts (the adapter)
+├── domain/<ctx>/        entities, value objects, repository interfaces, events. No next/*, Drizzle or server-only
+├── application/<ctx>/   one file per use case; depends on domain interfaces and the UnitOfWork interface only
+├── infrastructure/      db client, schema and tables, mappers, Drizzle repositories, the unit of work,
+│                        the outbox writer, email, tokens, passwords, log, config
+├── queries/             read-only SQL for pages, returning src/contract types
+├── contract/            response types and enum values shared by queries, actions and client components
+└── components/, lib/    the Track Lite kit, Region and other client building blocks; the Markdown module
+```
 
-Contexts without an aggregate (`identity`, and `notifications` apart from deliveries) keep plain domain functions, one per use case in `commands/` (reads included) or, for entry points no member action starts (the domain-event subscriber, the worker, the email webhook), in `notifications/handlers/`; their pure decisions are in `rules.ts`. A context gets an aggregate when a rule there would otherwise be written twice.
+**Layers and their imports.** `architecture.test.ts` fails on an import against this table.
 
-**Aggregates.** Each is changed only through its model, with one root locked per change.
+| Layer | May import | Holds |
+|---|---|---|
+| `domain/**` | `domain/**`, `valibot` | the rules: entities, value objects, domain events, `DomainError`, repository interfaces. No database, framework or I/O |
+| `application/**` | `domain/**`, `application/**`, `src/contract` | use cases: load through repository interfaces, call entities, save, inside a `UnitOfWork` |
+| `queries/**` | `domain/**` (value objects, `assertAdmin`), `infrastructure/**/tables.ts`, `infrastructure/db`, `src/contract` | the reads behind pages (D-64) |
+| `infrastructure/**` | anything but `app/` and `components/` | Drizzle tables, mappers and repositories, the unit of work, the outbox writer, channels, email, tokens, passwords, log, config |
+| `app/**` | everything | pages and route handlers, and the actions, which are the composition root: they wire infrastructure into use cases |
 
-| Aggregate | Context | Root and parts | Rules in its model | Concurrency |
+Nothing under `domain`, `application` or `queries` imports `next/*`. `src/contract/` imports nothing. `src/lib/markdown/` is shared by the browser and `infrastructure/` (4.7). Test files may build fixtures across layers.
+
+**Bounded contexts.** Each layer has one folder per context; `shared/` holds what every context uses (`domain/shared/` for `DomainError`, `AggregateRoot`, the shared value objects and events; `infrastructure/` itself for db, log, email and the rest).
+
+| Context | Domain | Use cases (`application/<ctx>/`) |
+|---|---|---|
+| `identity` | `Member` (`FullName`, `Username`, `Role`; the last-admin rule), `Invitation`, `PasswordReset`; `assertAdmin` | sign-in, sign-out, sessions, profile, password change, setup, invitations, password resets, members, client error reports, expired account rows |
+| `projects` | `Project` with its labels (`ProjectKey`, `ProjectName`, `LabelName`, `LabelColor`) | create, rename, archive and unarchive, delete, description save; create, update and delete labels |
+| `issues` | `Issue` (`IssueId`, `IssueTitle`, `IssueStatus`, `IssuePriority`) | create, update one field, move, delete |
+| `comments` | `Comment` | post, edit, delete |
+| `notifications` | `Delivery` (which notifications are still wanted, what a failed attempt leads to) | record notifications, send due deliveries, clean up, notification stats, outbox health, receive an email event |
+
+**Allowed dependencies between contexts.** Unchanged from the context map: `comments` → `issues`, `projects`; `issues` → `projects`; `notifications` → `comments`, `issues`, `projects` (reads for its drop checks and snapshots); every context → `identity` and `shared`. No context but `notifications` depends on `notifications`; the unit of work reaches it only through the outbox writer interface (D-62). No cycles. Within a layer, a context imports another context's files directly; the direction rule above still holds.
+
+**Entities and value objects (D-61).**
+- An **entity** is a class with a `private constructor(props)` that assigns `readonly` fields (no parameter properties, which `erasableSyntaxOnly` forbids). `static create(input)` runs the spec's rules for a new one and records its events; `static rehydrate(props)` rebuilds a stored one and runs no rules, so a rule added later never makes an old row unloadable. Each change is a method named for the domain's word (`retitle`, `assign`, `move`, `archive`) that checks its rule, changes the entity and records events, or throws a `DomainError` (3.2). A refusal whose message needs a read returns instead of throwing: an issue's stale description save returns `{ conflictWith }`, the member who saved last, and the use case throws `conflict` with their name.
+- An aggregate root extends `AggregateRoot`, which keeps recorded events and hands them over once from `pullEvents()`.
+- A **value object** is a small immutable class with a `private constructor` and `static from(raw)`, which validates, normalises (keys uppercase, usernames lowercase) and throws `DomainError("invalid", …)` with the spec's message. It may export its Valibot schema, which action schemas reuse (D-42). Identifiers (`IssueId` such as `WEB-42`, `ProjectKey`, `Username`, `RequestId`, `Uuid`) are value objects made at the edge and passed inward, so an unchecked string doesn't compile, and lookups ignore case without each query doing it.
+- Entities hold only rules the spec states, and leave to the database the rules it can hold (unique issue numbers, keys and label names). They may use `src/contract/` enum types, the words server and client share (D-44). Their tests sit next to them and use no database.
+
+**Repositories (D-62).** Each aggregate has a repository interface in its domain folder (`IssueRepository`: `get`, `save`, `nextNumber`, `firstPositionIn`), written in the domain's terms. `infrastructure/<ctx>/` implements it with Drizzle (`drizzle-issue-repository.ts`), with a mapper (`issue-mapper.ts`) between rows and entities (statuses through `IssueStatus.from`). `get` reads the root with `select … for update` and its parts; `save` writes only what changed and tells the unit of work the aggregate was saved. A repository takes the unit of work's transaction scope and never opens a transaction. A use case that only needs to check another aggregate (the project's labels, whether it's archived) uses that aggregate's repository through its interface.
+
+**Unit of work (D-62).** `application/shared/unit-of-work.ts` declares `UnitOfWork<R>`, with one method, `run(work: (repositories: R) => Promise<T>)`. A use case names the repositories it needs as `R`, such as `{ issues: IssueRepository; projects: ProjectRepository }`. `infrastructure/unit-of-work.ts` implements it with `db.transaction`: it builds `R` from each context's repository factory on the transaction, runs the work, then, before commit, pulls the events of every saved aggregate and hands them to the outbox writer on the same transaction (1.4). A thrown error rolls back the aggregate's rows and its events together. Adding a context adds a factory in its own `infrastructure/<ctx>/`; the unit of work stays generic.
+
+**Use cases.** One file per use case in `application/<ctx>/` (`create-issue.ts`, …), exporting one function that takes `actor` first (4.10), then the `UnitOfWork`, then the parsed input. An admin-only use case calls `assertAdmin(actor)` before anything else. Then, inside `run`: load the aggregate, load what a rule needs from other aggregates, call the entity, save. It returns what the caller needs next (an ID, or nothing), never a page's data, which comes from `queries/`. A use case holds no rule and no SQL of its own. A helper two use cases share goes in a file named for its area in the same folder.
+
+**Read side (D-64).** `src/queries/` holds the reads behind pages. It reads any context's tables in joins, writes none (M16 fails on a write), and returns `src/contract/` types (D-44) without building entities: rendering a board of 200 cards changes nothing, so there is no rule to protect. A query takes `actor` first like a use case; an admin-only one calls `assertAdmin(actor)` first. A condition both a read and a repository need, such as finding an issue by its ID, lives in `queries/`, and the repository imports it.
+
+**Aggregates.** Each is changed only through its entity, with one root locked per change.
+
+| Aggregate | Context | Root and parts | Rules in its entity | Concurrency |
 |---|---|---|---|---|
 | Issue | `issues` | the `issues` row, its assignees and label ids | title (REQ-016); any status at any time, no workflow (REQ-017); assignees are active members (REQ-019); 0 to 10 labels of its own project (REQ-020); the position of a moved or re-statused issue (REQ-026, REQ-027); who may delete (REQ-023); who is newly assigned (REQ-043) | row lock, last save wins (REQ-026, D-59); `description_version` (STD-8) |
 | Project | `projects` | the `projects` row, its key and its labels | name and key (REQ-009); an archived project is read-only (REQ-013); label name and colour (REQ-021) | row lock; `description_version` (STD-8) |
-| Comment | `comments` | the `comments` row | only the author edits (REQ-033); the author or an admin deletes (REQ-034); the length limit (REQ-031) is a shape check in `schemas.ts` | `version` (STD-8) |
-| Delivery | `notifications` | a `notification_deliveries` row and its batch's notifications | which notifications are still wanted, and what a failed attempt leads to (2.6, 1.4) | the worker's lease (1.4) |
+| Comment | `comments` | the `comments` row | only the author edits (REQ-033); the author or an admin deletes (REQ-034); the length limit (REQ-031) | `version` (STD-8) |
+| Member | `identity` | the `members` row | the last admin (REQ-007.3, REQ-052.3); deactivate and reactivate (REQ-007, REQ-008); role changes (REQ-052) | row locks on the active admins (2.2) |
+| Invitation, PasswordReset | `identity` | an `invitations` or `password_reset_tokens` row | state and which `410` (REQ-002, REQ-050); expiry is checked in SQL with `now()` (1.3) | row lock on the link (4.6) |
+| Delivery | `notifications` | a `notification_deliveries` row and its batch's notifications | which notifications are still wanted, and what a failed attempt leads to (2.6, 1.4) | the run's lease (D-46) |
 
-**Read side (D-57).** `src/server/queries/` holds the reads behind screens and the response a command returns after its write. It reads any context's tables in joins, importing each owner's `tables.ts` and `schemas.ts` directly, writes none (M16 fails on a write), and returns `src/contract/` types (D-44) without building aggregates: rendering a board of 200 cards changes nothing, so there is no rule to protect. Routes and commands import it through `queries/index.ts`; it imports no context's `index.ts` but `identity`'s, so no cycle forms. A condition both a read and a repository need, such as finding an issue by its ID, lives in `queries/`, and the repository imports it.
-
-**Allowed dependencies.** `comments` → `issues`, `projects`; `issues` → `projects`; `notifications` → `comments`, `issues`, `projects` (reads for its drop checks and snapshots); every context → `identity`, `shared/`; `issues`, `projects` and `comments` → `queries`; `queries` → every context's `tables.ts` and `schemas.ts`, `identity`, `shared/`; `identity` → `shared/` only. No context but `notifications` imports `notifications`. No cycles. `shared/` holds no domain rules and is imported by file, not through an index; its only context imports are in `api-route.ts`: `requireMember` from `identity`, and `notifications` for its event subscription. `src/server/architecture.test.ts` fails on an import past another context's `index.ts`, against these directions, or forbidden in a `model.ts` or `rules.ts`. Files within a context import each other freely. Test files (`*.test.ts`, `*.test.tsx`) and `src/test/` helpers also import contexts only through `index.ts`, but are exempt from the directions, since they build fixtures across contexts (the notification and worker tests create projects, issues and comments).
-
-**Table ownership.** Only the owning context inserts, updates or deletes its tables. Others may read them in joins, through the table the owner exports from `index.ts`; splitting joins into calls would cost queries for nothing at this size. Enums and shared column helpers stay in `shared/schema.ts`; each context's tables are in its `tables.ts`, exported from its `index.ts`, and `drizzle.config.ts` reads them all. A `tables.ts` imports other contexts' `tables.ts` directly for foreign keys; the foreign-key graph runs `notifications` → `comments` → `issues` → `projects` → `identity`, with no cycles. Reads that cross the context map (label usage from `issue_labels`, issue counts per status for project details (REQ-046.3), and who a text mentions from `mentions`) live in `queries/` (D-57), so no context reads against the map. `M16: a context writes only its own tables` fails on an `insert`, `update` or `delete` of another context's table outside test code; test files and `src/test/` (including the NFR-001 load data, `src/test/seed-load.ts`) may write any table for fixtures. To change another context's table, call a function its owner exports (`takeIssueNumber`, `markInvitationBounced`, `deleteExpiredAccountRows`).
+**Table ownership.** Only the owning context's infrastructure inserts, updates or deletes its tables. Others may read them in joins; splitting joins into calls would cost queries for nothing at this size. Enums and shared column helpers are in `infrastructure/schema.ts`; each context's tables are in `infrastructure/<ctx>/tables.ts`, and `drizzle.config.ts` reads them all. A `tables.ts` imports other contexts' `tables.ts` directly for foreign keys; the foreign-key graph runs `notifications` → `comments` → `issues` → `projects` → `identity`, with no cycles. Reads that cross the context map (label usage, issue counts per status (REQ-046.3), who a text mentions) live in `queries/`. `M16: a context writes only its own tables` fails on an `insert`, `update` or `delete` of another context's table outside test code; test files and `src/test/` (including the NFR-001 load data, `src/test/seed-load.ts`) may write any table for fixtures. To change another context's table, call a use case or repository its owner provides (`takeIssueNumber`, `markInvitationBounced`, `deleteExpiredAccountRows`).
 
 | Context | Tables it owns |
 |---|---|
@@ -173,43 +209,39 @@ Contexts without an aggregate (`identity`, and `notifications` apart from delive
 | `projects` | `project_keys`, `projects`, `labels` |
 | `issues` | `issues`, `issue_labels`, `issue_assignees` |
 | `comments` | `comments` |
-| `notifications` | `mentions`, `notification_batches`, `notification_deliveries`, `notifications`, `worker_heartbeats` |
+| `notifications` | `mentions`, `outbox_events`, `notification_batches`, `notification_deliveries`, `notifications`, `job_runs` |
 
-**Glossary.** The words code, spec and UI share, by owning context. The code name is the table, type or column that holds the term in `src/server/` and `src/contract/`.
+**Glossary.** The words code, spec and UI share, by owning context. The code name is the table, class or column that holds the term in `src/` and `src/contract/`.
 
 | Context | Term | Meaning | Code name |
 |---|---|---|---|
 | `identity` | member | a person with an account; `role` is `admin` or `member` | `members`, `Member`, `MemberSummary`, `Me` |
-| `identity` | username | a member's lowercase handle, used in addresses and mentions | `username` |
+| `identity` | username | a member's lowercase handle, used in addresses and mentions | `username`, `Username` |
 | `identity` | invitation | an admin's email invite; its state (Pending, Accepted, Revoked, Bounced, Expired) is derived (2.2) | `invitations`, `Invitation` |
 | `projects` | project | a named container for issues, possibly archived | `projects`, `Project`, `ProjectSummary`, `archivedAt` |
-| `projects` | key | a project's short uppercase code, reserved forever | `key`, `project_keys` |
+| `projects` | key | a project's short uppercase code, reserved forever | `key`, `ProjectKey`, `project_keys` |
 | `projects` | label | a coloured tag belonging to one project | `labels`, `Label`, `LabelColor` |
 | `issues` | issue | a unit of work in one project | `issues`, `Issue` |
-| `issues` | issue ID | the project key plus a number, `WEB-42`; the database `uuid` is never shown | `Issue.id`, `number` |
+| `issues` | issue ID | the project key plus a number, `WEB-42`; the database `uuid` is never shown | `IssueId`, `number` |
 | `issues` | status | where an issue is in the workflow; a board column | `status`, `IssueStatus` |
 | `issues` | priority | how urgent an issue is | `priority`, `IssuePriority` |
 | `issues` | position | an issue's sort key within its board column (2.4) | `position` |
 | `issues` | assignees | the members responsible for an issue, any number or none (REQ-019) | `issue_assignees`, `Issue.assignees` |
-| `comments` | comment | a message on one issue or one project | `comments`, `ThreadComment` |
+| `comments` | comment | a message on one issue or one project | `comments`, `Comment`, `ThreadComment` |
 | `notifications` | mention | an `@username` in a description or comment, mirrored as a row (2.5) | `mentions` |
+| `notifications` | event | a fact an action recorded, waiting in the outbox to become notifications (1.4) | `outbox_events`, `DomainEvent` |
+| `notifications` | outbox run | one call of the cron route: events, deliveries, cleanup (1.4) | `job_runs`, `/api/cron/outbox` |
 | `notifications` | notification | one thing to tell a member: `assigned` or `mentioned` | `notifications`, `notificationKind` |
 | `notifications` | batch | the notifications a recipient gets together about one target (2.6) | `notification_batches` |
-| `notifications` | delivery | one batch sent over one channel, with its state | `notification_deliveries`, `deliveryState`, `ProblemDelivery` |
+| `notifications` | delivery | one batch sent over one channel, with its state | `notification_deliveries`, `Delivery`, `deliveryState`, `ProblemDelivery` |
 
-**Typed identifiers.** Identifiers are branded types, each with one parse function, made at the edge (the context's `schemas.ts`) and passed inward: `IssueId` (`WEB-42`) in `issues`, `ProjectKey` in `projects`, `Username` in `identity`, `RequestId` and `Uuid` in `shared/`. Domain functions take the branded types, so an unchecked string doesn't compile. Parsing normalises once (keys uppercase, usernames lowercase), so lookups ignore case without each query doing it.
+**Permission checks** stay where 4.10 puts them: `assertAdmin(actor)` is an admin-only use case's or query's first statement, before any load. Ownership checks (who may delete an issue, edit or delete a comment) are entity methods the use case calls once the aggregate is loaded.
 
-**Pure rules.** Decisions that need no database are pure functions over plain types, tested without a database, and every domain function reads as load → decide → write. In `issues`, `projects` and `comments` they are the aggregate's `model.ts` (above), and those contexts have no `rules.ts`. Elsewhere:
-- `identity/rules.ts`: the last admin, invitation state and reset-link rules.
-- `notifications/model.ts`: the delivery decisions (1.4). Which members a text newly mentions is worked out in `descriptions.ts`, next to the `mentions` writes.
-
-Permission checks stay where 4.10 puts them: `assertAdmin(actor)` is still an admin-only function's first statement, before any load. Ownership checks (who may delete an issue, edit or delete a comment) are model functions the command calls once the aggregate is loaded.
-
-**Domain events.** `shared/events.ts` holds `DomainEvent`, a typed union of the facts that cause notifications in R1: `IssueAssigned`, `DescriptionSaved` (issue or project), `CommentPosted` and `CommentEdited`. Each carries the actor, the target ids and, for text, the saved text; `IssueAssigned` carries the ids of the members newly added as assignees (REQ-043), from a create or an assignee change; which members a text newly mentions is worked out by `notifications`, which owns `mentions`. `publish(tx, event)` hands an event to the one subscriber and throws if none is registered, so a missing import fails loudly instead of dropping notifications. A context publishes inside its own transaction; `notifications` subscribes when its `index.ts` loads and writes its rows (mentions, batches, deliveries, notifications) on the same `tx`, so the action and its notifications commit or roll back together (spec §12). In a context with an aggregate, the model returns the events and the command publishes them with `publishAll(tx, events)`; a `model.ts` never calls `publish`. `shared/api-route.ts` and `scripts/worker.ts` import `notifications`, and the `unit` test project loads it in a setup file (`src/test/subscribe-notifications.ts`), so tests that call domain functions directly have the subscriber.
+**Domain events.** `domain/shared/events.ts` holds `DomainEvent`, a typed union of the facts that cause notifications in R1: `IssueAssigned`, `DescriptionSaved` (issue or project), `CommentPosted` and `CommentEdited`. Each carries the actor, the target ids and, for text, the saved text; `IssueAssigned` carries the ids of the members newly added as assignees (REQ-043), from a create or an assignee change. Entities record them; the unit of work pulls them after the save and hands them to the outbox writer (1.4), which works out who a text newly mentions, since `notifications` owns `mentions`. Nothing publishes an event outside a unit of work, so a use case that forgets to save its aggregate also sends nothing.
 
 ## 2. Schema
 
-PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). Enums and column helpers are in `src/server/shared/schema.ts`, and tables, columns, constraints and indexes in each context's `tables.ts` (1.8); `drizzle-kit generate` writes migrations to `migrations/`. This section records only why the schema is shaped as it is. Every table has a `uuid` id unless stated (`project_keys` is keyed by `key`, `issue_labels` and `issue_assignees` by their pairs), and every timestamp is `timestamptz` in UTC (DATA-003).
+PostgreSQL via Drizzle ORM, connected through the `postgres` (postgres.js) driver (`drizzle-orm/postgres-js`). Enums and column helpers are in `src/infrastructure/schema.ts`, and tables, columns, constraints and indexes in each context's `infrastructure/<ctx>/tables.ts` (1.8); `drizzle-kit generate` writes migrations to `migrations/`. This section records only why the schema is shaped as it is. Every table has a `uuid` id unless stated (`project_keys` is keyed by `key`, `job_runs` by `name`, `issue_labels` and `issue_assignees` by their pairs), and every timestamp is `timestamptz` in UTC (DATA-003).
 
 ### 2.1 Enums
 
@@ -268,89 +300,105 @@ Postgres sorts an enum by its declared order, so the order is the sort order. `i
 
 ### 2.6 Notifications
 
-Notifications don't know how they're delivered. Three tables keep the *what*, the *grouping* and the *how* apart:
+Four tables keep the *event*, the *what*, the *grouping* and the *how* apart:
+
+**`outbox_events`**: one row per event the outbox writer kept (1.4), written in the action's transaction.
+
+| Column | Type | Meaning |
+|---|---|---|
+| `id` | `uuid` primary key | the event's identity; the handler's idempotency key |
+| `type` | `text` | the `DomainEvent` type, such as `IssueAssigned` |
+| `payload` | `jsonb` | what the handler needs: the actor, the target, the recipients with their notification kind, the comment id if any, and the snapshot below |
+| `occurred_at` | `timestamptz` | `now()` when the action committed; starts the REQ-045 wait |
+| `published_at` | `timestamptz` null | set when its notifications are recorded; `null` while waiting |
+| `attempts` | `integer`, default `0` | failed handler runs |
+| `next_attempt_at` | `timestamptz`, default `now()` | when a run may claim it next |
+
+A partial index, `outbox_events_unpublished_idx` on `(next_attempt_at) where published_at is null`, serves the claim and stays small however many events are kept.
 
 **`notification_batches`**: one row per group of notifications a recipient gets together about one issue or project (`target_type`, `target_id`), with its `send_after` (REQ-045). No channel, no state.
 
-**`notifications`**: one row per notification, in its batch, with a **snapshot** of what any message needs: issue ID, issue title, project name and key, link path, and a plain-text excerpt of up to 500 characters (then "…").
+**`notifications`**: one row per notification, in its batch, with the `event_id` it came from and a **snapshot** of what any message needs: issue ID, issue title, project name and key, link path, and a plain-text excerpt of up to 500 characters (then "…"). The snapshot is taken by the outbox writer in the action's transaction and copied from the event. `(event_id, recipient_id)` is unique, so recording an event twice adds nothing (1.4).
 
 **`notification_deliveries`**: one row per batch and channel (`channel`, unique per batch), with its `state`, retry count, next attempt and the provider's message ID. Channels come from **`members.notification_channels`** (at least one; `{email}` by default and the only choice in R1) when the batch is created, so a channel change applies from the next batch.
 
-**`notification_deliveries.locked_until`** is the lease a worker pass holds on a claimed delivery (1.4), `null` otherwise. A partial index, `notification_deliveries_pending_idx` on `(batch_id) where state = 'pending'`, serves the claim and the queue counts. The due time comes from the batch (`send_after`), so no single-table index can order by it, but the partial index holds only the few pending rows, each joined to its batch by primary key, and stays small however much history accumulates.
+**`notification_deliveries.locked_until`** is the lease a run's delivery pass holds on a claimed delivery (1.4), `null` otherwise. A partial index, `notification_deliveries_pending_idx` on `(batch_id) where state = 'pending'`, serves the claim and the queue counts. The due time comes from the batch (`send_after`), so no single-table index can order by it, but the partial index holds only the few pending rows, each joined to its batch by primary key, and stays small however much history accumulates.
 
-**`notification_deliveries.state_changed_at`**: when the delivery reached its current state, set with `now()` when the worker records `sent`, `dropped` or `failed` and when the bounce webhook records `bounced`; `null` while `pending`. The status page counts and lists by it (REQ-053).
+**`notification_deliveries.state_changed_at`**: when the delivery reached its current state, set with `now()` when a run records `sent`, `dropped` or `failed` and when the bounce webhook records `bounced`; `null` while `pending`. The status page counts and lists by it (REQ-053).
 
-**`worker_heartbeats`**: one row per worker process name (`name text primary key`, `last_pass_at timestamptz not null`), upserted at the start of every pass (1.4).
+**`job_runs`**: one row per periodic job (`name text primary key`, `last_run_at timestamptz not null`). `outbox` is upserted at the start of every run, and read by `/health/worker` and the status page; `cleanup` is claimed once an hour (1.4). It replaces `worker_heartbeats`.
 
-**Channels.** `src/server/notifications/notification-channels/` has one module per channel; its index maps every `notification_channel` enum value to a sender: `send(recipient, notifications, deliveryId) → Result<{ providerMessageId }, "email-failed">`. The email sender builds the message from the templates (5.3) and calls `sendEmail()` (5.2). Because the map is typed by the enum, a new channel doesn't compile until its sender exists, and nothing in `notify()` or the worker changes.
+**Channels.** `src/infrastructure/notifications/channels/` has one module per channel; its index maps every `notification_channel` enum value to a sender: `send(recipient, notifications, deliveryId) → Result<{ providerMessageId }, "email-failed">`. The email sender builds the message from the templates (5.3) and calls `sendEmail()` (5.2). Because the map is typed by the enum, a new channel doesn't compile until its sender exists, and nothing in `record-notifications` or `send-due-deliveries` changes.
 
 These lookups and cascades have no index on purpose: `provider_message_id` (here or on `invitations`), `notifications.batch_id`, `notification_batches` by recipient and target, `notification_deliveries.state_changed_at`, `sessions.member_id`, `issue_labels.label_id`, and `mentions` by issue, project or comment (its unique indexes start with `member_id`). At one team's volume they scan small tables; add an index if one shows up in NFR-003 timings.
 
 How the parts fit:
 
 - **No FKs to issues, projects or comments.** Notifications about deleted issues and projects must still be sent (REQ-045.7), so they can't cascade; the snapshot lets the message be built after its target is gone.
-- **Joining a batch (fixed wait).** In the action's transaction (spec §12), look for a batch for that recipient and target with `send_after > now()` and attach to it; otherwise create one with `send_after = now() + 2 minutes` and one `pending` delivery per recipient channel. A later notification never moves `send_after` (REQ-045.8) and adds no deliveries. Two members acting at the very same moment can occasionally cause two messages instead of one; that's accepted rather than adding a lock.
-- **Drop checks at send time (REQ-045).** For each delivery, the worker re-checks each of the batch's notifications not yet dropped:
+- **Recording an event (fixed wait).** `record-notifications` runs once per event, in a run (1.4). For each recipient it looks for a batch for that recipient and target with `send_after > occurred_at` and `send_after > now()` (not yet due, so not yet sent) and attaches to it; otherwise it creates one with `send_after = occurred_at + 2 minutes` and one `pending` delivery per recipient channel. The wait counts from the action, not from the run, so a notification goes out 2 to 3 minutes after it was created: it is due 2 minutes after, and the next run, at most a minute later, sends it (REQ-045). A later notification never moves `send_after` (REQ-045.8) and adds no deliveries. An event whose batch fell due before its run (a failed handler retried later) gets a new batch that's due at once. Two members acting at the very same moment can occasionally cause two messages instead of one; that's accepted rather than adding a lock.
+- **Drop checks at send time (REQ-045).** For each delivery, the delivery pass re-checks each of the batch's notifications not yet dropped:
   - recipient deactivated → drop;
   - target issue or project no longer exists → **send** (REQ-045.7);
   - `assigned` but the recipient is no longer one of the issue's assignees → drop;
   - `mentioned` but the comment is gone, or there's no longer a matching `mentions` row → drop.
 
-  A dropped notification stays dropped for every channel. If none is left, the delivery becomes `dropped`.
+  A dropped notification stays dropped for every channel. If none is left, the delivery becomes `dropped`. An event still waiting in the outbox is checked the same way once recorded, so a mention edited out before the run is still dropped (REQ-045.3).
 
   Their data is loaded once per pass for all claimed deliveries, in a fixed number of queries whatever the number of notifications: the recipients; the batches' notifications not yet dropped; the target issues and projects that still exist; and, in one query, the `mentions` rows of those recipients for those targets and for the comments the notifications name. The checks then run in memory. A change made while the pass is sending (a few seconds) isn't seen, the same as a change a moment after the send.
-- **Retries (STD-6), per delivery.** After a failed send, `attempts += 1` and `next_attempt_at` moves forward 1, then 4, then 10 minutes; when the third retry fails, the state becomes `failed`. A bounce sets `bounced` and isn't retried.
+- **Retries (STD-6), per delivery.** After a failed send, `attempts += 1` and `next_attempt_at` moves forward 1, then 4, then 10 minutes; when the third retry fails, the state becomes `failed`. Each retry is sent by the first run after it falls due. A bounce sets `bounced` and isn't retried.
 
 ### 2.7 Deleting and cleanup
 
-- **Deleting a project (DATA-002):** cascades to issues, labels, issue_labels, comments (both issue and project comments) and mentions. `project_keys` and notifications stay.
+- **Deleting a project (DATA-002):** cascades to issues, labels, issue_labels, comments (both issue and project comments) and mentions. `project_keys`, outbox events and notifications stay.
 - **Deleting an issue:** cascades to issue_labels, comments and mentions.
-- **DATA-004 cleanup:** an hourly job deletes rows older than their retention period, using `now() - interval`. These are among the few queries written in raw SQL. Each table is deleted in chunks: one statement deletes at most 1,000 matching rows (`where ctid in (select ctid … limit 1000)`) in its own transaction, and repeats until a statement deletes fewer than 1,000. No long transaction holds locks or delays the worker's next pass.
+- **DATA-004 cleanup:** once an hour, the outbox run (1.4) deletes rows older than their retention period, using `now() - interval`, including outbox events published over 30 days ago. These are among the few queries written in raw SQL. Each table is deleted in chunks: one statement deletes at most 1,000 matching rows (`where ctid in (select ctid … limit 1000)`) in its own transaction, and repeats until a statement deletes fewer than 1,000 or the run's time is up. No long transaction holds locks or delays the run's other steps.
 
-## 3. API
+## 3. Actions and routes
 
-Settles DEC-002. Request types live in each context's `schemas.ts` (1.8) and response types in `src/contract/` (3.5); this section fixes paths, permissions and errors.
+Settles DEC-002. Pages change data through server actions; route handlers serve only callers that aren't the app's pages (1.2). Input schemas live in `src/app/_server/schemas/<ctx>.ts`, built from the value objects' schemas, so actions and the remaining `/api` routes share them (D-42), and response types in `src/contract/` (3.5); this section fixes names, permissions and errors.
 
 ### 3.1 Conventions
 
-- **Format.** JSON in and out. Times are ISO 8601 strings in UTC (DATA-003).
+- **One action per user action.** Each route's `actions.ts` exports one action per thing a member does there (`createIssue`, `moveIssue`, `updateIssueTitle`, …), each wrapped by the adapter (1.2) and calling one use case. Actions take plain serialisable input (an object, or `FormData` for a form) and return `{ ok: true, data } | { ok: false, error: { kind, message, fields? } }`.
 - **Addressing.** Issues by ID (`WEB-42`), projects by key (`WEB`), members by username, all matched ignoring capitals (REQ-016.5). Labels, comments and invitations use their `uuid`.
-- **Unknown paths.** A catch-all, `src/app/api/[...path]/route.ts`, answers `GET`, `POST`, `PUT`, `PATCH` and `DELETE` on an unknown `/api` path with `404` "Not found". It needs a session, so a signed-out caller gets `401` and learns nothing about which paths exist.
-- **No tokens in paths.** Invitation and reset tokens travel in the request body. The `?token=` on the invitation and reset *pages* (API-004) is kept out of logs by 4.8 and 4.9.
+- **Unknown pages.** Any address that isn't an API-004 page renders Not found (STD-4) through `app/not-found.tsx`.
+- **No tokens in addresses but the links' own.** Invitation and reset tokens travel in action input. The `?token=` on the invitation and reset *pages* (API-004) is kept out of logs by 4.8 and 4.9.
 - **List paging** uses `offset`; keyset cursors would be complex with several sort columns. With no live updates (spec §3), rows only shift if someone edits mid-scroll, which is accepted.
-- **Field-by-field saves.** The issue page saves each field as it changes, with a `PATCH` holding only that field, so STD-8's "last save wins" works per field and one failed field leaves the others saved (REQ-020.4).
-- **Creating twice.** Issue and comment creates carry `requestId`; a repeat returns the first result with `200` instead of `201` (STD-5). `request_id` is unique across the whole table. The repeat is looked up after the target's own checks, so a retry to an issue deleted meanwhile gets `404`, and into a project archived meanwhile `403`.
-- **Small member data.** A member appears as `{ username, fullName, initials, deactivated }`. An issue's `assignees` is an array of these, sorted by full name, empty when unassigned. A member's email appears only in a full profile: `/api/me`, the admin member list, an admin's `PATCH /api/members/{username}`, and the new member's own `POST /api/members`. An invited email appears in the admin's invitation responses and the invitation lookup. Password hashes never appear (SEC-008.2).
+- **Field-by-field saves.** The issue page saves each field as it changes, with an action that takes only that field, so STD-8's "last save wins" works per field and one failed field leaves the others saved (REQ-020.4).
+- **Creating twice.** Issue and comment creates carry `requestId`; a repeat returns the first result instead of a second one (STD-5). `request_id` is unique across the whole table. The repeat is looked up after the target's own checks, so a retry to an issue deleted meanwhile gets `notFound`, and into a project archived meanwhile `forbidden`.
+- **Small member data.** A member appears as `{ username, fullName, initials, deactivated }`. An issue's `assignees` is an array of these, sorted by full name, empty when unassigned. A member's email appears only in a full profile: the member's own profile, the admin member list, and the profile an admin's member change or a new member's acceptance returns. An invited email appears in the admin's invitations and the invitation lookup. Password hashes never appear (SEC-008.2).
 
 ### 3.2 Errors
 
-Every error body is `{ error: { message, fields? } }`, and the browser shows `message` as-is. That keeps all user-facing copy for server-side outcomes in one place.
+Every refusal is `{ kind, message, fields? }`, and the browser shows `message` as-is. That keeps all user-facing copy for server-side outcomes in one place.
 
-Domain code throws `DomainError(kind, message, fields?)` from `shared/domain-error.ts`, and `apiRoute` maps its kind to the status below (D-47); no other server code names an HTTP status.
+Domain and application code throw `DomainError(kind, message, fields?)` from `domain/shared/domain-error.ts`. The action adapter returns its kind and message (D-63); a route handler maps the kind to the status below. No other code names an HTTP status (D-47).
 
-| Status | Kind | When | Browser shows |
+| Kind | Route status | When | Browser shows |
 |---|---|---|---|
-| `401` | `signedOut` | No valid session: signed out, expired or deactivated (STD-1, REQ-007.4) | Redirect to `/sign-in?next=…` |
-| `403` | `forbidden` | Not allowed (STD-2), a cross-site write (SEC-004), or a write to an archived project (REQ-013.4) | Toast (STD-9) |
-| `404` | `notFound` | The target doesn't exist, and the message names it. Reading a missing issue or its comments gets "Not found"; a write to one gets "This issue was deleted" | Not-found page on load (STD-4); toast on save (STD-9) |
-| `409` | `conflict` | Stale save of a description or comment (STD-8) | Message in the editor; text kept |
-| `410` | `expired` | An invitation or reset link that's expired, used or revoked (REQ-002.2, REQ-002.4, REQ-050.4) | The page's expired state |
-| `422` | `invalid` | Invalid input. With `fields`: one error per field (STD-3). Without `fields`: a form-level refusal, such as the last admin or a wrong sign-in | Next to the fields, or beside the form |
-| `429` | `limited` | A SEC-001 limit | Beside the form |
-| `503` | `unavailable` | An invitation or reset email couldn't be sent (STD-6) | Toast |
-| `500` | — | Anything else | The DEC-006 toast or error state |
+| `signedOut` | `401` | No valid session: signed out, expired or deactivated (STD-1, REQ-007.4) | Redirect to `/sign-in?next=…` |
+| `forbidden` | `403` | Not allowed (STD-2), a cross-site write (SEC-004), or a write to an archived project (REQ-013.4) | Toast (STD-9); STD-2's message in the page area on load |
+| `notFound` | `404` | The target doesn't exist, and the message names it. Opening a missing issue gets the Not found page; a write to one gets "This issue was deleted" | Not-found page on load (STD-4); toast on save (STD-9) |
+| `conflict` | `409` | Stale save of a description or comment (STD-8) | Message in the editor; text kept |
+| `expired` | `410` | An invitation or reset link that's expired, used or revoked (REQ-002.2, REQ-002.4, REQ-050.4) | The page's expired state |
+| `invalid` | `422` | Invalid input. With `fields`: one error per field (STD-3). Without `fields`: a form-level refusal, such as the last admin or a wrong sign-in | Next to the fields, or beside the form |
+| `limited` | `429` | A SEC-001 limit | Beside the form |
+| `unavailable` | `503` | An invitation or reset email couldn't be sent (STD-6) | Toast |
+| — | `500` | Anything else: the action rethrows it (1.2) | The DEC-006 toast or error state |
 
 Database rules answer with a field error when one field is at fault: a key, label name or username already taken, or a wrong current password. Inviting an existing or deactivated member is a form-level refusal.
 
-Changing a fixed field (username, email, project key) gets `422` with a field error, and the stored value stays (REQ-003.3, REQ-010.1).
+Changing a fixed field (username, email, project key) gets `invalid` with a field error, and the stored value stays (REQ-003.3, REQ-010.1).
 
-A body schema failure gets `422` "Check the highlighted fields", with the first failing rule's message per field (STD-3); a missing field gets "Required". A rule on the whole body, such as "Change one field at a time" on an issue `PATCH`, gets `422` with its own message and no `fields`. A body that isn't valid JSON or isn't a JSON object gets `422` "Couldn’t read the request." with no `fields`; the browser never sends one, so this only keeps it from becoming a `500`. Query strings and path segments aren't covered by schemas.
+A schema failure gets `invalid` "Check the highlighted fields", with the first failing rule's message per field (STD-3); a missing field gets "Required". A rule on the whole input, such as "Change one thing at a time" on a project update, gets `invalid` with its own message and no `fields`. A route body that isn't valid JSON or isn't a JSON object gets `422` "Couldn’t read the request." with no `fields`.
 
-### 3.3 Endpoints
+### 3.3 `/api` endpoints (until H20)
+
+The client-rendered screens under `src/app/[[...path]]` call these until H20 deletes them. As each screen moves to its own page (H13 to H19), its reads become `src/queries` calls and its writes become actions with the same rules, permissions and messages as below; the tables stay the reference for those rules until then.
 
 "Member" means any signed-in active member. Every write to something inside an archived project (its description, issues, comments, labels) gets `403` "This project is archived". Admins can still unarchive or delete an archived project; renaming it gets the same `403`.
 
-The domain functions declare the contract types (3.5) as their return types. The tables give only what the types can't say.
+The queries declare the contract types (3.5) as their return types. The tables give only what the types can't say.
 
 **Sign-in and account** (no session needed unless noted)
 
@@ -366,7 +414,6 @@ The domain functions declare the contract types (3.5) as their return types. The
 | `GET /api/me` | The profile, including email and role | Member | REQ-003.3 |
 | `PATCH /api/me` | Full name only | Member | REQ-003 |
 | `PUT /api/me/password` | `204`; ends the member's other sessions. A wrong current password counts toward the sign-in limit (4.5) | Member | REQ-049, SEC-001 |
-| `POST /api/client-errors` | `204` whether logged or past the limit; the member, if any, comes from the session only (4.8) | Anyone | OPS-008 |
 | `GET /api/setup` | `{ needed: boolean }`, true while no members exist | Anyone | OPS-001 |
 | `POST /api/setup-checks` | Body `{ secret }`. `204` for the right secret; `403` "Wrong setup secret", `410` "Setup already done", `503` when `SETUP_SECRET` isn't set (4.6) | Anyone | OPS-001 |
 | `POST /api/setup` | Body `{ secret, email, fullName, username, password }`; same refusals as the check. `201` and the new admin's profile (`Me`), sets the cookie | Anyone | OPS-001, REQ-003, REQ-048 |
@@ -422,21 +469,25 @@ The domain functions declare the contract types (3.5) as their return types. The
 
 | Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `GET /api/notification-stats` | The status page's data. Counts and the recent list go by `state_changed_at`, and all windows use `now()`. A delivery's issue ID or project key comes from its batch's newest notification. A bounced delivery's attempts include the send that bounced. `workerStaleMinutes` is the whole minutes since the worker's last pass once that is 2 minutes or more (OPS-005), worked out with `now()`, else null. No emails and no excerpts | Admin | REQ-053, SEC-007 |
+| `GET /api/notification-stats` | The status page's data. Counts and the recent list go by `state_changed_at`, and all windows use `now()`. A delivery's issue ID or project key comes from its batch's newest notification. A bounced delivery's attempts include the send that bounced. `outboxStaleMinutes` is the whole minutes since the last outbox run once that is 2 minutes or more (OPS-005), worked out with `now()`, else null. No emails and no excerpts | Admin | REQ-053, SEC-007 |
 
-**Outside `/api`**
+### 3.4 Route handlers
+
+These stay after H20. None of them goes through the action adapter; each checks its own caller.
 
 | Method and path | Notes | Spec |
 |---|---|---|
+| `POST /api/cron/outbox` | `401` without `Authorization: Bearer {CRON_SECRET}`. One outbox run (1.4) within 50 seconds, then `204` | DEC-004, REQ-045 |
+| `POST /api/client-errors` | `204` whether logged or past the limit; the member, if any, comes from the session only (4.8). Same-origin check as 4.4 | OPS-008 |
 | `GET /health` | `200` if `select 1` succeeds, otherwise `503` | OPS-005 |
-| `GET /health/worker` | No session. `503` if the `worker` heartbeat is missing or its `last_pass_at` is older than `now() - interval '2 minutes'`, if any due pending delivery's `coalesce(next_attempt_at, send_after)` is older than `now() - interval '10 minutes'`, or if the database doesn't answer; otherwise `200`. The body is a short fixed word, never data about members or notifications | OPS-005 |
+| `GET /health/worker` | No session. `503` if the `outbox` row of `job_runs` is missing or its `last_run_at` is older than `now() - interval '2 minutes'`, if any due pending delivery's `coalesce(next_attempt_at, send_after)` is older than `now() - interval '10 minutes'`, if any unpublished outbox event's `occurred_at` is older than `now() - interval '10 minutes'`, or if the database doesn't answer; otherwise `200`. The path keeps its old name so the deployment's uptime check doesn't change (D-72). The body is a short fixed word, never data about members or notifications | OPS-005 |
 | `POST /webhooks/email` | Checks the provider's signature (`401` if it doesn't match). It skips the same-site check, since the provider is always cross-site, and marks emails `bounced` | API-003 |
 
-### 3.5 Shared API types
+### 3.5 Shared contract types
 
-Every response type, and the enum values both sides need, lives in `src/contract/`. It holds types and constant arrays only, so both the browser and the server can import it.
-- **Three shapes, two boundaries.** Database rows (`*Row`, inferred from `schema.ts`) stay on the server. Contract types are what goes over the wire. Mapping functions in each context under `src/server/` (1.8) turn one into the other and declare the contract type as their return type, so a field added to a response by accident fails to compile. A mapper that builds rows with `.map` declares the row type on the callback too, since `.map` infers its element type and would skip the check.
-- **Enums have one source.** `issueStatuses`, `issuePriorities`, `labelColors`, `roles` and `notificationChannels` are `as const` arrays in the contract; `schema.ts` builds its `pgEnum`s from them, so their order is still the sort order (2.1). The request schemas in each context's `schemas.ts` take their picklists from the same arrays (D-42). Client lists keyed by an enum use `satisfies Record<…>`, so a new value fails to compile until every list covers it, and pickers list values in the contract's order, which is also the order the spec names them in (REQ-017, REQ-018).
+Every type a query returns, an action returns or a client component takes as props, and the enum values both sides need, lives in `src/contract/`. It holds types and constant arrays only, so both the browser and the server can import it.
+- **Three shapes, two boundaries.** Database rows (`*Row`, inferred from `schema.ts`) stay on the server. Contract types are what reaches the browser, as props or action results. The mapping functions in `src/queries/` (1.8) turn one into the other and declare the contract type as their return type, so a field added to a response by accident fails to compile. A mapper that builds rows with `.map` declares the row type on the callback too, since `.map` infers its element type and would skip the check.
+- **Enums have one source.** `issueStatuses`, `issuePriorities`, `labelColors`, `roles` and `notificationChannels` are `as const` arrays in the contract; `schema.ts` builds its `pgEnum`s from them, so their order is still the sort order (2.1). The input schemas and value objects take their picklists from the same arrays (D-42). Client lists keyed by an enum use `satisfies Record<…>`, so a new value fails to compile until every list covers it, and pickers list values in the contract's order, which is also the order the spec names them in (REQ-017, REQ-018).
 - **One type per view, derived.** `ListIssue`, `BoardIssue` and `MyIssue` are `Pick`s of `Issue` (`MyIssue` adds the project name), not separate models.
 
 ## 4. Auth and security
@@ -475,24 +526,26 @@ How sessions start and end:
 
 ### 4.4 Cross-site writes (SEC-004)
 
-For `POST`, `PUT`, `PATCH` and `DELETE`, `apiRoute` requires:
+**Server actions** rely on Next.js's own check (D-69). An action runs only for a `POST`, and Next.js compares the request's `Origin` with its `Host` (or `X-Forwarded-Host`) and aborts the action when they differ, before any app code runs (`node_modules/next/dist/docs/01-app/02-guides/data-security.md`, "Allowed origins"). The reverse proxy passes the original host (1.1), so `serverActions.allowedOrigins` stays unset. A request with no `Origin` gets through that check, but a browser never sends the `SameSite=Lax` cookie on a cross-site `POST`, so it arrives signed out and only public actions run, which change nothing an attacker could exploit in someone else's name. A test posts to an action with a foreign `Origin` and finds nothing changed (SEC-004.1).
+
+**Route handlers.** For `POST`, `PUT`, `PATCH` and `DELETE`, `/api/client-errors` (and, until H20, the `/api` routes, through `apiRoute`) require:
 - an `Origin` header equal to `APP_URL`'s origin;
 - or, if `Origin` is missing, `Sec-Fetch-Site: same-origin`.
 
-Anything else gets `403`. `SameSite=Lax` is a second layer of protection. Together they cover SEC-004 with no CSRF token stored in forms or state. The one exception is `/webhooks/email`, which is checked by signature instead (5.4).
+Anything else gets `403`. `SameSite=Lax` is a second layer of protection. Together they cover SEC-004 with no CSRF token stored in forms or state. `/webhooks/email` is checked by signature instead (5.4), and `/api/cron/outbox` by its bearer secret (1.4).
 
 ### 4.5 Sign-in and reset limits (SEC-001)
 
-**Sign-in** (`POST /api/sessions`), in order:
+**Sign-in** (the `signIn` action), in order:
 1. Lowercase and trim the email.
 2. Count the last hour's `sign_in_attempts` rows for that email and that IP; at 10 or more for the email, or 30 or more for the IP, answer `429`. This comes **before** the password check, so a correct password is refused too (SEC-001.1).
 3. Look up an active member by `lower(email)` and verify the password.
 4. If either fails, insert a `sign_in_attempts` row and answer `422` "Incorrect email or password.", not `401`, which the browser would treat as an ended session. Unknown and deactivated emails count the same way (SEC-001.3).
 5. On success, create the session. Earlier failures stay counted until an hour old; success doesn't reset them.
 
-**Changing a password** (`PUT /api/me/password`) shares the limits: a wrong current password inserts a `sign_in_attempts` row for the email and IP, and past either limit even the right one gets `429` (REQ-049.3).
+**Changing a password** (`changePassword`) shares the limits: a wrong current password inserts a `sign_in_attempts` row for the email and IP, and past either limit even the right one gets `429` (REQ-049.3).
 
-**Reset request** (`POST /api/password-reset-links`): the same count against `password_reset_requests` (5 per email, 20 per IP), but **every** request is recorded, not just failures. The email goes only to an active member's address.
+**Reset request** (`requestPasswordReset`): the same count against `password_reset_requests` (5 per email, 20 per IP), but **every** request is recorded, not just failures. The email goes only to an active member's address.
 
 **Details:**
 - **IP address.** The rightmost `X-Forwarded-For` entry, set by the reverse proxy (1.1); `127.0.0.1` in development without a proxy.
@@ -500,13 +553,13 @@ Anything else gets `403`. `SameSite=Lax` is a second layer of protection. Togeth
 
 ### 4.6 Invitation and reset links
 
-Accepting an invitation (`POST /api/members`) and resetting a password (`POST /api/password-resets`) each run in one transaction that **locks the link's row** (`for update`) before checking it, so two submits of the same link can't both succeed. The body schema has already checked the form (D-42), so a malformed form is refused before the link is looked at.
+Accepting an invitation (`acceptInvitation`) and resetting a password (`resetPassword`) each run in one transaction that **locks the link's row** (`for update`) before checking it, so two submits of the same link can't both succeed. The input schema has already checked the form (D-42), so a malformed form is refused before the link is looked at.
 - **Which `410`.** A revoked invitation gets REQ-002.4's message; expired, accepted or unknown (including a link replaced by a resend) gets REQ-002.2's. A reset link that's used, expired or unknown, or whose member is deactivated, gets "This link has expired".
 - **Signed in.** Accepting with a valid session gets `403` "You're signed in as {name}. Sign out to accept this invitation." The page shows that state before the form appears (REQ-002.3); the API check only stops a bypass. The reset page shows its own sign-out prompt and never looks at the token (REQ-050.8).
 
-**Opening a link.** The invitation page calls `POST /api/invitation-lookups` with the token in the body as it opens, so it can show "expired" straight away (REQ-002.2) and greet the person by email. The reset page checks its token with `POST /api/password-reset-lookups` the same way, and shows the form only for a usable link (REQ-050.9). Neither lookup uses up the link, so a mail scanner opening it changes nothing (REQ-050.5).
+**Opening a link.** The invitation page looks its token up as it renders (`lookUpInvitation`), so it can show "expired" straight away (REQ-002.2) and greet the person by email. The reset page checks its token the same way (`checkPasswordReset`), and shows the form only for a usable link (REQ-050.9). The token reaches the page as `searchParams`, and the page's client component removes it from the address bar with `history.replaceState` (4.2). Neither lookup uses up the link, so a mail scanner opening it changes nothing (REQ-050.5).
 
-**First-admin setup (OPS-001).** `setupNeeded`, `checkSetupSecret` and `createFirstAdmin` are commands in `src/server/identity/commands/`. They are public like accepting an invitation, so they take no `actor`.
+**First-admin setup (OPS-001).** `setupNeeded`, `checkSetupSecret` and `createFirstAdmin` are use cases in `src/application/identity/`. They are public like accepting an invitation, so they take no `actor`.
 - **Secret check:** a member exists → `410`; `SETUP_SECRET` unset → `503`; otherwise the sha256 of the given and configured secrets are compared with `crypto.timingSafeEqual`, and a mismatch gets `403`.
 - **Creating the admin:** `createFirstAdmin` runs the same check, then in one transaction takes `lock table members in exclusive mode`, re-checks that no member exists (OPS-001.7), inserts the admin and creates the session with `createSession(member.id, tx)`. It returns `{ member, sessionToken }`, like `acceptInvitation`.
 - **No guess limit (D-54):** a secret of at least 32 characters can't be guessed, and the endpoints stop working once the admin exists.
@@ -524,45 +577,48 @@ One module, `src/lib/markdown/`, used for both **rendering** in the browser and 
 
 ### 4.8 Error logging (SEC-007, OPS-007, OPS-008)
 
-Built by the E batch (E02–E08). E02 built the writer, the info lines and `apiRoute`'s `request-failed` line; E03 the `onRequestError`, worker and script catch points; E04 the `mail/*` lines and `Result` (`ok`, `err` in `shared/result.ts`) for `sendEmail`.
+Built by the E batch (E02–E08); batch H moves the catch points to the action adapter and the outbox run. `Result` (`ok`, `err` in `domain/shared/result.ts`) is used only by `sendEmail`.
 
-**The boundary rule.** An error is logged once, by the code that turns it into an answer: a status code, a retry, an exit code, a crash screen. Code below that boundary throws or returns and never logs. A `DomainError` is an expected outcome, not a fault: `apiRoute` maps it to its status and logs no error line (D-47).
+**The boundary rule.** An error is logged once, by the code that turns it into an answer: a status code, a retry, an exit code, a crash screen. Code below that boundary throws or returns and never logs. A `DomainError` is an expected outcome, not a fault: the action adapter returns it and `apiRoute` maps it to its status, and neither logs an error line (D-47).
 
 **Catch points.** These are the only places that log an error:
 
 | Where | Catches | Logs |
 |---|---|---|
-| `apiRoute`'s catch (`shared/api-route.ts`) | Anything but a `DomainError` thrown by a handler; answers `500` | `route/request-failed` |
-| `onRequestError` in `src/instrumentation.ts` | Errors Next.js sees outside `apiRoute`: the page shell, `/health`, `/webhooks/email` | `route/request-failed` |
-| The worker's per-delivery `try` (1.4 step 4) | One delivery's unexpected error; counts as a failed attempt. A failed send (`err` from the sender) also counts as one but logs nothing here, since `sendEmail` logged it | `worker/delivery-failed` |
-| The worker's per-pass, metrics and cleanup catches | Heartbeat, claim, drop-check loading; metrics; cleanup | `worker/pass-failed`, `metrics-failed`, `cleanup-failed` |
+| `onRequestError` in `src/instrumentation.ts` | Errors Next.js sees: a page or layout render, an action's rethrown error (1.2), the route handlers | `route/request-failed` |
+| `apiRoute`'s catch, until H20 | Anything but a `DomainError` thrown by an `/api` handler; answers `500` | `route/request-failed` |
+| The outbox run's per-event `try` (1.4 step 2) | One event's handler error; the event backs off | `outbox/event-failed` |
+| The outbox run's per-delivery `try` (1.4 step 3) | One delivery's unexpected error; counts as a failed attempt. A failed send (`err` from the sender) also counts as one but logs nothing here, since `sendEmail` logged it | `outbox/delivery-failed` |
+| The outbox run's outer, metrics and cleanup catches | Heartbeat, claims, drop-check loading; metrics; cleanup. The outer catch answers `500` | `outbox/run-failed`, `metrics-failed`, `cleanup-failed` |
 | The top-level `catch` of each script in `scripts/` | A script that can't start or finish; exits `1`. A script's own usage message (a missing `DATABASE_URL`) is CLI output, not an error line | `boot/start-failed` |
-| `sendEmail` (`shared/email/send.ts`), the one outbound wrapper | A failed call to Resend or Mailpit: a thrown `fetch` or the 10-second timeout, a non-2xx status (the error is named after Resend's error `name`), or a 2xx without the message id; returns `err("email-failed")`, never throws. Invitations and password resets turn it into `DomainError("unavailable")` (`503`), so the transaction rolls back (1.5); the worker records a failed attempt | `mail/fetch-failed`, `bad-status`, `bad-response` |
-| `POST /api/client-errors` | A report from the browser's catch points: `window` `error` and `unhandledrejection`, the router's root `errorElement` and `global-error.tsx`, each zone's error boundary (STD-11) | `client/uncaught`, `page-crashed`, `zone-crashed` |
+| `sendEmail` (`shared/email/send.ts`), the one outbound wrapper | A failed call to Resend or Mailpit: a thrown `fetch` or the 10-second timeout, a non-2xx status (the error is named after Resend's error `name`), or a 2xx without the message id; returns `err("email-failed")`, never throws. Invitations and password resets turn it into `DomainError("unavailable")` (`503`), so the transaction rolls back (1.5); the outbox run records a failed attempt | `mail/fetch-failed`, `bad-status`, `bad-response` |
+| `POST /api/client-errors` | A report from the browser's catch points: `window` `error` and `unhandledrejection`, `error.tsx` and `global-error.tsx`, each region's error boundary (STD-11) | `client/uncaught`, `page-crashed`, `zone-crashed` |
 
 There's no database pool listener: postgres.js reconnects on its own and emits no pool `error` event, and a failed query reaches one of the catch points above (D-52).
 
-**The line.** One writer, `logError(source, event, error, context?)` in `shared/log.ts`, writes one JSON line to standard error. The info lines (the request line, email events, worker metrics) go through the same writer, as `logInfo(source, event, context)`, with `level: "info"` and no `error`. Biome's `suspicious/noConsole` rule allows `console` only in `shared/log.ts` and `scripts/` (CLI output), so nothing else writes a line. Tests read error lines with `spyOnLoggedErrors()` from `src/test/log.ts`. Keys come in this order:
+**The line.** One writer, `logError(source, event, error, context?)` in `infrastructure/log.ts`, writes one JSON line to standard error. The info lines (the request and action lines, email events, outbox metrics) go through the same writer, as `logInfo(source, event, context)`, with `level: "info"` and no `error`. Biome's `suspicious/noConsole` rule allows `console` only in `infrastructure/log.ts` and `scripts/` (CLI output), so nothing else writes a line. Tests read error lines with `spyOnLoggedErrors()` from `src/test/log.ts`. Keys come in this order:
 
 | Key | Value |
 |---|---|
 | `level` | `"error"` or `"info"` |
 | `time` | ISO 8601, from the app clock (a log time isn't an expiry check, 1.3) |
-| `source` | Where: `route`, `worker`, `boot`, `mail`, `client` |
+| `source` | Where: `route`, `action`, `outbox`, `boot`, `mail`, `client` |
 | `event` | What failed, from the table below |
 | context | The event's fields from the table below, in that order; nothing else |
 | `error` | `{ name, message, code?, stack?, cause? }`, copied field by field: `message` cut at 500 characters, `code` only if a string or number, `cause` the same shape, 2 levels deep. A thrown non-object becomes `{ name: "Error", message: String(value) }`. Email addresses in `message` and `stack` become `[email]`. A `DrizzleQueryError`'s message (which holds the SQL and its parameters) is replaced by `"query failed"`, keeping its PostgreSQL cause's `code` (SQLSTATE) |
 
-**Sources and events.** `source`, `event` and the context type are closed unions in `shared/log.ts`, holding every row below.
+**Sources and events.** `source`, `event` and the context type are closed unions in `infrastructure/log.ts`, holding every row below.
 
 | `source` | `event` | Level | Context |
 |---|---|---|---|
-| `route` | `request` | info | `method`, `path`, `status`, `durationMs`, `actor?` (one per `apiRoute` request, 1.2) |
+| `route` | `request` | info | `method`, `path`, `status`, `durationMs`, `actor?` (one per `apiRoute` request, until H20) |
+| `action` | `call` | info | `action` (its name), `outcome` (`ok`, the `DomainError`'s kind, or `error` for a rethrown one), `durationMs`, `actor?` (one per action call, 1.2) |
 | `route` | `request-failed` | error | `method`, `path` (from `apiRoute`) or `route` (the pattern, from `onRequestError`), `actor?`, `digest?` |
-| `worker` | `metrics` | info | `pending`, `due`, `oldestDueSeconds`, `sent`, `failed`, `dropped` (1.4 step 6) |
-| `worker` | `delivery-failed` | error | `deliveryId`, `channel` |
-| `worker` | `pass-failed`, `metrics-failed`, `cleanup-failed` | error | none |
-| `boot` | `start-failed` | error | `script` (such as `worker`, `migrate`) |
+| `outbox` | `metrics` | info | `events`, `pending`, `due`, `oldestDueSeconds`, `sent`, `failed`, `dropped` (1.4 step 5) |
+| `outbox` | `event-failed` | error | `eventId`, `type` |
+| `outbox` | `delivery-failed` | error | `deliveryId`, `channel` |
+| `outbox` | `run-failed`, `metrics-failed`, `cleanup-failed` | error | none |
+| `boot` | `start-failed` | error | `script` (such as `migrate`, `seed`) |
 | `mail` | `bounced`, `ignored` | info | `kind?` (`notification`, `invitation`, `untracked`), `id?` (5.4) |
 | `mail` | `fetch-failed` | error | `host` |
 | `mail` | `bad-status` | error | `host`, `status` |
@@ -573,18 +629,18 @@ There's no database pool listener: postgres.js reconnects on its own and emits n
 
 **Client reports (OPS-008).**
 
-1. **Catch.** `window` `error` and `unhandledrejection` report `uncaught`. The router's root `errorElement` and `src/app/global-error.tsx` render the crash screen (STD-10), which reports `page-crashed` once on mount with Next's `digest` if there is one; `global-error.tsx` calls the reporter directly because it sits outside the app's providers, and imports the kit stylesheet itself because it replaces the root layout. The router's root is a pathless route whose `errorElement` is `RouteCrashScreen`, so a crash in any page or a failed lazy route import reaches it. The crash screen keeps the tab's crash times in `sessionStorage` (`tracklite.crashes`); if storage is unavailable each crash counts as the first. Each zone's error boundary reports `zone-crashed` with the first component name of React's `componentStack` (STD-11).
-2. **Send.** `createErrorReporter` in `src/client/` is the only code that names `/api/client-errors`. It cuts each string to the server's cap, de-dupes by message and first stack frame, sends at most 20 an hour (both reset hourly), queues while `navigator.onLine` is false and flushes on `online`, posts with `keepalive: true` so a report survives a reload, and drops a failed send. It never throws. `occurredAt` is taken when the error is caught. `build` is the build ID baked into the bundle: `next.config.ts` sets `env.BUILD_ID` to the `BUILD_ID` environment variable, or else the short git commit at build time (`unknown` without git). `ClientApp` creates one reporter, installs the `window` listeners and provides it through `ErrorReporterContext`, whose default is a no-op. A guard test fails if any other file under `src` (outside the endpoint's own route folder) names `/api/client-errors`. `productionBrowserSourceMaps` is on, since the repository is public, so a reported `stack` can be mapped back to source.
-3. **Accept.** `apiRoute("public", …)` checks the origin (4.4) and parses a Valibot schema that caps every string: `event` one of the three client events, `name` 100, `message` 500, `stack` 4,000, `page` 200 and starting with `/` (the browser sends `location.pathname`), `component` 200, `digest` 100, `build` 100, `timeZone` 64, `occurredAt` an ISO time. `event`, `name`, `message`, `page` and `occurredAt` are required, the rest optional; unknown fields are dropped. Fields added later are optional, so an old tab's report still parses.
-4. **Log.** The domain function, `reportClientError` in `identity/commands/report-client-error.ts`, takes `actor` from the session only, if there is one (OPS-008.2). It masks the IP from `clientIp` (IPv4 last octet → `0`; IPv6 keeps the first 3 groups, `2001:db8:85a3::`; a v4-mapped IPv6 address is masked as IPv4), parses the `User-Agent` header into `browser` and `device` (`desktop`, `mobile`, `tablet`) and cuts it to 300 characters as `userAgent`, then writes one `client` line. Nothing is stored except the limit's attempt row.
+1. **Catch.** `window` `error` and `unhandledrejection` report `uncaught`. `src/app/error.tsx` and `src/app/global-error.tsx` render the crash screen (STD-10), which reports `page-crashed` once on mount with Next's `digest` if there is one, so a crash on the server and in the browser can be matched (STD-10.5); `global-error.tsx` calls the reporter directly because it sits outside the app's providers, and imports the kit stylesheet itself because it replaces the root layout. A crash in any page that no `Region` catches reaches `error.tsx`. The crash screen keeps the tab's crash times in `sessionStorage` (`tracklite.crashes`); if storage is unavailable each crash counts as the first. Each region's error boundary reports `zone-crashed` with the first component name of React's `componentStack` (STD-11).
+2. **Send.** `createErrorReporter` in `src/lib/` is the only code that names `/api/client-errors`. It cuts each string to the server's cap, de-dupes by message and first stack frame, sends at most 20 an hour (both reset hourly), queues while `navigator.onLine` is false and flushes on `online`, posts with `keepalive: true` so a report survives a reload, and drops a failed send. It never throws. `occurredAt` is taken when the error is caught. `build` is the build ID baked into the bundle: `next.config.ts` sets `env.BUILD_ID` to the `BUILD_ID` environment variable, or else the short git commit at build time (`unknown` without git). A client component in the root layout creates one reporter, installs the `window` listeners and provides it through `ErrorReporterContext`, whose default is a no-op. A guard test fails if any other file under `src` (outside the endpoint's own route folder) names `/api/client-errors`. `productionBrowserSourceMaps` is on, since the repository is public, so a reported `stack` can be mapped back to source.
+3. **Accept.** The route checks the origin (4.4) and parses a Valibot schema that caps every string: `event` one of the three client events, `name` 100, `message` 500, `stack` 4,000, `page` 200 and starting with `/` (the browser sends `location.pathname`), `component` 200, `digest` 100, `build` 100, `timeZone` 64, `occurredAt` an ISO time. `event`, `name`, `message`, `page` and `occurredAt` are required, the rest optional; unknown fields are dropped. Fields added later are optional, so an old tab's report still parses.
+4. **Log.** The use case, `reportClientError` in `application/identity/report-client-error.ts`, takes `actor` from the session only, if there is one (OPS-008.2). It masks the IP from `clientIp` (IPv4 last octet → `0`; IPv6 keeps the first 3 groups, `2001:db8:85a3::`; a v4-mapped IPv6 address is masked as IPv4), parses the `User-Agent` header into `browser` and `device` (`desktop`, `mobile`, `tablet`) and cuts it to 300 characters as `userAgent`, then writes one `client` line. Nothing is stored except the limit's attempt row.
 5. **Limit.** At most 30 reports in 10 minutes per member, or per masked IP when signed out, counted in a `client_error_reports` table like `sign_in_attempts` (4.5), with `now()` in SQL and the same hourly cleanup (2.2). A limited report inserts no row. Logged or limited, the answer is `204`, so the browser can't tell and has nothing to retry.
 
 **Reading the logs.** Lines are on the process's standard error, mixed with Next.js's own output; `fromjson?` skips lines that aren't JSON. Where the deployment keeps the logs is outside this repository; these read from standard input.
 
 ```bash
 jq -cR 'fromjson? | select(.level == "error")'                                   # one line per error
-tail -F web.log worker.log | jq -cR 'fromjson? | select(.level == "error")'      # follow live
-jq -cR 'fromjson? | select(.source == "worker")'                                  # one source
+tail -F web.log | jq -cR 'fromjson? | select(.level == "error")'      # follow live
+jq -cR 'fromjson? | select(.source == "outbox")'                                  # one source
 jq -sR '[split("\n")[] | fromjson? | select(.level == "error")] | group_by([.source, .event]) | map({source: .[0].source, event: .[0].event, count: length})'   # count by source and event
 jq -cR 'fromjson? | select(.level == "error" and .actor == "sam")'                # one member's errors
 jq -cR 'fromjson? | select(.source == "client") | {time, event, page, build, component, message: .error.message}'   # client errors
@@ -604,23 +660,23 @@ default-src 'self'; script-src 'self' 'nonce-{n}' 'strict-dynamic'; style-src 's
 img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
 ```
 
-In development `script-src` also gets `'unsafe-eval'`, which Next.js's dev tooling needs. Next.js reads the nonce from the request and adds it to its own scripts; the root layout awaits `connection()` so the shell is rendered per request. A nonce makes the shell render per request instead of being cached, which costs nothing here because there's one small shell.
+In development `script-src` also gets `'unsafe-eval'`, which Next.js's dev tooling needs. Next.js reads the nonce from the request and adds it to its own scripts; the root layout awaits `connection()` so every page is rendered per request. Pages render per request anyway, since they read the session cookie and current data (1.7), so the nonce costs no caching.
 
 **Access logs (SEC-007).** The reverse proxy's access log drops the `token` query parameter, so `/invite` and `/reset-password` addresses are logged without it.
 
 ### 4.10 Permissions (SEC-006, STD-2)
 
-The route says who you are; the domain says what you may do (D-43). SEC-006's single server-side permission layer is the domain layer, so a domain file shows who may call each function.
+The adapter or page says who you are; the use case or query says what you may do (D-43). SEC-006's single server-side permission layer is the application layer and the queries, so a use case file shows who may call it.
 
-- **Routes only authenticate.** `apiRoute`'s access mode is `"public"` or `"member"`; for `"member"`, `requireMember` (`401`) loads the member and passes it on. No route checks a role.
-- **`actor` first.** Every domain function called from a signed-in route takes the member as its first parameter, `actor`, even reads that don't use it yet (`_actor`). Public flows (sign-in, password reset, invitation lookup and acceptance, the email webhook), the worker, cleanup and helpers (log, tokens, email, limits) take none.
-- **Admin checks.** `src/server/identity/sessions.ts` defines `type Admin = Member & { role: "admin" }` and `assertAdmin(member): asserts member is Admin`, which throws a `forbidden` `DomainError` (`403`) "You don't have permission to do that." (STD-2). `identity`'s `index.ts` exports `assertAdmin` but not `Admin`, which nothing outside `identity` uses.
-  - Admin-only functions call `assertAdmin(actor)` first: `createProject`, `deleteProject`, `updateMember`, `listInvitations`, `createInvitation`, `resendInvitation`, `revokeInvitation` and `notificationStats`.
+- **Adapters only authenticate.** The action adapter's access mode, like `apiRoute`'s, is `"public"` or `"member"`; for `"member"`, `requireMember` (`signedOut`) loads the member and passes it on. The `(signed-in)` layout does the same for pages. No page, action or route checks a role.
+- **`actor` first.** Every use case and query called for a signed-in member takes the member as its first parameter, `actor`, even reads that don't use it yet (`_actor`). Public flows (sign-in, password reset, invitation lookup and acceptance, the email webhook), the outbox run, cleanup and helpers (log, tokens, email, limits) take none.
+- **Admin checks.** `domain/identity/` defines `type Admin = Member & { role: "admin" }` and `assertAdmin(member): asserts member is Admin`, which throws a `forbidden` `DomainError` "You don't have permission to do that." (STD-2).
+  - Admin-only use cases and queries call `assertAdmin(actor)` first: `createProject`, `deleteProject`, `updateMember`, `listInvitations`, `createInvitation`, `resendInvitation`, `revokeInvitation` and `notificationStats`.
   - Mixed functions check on the admin-only branch: `updateProject` for `name` and `archived`. `listMembers` never throws; it shapes the response by role (emails only for admins).
-  - Ownership checks run once the row is loaded: `deleteIssue` (creator or admin), `editComment` (author only), `deleteComment` (author or admin). The check itself is a model function (1.8).
-- **Order of checks:** cross-site (`403`), session (`401`), body schema (`422`), the domain's role check (`403`), lookups (`404`) and ownership (`403`), database rules, then the write. The role check precedes any lookup, so a member gets `403`, not `404`, for an admin-only action on a missing target and learns nothing about it. A member's invalid body on an admin-only route gets `422`, not `403` (D-42).
-- **Tests are the guard.** Typecheck can't force an admin-only function to call `assertAdmin`, so each has a `403` test calling the domain function directly with a plain member.
-- **Logging.** Domain functions don't log, except the client-report function, whose job is to write the line (4.8); `apiRoute` names the actor by username (4.8), which SEC-007 allows (SEC-007.1 itself logs "member sam").
+  - Ownership checks run once the row is loaded: `deleteIssue` (creator or admin), `editComment` (author only), `deleteComment` (author or admin). The check itself is an entity method (1.8).
+- **Order of checks:** cross-site (4.4), session (`signedOut`), input schema (`invalid`), the use case's role check (`forbidden`), lookups (`notFound`) and ownership (`forbidden`), database rules, then the write. The role check precedes any lookup, so a member gets `forbidden`, not `notFound`, for an admin-only action on a missing target and learns nothing about it. A member's invalid input to an admin-only action gets `invalid`, not `forbidden` (D-42).
+- **Tests are the guard.** Typecheck can't force an admin-only use case to call `assertAdmin`, so each has a `forbidden` test calling it directly with a plain member.
+- **Logging.** Use cases don't log, except the client-report one, whose job is to write the line (4.8); the adapter names the actor by username (4.8), which SEC-007 allows (SEC-007.1 itself logs "member sam").
 
 ## 5. Notifications and email
 
@@ -660,7 +716,7 @@ It returns `Result<{ providerMessageId }, "email-failed">` and never throws; a f
 
 The wording of every email the app sends is in the spec (§9, "Email content"). That's where to change it. How the code builds each email:
 
-- **Templates.** One plain function per email type in `src/server/shared/email/templates.ts`. Each takes the snapshot (2.6) or the token and returns `{ subject, text }`. Tests check each one against the spec's wording.
+- **Templates.** One plain function per email type in `src/infrastructure/email/templates.ts`. Each takes the snapshot (2.6) or the token and returns `{ subject, text }`. Tests check each one against the spec's wording.
 - **Excerpts** are made with the shared Markdown module's text extraction (4.7), when the notification is created.
 - **Comment links** end in `#comment-{id}`. The browser scrolls to that comment (section 6).
 
@@ -694,7 +750,7 @@ Every R1 screen is designed in the Claude Design export "Tracklite project setup
 
 ### 6.1 Routes
 
-The routes are API-004's addresses (`src/client/routes.tsx`).
+The pages are API-004's addresses, one `page.tsx` each under `src/app/(signed-out)/` or `src/app/(signed-in)/` (1.7). `/project/[key]/layout.tsx` resolves the project once for the board, list, details, labels and settings pages, and `/issue/[id]/page.tsx` the issue.
 - `/forgot-password` sends a signed-in member to `/my-issues`, as `/sign-in` and `/` do (1.7).
 - `/reset-password` and `/invite` show a signed-in member a sign-out prompt (REQ-050.8, REQ-002.3).
 - `/welcome` is reached only while setup is needed, and goes to `/sign-in` otherwise (1.7, OPS-001). The welcome screen has no design export yet, so it's built from the signed-out kit pieces that `/invite` uses: the secret step (the server's refusal shown under the field), then email and the same profile and password fields, plus **Confirm password**, which the browser checks before sending ("Passwords don’t match").
@@ -702,11 +758,11 @@ The routes are API-004's addresses (`src/client/routes.tsx`).
 - Any other address shows Not found (STD-4).
 
 **Permissions.**
-- A member who reaches an admin-only route sees "You don't have permission to do that." (STD-2) in the page area; the links to it are hidden.
-- An unknown project key or issue ID shows Not found (STD-4).
+- A member who reaches an admin-only page sees "You don't have permission to do that." (STD-2) in the page area; the links to it are hidden.
+- An unknown project key or issue ID shows Not found (STD-4): the layout or page calls `notFound()`, which renders `not-found.tsx` with a `404`.
 
 **Addresses.**
-- When an address uses lower case, such as `/issue/web-42`, the app rewrites it to the canonical form `/issue/WEB-42` with `replace` (REQ-016.5). Project addresses work the same way in `ProjectGate`: `/project/web/list?status=done` becomes `/project/WEB/list?status=done`, keeping the rest of the path, the query string and the hash.
+- When an address uses lower case, such as `/issue/web-42`, the page redirects to the canonical form `/issue/WEB-42` with `redirect()` (REQ-016.5). Project addresses work the same way in the project layout: `/project/web/list?status=done` becomes `/project/WEB/list?status=done`, keeping the rest of the path and the query string; the browser keeps the hash.
 - An address ending in `#comment-{id}` scrolls to that comment once comments load, and highlights it briefly. If the comment is gone, the page stays at the top.
 
 ### 6.2 App shell
@@ -737,7 +793,7 @@ The spec gives the copy for these pages; these are the layout choices it leaves 
 - **Accept invitation:** the invited email is shown, not editable. The expired and revoked states show no form (REQ-002).
 - **Profile:** full name with **Save**; username and email read-only; a separate **Change password** form.
 - **Members** (admin): the invite field, the invitations table, then the members table sorted by name. Invitation rows have **Resend** and **Revoke** buttons; member row actions are in a **⋯** menu (REQ-051). Revoke and Deactivate ask for confirmation.
-- **Notification status** (admin, REQ-053): the title with **Refresh** beside it, then four sections. **Worker**: last seen as a relative time (6.7), or "Never". **Queue**: pending, due and the oldest due wait. **Last 24 hours**: one row per channel, columns Sent, Dropped, Failed and Bounced. **Recent problems**: Recipient (username), Channel, Issue or project, Attempts and When (6.7), or "No failed or bounced notifications.". **Refresh** calls the RTK Query endpoint's `refetch` and is disabled while it runs; the endpoint refetches on mount and is never polled (1.7).
+- **Notification status** (admin, REQ-053): the title with **Refresh** beside it, then four sections. **Outbox**: the last run as a relative time (6.7), or "Never". **Queue**: pending, due and the oldest due wait. **Last 24 hours**: one row per channel, columns Sent, Dropped, Failed and Bounced. **Recent problems**: Recipient (username), Channel, Issue or project, Attempts and When (6.7), or "No failed or bounced notifications.". **Refresh** calls `router.refresh()` inside a transition and is disabled while it runs; the page reads current data when it renders and is never polled (1.7).
 - **Project settings** (admin): name with **Save**, the key read-only, **Archive** / **Unarchive**, and **Delete** in a dialog whose button stays disabled until the key is typed exactly (REQ-014).
 - **Archived projects:** each one opens its board, read-only.
 - **List and My issues rows:** up to 2 labels, then "+N" (a board card shows 3, REQ-025).
@@ -751,7 +807,7 @@ The spec gives the copy for these pages; these are the layout choices it leaves 
   - the comments below it (REQ-032), then the comment box.
 - **Side panel:** Status, Priority, Assignees and Labels pickers (Assignees is a multi-select listing active members, filtered by name or username, where Enter adds the first match and each toggle saves the whole set; deactivated assignees are shown but not offered), each saving as soon as a value is chosen. A picker shows the new value once the server accepts it; on a failure it keeps the old value. Then "Created by {name}, {date}", and **Delete issue** for the creator or an admin. After a delete, the app goes to the project's board.
 - **Mention suggestions (DATA-001):** typing `@` in the description editor or comment box opens a list of active members, filtered by username or name as the member types. Choosing one inserts `@username`.
-- **Unsaved text (REQ-035):** a comment box holding text, or a description editor (issue or project) with unsaved changes, blocks in-app navigation with `useBlocker` and its REQ-035 message, and closing or reloading the tab with `beforeunload`.
+- **Unsaved text (REQ-035):** a comment box holding text, or a description editor (issue or project) with unsaved changes, asks before in-app links with `useLeaveGuard` and its REQ-035 message, and before closing or reloading the tab with `beforeunload` (1.7).
 
 ### 6.5 Board details
 
@@ -776,31 +832,44 @@ Only decisions with an alternative worth recording. Where the reason is already 
 |---|---|---|---|
 | D-1 | Drizzle ORM on the postgres.js driver (spec 0.9) | postgres.js queries alone | Matches the existing setup; typed schema and migrations. |
 | D-5 | `pg_trgm` + `ILIKE` per word | Postgres full-text search | The spec asks for substring matching (`"42"` → `WEB-42`, `"100%"`), which full-text search doesn't do. |
-| D-9 | Separate worker process polling Postgres with `skip locked` (DEC-004) | A timer inside the Next.js server; pg-boss or similar | A web restart can't interrupt sends, there's no new dependency, and the queue is just a table. |
-| D-10 | Strict single-page app: one HTML shell, all page data loaded through the API | Server-rendered pages | Owner's choice. Also gives one code path for permissions and tests. |
+| D-9 | **Reversed by D-70 (2026-11-05).** Was: a separate worker process polling PostgreSQL with `skip locked` (DEC-004) | | The owner chose an outbox drained by a cron route, with no second process. |
+| D-10 | **Reversed (2026-11-05, owner decision).** Pages are React Server Components that read their data on the server through `src/queries`, and changes go through server actions (1.7). Was: one HTML shell for every address, with all page data loaded in the browser through the API | One HTML shell with browser-side routing and a client data store | Following the owner's DDD part 8 article: less client code and state, one render per request with current data, and permissions still in one layer, since pages, actions and routes all call the same use cases and queries (SEC-006). |
 | D-26 | Nonce-based CSP set in `src/proxy.ts` (SEC-010) | A CSP without script rules | SEC-010 requires that only the app's own scripts run, and Next.js's inline scripts need a nonce for that. |
-| D-27 | React Router (data mode) inside the shell | Next.js routing; hand-rolled `pushState` | One HTML document for every route, plus `useBlocker` for REQ-035. |
+| D-27 | **Reversed (2026-11-05).** The App Router's file-system routes, `next/link` and `useRouter` handle navigation. Was: a client router library inside the shell, chosen for its navigation blocker | Keeping a client router beside the App Router | Server-rendered pages make the App Router the only router; REQ-035's prompt moves to a link guard (D-67). |
 | D-32 | Resend (DEC-003) | Postmark, Amazon SES | Free plan fits NFR-009, signed webhooks, idempotency keys, simple domain setup. Postmark's paid plan (~$15) plus hosting goes over the $20 budget, and its webhooks aren't signed. SES is cheapest at volume, but its bounces come through SNS, which needs an AWS account and much more setup for 15 people. |
 | D-34 | `fetch` + hand-written signature check | Resend SDK, `svix` package | Two small functions instead of two dependencies. |
 | D-36 | React Aria `GridList` drag and drop | dnd-kit | Already in the stack, and accessible by keyboard and screen reader out of the box. Edge auto-scroll confirmed by the M5.1 spike (D-40). |
 | D-37 | New issue: a title and assignees, then go to the issue | A full create form | Matches REQ-016's flow ("enters a title", with assignees chosen in New issue); everything else is edited on the issue page. |
 | D-39 | Track Lite design system, ported from its Claude Design project into `src/components/ui/track-lite/` | Hairline; a component library from npm | Made for this product. Fonts load through `next/font` and icons through `lucide-react` (C20) instead of the project's CDN links, which the CSP (D-26) would block. |
 | D-40 | Keep D-36 with no fallback, after the M5.1 spike. Each column's `GridList` is the scroll box, with `position: relative` (virtualized with `Virtualizer` and `ListLayout` since M11.2b, so only the cards in view render); each card has a `<Button slot="drag">` | Writing our own edge auto-scroll; a separate drag library | Mouse drags across 5 columns, into an empty column (`onRootDrop`) and within a column (`onReorder`) all landed correctly. Near a column's edge the browser scrolls it natively (React Aria's `useAutoScroll` in Safari). Keyboard drags (Enter on the drag button, Tab between columns, arrows, Enter) work and are announced. Without `position: relative` on the scroll box, hidden keyboard drop targets scroll the page instead of the column; without the drag button, cards that open on click drag only with Alt+Enter. |
-| D-42 | Valibot body schemas declared per route and run by `apiRoute`; schemas live in `src/server/<context>/schemas.ts` (one per context, server-only; shared helpers in `src/server/shared/schemas.ts`), and the domain function takes their typed output | Hand-written `typeof` checks in each domain function; Zod; parsing at the start of each domain function; each schema in the domain module that uses it | One path turns invalid input into STD-3's `422`, domain functions get typed, trimmed input instead of `unknown`, and a malformed body stops being a `500`. Check order is in 4.10: a signed-out caller always gets `401` and learns nothing about the body; invalid input fails before the role check and any query, so a member without the role sending an invalid body gets `422`, not `403`, revealing only the request's shape, which the browser code already shows. Lengths count code points, as the spec and Postgres do, not UTF-16 units. One `schemas.ts` per context keeps its input rules in one place to review, apart from its database code. |
-| D-43 | Routes only authenticate. Every domain function called from a signed-in route takes the member as `actor` first and owns every role and ownership check, with `assertAdmin` before any lookup (4.10) | `apiRoute("admin")` checking the role in the route; admin-only functions typed `actor: Admin`; an `adminOnly` wrapper | Reading a domain file must show its permission rules: with the role in the route, `createProject` looked open to anyone while `updateProject` checked. Typing `actor: Admin` would push the narrowing back into the route. A wrapper adds an abstraction for a one-line check. |
-| D-44 | Response types and enum values in a shared `src/contract/`; mapping functions in each context under `src/server/` (1.8) return them | Types owned by the client and checked with `satisfies` in each route; one model shared by database, domain and API | A declared return type catches extra fields, which `satisfies` on a function call can't. One enum source keeps client lists complete. Rows and responses really differ (uuid vs `WEB-42`, `Date` vs ISO string, internal columns), so they stay separate types with a mapping between them. |
-| D-45 | Notifications in batches with one delivery per channel; senders in `src/server/notifications/notification-channels/`, mapped by the `notification_channel` enum | One `notification_emails` table; one deliveries table with the notification rows copied per channel | Keeps notifications independent of email so a channel (SMS) can be added with a new sender, an enum value and a profile setting. Batching and drop checks stay shared; state and retries are per channel, so one channel failing doesn't touch another. |
-| D-46 | The worker claims deliveries with a 2-minute lease (`locked_until`) in a short transaction, then sends outside any transaction and records the result only if the lease is still its own (1.4) | Holding the row lock in one transaction for the whole pass, so "locked" meant "being sent"; a `sending` state | Holding the lock kept a transaction and pooled connection open across up to 10 provider calls, and one bad row rolled back the pass and crash-looped the worker. A `sending` state would need its own recovery and leak into the webhook, cleanup and stats. |
-| D-47 | Domain code throws `DomainError` with a kind (`notFound`, `forbidden`, …) for expected failures, and only `apiRoute` maps a kind to an HTTP status (3.2); `Result` only for the outbound email wrapper (4.8) | Glance's `Result<T, E>` returned from every domain function; an `ApiError` carrying its HTTP status into domain code | Throwing keeps one catch point that maps each failure to a status and the spec's message, and an expected failure is never logged. Keeping the status out of domain code keeps HTTP out of the models (1.8). `Result` pays off only where a caller must handle the failure, which is `sendEmail` (invitations turn it into `503`, the worker into a retry). |
+| D-42 | Valibot input schemas, declared per action (or `/api` route) and run by the adapter; they live in `src/app/_server/schemas/<ctx>.ts`, built from the value objects' schemas, and the use case takes their typed output | Hand-written `typeof` checks in each use case; Zod; parsing at the start of each use case; each schema in the domain module that uses it | One path turns invalid input into STD-3's `invalid` refusal, use cases get typed, trimmed input instead of `unknown`, and a malformed body stops being a `500`. Check order is in 4.10: a signed-out caller always gets `signedOut` and learns nothing about the input; invalid input fails before the role check and any query, so a member without the role sending invalid input gets `invalid`, not `forbidden`, revealing only the input's shape, which the browser code already shows. Lengths count code points, as the spec and Postgres do, not UTF-16 units. One schemas file per context keeps its input rules in one place to review, apart from its database code. |
+| D-43 | Adapters and the signed-in layout only authenticate. Every use case and query for a signed-in member takes the member as `actor` first and owns every role and ownership check, with `assertAdmin` before any lookup (4.10) | The adapter checking the role; admin-only use cases typed `actor: Admin`; an `adminOnly` wrapper | Reading a use case file must show its permission rules: with the role in the route, `createProject` looked open to anyone while `updateProject` checked. Typing `actor: Admin` would push the narrowing back into the adapter. A wrapper adds an abstraction for a one-line check. |
+| D-44 | Response types and enum values in a shared `src/contract/`; the queries' mapping functions (1.8) return them | Types owned by the client and checked with `satisfies`; one model shared by database, domain and pages | A declared return type catches extra fields, which `satisfies` on a function call can't. One enum source keeps client lists complete. Rows and responses really differ (uuid vs `WEB-42`, `Date` vs ISO string, internal columns), so they stay separate types with a mapping between them. |
+| D-45 | Notifications in batches with one delivery per channel; senders in `src/infrastructure/notifications/channels/`, mapped by the `notification_channel` enum | One `notification_emails` table; one deliveries table with the notification rows copied per channel | Keeps notifications independent of email so a channel (SMS) can be added with a new sender, an enum value and a profile setting. Batching and drop checks stay shared; state and retries are per channel, so one channel failing doesn't touch another. |
+| D-46 | A delivery pass claims deliveries with a 2-minute lease (`locked_until`) in a short transaction, then sends outside any transaction and records the result only if the lease is still its own (1.4) | Holding the row lock in one transaction for the whole pass, so "locked" meant "being sent"; a `sending` state | Holding the lock kept a transaction and pooled connection open across up to 10 provider calls, and one bad row rolled back the pass. A `sending` state would need its own recovery and leak into the webhook, cleanup and stats. Kept for the outbox run, whose overlapping calls need it too. |
+| D-47 | Domain and application code throw `DomainError` with a kind (`notFound`, `forbidden`, …) for expected failures; the action adapter returns the kind and message, and only route handlers map a kind to an HTTP status (3.2); `Result` only for the outbound email wrapper (4.8) | Glance's `Result<T, E>` returned from every use case; an `ApiError` carrying its HTTP status into domain code | Throwing keeps one catch point that maps each failure to the spec's message, and an expected failure is never logged. Keeping the status out of domain code keeps HTTP out of the entities (1.8). `Result` pays off only where a caller must handle the failure, which is `sendEmail` (invitations turn it into `unavailable`, the outbox run into a retry). |
 | D-48 | Error body stays `{ error: { message, fields? } }` with the server's copy (3.2) | Glance's `{ "error": "<code>" }` with copy in the browser | All user-facing copy for server outcomes lives on the server (1.2), and STD-3 needs per-field messages. |
-| D-49 | Route steps stay origin → session → schema → domain → map (1.2), with no `426` build check | Glance's build check that answers `426 outdated` | There's no offline client or stored writes to replay against a newer server; a stale tab picks up the new build on its next page load. |
-| D-50 | No offline outbox or sync rules | Glance's queued offline writes | Writes go straight to the API, and a failed board move is undone (REQ-026). Only error reports are held while offline (4.8). |
+| D-49 | Action steps stay origin → session → schema → use case → map (1.2), with no build check | Glance's build check that answers `426 outdated` | There's no offline client or stored writes to replay against a newer server. A tab from an older build that calls an action Next.js no longer knows gets a failed call and the STD-9 toast; reloading picks up the new build. |
+| D-50 | No offline outbox or sync rules in the browser | Glance's queued offline writes | Actions run straight away, and a failed board move is undone (REQ-026). Only error reports are held while offline (4.8). The server's `outbox_events` (D-70) is a different thing: events waiting to become notifications. |
 | D-51 | No multi-tenant error tests | Glance's per-tenant isolation tests | One invite-only team, no tenants. |
 | D-52 | No database pool error listener, and no `worker-crashed` or `sw-crashed` client events | Glance's pool listener and web or service worker crash events | postgres.js reconnects on its own and emits no pool `error` event, and a failed query surfaces at a catch point (4.8); the browser app has no web or service worker. |
-| D-53 | A failed notification send logs only `sendEmail`'s `mail/*` line; the worker adds no `delivery-failed` line for it | Both lines, the mail line for why and the worker line for which delivery | OPS-007 logs each fault once. The status page (REQ-053) already shows which delivery failed and how often, and `delivery-failed` keeps meaning an unexpected error. |
+| D-53 | A failed notification send logs only `sendEmail`'s `mail/*` line; the outbox run adds no `delivery-failed` line for it | Both lines, the mail line for why and the run's line for which delivery | OPS-007 logs each fault once. The status page (REQ-053) already shows which delivery failed and how often, and `delivery-failed` keeps meaning an unexpected error. |
 | D-54 | The first admin is created on a welcome screen guarded by `SETUP_SECRET` from server config, with no guess limit (OPS-001, 4.6) | The `npm run setup` command; a secret generated at boot and printed to the log; counting wrong secrets in `sign_in_attempts` | The owner wanted setup in the browser, without shell access to the host. A config secret is set once and survives restarts, while a generated one would change on every restart and land in log storage. With at least 32 characters, guessing is hopeless, and a limit would only lock out the owner. |
-| D-55 | Aggregates (Issue, Project, Comment, Delivery) as readonly types and pure functions that return `{ aggregate, events }`, with a `model.ts` and `repository.ts` per context (1.8) | Classes with private constructors and `pullEvents()`; an aggregate for every table | `erasableSyntaxOnly` rules out parameter properties, and the rest of `src/server/` is functions; a returned value is easier to test than a mutated object holding pending events. Only these four hold rules the spec can refuse; members, invitations, sessions and cleanup stay plain functions until a rule there is written twice. Models hold only the spec's rules: REQ-017 lets any member move an issue to any status, so there is no status workflow. |
-| D-56 | Repositories are plain functions that take the command's `tx`; no repository interfaces, dependency container or in-memory fakes | An `IssueRepository` interface with a Drizzle class, wired in a container | Nothing swaps the implementation and tests run against PostgreSQL, so an interface and fakes would only test the fakes. Taking `tx` lets a command save its aggregate and its notifications in one transaction (spec §12). |
-| D-57 | Reads for screens in `src/server/queries/`, which reads any table, writes none and returns contract types without building aggregates (1.8) | Each context's own reads, with listed exceptions to the context map; loading aggregates to render | Five reads already crossed the context map (issue counts, label usage, mentions). One read side ends the exceptions, and rendering changes nothing, so it needs no aggregate. |
-| D-58 | No generic outbox: the notification rows written on the action's `tx` are the outbox, drained by the long-running worker (1.4); no `after()` and no cron routes | An `outbox_events` table drained by a cron route; deferring work with Next.js `after()` | Deliveries already commit with the action, carry their own state for the status page (REQ-053), retry under a lease and send with an idempotency key. A second table would add a hop for the same data, `after()` has no completion guarantee, and the worker sends within seconds. |
-| D-59 | Field edits keep the row lock (`select … for update`) and save only changed fields; only descriptions and comments carry a version (STD-8) | A `version` on every aggregate, checked on every save | Issue edits are per-field `PATCH`es and REQ-026 says the last save wins; a whole-row version would make two members changing different fields conflict. |
+| D-55 | **Reversed by D-61 (2026-11-05).** Was: aggregates as readonly types and pure functions returning `{ aggregate, events }`, in a `model.ts` per context | | The owner chose entity classes with recorded events, following the DDD part 8 article. Still true: only aggregates hold rules the spec can refuse, and REQ-017 lets any member move an issue to any status, so there is no status workflow. |
+| D-56 | **Reversed by D-62 (2026-11-05).** Was: repositories as plain functions taking the command's `tx`, with no interfaces | | The application layer must not import infrastructure (D-60), so it needs repository interfaces. Still true: tests run against PostgreSQL, so there are no in-memory fakes and no container; actions wire the Drizzle repositories in. |
+| D-57 | Reads for pages in `src/queries/`, which reads any table, writes none and returns contract types without building entities (1.8) | Each context's own reads, with listed exceptions to the context map; loading aggregates to render | Five reads already crossed the context map (issue counts, label usage, mentions). One read side ends the exceptions, and rendering changes nothing, so it needs no aggregate. |
+| D-58 | **Reversed by D-70 (2026-11-05, owner decision).** Was: no generic outbox; the notification rows written on the action's transaction were the outbox, drained by a long-running worker | | See D-70. |
+| D-59 | **Kept in batch H, against the DDD article.** Field edits keep the row lock (`select … for update`) and save only changed fields; only descriptions and comments carry a version (STD-8) | A `version` on every aggregate, checked on every save, as the article does | Issue edits are per-field actions and STD-8 and REQ-026 say the last save wins; a whole-row version would make two members changing different fields conflict. |
+| D-60 | Four server layers, `domain`, `application`, `infrastructure` and `queries`, with the five contexts as folders inside each, and the import rules of 1.8 checked by `architecture.test.ts` | Context folders with layers by file name (`model.ts`, `repository.ts`), as before | The owner's DDD part 8 layout. The rules keep rules free of Drizzle and Next.js, so entities test without a database, and keep the context map and table ownership as they were. |
+| D-61 | Entities as classes with a private constructor, `static create` (runs the rules) and `static rehydrate` (doesn't), methods that change the entity and record events, and `pullEvents()` on an `AggregateRoot` base; value objects with `static from`; no parameter properties, which `erasableSyntaxOnly` forbids | Readonly types and pure functions returning `{ aggregate, events }` (D-55) | Methods read as the domain's verbs and keep an aggregate's invariants in one class. `rehydrate` keeps old rows loadable when a rule is added. Plain field assignments in the constructor are erasable syntax, so Node and the type checker agree. |
+| D-62 | Repository interfaces in `domain/<ctx>/`, Drizzle implementations and mappers in `infrastructure/<ctx>/`, and a `UnitOfWork<R>` that owns the transaction, builds the repositories a use case names on it, and before commit hands every saved aggregate's pulled events to the outbox writer | Repositories taking `tx` (D-56); a dependency container; the use case publishing events itself | The use case can't import infrastructure, so it gets its repositories through the unit of work. Pulling events in one place means no use case can save without its events or send events without saving. Each context adds its own repository factory, so the unit of work stays generic. |
+| D-63 | Server actions are thin adapters, wrapped once in `src/app/_server/action.ts`: session → Valibot → one use case → `refresh()` → `{ ok: true, data }`; a `DomainError` becomes `{ ok: false, error: { kind, message, fields? } }`, and anything else is rethrown | Actions with their own checks; returning every error as a value; route handlers for every write | One wrapper keeps authentication, parsing, mapping and logging in one place, as `apiRoute` did. Expected refusals are values the form shows; unknown errors are rethrown so Next.js logs them once through `onRequestError` (OPS-007) and the browser shows the generic toast. `kind` lets the client tell a conflict or an ended session from a toast-worthy refusal without status codes. |
+| D-64 | Server components read through `src/queries`, which may import domain value objects and `assertAdmin` and returns contract types; an admin-only read asserts first | Reading through use cases; reading tables in pages | Reads need no entities (D-57), and admin-only reads still check in one layer (SEC-006). Pages stay free of SQL. |
+| D-65 | STD-7's delay is `DelayedFallback`: a Suspense fallback that renders nothing for 300 ms, then "Loading…" | Showing the fallback at once; a hook that times each request | A fast region never flashes a spinner, and the same component serves every `Region` and `loading.tsx`. |
+| D-66 | STD-11 regions are `Region`: Suspense plus an error boundary from `catchError` (`next/error`), whose **Try again** calls `retry()`, which re-fetches the route's server data like `router.refresh()`. A refresh that fails a region replaces its data with the failed view (STD-11.4 changed in spec 0.40) | A hand-written error boundary calling `router.refresh()`; keeping old data on a failed refresh | `catchError` lets `redirect()` and `notFound()` through and clears on navigation, which a hand-written boundary would have to copy. A server-rendered region has no client cache to fall back on, so keeping stale data would need one. |
+| D-67 | REQ-035 is `useLeaveGuard`: a context the app's links read through `next/link`'s `onNavigate`, plus `beforeunload`; Back and Forward aren't caught | A client router's blocker; intercepting `popstate` | The App Router has no blocking API. `onNavigate` is the documented way to stop a link (`node_modules/next/dist/docs/01-app/03-api-reference/02-components/link.md`, "Blocking navigation"); undoing a `popstate` after the fact is fragile. |
+| D-68 | NFR-005 board moves use `useOptimistic` inside the move action's transition | A client copy of the board kept in sync by hand | React drops the optimistic state when the transition ends, so a failed move rolls back by itself, and a successful one shows the refreshed board. |
+| D-69 | SEC-004 for actions is Next.js's `Origin`/`Host` check plus `SameSite=Lax`; route handlers keep the origin check of 4.4 | Repeating the origin check in the adapter; CSRF tokens | Next.js aborts a cross-site action before app code runs (`node_modules/next/dist/docs/01-app/02-guides/data-security.md`); an action without `Origin` arrives without the session cookie. A second check would test the framework. |
+| D-70 | Events go to an `outbox_events` table in the action's transaction; `POST /api/cron/outbox`, called every minute by the deployment with `CRON_SECRET`, records them as notifications, sends due deliveries and runs cleanup, within 50 seconds (1.4). Reverses D-9 and D-58 | A long-running worker process (D-9); in-process event handlers writing notifications on the action's transaction (D-58); Next.js `after()` | Owner decision (2026-11-05): one app process, and the action's transaction does less. The cost is REQ-045's wait growing from 2 minutes to 2 to 3. `after()` has no completion guarantee. |
+| D-71 | `job_runs` holds one row per periodic job: `outbox` (the heartbeat, every run) and `cleanup` (claimed hourly with a conditional update) | A heartbeat per process (`worker_heartbeats`); a cleanup timer in memory | Runs are separate requests with no memory between them, so when cleanup last ran must be stored. A conditional update stops two overlapping runs from both cleaning. |
+| D-72 | `/health/worker` keeps its path and now checks the outbox run and the event backlog | Renaming it `/health/outbox` | The uptime check is configured outside this repository; a rename would break it for no gain. |
