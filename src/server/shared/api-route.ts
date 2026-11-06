@@ -5,7 +5,6 @@ import { readConfig } from "../../infrastructure/config";
 import { logError, logInfo } from "../../infrastructure/log";
 import type { Member } from "../../infrastructure/identity/tables";
 import { requireMember } from "../../infrastructure/identity/session";
-import "../../infrastructure/notifications/subscription";
 
 const statusOfKind: Record<DomainErrorKind, number> = {
   signedOut: 401,

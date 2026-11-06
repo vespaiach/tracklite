@@ -17,11 +17,11 @@ function postgresError(code: string) {
 it("§4.8: an error line's keys come in the order level, time, source, event, context, error", () => {
   const loggedErrors = spyOnLoggedErrors();
 
-  logError("worker", "delivery-failed", new Error("boom"), { deliveryId: "d1", channel: "email" });
+  logError("outbox", "delivery-failed", new Error("boom"), { deliveryId: "d1", channel: "email" });
 
   const [line] = loggedErrors();
   expect(Object.keys(line)).toEqual(["level", "time", "source", "event", "deliveryId", "channel", "error"]);
-  expect(line).toMatchObject({ level: "error", source: "worker", event: "delivery-failed" });
+  expect(line).toMatchObject({ level: "error", source: "outbox", event: "delivery-failed" });
   expect(Number.isNaN(Date.parse(line.time))).toBe(false);
 });
 
@@ -43,7 +43,7 @@ it("SEC-007.3: a failed query's line keeps the PostgreSQL error code but not the
     postgresError("23505"),
   );
 
-  logError("worker", "pass-failed", error);
+  logError("outbox", "run-failed", error);
 
   const [line] = loggedErrors();
   expect(line.error).toMatchObject({
@@ -61,7 +61,7 @@ it("SEC-007.4: an email address in an error's message, stack or cause shows as [
     cause: new Error("rejected sam.lee+x@mail.example.co.uk"),
   });
 
-  logError("worker", "pass-failed", error);
+  logError("outbox", "run-failed", error);
 
   const [line] = loggedErrors();
   expect(line.error.message).toBe("no mailbox for [email]");
@@ -73,7 +73,7 @@ it("SEC-007.5: an error's 2,000-character message is cut to its first 500, in th
   const loggedErrors = spyOnLoggedErrors();
   const message = "a".repeat(500) + "b".repeat(1500);
 
-  logError("worker", "pass-failed", new Error(message));
+  logError("outbox", "run-failed", new Error(message));
 
   const [line] = loggedErrors();
   expect(line.error.message).toBe("a".repeat(500));
@@ -90,7 +90,7 @@ it("SEC-007.6: an error's extra properties are left out; only name, message, cod
     { code: "E_SEND", request: { body: "request-secret" }, status: 500 },
   );
 
-  logError("worker", "pass-failed", error);
+  logError("outbox", "run-failed", error);
 
   const [line] = loggedErrors();
   expect(Object.keys(line.error)).toEqual(["name", "message", "code", "stack", "cause"]);
@@ -103,7 +103,7 @@ it("SEC-007.6: an error's extra properties are left out; only name, message, cod
 it("§4.8: a code that isn't a string or number is left out", () => {
   const loggedErrors = spyOnLoggedErrors();
 
-  logError("worker", "pass-failed", Object.assign(new Error("x"), { code: { secret: "nested" } }));
+  logError("outbox", "run-failed", Object.assign(new Error("x"), { code: { secret: "nested" } }));
 
   expect(loggedErrors()[0].error).not.toHaveProperty("code");
 });
@@ -111,7 +111,7 @@ it("§4.8: a code that isn't a string or number is left out", () => {
 it("§4.8: a thrown string becomes an error named Error with that message", () => {
   const loggedErrors = spyOnLoggedErrors();
 
-  logError("boot", "start-failed", "cannot reach sam@example.com", { script: "worker" });
+  logError("boot", "start-failed", "cannot reach sam@example.com", { script: "seed" });
 
   expect(loggedErrors()[0].error).toEqual({ name: "Error", message: "cannot reach [email]" });
 });
@@ -119,7 +119,7 @@ it("§4.8: a thrown string becomes an error named Error with that message", () =
 it("§4.8, SEC-007.6: a thrown plain object keeps only its name, message and code", () => {
   const loggedErrors = spyOnLoggedErrors();
 
-  logError("worker", "pass-failed", { message: "bad thing", code: 42, password: "hunter2" });
+  logError("outbox", "run-failed", { message: "bad thing", code: 42, password: "hunter2" });
 
   expect(loggedErrors()[0].error).toEqual({ name: "Error", message: "bad thing", code: 42 });
 });

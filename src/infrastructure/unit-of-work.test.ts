@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { AggregateRoot } from "../domain/shared/aggregate-root";
 import { createIssue, createMember, createProject } from "../test/factories";
 import { db } from "./db";
 import { issues } from "./issues/tables";
-import { notificationBatches } from "./notifications/tables";
+import { outboxEvents } from "./notifications/tables";
 import { type TransactionScope, unitOfWork } from "./unit-of-work";
 
 class TestIssue extends AggregateRoot {
@@ -44,20 +44,23 @@ async function assignedIssue() {
 
 async function stored(issue: TestIssue, assigneeId: string) {
   const [row] = await db.select({ title: issues.title }).from(issues).where(eq(issues.id, issue.id));
-  const batches = await db.$count(notificationBatches, eq(notificationBatches.recipientId, assigneeId));
-  return { title: row.title, batches };
+  const events = await db.$count(
+    outboxEvents,
+    sql`${outboxEvents.payload} @> ${JSON.stringify({ recipientIds: [assigneeId] })}::jsonb`,
+  );
+  return { title: row.title, events };
 }
 
-it("D-62: a committed unit of work saves the aggregate and its notifications, and pullEvents hands events over once", async () => {
+it("D-62: a committed unit of work saves the aggregate and writes its event to the outbox, and pullEvents hands events over once", async () => {
   const { issue, assignee } = await assignedIssue();
 
   await work.run(({ issues }) => issues.save(issue));
 
-  expect(await stored(issue, assignee.id)).toEqual({ title: "Renamed", batches: 1 });
+  expect(await stored(issue, assignee.id)).toEqual({ title: "Renamed", events: 1 });
   expect(issue.pullEvents()).toEqual([]);
 });
 
-it("D-62: a thrown error rolls back the aggregate's row and its notification rows together", async () => {
+it("D-62: a thrown error rolls back the aggregate's row and its outbox event together", async () => {
   const { issue, assignee, originalTitle } = await assignedIssue();
 
   const failing = work.run(async ({ issues }) => {
@@ -66,5 +69,5 @@ it("D-62: a thrown error rolls back the aggregate's row and its notification row
   });
 
   await expect(failing).rejects.toThrow("after save");
-  expect(await stored(issue, assignee.id)).toEqual({ title: originalTitle, batches: 0 });
+  expect(await stored(issue, assignee.id)).toEqual({ title: originalTitle, events: 0 });
 });

@@ -1,28 +1,27 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { PostgresJsPreparedQuery } from "drizzle-orm/postgres-js/session";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createIssue, createMember, createProject, newRequestId } from "../../test/factories";
-import { spyOnLoggedErrors } from "../../test/log";
-import { postIssueComment } from "../../application/comments/post-comment";
-import { commentWork } from "../../infrastructure/comments/comment-work";
 import { db } from "../../infrastructure/db";
 import { outbox } from "../../infrastructure/email/outbox";
+import { notificationSenders } from "../../infrastructure/notifications/channels";
+import { deliveryServices } from "../../infrastructure/notifications/services";
+import { notificationDeliveries, notifications } from "../../infrastructure/notifications/tables";
 import type { Transaction } from "../../infrastructure/transaction";
-import { updateIssue } from "../../application/issues/update-issue";
-import { issueWork } from "../../infrastructure/issues/issue-work";
-import { issues } from "../../infrastructure/issues/tables";
-import { notificationSenders } from "./channels";
-import { members, type Member } from "../../infrastructure/identity/tables";
 import {
-  notificationBatches,
-  notificationDeliveries,
-  notifications,
-  workerHeartbeats,
-} from "../../infrastructure/notifications/tables";
-import { runWorker } from "./run-worker";
-import { sendDueDeliveries } from "../../application/notifications/send-due-deliveries";
-import { deliveryServices } from "./services";
-import { IssueId, Username } from "../../domain/shared/identifiers";
+  assign,
+  batchesOf,
+  comment,
+  dueMentionsFor,
+  emailsOf,
+  leaseEndsIn,
+  mailTo,
+  statesOf,
+  waitIsOver,
+  website,
+} from "../../test/deliveries";
+import { createMember } from "../../test/factories";
+import { spyOnLoggedErrors } from "../../test/log";
+import { sendDueDeliveries } from "./send-due-deliveries";
 
 beforeEach(() => {
   outbox.sent = [];
@@ -33,69 +32,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function website() {
-  const project = await createProject({ name: "Website" });
-  const issue = await createIssue(project.id);
-  await db.update(issues).set({ title: "Fix login button" }).where(eq(issues.id, issue.id));
-  return { project, issue, issueRef: `${project.key}-${issue.number}` };
-}
-
-function assign(issueRef: string, by: Member, ...assignees: Member[]) {
-  return updateIssue(by, issueWork, IssueId.from(issueRef), {
-    assignees: assignees.map((assignee) => Username.from(assignee.username)),
-  });
-}
-
-async function comment(issueRef: string, by: Member, body: string) {
-  const { commentId } = await postIssueComment(by, commentWork, IssueId.from(issueRef), {
-    requestId: newRequestId(),
-    body,
-  });
-  return { id: commentId };
-}
-
-function batchesOf(member: { id: string }) {
-  return db
-    .select({ id: notificationBatches.id })
-    .from(notificationBatches)
-    .where(eq(notificationBatches.recipientId, member.id));
-}
-
-function emailsOf(member: { id: string }) {
-  return db
-    .select({
-      id: notificationDeliveries.id,
-      state: notificationDeliveries.state,
-      attempts: notificationDeliveries.attempts,
-      retryInSeconds: sql<
-        number | null
-      >`round(extract(epoch from ${notificationDeliveries.nextAttemptAt} - now()))::int`,
-      providerMessageId: notificationDeliveries.providerMessageId,
-      sentAt: notificationDeliveries.sentAt,
-    })
-    .from(notificationDeliveries)
-    .where(
-      and(
-        eq(notificationDeliveries.channel, "email"),
-        inArray(notificationDeliveries.batchId, batchesOf(member)),
-      ),
-    )
-    .orderBy(asc(notificationDeliveries.createdAt));
-}
-
 function droppedFlagsOf(member: { id: string }) {
   return db
     .select({ kind: notifications.kind, dropped: notifications.dropped })
     .from(notifications)
     .where(inArray(notifications.batchId, batchesOf(member)))
     .orderBy(asc(notifications.createdAt));
-}
-
-async function waitIsOver(member: { id: string }) {
-  await db
-    .update(notificationBatches)
-    .set({ sendAfter: sql`now() - interval '1 second'` })
-    .where(eq(notificationBatches.recipientId, member.id));
 }
 
 async function retryIsDue(member: { id: string }) {
@@ -105,34 +47,8 @@ async function retryIsDue(member: { id: string }) {
     .where(inArray(notificationDeliveries.batchId, batchesOf(member)));
 }
 
-function mailTo(member: { email: string }) {
-  return outbox.sent.filter((email) => email.to === member.email);
-}
-
 async function sendAllDue() {
   while ((await sendDueDeliveries(deliveryServices)) > 0) {}
-}
-
-async function leaseEndsIn(member: { id: string }, interval: string) {
-  await db.execute(
-    sql`update ${notificationDeliveries} set locked_until = now() + ${interval}::interval where ${inArray(notificationDeliveries.batchId, batchesOf(member))}`,
-  );
-}
-
-async function dueMentionsFor(count: number) {
-  const alex = await createMember();
-  const recipients = await Promise.all(Array.from({ length: count }, () => createMember()));
-  const { issueRef } = await website();
-
-  await comment(issueRef, alex, recipients.map((recipient) => `@${recipient.username}`).join(" "));
-  for (const recipient of recipients) await waitIsOver(recipient);
-
-  return recipients;
-}
-
-async function statesOf(recipients: { id: string }[]) {
-  const emails = await Promise.all(recipients.map(emailsOf));
-  return emails.flat().map((email) => email.state);
 }
 
 function fromAnotherConnection<T>(write: (tx: Transaction) => Promise<T>) {
@@ -171,32 +87,6 @@ async function dropCheckQueriesOfOnePass() {
   } finally {
     execute.mockRestore();
   }
-}
-
-function logLines(log: { mock: { calls: unknown[][] } }) {
-  return log.mock.calls.map(([line]) => JSON.parse(String(line)));
-}
-
-function workerLines(log: { mock: { calls: unknown[][] } }) {
-  return logLines(log).filter((line) => line.event === "metrics");
-}
-
-async function emptyQueue() {
-  await db.delete(notificationDeliveries).where(eq(notificationDeliveries.state, "pending"));
-}
-
-async function onePass() {
-  const stop = new AbortController();
-  stop.abort();
-  await runWorker({ signal: stop.signal });
-}
-
-async function sendFailsFor(deliveryId: string) {
-  const send = notificationSenders.email;
-  vi.spyOn(notificationSenders, "email").mockImplementation(async (...args) => {
-    if (args[2] === deliveryId) throw new Error("provider down");
-    return send(...args);
-  });
 }
 
 async function stateChangesOf(member: { id: string }) {
@@ -329,7 +219,7 @@ it("REQ-045: a notification already dropped isn't sent by a later delivery", asy
   ]);
 });
 
-it("STD-6, REQ-053: each failed attempt records its retry time; the last records failed with its time, and nothing more is sent; a failed send is sendEmail's to log, so the worker logs no delivery-failed line", async () => {
+it("STD-6, REQ-053: each failed attempt records its retry time; the last records failed with its time, and nothing more is sent; a failed send is sendEmail's to log, so the run logs no delivery-failed line", async () => {
   const alex = await createMember();
   const sam = await createMember();
   const { issueRef } = await website();
@@ -450,7 +340,7 @@ it("OPS-007.6, §1.4: an unexpected error in one delivery logs one delivery-fail
   const lines = loggedErrors();
   expect(lines).toEqual([
     expect.objectContaining({
-      source: "worker",
+      source: "outbox",
       event: "delivery-failed",
       deliveryId: samEmail.id,
       channel: "email",
@@ -458,22 +348,6 @@ it("OPS-007.6, §1.4: an unexpected error in one delivery logs one delivery-fail
     }),
   ]);
   expect(JSON.stringify(lines)).not.toContain(sam.email);
-});
-
-it("§1.4: a full batch is followed at once by another pass", async () => {
-  const recipients = await dueMentionsFor(11);
-  const stop = new AbortController();
-
-  const running = runWorker({ signal: stop.signal });
-  try {
-    await vi.waitFor(async () => expect(await statesOf(recipients)).toEqual(Array(11).fill("sent")), {
-      timeout: 2_000,
-      interval: 50,
-    });
-  } finally {
-    stop.abort();
-    await running;
-  }
 });
 
 it("§1.4: no transaction is open while the sender runs", async () => {
@@ -522,49 +396,6 @@ it("§1.4: a pass whose lease was taken over doesn't overwrite the newer pass's 
   expect(await emailsOf(sam)).toEqual([expect.objectContaining({ state: "pending", attempts: 0 })]);
 });
 
-it("§1.4: on SIGTERM the worker finishes the deliveries it claimed and claims no more", async () => {
-  const recipients = await dueMentionsFor(11);
-  const stop = new AbortController();
-  const send = notificationSenders.email;
-  vi.spyOn(notificationSenders, "email").mockImplementationOnce(async (...args) => {
-    stop.abort();
-    return send(...args);
-  });
-
-  await runWorker({ signal: stop.signal });
-
-  const states = await statesOf(recipients);
-  expect(states.filter((state) => state === "sent")).toHaveLength(10);
-  expect(states.filter((state) => state === "pending")).toHaveLength(1);
-});
-
-it("§1.4: an error outside any delivery logs pass-failed and the worker keeps running", async () => {
-  const connectionRefused = Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:5432"), {
-    code: "ECONNREFUSED",
-  });
-  const claim = vi.spyOn(db, "transaction").mockRejectedValueOnce(connectionRefused);
-  const loggedErrors = spyOnLoggedErrors();
-  const stop = new AbortController();
-
-  const outcome = runWorker({ signal: stop.signal }).then(
-    () => "stopped",
-    (error: Error) => error.message,
-  );
-  await vi.waitFor(() => expect(claim).toHaveBeenCalled());
-  stop.abort();
-
-  expect(await outcome).toBe("stopped");
-  expect(loggedErrors()).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        source: "worker",
-        event: "pass-failed",
-        error: expect.objectContaining({ code: "ECONNREFUSED" }),
-      }),
-    ]),
-  );
-});
-
 it("REQ-045: a pass of 10 deliveries runs as many drop-check queries as a pass of 1", async () => {
   await sendAllDue();
   const one = await dueMentionsFor(1);
@@ -574,89 +405,4 @@ it("REQ-045: a pass of 10 deliveries runs as many drop-check queries as a pass o
 
   expect(queriesForTen).toBe(queriesForOne);
   expect(await statesOf([...one, ...ten])).toEqual(Array(11).fill("sent"));
-});
-
-it("OPS-005: every pass records the worker heartbeat with now()", async () => {
-  await db
-    .insert(workerHeartbeats)
-    .values({ name: "worker", lastPassAt: sql`now() - interval '5 minutes'` })
-    .onConflictDoUpdate({
-      target: workerHeartbeats.name,
-      set: { lastPassAt: sql`now() - interval '5 minutes'` },
-    });
-
-  await onePass();
-
-  const [heartbeat] = await db
-    .select({ ageSeconds: sql<number>`extract(epoch from now() - ${workerHeartbeats.lastPassAt})::float` })
-    .from(workerHeartbeats)
-    .where(eq(workerHeartbeats.name, "worker"));
-  expect(heartbeat.ageSeconds).toBeLessThan(5);
-});
-
-it("§1.4: the metrics line holds the queue and delivery counts, and no recipient or text", async () => {
-  await emptyQueue();
-  const alex = await createMember();
-  const [sam, jo, kim, lee, mia] = await Promise.all(Array.from({ length: 5 }, () => createMember()));
-  const issueRefs = await Promise.all(Array.from({ length: 5 }, async () => (await website()).issueRef));
-  for (const [index, recipient] of [sam, jo, kim, lee, mia].entries())
-    await assign(issueRefs[index], alex, recipient);
-  await db.update(members).set({ deactivatedAt: sql`now()` }).where(eq(members.id, jo.id));
-  for (const recipient of [sam, jo, kim, mia]) await waitIsOver(recipient);
-  const [kimEmail] = await emailsOf(kim);
-  await db
-    .update(notificationDeliveries)
-    .set({ attempts: 3 })
-    .where(eq(notificationDeliveries.id, kimEmail.id));
-  await sendFailsFor(kimEmail.id);
-  await db
-    .update(notificationBatches)
-    .set({ sendAfter: sql`now() - interval '3 minutes'` })
-    .where(eq(notificationBatches.recipientId, mia.id));
-  await leaseEndsIn(mia, "1 minute");
-  const log = vi.spyOn(console, "error").mockImplementation(() => {});
-
-  await onePass();
-
-  const lines = workerLines(log);
-  expect(lines).toEqual([
-    {
-      level: "info",
-      time: expect.any(String),
-      source: "worker",
-      event: "metrics",
-      pending: 2,
-      due: 1,
-      oldestDueSeconds: expect.any(Number),
-      sent: 1,
-      failed: 1,
-      dropped: 1,
-    },
-  ]);
-  expect(lines[0].oldestDueSeconds).toBeGreaterThanOrEqual(180);
-  expect(lines[0].oldestDueSeconds).toBeLessThan(190);
-  const text = JSON.stringify(lines);
-  for (const member of [sam, jo, kim, lee, mia]) {
-    expect(text).not.toContain(member.email);
-    expect(text).not.toContain(member.username);
-  }
-  expect(text).not.toContain("Fix login button");
-});
-
-it("§1.4: the metrics line is written at most once a minute", async () => {
-  await emptyQueue();
-  await dueMentionsFor(25);
-  const stop = new AbortController();
-  const send = notificationSenders.email;
-  let sends = 0;
-  vi.spyOn(notificationSenders, "email").mockImplementation(async (...args) => {
-    if (++sends === 25) stop.abort();
-    return send(...args);
-  });
-  const log = vi.spyOn(console, "error").mockImplementation(() => {});
-
-  await runWorker({ signal: stop.signal });
-
-  expect(sends).toBe(25);
-  expect(workerLines(log)).toHaveLength(1);
 });

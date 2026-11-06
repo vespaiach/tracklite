@@ -85,6 +85,20 @@
       "when": 1793316257288,
       "tag": "0011_client_error_reports",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793937940745,
+      "tag": "0012_outbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793937946639,
+      "tag": "0013_drop_worker_heartbeats",
+      "breakpoints": true
     }
   ]
 }

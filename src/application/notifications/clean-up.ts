@@ -3,10 +3,17 @@ import type { DeliveryRepository } from "../../domain/notifications/delivery-rep
 export type CleanUpServices = {
   deleteExpiredAccountRows(): Promise<void>;
   deliveries: DeliveryRepository;
+  deletePublishedEvents(): Promise<void>;
 };
 
-export async function cleanUp({ deleteExpiredAccountRows, deliveries }: CleanUpServices) {
+export async function cleanUp({
+  deleteExpiredAccountRows,
+  deliveries,
+  deletePublishedEvents,
+}: CleanUpServices) {
   await deleteExpiredAccountRows();
 
   await deliveries.deleteFinishedBatches();
+
+  await deletePublishedEvents();
 }

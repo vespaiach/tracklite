@@ -113,7 +113,7 @@ function StatsReport({ stats }: { stats: NotificationStats }) {
 }
 
 function WorkerFacts({ stats }: { stats: NotificationStats }) {
-  const lastPassAt = stats.workerLastPassAt;
+  const lastPassAt = stats.outboxLastRunAt;
   const warning = workerWarning(stats);
 
   return (
@@ -132,12 +132,12 @@ function WorkerFacts({ stats }: { stats: NotificationStats }) {
   );
 }
 
-function workerWarning({ workerLastPassAt, workerStaleMinutes }: NotificationStats) {
-  if (!workerLastPassAt) return "The worker has never run. No notifications are sent until it does.";
-  if (workerStaleMinutes != null) {
+function workerWarning({ outboxLastRunAt, outboxStaleMinutes }: NotificationStats) {
+  if (!outboxLastRunAt) return "The outbox has never run. No notifications are sent until it does.";
+  if (outboxStaleMinutes != null) {
     return (
       <>
-        No pass for <Mono>{workerStaleMinutes}</Mono> min. Notifications wait in the queue until the worker
+        No outbox run for <Mono>{outboxStaleMinutes}</Mono> min. Notifications wait in the queue until it
         runs.
       </>
     );
