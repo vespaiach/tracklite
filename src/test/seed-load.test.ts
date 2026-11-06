@@ -2,7 +2,12 @@ import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { comments } from "../server/comments";
 import { members } from "../server/identity";
-import { createIssue, issueAssignees, issues } from "../server/issues";
+import { createIssue } from "../application/issues/create-issue";
+import { IssueStatus } from "../domain/issues/issue-status";
+import { IssueTitle } from "../domain/issues/issue-title";
+import { issueWork } from "../infrastructure/issues/issue-work";
+import { issueAssignees, issues } from "../infrastructure/issues/tables";
+import { updatedIssue } from "../queries";
 import { projectKeys, projects } from "../server/projects";
 import { db } from "../infrastructure/db";
 import { newRequestId } from "./factories";
@@ -63,14 +68,14 @@ it("NFR-001: an issue created after seeding gets the next number", async () => {
     .from(issues)
     .where(eq(issues.projectId, project.id));
 
-  const { issue } = await createIssue(member, ProjectKey.from(project.key), {
+  const { issueId } = await createIssue(member, issueWork, ProjectKey.from(project.key), {
     requestId: newRequestId(),
-    title: "After seeding",
-    status: "backlog",
+    title: IssueTitle.from("After seeding"),
+    status: IssueStatus.from("backlog"),
     assignees: [],
   });
 
-  expect(issue.id).toBe(`${project.key}-${highest + 1}`);
+  expect((await updatedIssue(db, issueId)).id).toBe(`${project.key}-${highest + 1}`);
 });
 
 it("NFR-001: running twice adds nothing", async () => {

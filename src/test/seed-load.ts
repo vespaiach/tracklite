@@ -5,7 +5,7 @@ import { generateNKeysBetween } from "fractional-indexing";
 import { issuePriorities, issueStatuses } from "../contract";
 import { comments } from "../server/comments";
 import { members, seedMembers } from "../server/identity";
-import { issueAssignees, issues } from "../server/issues";
+import { issueAssignees, issues } from "../infrastructure/issues/tables";
 import { projectKeys, projects } from "../server/projects";
 import { db } from "../infrastructure/db";
 import type { Transaction } from "../infrastructure/transaction";

@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../../../infrastructure/db";
-import { issues } from "../../../../../server/issues";
+import { issues } from "../../../../../infrastructure/issues/tables";
 import { createSession } from "../../../../../server/identity";
 import { createIssue, createLabel, createMember, createProject } from "../../../../../test/factories";
 import { GET } from "./route";

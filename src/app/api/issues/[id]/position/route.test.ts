@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../../../infrastructure/db";
-import { issues } from "../../../../../server/issues";
+import { issues } from "../../../../../infrastructure/issues/tables";
 import type { issueStatus } from "../../../../../infrastructure/schema";
 import { createSession } from "../../../../../server/identity";
 import { createIssue, createMember, createProject } from "../../../../../test/factories";

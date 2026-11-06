@@ -8,7 +8,7 @@ import { logError, logInfo } from "../../../infrastructure/log";
 import { notificationSenders, type Recipient } from "../notification-channels";
 import { afterFailure, assignmentKey, checkedMessage, mentionKey } from "../model";
 import { dueAt, queueCounts } from "../notification-queue";
-import { issueAssignees, issues } from "../../issues";
+import { issueAssignees, issues } from "../../../infrastructure/issues/tables";
 import { members } from "../../identity";
 import {
   mentions,

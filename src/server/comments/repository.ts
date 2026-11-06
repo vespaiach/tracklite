@@ -2,7 +2,7 @@ import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { DomainError } from "../../domain/shared/domain-error";
 import type { Executor, Transaction } from "../../infrastructure/transaction";
-import { issues } from "../issues";
+import { issues } from "../../infrastructure/issues/tables";
 import { projects, writableProject } from "../projects";
 import { findComments } from "../../queries";
 import { comments } from "../../infrastructure/comments/tables";

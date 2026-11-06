@@ -1,41 +1,51 @@
 import "server-only";
 import { and, asc, desc, eq, gt, inArray, ne, type SQL, sql } from "drizzle-orm";
-import type { Transaction } from "../../infrastructure/transaction";
-import { members } from "../identity";
-import { labels, projects, writableProject } from "../projects";
-import type { IssueStatus } from "../../contract";
-import { issueAssignees, issueLabels, issues } from "../../infrastructure/issues/tables";
-import type { IssueMove } from "./schemas";
+import { assigneeChange, type Issue, type IssueProps, type Neighbours } from "../../domain/issues/issue";
+import type { IssueRepository, Place } from "../../domain/issues/issue-repository";
+import type { IssueStatus } from "../../domain/issues/issue-status";
+import { type IssueId, ProjectKey, type RequestId } from "../../domain/shared/identifiers";
 import { byIssueId, issueGone } from "../../queries";
-import { type AssigneeCandidate, assigneeChange, type Issue, type Neighbours } from "./model";
-import { type IssueId, ProjectKey, tryFrom, type Username, Uuid } from "../../domain/shared/identifiers";
+import { takeIssueNumber, writableProject } from "../../server/projects";
+import { projects } from "../projects/tables";
+import type { Transaction } from "../transaction";
+import type { TransactionScope } from "../unit-of-work";
+import { toIssue, toRow } from "./issue-mapper";
+import { issueAssignees, issueLabels, issues } from "./tables";
 
-type IssueRows = {
-  row: typeof issues.$inferSelect;
-  assignees: { memberId: string }[];
-  labels: { labelId: string }[];
-};
+export function drizzleIssueRepository({ tx, saved }: TransactionScope): IssueRepository {
+  const loaded = new WeakMap<Issue, Readonly<IssueProps>>();
 
-export function toIssue({ row, assignees, labels }: IssueRows): Issue {
   return {
-    id: row.id,
-    projectId: row.projectId,
-    number: row.number,
-    requestId: row.requestId,
-    title: row.title,
-    description: row.description,
-    descriptionVersion: row.descriptionVersion,
-    descriptionEditedBy: row.descriptionEditedBy,
-    status: row.status,
-    priority: row.priority,
-    position: row.position,
-    createdBy: row.createdBy,
-    assigneeIds: assignees.map((assignee) => assignee.memberId),
-    labelIds: labels.map((label) => label.labelId),
+    async get(id) {
+      const issue = await loadIssue(tx, id);
+      loaded.set(issue, issue.props);
+      return issue;
+    },
+
+    idForRequest: (requestId) => idForRequest(tx, requestId),
+
+    nextNumber: (projectId) => takeIssueNumber(tx, projectId),
+
+    firstPositionIn: (projectId, status) => firstPositionIn(tx, projectId, status),
+
+    neighboursAt: (issue, status, place) => neighboursAt(tx, issue.props, status, place),
+
+    async save(issue) {
+      const before = loaded.get(issue);
+      if (before) await updateIssue(tx, before, issue.props);
+      else await insertIssue(tx, issue.props);
+
+      loaded.set(issue, issue.props);
+      saved(issue);
+    },
+
+    async remove(issue) {
+      await tx.delete(issues).where(eq(issues.id, issue.props.id));
+    },
   };
 }
 
-export async function loadIssue(tx: Transaction, id: IssueId | undefined) {
+async function loadIssue(tx: Transaction, id: IssueId | undefined) {
   const where = byIssueId(id);
   if (!where) throw issueGone();
 
@@ -51,7 +61,11 @@ export async function loadIssue(tx: Transaction, id: IssueId | undefined) {
     .from(issueLabels)
     .where(eq(issueLabels.issueId, row.id));
 
-  return toIssue({ row, assignees, labels: labelRows });
+  return toIssue({
+    row,
+    assigneeIds: assignees.map((assignee) => assignee.memberId),
+    labelIds: labelRows.map((label) => label.labelId),
+  });
 }
 
 async function lockedRow(tx: Transaction, where: SQL) {
@@ -69,9 +83,23 @@ async function lockedRow(tx: Transaction, where: SQL) {
   return row;
 }
 
-export async function saveIssue(tx: Transaction, before: Issue | null, after: Issue) {
-  if (!before) return insertIssue(tx, after);
+async function idForRequest(tx: Transaction, requestId: RequestId) {
+  const [repeated] = await tx
+    .select({ id: issues.id })
+    .from(issues)
+    .where(eq(issues.requestId, requestId.value));
+  return repeated?.id;
+}
 
+async function insertIssue(tx: Transaction, issue: IssueProps) {
+  await tx.insert(issues).values(toRow(issue));
+
+  await insertAssignees(tx, issue.id, issue.assigneeIds);
+
+  await insertLabels(tx, issue.id, issue.labelIds);
+}
+
+async function updateIssue(tx: Transaction, before: IssueProps, after: IssueProps) {
   const assignees = assigneeChange(before.assigneeIds, after.assigneeIds);
   const removedLabels = before.labelIds.filter((labelId) => !after.labelIds.includes(labelId));
   const addedLabels = after.labelIds.filter((labelId) => !before.labelIds.includes(labelId));
@@ -96,17 +124,8 @@ export async function saveIssue(tx: Transaction, before: Issue | null, after: Is
   await insertLabels(tx, after.id, addedLabels);
 }
 
-async function insertIssue(tx: Transaction, issue: Issue) {
-  const { assigneeIds, labelIds, ...row } = issue;
-  await tx.insert(issues).values(row);
-
-  await insertAssignees(tx, issue.id, assigneeIds);
-
-  await insertLabels(tx, issue.id, labelIds);
-}
-
-async function updateRow(tx: Transaction, before: Issue, after: Issue, partsChanged: boolean) {
-  const fields = changedFields(before, after);
+async function updateRow(tx: Transaction, before: IssueProps, after: IssueProps, partsChanged: boolean) {
+  const fields = changedFields(toRow(before), toRow(after));
   if (Object.keys(fields).length === 0 && !partsChanged) return;
 
   const touched = partsChanged || Object.keys(fields).some((field) => field !== "position");
@@ -115,13 +134,13 @@ async function updateRow(tx: Transaction, before: Issue, after: Issue, partsChan
     .update(issues)
     .set({
       ...fields,
-      ...(before.status !== after.status ? { statusChangedAt: sql`now()` } : {}),
+      ...("status" in fields ? { statusChangedAt: sql`now()` } : {}),
       ...(touched ? { updatedAt: sql`now()` } : {}),
     })
     .where(eq(issues.id, after.id));
 }
 
-function changedFields(before: Issue, after: Issue) {
+function changedFields(before: ReturnType<typeof toRow>, after: ReturnType<typeof toRow>) {
   const columns = [
     "title",
     "description",
@@ -146,61 +165,25 @@ async function insertLabels(tx: Transaction, issueId: string, labelIds: readonly
   await tx.insert(issueLabels).values(labelIds.map((labelId) => ({ issueId, labelId })));
 }
 
-export async function deleteIssueRow(tx: Transaction, issue: Issue) {
-  await tx.delete(issues).where(eq(issues.id, issue.id));
-}
-
-export async function assigneeCandidates(
-  tx: Transaction,
-  usernames: Username[],
-): Promise<AssigneeCandidate[]> {
-  if (usernames.length === 0) return [];
-  const rows = await tx
-    .select({ id: members.id, username: members.username, deactivatedAt: members.deactivatedAt })
-    .from(members)
-    .where(
-      inArray(
-        members.username,
-        usernames.map((username) => username.value),
-      ),
-    );
-  return rows.map(({ id, username, deactivatedAt }) => ({
-    id,
-    username,
-    deactivated: deactivatedAt !== null,
-  }));
-}
-
-export async function projectLabelIds(tx: Transaction, projectId: string, labelIds: string[]) {
-  const validIds = labelIds.filter((labelId) => tryFrom(Uuid, labelId));
-  if (validIds.length === 0) return [];
-  const found = await tx
-    .select({ id: labels.id })
-    .from(labels)
-    .where(and(inArray(labels.id, validIds), eq(labels.projectId, projectId)))
-    .for("share");
-  return found.map((label) => label.id);
-}
-
-export async function firstPositionIn(tx: Transaction, projectId: string, status: IssueStatus) {
+async function firstPositionIn(tx: Transaction, projectId: string, status: IssueStatus) {
   const [first] = await tx
     .select({ position: issues.position })
     .from(issues)
-    .where(and(eq(issues.projectId, projectId), eq(issues.status, status)))
+    .where(and(eq(issues.projectId, projectId), eq(issues.status, status.value)))
     .orderBy(asc(issues.position), asc(issues.id))
     .limit(1);
   return first?.position ?? null;
 }
 
-export async function neighboursAt(
+async function neighboursAt(
   tx: Transaction,
-  issue: Issue,
+  issue: IssueProps,
   status: IssueStatus,
-  place: IssueMove["place"],
+  place: Place,
 ): Promise<Neighbours> {
   const otherCards = and(
     eq(issues.projectId, issue.projectId),
-    eq(issues.status, status),
+    eq(issues.status, status.value),
     ne(issues.id, issue.id),
   );
 
