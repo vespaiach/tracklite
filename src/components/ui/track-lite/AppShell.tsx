@@ -1,5 +1,6 @@
 import type { CSSProperties, HTMLAttributes, MouseEvent, ReactNode, Ref } from "react";
 import { cx } from "./cx";
+import { Link } from "../../leave-guard";
 
 export type AppShellProps = {
   collapsed?: boolean;
@@ -114,12 +115,12 @@ export function RailItem({
     className: cx("tl-rail-item", className),
   };
   return href ? (
-    <a
+    <Link
       ref={ref as Ref<HTMLAnchorElement>}
       href={href}
       {...shared}>
       {content}
-    </a>
+    </Link>
   ) : (
     <button
       ref={ref as Ref<HTMLButtonElement>}

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createSession, sessionCookieName } from "../../infrastructure/identity/session";
+import { signedInWith } from "../../test/actions";
 import { createMember } from "../../test/factories";
 import { setNextRequest, writtenCookies } from "../../test/next-request";
-import { GET as getMe } from "../api/me/route";
 import { signOut } from "./actions";
 
 beforeEach(() => {
@@ -13,11 +13,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function meStatus(token: string) {
-  const response = await getMe(
-    new Request("http://localhost:3000/api/me", { headers: { Cookie: `session=${token}` } }),
-  );
-  return response.status;
+function signedInBy(token: string) {
+  return signedInWith(`session=${token}`);
 }
 
 it("REQ-006, REQ-050.8, REQ-002.3: signing out ends the session on this browser only and clears the cookie, also without a session", async () => {
@@ -31,8 +28,8 @@ it("REQ-006, REQ-050.8, REQ-002.3: signing out ends the session on this browser 
   expect(writtenCookies()).toEqual([
     { name: sessionCookieName(), value: "", options: expect.objectContaining({ maxAge: 0 }) },
   ]);
-  expect(await meStatus(laptop)).toBe(401);
-  expect(await meStatus(phone)).toBe(200);
+  expect(await signedInBy(laptop)).toBeUndefined();
+  expect(await signedInBy(phone)).toMatchObject({ id: sam.id });
 
   setNextRequest({});
   expect(await signOut({})).toEqual({ ok: true, data: null });

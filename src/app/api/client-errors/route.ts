@@ -5,7 +5,7 @@ import { signedInMember } from "../../../infrastructure/identity/session";
 import { apiRoute } from "../_route";
 import { ClientErrorReport } from "../../_server/schemas/identity";
 
-export const POST = apiRoute("public", ClientErrorReport, async (request, report, nameActor) => {
+export const POST = apiRoute(ClientErrorReport, async (request, report, nameActor) => {
   const member = await signedInMember(request);
   if (member) nameActor(member.username);
 

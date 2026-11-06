@@ -1,4 +1,5 @@
 import { type MouseEvent, type ReactNode, useId } from "react";
+import { Link } from "../../leave-guard";
 
 export function DetailsLayout({ children }: { children: ReactNode }) {
   return (
@@ -46,7 +47,7 @@ export type CountRowProps = {
 
 export function CountRow({ href, label, icon, name, count, onClick }: CountRowProps) {
   return (
-    <a
+    <Link
       href={href}
       aria-label={label}
       onClick={onClick}
@@ -54,7 +55,7 @@ export function CountRow({ href, label, icon, name, count, onClick }: CountRowPr
       <span aria-hidden="true">{icon}</span>
       <span>{name}</span>
       <span className="tl-count-row__count">{count}</span>
-    </a>
+    </Link>
   );
 }
 

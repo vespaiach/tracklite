@@ -1,7 +1,6 @@
-import { useContext, useEffect, useState } from "react";
-import { useRouteError } from "react-router";
+import { useEffect, useState } from "react";
 import { Button } from "../components/ui/track-lite";
-import { ErrorReporterContext, type ReportError } from "./error-reporter";
+import type { ReportError } from "./error-reporter";
 
 const countdownSeconds = 60;
 const crashWindow = 10 * 60 * 1000;
@@ -38,15 +37,6 @@ export function CrashScreen({ error, report, reload = reloadPage }: CrashScreenP
         </Button>
       </p>
     </main>
-  );
-}
-
-export function RouteCrashScreen() {
-  return (
-    <CrashScreen
-      error={useRouteError()}
-      report={useContext(ErrorReporterContext)}
-    />
   );
 }
 

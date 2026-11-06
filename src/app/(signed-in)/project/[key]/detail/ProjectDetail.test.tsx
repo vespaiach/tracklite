@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { type ReactNode, startTransition, useState } from "react";
+import { type ComponentProps, type ReactNode, startTransition, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { Link } from "../../../../../components/leave-guard";
 import { ToastProvider } from "../../../../../components/toast";
@@ -14,12 +14,14 @@ vi.mock("next/link", () => ({
     href,
     onNavigate,
     children,
-  }: {
+    ...props
+  }: ComponentProps<"a"> & {
     href: string;
     onNavigate: (event: { preventDefault: () => void }) => void;
     children: ReactNode;
   }) => (
     <a
+      {...props}
       href={href}
       onClick={(event) => {
         event.preventDefault();

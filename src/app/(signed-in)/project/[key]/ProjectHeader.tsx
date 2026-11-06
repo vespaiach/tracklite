@@ -19,14 +19,14 @@ export function ProjectHeader({ project, admin, issue, ...newIssue }: ProjectHea
   const base = `/project/${project.key}`;
   const title = `${project.name} · ${project.key}`;
   const details = (
-    <a
+    <Link
       href={`${base}/detail`}
       aria-label="Project details"
       title="Project details"
       aria-current={view === "detail" ? "page" : undefined}
       className="tl-btn tl-btn--sm tl-btn--quiet tl-btn--icon">
       <BookOpen size={16} />
-    </a>
+    </Link>
   );
 
   if (view === "settings") return null;
@@ -36,12 +36,12 @@ export function ProjectHeader({ project, admin, issue, ...newIssue }: ProjectHea
       end={
         <>
           {admin && (
-            <a
+            <Link
               href={`${base}/settings`}
               aria-label="Project settings"
               className="tl-btn tl-btn--sm tl-btn--quiet tl-btn--icon">
               <Settings size={15} />
-            </a>
+            </Link>
           )}
           {!project.archivedAt && (
             <NewIssueButton

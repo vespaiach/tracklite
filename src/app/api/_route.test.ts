@@ -1,12 +1,8 @@
-import { eq } from "drizzle-orm";
 import * as v from "valibot";
 import { afterEach, beforeEach, expect, it, type MockInstance, vi } from "vitest";
 import { createMember } from "../../test/factories";
 import { apiRoute } from "./_route";
-import { db } from "../../infrastructure/db";
 import { DomainError, type DomainErrorKind } from "../../domain/shared/domain-error";
-import { createSession } from "../../infrastructure/identity/session";
-import { members } from "../../infrastructure/identity/tables";
 
 const appOrigin = "http://localhost:3000";
 let log: MockInstance<typeof console.error>;
@@ -27,7 +23,7 @@ const ok = () => new Response(null, { status: 204 });
 
 it("SEC-004.1, SEC-004: a cross-site write, or one with neither Origin nor a same-origin Sec-Fetch-Site, gets 403 before the body is read, and the handler never runs", async () => {
   const handler = vi.fn(ok);
-  const route = apiRoute("public", handler);
+  const route = apiRoute(handler);
   const crossSiteDelete = await route(
     new Request(`${appOrigin}/api/issues/WEB-42`, {
       method: "DELETE",
@@ -46,7 +42,6 @@ it("SEC-004.1, SEC-004: a cross-site write, or one with neither Origin nor a sam
     ),
     await route(new Request(`${appOrigin}/api/issues`, { method: "PATCH" })),
     await apiRoute(
-      "public",
       NewThing,
       handler,
     )(
@@ -64,7 +59,7 @@ it("SEC-004.1, SEC-004: a cross-site write, or one with neither Origin nor a sam
 
 it("SEC-004: a write whose Origin matches APP_URL, a write with Sec-Fetch-Site same-origin, and a cross-site GET reach the handler", async () => {
   const handler = vi.fn(ok);
-  const route = apiRoute("public", handler);
+  const route = apiRoute(handler);
 
   const responses = [
     await route(new Request(`${appOrigin}/api/issues`, { method: "PUT", headers: { Origin: appOrigin } })),
@@ -97,7 +92,7 @@ it("STD-2, STD-3: each DomainError kind maps to its status and { error: { messag
     unavailable: 503,
   } as const;
   const throwing = (error: DomainError) =>
-    apiRoute("public", () => {
+    apiRoute(() => {
       throw error;
     })(new Request(`${appOrigin}/api/issues`));
 
@@ -115,7 +110,7 @@ it("STD-2, STD-3: each DomainError kind maps to its status and { error: { messag
 });
 
 it("§4.8: any other thrown error maps to 500 with a generic message, logged once as route/request-failed and once as the info request line", async () => {
-  const response = await apiRoute("public", () => {
+  const response = await apiRoute(() => {
     throw new TypeError("column does not exist");
   })(new Request(`${appOrigin}/api/issues`));
 
@@ -135,10 +130,7 @@ it("§4.8: any other thrown error maps to 500 with a generic message, logged onc
 });
 
 it("SEC-007: each request writes one log line of exactly method, path, status, duration and time, leaving out the query string, body, headers and cookies", async () => {
-  await apiRoute(
-    "public",
-    ok,
-  )(
+  await apiRoute(ok)(
     new Request(`${appOrigin}/api/password-resets?token=query-secret`, {
       method: "POST",
       headers: {
@@ -181,7 +173,7 @@ it("SEC-007: a failed database query's 500 log line has no query values", async 
   const secret = `secret-${Date.now()}@example.test`;
   await createMember({ email: secret });
 
-  await apiRoute("public", async () => {
+  await apiRoute(async () => {
     await createMember({ email: secret });
     return ok();
   })(new Request(`${appOrigin}/api/issues`));
@@ -191,39 +183,21 @@ it("SEC-007: a failed database query's 500 log line has no query values", async 
   expect(JSON.parse(lines[0]).error).toMatchObject({ message: "query failed", cause: { code: "23505" } });
 });
 
-async function signedInRequest(role: "admin" | "member", body?: unknown) {
-  const member = await createMember({ role });
-  const token = await createSession(member.id);
-  const request = new Request(`${appOrigin}/api/projects/WEB`, {
-    method: "DELETE",
-    headers: { Origin: appOrigin, Cookie: `session=${token}` },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  return { member, token, request };
-}
-
-it("REQ-052: the handler gets the member's role as stored now, not as at sign-in", async () => {
-  const handler = vi.fn(ok);
-  const { member, request } = await signedInRequest("admin");
-  await db.update(members).set({ role: "member" }).where(eq(members.id, member.id));
-  const response = await apiRoute("member", handler)(request);
-  expect(response.status).toBe(204);
-  expect(handler).toHaveBeenCalledWith(request, expect.objectContaining({ id: member.id, role: "member" }));
-});
-
-it("SEC-007: a signed-in request's log line names the actor by username only; a signed-out request's 401 has no actor", async () => {
-  const { member, token, request } = await signedInRequest("member");
-  await apiRoute("member", ok)(request);
+it("SEC-007: a request whose handler names its actor logs the username only; one that names nobody has no actor", async () => {
+  const sam = await createMember();
+  await apiRoute((_request, nameActor) => {
+    nameActor(sam.username);
+    return ok();
+  })(new Request(`${appOrigin}/api/things`));
   const [line] = log.mock.calls.map(([raw]) => raw as string);
-  expect(JSON.parse(line).actor).toBe(member.username);
-  for (const secret of [member.id, member.email, member.fullName, token]) {
+  expect(JSON.parse(line).actor).toBe(sam.username);
+  for (const secret of [sam.id, sam.email, sam.fullName]) {
     expect(line).not.toContain(secret);
   }
 
   log.mockClear();
-  const response = await apiRoute("member", ok)(new Request(`${appOrigin}/api/projects`));
+  await apiRoute(ok)(new Request(`${appOrigin}/api/things`));
 
-  expect(response.status).toBe(401);
   expect(loggedLines()).toEqual([expect.not.objectContaining({ actor: expect.anything() })]);
 });
 
@@ -249,7 +223,7 @@ function postWith(body: string) {
 it("a body that isn't valid JSON, or JSON that isn't an object, gets 422 \"Couldn’t read the request.\" with no fields", async () => {
   const handler = vi.fn(ok);
   for (const body of ["{ name: ", "[]", "null", '"text"']) {
-    const response = await apiRoute("public", NewThing, handler)(postWith(body));
+    const response = await apiRoute(NewThing, handler)(postWith(body));
     expect(response.status).toBe(422);
     expect(await response.json()).toEqual({ error: { message: "Couldn’t read the request." } });
   }
@@ -263,18 +237,13 @@ it("STD-3, SEC-007: a schema failure gets 422 with the first message for each fa
     v.check((body) => Object.keys(body).length === 1, "Change one field at a time"),
   );
 
-  const fieldFailure = await apiRoute(
-    "public",
-    NewThing,
-    handler,
-  )(postWith(JSON.stringify({ name: "  ", key: "1" })));
+  const fieldFailure = await apiRoute(NewThing, handler)(postWith(JSON.stringify({ name: "  ", key: "1" })));
   const wholeBodyFailure = await apiRoute(
-    "public",
     OneChange,
     handler,
   )(postWith(JSON.stringify({ title: "New", priority: "high" })));
   log.mockClear();
-  await apiRoute("public", NewThing, ok)(postWith(JSON.stringify({ name: "body-secret", key: "1" })));
+  await apiRoute(NewThing, ok)(postWith(JSON.stringify({ name: "body-secret", key: "1" })));
 
   expect(fieldFailure.status).toBe(422);
   expect(await fieldFailure.json()).toEqual({
@@ -294,20 +263,13 @@ it("STD-3, SEC-007: a schema failure gets 422 with the first message for each fa
 it("the handler receives the schema's output", async () => {
   const handler = vi.fn(ok);
   const request = postWith(JSON.stringify({ name: "  Website ", key: "web", extra: "dropped" }));
-  const response = await apiRoute("public", NewThing, handler)(request);
+  const response = await apiRoute(NewThing, handler)(request);
   expect(response.status).toBe(204);
   expect(handler).toHaveBeenCalledWith(request, { name: "Website", key: "WEB" }, expect.any(Function));
 });
 
-it("STD-1: a signed-out request with an invalid body gets 401", async () => {
-  const handler = vi.fn(ok);
-  const response = await apiRoute("member", NewThing, handler)(postWith(JSON.stringify({ name: "" })));
-  expect(response.status).toBe(401);
-  expect(handler).not.toHaveBeenCalled();
-});
-
 it("a route without a schema can still read the body itself", async () => {
-  const response = await apiRoute("public", async (request) => Response.json(await request.json()))(
+  const response = await apiRoute(async (request) => Response.json(await request.json()))(
     postWith(JSON.stringify({ name: "Website" })),
   );
   expect(await response.json()).toEqual({ name: "Website" });

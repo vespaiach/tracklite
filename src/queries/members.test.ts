@@ -1,35 +1,20 @@
 import { eq } from "drizzle-orm";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../infrastructure/db";
-import { members } from "../../../infrastructure/identity/tables";
-import { createSession } from "../../../infrastructure/identity/session";
-import { createMember } from "../../../test/factories";
-import { GET } from "./route";
-
-beforeEach(() => {
-  vi.spyOn(console, "error").mockImplementation(() => {});
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+import { expect, it } from "vitest";
+import { db } from "../infrastructure/db";
+import { members } from "../infrastructure/identity/tables";
+import { hashPassword } from "../infrastructure/passwords";
+import { createMember } from "../test/factories";
+import { listMembers, profileResponse } from "./members";
 
 async function listAs(role: "admin" | "member") {
-  const viewer = await createMember({ role });
-  const response = await GET(
-    new Request("http://localhost:3000/api/members", {
-      headers: { Cookie: `session=${await createSession(viewer.id)}` },
-    }),
-  );
-  expect(response.status).toBe(200);
-  return (await response.json()) as { username: string }[];
+  return listMembers(await createMember({ role }));
 }
 
 function rowFor(list: { username: string }[], username: string) {
   return list.find((row) => row.username === username);
 }
 
-it("§3.3, REQ-007.2, REQ-008.2: members get every member, a deactivated one marked and a reactivated one not, without emails or roles", async () => {
+it("REQ-007.2, REQ-008.2: members get every member, a deactivated one marked and a reactivated one not, without emails or roles", async () => {
   const sam = await createMember({ fullName: "Sam Lee", role: "admin" });
   const jo = await createMember({ fullName: "Jo Park", deactivatedAt: new Date() });
   const reactivated = await createMember({ deactivatedAt: new Date() });
@@ -65,4 +50,15 @@ it("REQ-051: admins get every member with email and role", async () => {
     email: sam.email,
     role: "admin",
   });
+});
+
+it("SEC-008.2: a member's profile and the admin's member list contain no password or password hash", async () => {
+  const passwordHash = await hashPassword("correct horse battery");
+  const sam = await createMember({ passwordHash });
+
+  const sent = JSON.stringify([profileResponse(sam), rowFor(await listAs("admin"), sam.username)]);
+
+  expect(sent).not.toContain(passwordHash);
+  expect(sent).not.toContain("$argon2");
+  expect(sent.toLowerCase()).not.toContain("password");
 });

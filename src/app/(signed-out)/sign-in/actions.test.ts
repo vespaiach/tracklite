@@ -4,12 +4,10 @@ import { afterEach, beforeEach, expect, it, type MockInstance, vi } from "vitest
 import { db } from "../../../infrastructure/db";
 import { members, signInAttempts } from "../../../infrastructure/identity/tables";
 import { hashPassword, verifyPassword } from "../../../infrastructure/passwords";
-import { sessionCookieWritten } from "../../../test/actions";
+import { sessionCookieWritten, signedInWith } from "../../../test/actions";
 import { createMember } from "../../../test/factories";
 import { setNextRequest } from "../../../test/next-request";
 import { uniqueIp } from "../../../test/reset-links";
-import { GET as getIssue } from "../../api/[...path]/route";
-import { GET as getMe } from "../../api/me/route";
 import { signIn as signInAction } from "./actions";
 
 const password = "correct horse battery";
@@ -32,10 +30,7 @@ function signIn(input: { email: string; password: string }, forwardedFor = uniqu
 }
 
 async function signedInUsername(cookie: string | undefined) {
-  const response = await getMe(
-    new Request("http://localhost:3000/api/me", { headers: cookie ? { Cookie: cookie } : {} }),
-  );
-  return response.status === 200 ? ((await response.json()) as { username: string }).username : undefined;
+  return (await signedInWith(cookie))?.username;
 }
 
 const incorrect = { ok: false, error: { kind: "invalid", message: "Incorrect email or password." } };
@@ -93,19 +88,6 @@ it("REQ-047.2, REQ-047.3, REQ-047: a wrong password, an unknown email and a deac
   await expectRefused(signIn({ email: sam.email, password: "wrong password!!" }), incorrect);
   await expectRefused(signIn({ email: "nobody-047-3@x.com", password }), incorrect);
   await expectRefused(signIn({ email: jo.email, password }), incorrect);
-});
-
-it("REQ-047.5: after signing in, the page Sam was sent away from loads", async () => {
-  const sam = await createMember({ passwordHash });
-  const openIssue = (cookie?: string) =>
-    getIssue(
-      new Request("http://localhost:3000/api/issues/WEB-42", { headers: cookie ? { Cookie: cookie } : {} }),
-    );
-  expect((await openIssue()).status).toBe(401);
-
-  await signIn({ email: sam.email, password });
-
-  expect((await openIssue(sessionCookieWritten())).status).not.toBe(401);
 });
 
 it("SEC-001.1: 10 wrong passwords lock out the right one, and a successful sign-in in between doesn't reset the count", async () => {

@@ -1,13 +1,12 @@
 import { sql } from "drizzle-orm";
 import * as v from "valibot";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { GET as getMe } from "../../app/api/me/route";
 import { createFirstAdmin as createFirstAdminAction } from "../../app/(signed-out)/welcome/actions";
 import { db } from "../../infrastructure/db";
 import { identityWork } from "../../infrastructure/identity/repositories";
 import { members } from "../../infrastructure/identity/tables";
 import { FirstAdmin } from "../../app/_server/schemas/identity";
-import { outcome, signInAs } from "../../test/actions";
+import { outcome, signedInWith, signInAs } from "../../test/actions";
 import { checkSetupSecret as checkSecret } from "./check-setup-secret";
 import { createFirstAdmin } from "./create-first-admin";
 
@@ -53,10 +52,7 @@ it('OPS-001.1, REQ-003.1: the right secret creates admin "Sam" as "sam", signed 
   expect(await db.select().from(members)).toMatchObject([
     { email: "owner@x.com", fullName: "Sam Lee", username: "sam", role: "admin" },
   ]);
-  const me = await getMe(
-    new Request("http://localhost:3000/api/me", { headers: { Cookie: `session=${sessionToken}` } }),
-  );
-  expect(me.status).toBe(200);
+  expect(await signedInWith(`session=${sessionToken}`)).toMatchObject({ username: "sam" });
   expect(outcome(await signInAs(admin.email, admin.password))).toBe("ok");
 });
 

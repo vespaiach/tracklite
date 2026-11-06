@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { Link, useLeaveGuard } from "./leave-guard";
+import { confirmLeave, Link, useLeaveGuard } from "./leave-guard";
 
 const navigate = vi.fn();
 
@@ -81,4 +81,15 @@ it("REQ-035.4: closing or reloading the tab is held for the browser's prompt onl
   const unguarded = new Event("beforeunload", { cancelable: true });
   window.dispatchEvent(unguarded);
   expect(unguarded.defaultPrevented).toBe(false);
+});
+
+it("REQ-035: once Leave anyway is chosen, the page that loads next isn't held back by the browser's prompt as well", () => {
+  vi.spyOn(window, "confirm").mockReturnValue(true);
+  renderPage("Looks good");
+
+  expect(confirmLeave()).toBe(true);
+
+  const leaving = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(leaving);
+  expect(leaving.defaultPrevented).toBe(false);
 });
