@@ -1,13 +1,17 @@
 import "server-only";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { toPlainText } from "../../../lib/markdown/parse";
-import type { DomainEvent, EventTarget } from "../../shared/events";
-import type { Transaction } from "../../shared/transaction";
+import type { DomainEvent, EventTarget } from "../../../domain/shared/events";
+import type { Transaction } from "../../../infrastructure/transaction";
 import { issues } from "../../issues";
 import { members } from "../../identity";
 import { replaceMentions } from "../descriptions";
-import { notificationBatches, notificationDeliveries, notifications } from "../tables";
-import type { notificationKind } from "../../shared/schema";
+import {
+  notificationBatches,
+  notificationDeliveries,
+  notifications,
+} from "../../../infrastructure/notifications/tables";
+import type { notificationKind } from "../../../infrastructure/schema";
 import { projects } from "../../projects";
 
 type NotificationKind = (typeof notificationKind.enumValues)[number];

@@ -1,8 +1,8 @@
 import "server-only";
-import { db } from "../../shared/db";
-import { publishAll } from "../../shared/events";
+import { db } from "../../../infrastructure/db";
+import { publishAll } from "../../../infrastructure/events";
 import type { Member } from "../../identity";
-import { updatedIssue } from "../../queries";
+import { updatedIssue } from "../../../queries";
 import type { IssueId, IssueMove } from "../schemas";
 import { move } from "../model";
 import { loadIssue, neighboursAt, saveIssue } from "../repository";

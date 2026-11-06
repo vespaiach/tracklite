@@ -1,15 +1,15 @@
 import "server-only";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { DomainError } from "../shared/domain-error";
-import { db } from "../shared/db";
-import { sendEmail } from "../shared/email/send";
-import { invitationEmail } from "../shared/email/templates";
+import { DomainError } from "../../domain/shared/domain-error";
+import { db } from "../../infrastructure/db";
+import { sendEmail } from "../../infrastructure/email/send";
+import { invitationEmail } from "../../infrastructure/email/templates";
 import type { Invitation } from "../../contract";
 import { memberSummary } from "./members";
-import { invitations, members } from "./tables";
+import { invitations, members } from "../../infrastructure/identity/tables";
 import type { Member } from "./sessions";
-import { createToken, hashToken } from "../shared/tokens";
-import type { Executor } from "../shared/transaction";
+import { createToken, hashToken } from "../../infrastructure/tokens";
+import type { Executor } from "../../infrastructure/transaction";
 import { checkInvitationLink } from "./rules";
 
 export const isOpen = and(isNull(invitations.acceptedAt), isNull(invitations.revokedAt));

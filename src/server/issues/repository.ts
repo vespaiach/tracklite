@@ -1,13 +1,13 @@
 import "server-only";
 import { and, asc, desc, eq, gt, inArray, ne, type SQL, sql } from "drizzle-orm";
-import { parseUuid } from "../shared/ids";
-import type { Transaction } from "../shared/transaction";
+import { parseUuid } from "../../infrastructure/ids";
+import type { Transaction } from "../../infrastructure/transaction";
 import { members, type Username } from "../identity";
 import { labels, projects, writableProject } from "../projects";
 import type { IssueStatus } from "../../contract";
-import { issueAssignees, issueLabels, issues } from "./tables";
+import { issueAssignees, issueLabels, issues } from "../../infrastructure/issues/tables";
 import type { IssueId, IssueMove } from "./schemas";
-import { byIssueId, issueGone } from "../queries";
+import { byIssueId, issueGone } from "../../queries";
 import { type AssigneeCandidate, assigneeChange, type Issue, type Neighbours } from "./model";
 
 type IssueRows = {

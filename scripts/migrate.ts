@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
-import { logError } from "../src/server/shared/log";
+import { logError } from "../src/infrastructure/log";
 
 const url = process.env.DATABASE_URL;
 

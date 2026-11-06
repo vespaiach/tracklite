@@ -31,7 +31,7 @@
   },
   "overrides": [
     {
-      "includes": ["src/server/shared/log.ts", "scripts/**"],
+      "includes": ["src/infrastructure/log.ts", "scripts/**"],
       "linter": { "rules": { "suspicious": { "noConsole": "off" } } }
     },
     {

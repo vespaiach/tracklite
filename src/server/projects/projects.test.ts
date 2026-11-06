@@ -1,12 +1,12 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createMember, createProject, uniqueProjectKey } from "../../test/factories";
-import { db } from "../shared/db";
+import { db } from "../../infrastructure/db";
 import { createProject as create } from "./commands/create-project";
 import { deleteProject } from "./commands/delete-project";
 import { updateProject } from "./commands/update-project";
 import { writableProject } from "./repository";
-import { projects } from "./tables";
+import { projects } from "../../infrastructure/projects/tables";
 import { parseProjectKey } from "./schemas";
 
 const forbidden = { kind: "forbidden", message: "You don't have permission to do that." };

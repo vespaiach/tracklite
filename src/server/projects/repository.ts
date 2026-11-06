@@ -1,10 +1,10 @@
 import "server-only";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { DrizzleQueryError } from "drizzle-orm/errors";
-import { DomainError } from "../shared/domain-error";
-import type { Transaction } from "../shared/transaction";
-import { byProjectKey, findLabel } from "../queries";
-import { labels, projectKeys, projects } from "./tables";
+import { DomainError } from "../../domain/shared/domain-error";
+import type { Transaction } from "../../infrastructure/transaction";
+import { byProjectKey, findLabel } from "../../queries";
+import { labels, projectKeys, projects } from "../../infrastructure/projects/tables";
 import { labelGone, type Project, type ProjectLabel } from "./model";
 import type { ProjectKey } from "./schemas";
 

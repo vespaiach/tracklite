@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createMember } from "../../test/factories";
-import { db } from "../shared/db";
+import { db } from "../../infrastructure/db";
 import { updateMember } from "./commands/update-member";
 import { initials } from "./members";
-import { members } from "./tables";
+import { members } from "../../infrastructure/identity/tables";
 import { parseUsername } from "./schemas";
 
 it("REQ-003.4: initials of long, single, bracketed, numeric and CJK names", () => {

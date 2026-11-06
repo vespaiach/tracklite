@@ -1,5 +1,5 @@
 import "server-only";
-import { db } from "../../shared/db";
+import { db } from "../../../infrastructure/db";
 import type { InvitationLookup } from "../../../contract";
 import { invitationByToken, usableInvitation } from "../invitations";
 

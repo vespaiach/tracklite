@@ -1,5 +1,5 @@
 import { index, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import { byteOrderedText, createdAt, id, issuePriority, issueStatus, timestamptz } from "../shared/schema";
+import { byteOrderedText, createdAt, id, issuePriority, issueStatus, timestamptz } from "../schema";
 import { members } from "../identity/tables";
 import { labels, projects } from "../projects/tables";
 

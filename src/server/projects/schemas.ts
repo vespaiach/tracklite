@@ -2,6 +2,9 @@ import "server-only";
 import * as v from "valibot";
 import { labelColors } from "../../contract";
 import { descriptionText, descriptionVersion, maxCharacters } from "../shared/schemas";
+import { projectKey } from "../../domain/shared/identifiers";
+
+export { type ProjectKey, parseProjectKey } from "../../domain/shared/identifiers";
 
 const maxProjectNameLength = 50;
 
@@ -11,22 +14,6 @@ const projectName = v.pipe(
   v.nonEmpty("Name required"),
   maxCharacters(maxProjectNameLength, `Too long (max ${maxProjectNameLength})`),
 );
-
-const projectKeyRule = "Key must be 2 to 5 letters";
-
-const projectKey = v.pipe(
-  v.string(projectKeyRule),
-  v.regex(/^[A-Za-z]{2,5}$/, projectKeyRule),
-  v.toUpperCase(),
-  v.brand("ProjectKey"),
-);
-
-export type ProjectKey = v.InferOutput<typeof projectKey>;
-
-export function parseProjectKey(text: string): ProjectKey | undefined {
-  const result = v.safeParse(projectKey, text);
-  return result.success ? result.output : undefined;
-}
 
 export const NewProject = v.object({ name: projectName, key: projectKey });
 export type NewProject = v.InferOutput<typeof NewProject>;

@@ -1,7 +1,7 @@
 import "server-only";
 import { readConfig } from "../config";
 import { logError } from "../log";
-import { err, ok, type Result } from "../result";
+import { err, ok, type Result } from "../../domain/shared/result";
 import { type Email, outbox } from "./outbox";
 
 type SendRequest = Email & { idempotencyKey?: string };

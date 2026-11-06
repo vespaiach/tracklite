@@ -58,4 +58,4 @@ export {
   passwordResetTokens,
   sessions,
   signInAttempts,
-} from "./tables";
+} from "../../infrastructure/identity/tables";

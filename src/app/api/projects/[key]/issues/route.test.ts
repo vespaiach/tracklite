@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, type SQL, sql } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { db } from "../../../../../server/shared/db";
+import { db } from "../../../../../infrastructure/db";
 import { createSession, memberSummary } from "../../../../../server/identity";
 import { comments } from "../../../../../server/comments";
 import { issues } from "../../../../../server/issues";

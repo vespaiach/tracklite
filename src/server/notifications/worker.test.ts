@@ -4,13 +4,18 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createIssue, createMember, createProject, newRequestId } from "../../test/factories";
 import { spyOnLoggedErrors } from "../../test/log";
 import { postIssueComment } from "../comments";
-import { db } from "../shared/db";
-import { outbox } from "../shared/email/outbox";
-import type { Transaction } from "../shared/transaction";
+import { db } from "../../infrastructure/db";
+import { outbox } from "../../infrastructure/email/outbox";
+import type { Transaction } from "../../infrastructure/transaction";
 import { parseIssueId, updateIssue, issues } from "../issues";
 import { notificationSenders } from "./notification-channels";
 import { members, type Member, parseUsername } from "../identity";
-import { notificationBatches, notificationDeliveries, notifications, workerHeartbeats } from "./tables";
+import {
+  notificationBatches,
+  notificationDeliveries,
+  notifications,
+  workerHeartbeats,
+} from "../../infrastructure/notifications/tables";
 import { runWorker, sendDueDeliveries } from "./handlers/run-worker";
 
 beforeEach(() => {

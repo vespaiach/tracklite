@@ -1,5 +1,5 @@
 import { runWorker } from "../src/server/notifications";
-import { logError } from "../src/server/shared/log";
+import { logError } from "../src/infrastructure/log";
 
 const stop = new AbortController();
 process.on("SIGTERM", () => stop.abort());

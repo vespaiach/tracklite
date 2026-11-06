@@ -35,7 +35,7 @@ npm run dev            # next dev
 npm test               # vitest run (all projects)
 npm run lint           # biome check  (auto-fix: npx biome check --write)
 npm run typecheck      # next typegen && tsc --noEmit
-npm run db:generate    # drizzle-kit: write a migration from shared/schema.ts and <context>/tables.ts
+npm run db:generate    # drizzle-kit: write a migration from infrastructure/schema.ts and infrastructure/<context>/tables.ts
 npm run db:migrate     # apply migrations to DATABASE_URL
 npm run db:studio
 npm run db:seed        # dev members and admins (password in src/server/identity/seed.ts)
@@ -48,7 +48,7 @@ npm run email:dev      # send one sample email to Mailpit
 Run one test file, one named test, or one project:
 
 ```bash
-npx vitest run src/server/shared/schema.test.ts
+npx vitest run src/infrastructure/schema.test.ts
 npx vitest run -t "REQ-016.4"
 npx vitest run --project unit
 ```
@@ -88,12 +88,14 @@ There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks
 
 The browser shows `message` as-is, so all user-facing copy for server outcomes lives on the server.
 
-**Bounded contexts (§1.8).** `src/server/` is split into context folders: `identity`, `notifications`, `projects`, `issues`, `comments`, plus `shared/` for infrastructure (db, schema enums and column helpers, config, log, domain-error, api-route, email, tokens, passwords, chunked-delete). Reads behind screens and the responses commands return live in `queries/` (D-57), which reads any context's `tables.ts` and `schemas.ts` and writes nothing.
+**Layers (§1.8, D-60).** The backend is moving from `src/server/` into `src/domain/`, `src/application/`, `src/infrastructure/` and `src/queries/`, one folder per context inside each. Already moved: db, transaction, schema enums and column helpers, config, log, email, tokens, passwords, chunked-delete, ids and the event bus (`infrastructure/events.ts`) are in `src/infrastructure/`; each context's tables are in `src/infrastructure/<context>/tables.ts`; `DomainError`, `result`, the domain event types and the `IssueId`/`ProjectKey` parsers are in `src/domain/shared/`; `memberSummary` is in `src/domain/identity/`. `src/architecture.test.ts` checks the layer imports: `domain/**` imports only `domain/**` and `valibot`; `application/**` only `domain/**`, `application/**` and `src/contract`; `queries/**` only `domain/**`, `infrastructure/**/tables.ts`, `infrastructure/db`, `infrastructure/transaction`, `src/contract` and packages other than `next/*`.
+
+**Bounded contexts (§1.8).** What is still in `src/server/` is split into context folders: `identity`, `notifications`, `projects`, `issues`, `comments`, plus `shared/` (api-route, shared request schemas). Reads behind screens and the responses commands return live in `src/queries/` (D-57), which reads any context's tables and writes nothing.
 - Each context has a public `index.ts`. Other contexts, routes and `scripts/` import a context only through it; `shared/` files are imported directly.
-- Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `projects`; `notifications` → `comments`, `issues`, `projects`; every context → `identity`, `shared/`; `issues`, `projects`, `comments` → `queries`; `queries` → `identity`, `shared/` and any context's `tables.ts` and `schemas.ts`. No other context imports `notifications`; `shared/api-route.ts` and `scripts/worker.ts` import it so its event subscription is registered. No cycles.
+- Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `projects`; `notifications` → `comments`, `issues`, `projects`; every context → `identity`, `shared/`; `issues`, `projects`, `comments` → `queries`. No other context imports `notifications`; `shared/api-route.ts` and `scripts/worker.ts` import it so its event subscription is registered. No cycles.
 - A context's request schemas are in its `schemas.ts`; tests sit next to their source.
 - Each context owns its tables (§1.8 table): only the owner inserts, updates or deletes them; others may read them in joins through the owner's `index.ts`.
-- Domain model (§1.8, M16): identifiers are branded types parsed in `schemas.ts` (`IssueId`, `ProjectKey`, `Username`, `RequestId`, `Uuid`); decisions that need no database are pure functions (load → decide → write), in the aggregate's `model.ts` where a context has one (`issues`; tech design §1.8) and in `rules.ts` elsewhere; contexts publish domain events from `shared/events.ts` inside their transaction and `notifications` subscribes, and `publish` throws if nothing subscribed. Use the §1.8 glossary's terms in code.
+- Domain model (§1.8, M16): identifiers are branded types parsed in `schemas.ts` and `domain/shared/identifiers.ts` (`IssueId`, `ProjectKey`, `Username`, `RequestId`, `Uuid`); decisions that need no database are pure functions (load → decide → write), in the aggregate's `model.ts` where a context has one (`issues`; tech design §1.8) and in `rules.ts` elsewhere; contexts publish domain events through `infrastructure/events.ts` inside their transaction and `notifications` subscribes, and `publish` throws if nothing subscribed. Use the §1.8 glossary's terms in code.
 
 **API conventions (§3.1).**
 - Issues are addressed by ID (`WEB-42`), projects by key, members by username, all matched ignoring case.
@@ -111,7 +113,7 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 - Notifications are grouped in `notification_batches`, with one `notification_deliveries` row per channel the recipient chose (only `email` in R1). The worker polls deliveries every 5 s with `for update skip locked`, hands them to the channel's sender in `src/server/notifications/notification-channels/`, and uses the delivery id as Resend's `Idempotency-Key`.
 - All mail goes through one `sendEmail()` with three backends: Resend in production, Mailpit (`:8025`) in development, and an in-memory outbox in tests.
 
-**Schema (§2, `src/server/shared/schema.ts` and each context's `tables.ts`).**
+**Schema (§2, `src/infrastructure/schema.ts` and each context's `src/infrastructure/<context>/tables.ts`).**
 - Drizzle ORM over postgres.js.
 - Enum declaration order is the sort order (status and priority), so changing the order changes the UI ordering.
 - Every timestamp is `timestamptz`.

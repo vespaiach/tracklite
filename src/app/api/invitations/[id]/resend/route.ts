@@ -1,6 +1,6 @@
 import type { Invitation } from "../../../../../contract";
 import { apiRoute } from "../../../../../server/shared/api-route";
-import { parseUuid } from "../../../../../server/shared/ids";
+import { parseUuid } from "../../../../../infrastructure/ids";
 import { resendInvitation } from "../../../../../server/identity";
 
 export async function POST(request: Request, { params }: RouteContext<"/api/invitations/[id]/resend">) {

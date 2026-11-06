@@ -2,15 +2,15 @@ import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createMember } from "../../test/factories";
 import { uniqueEmail } from "../../test/invitations";
-import { db } from "../shared/db";
-import { parseUuid } from "../shared/ids";
-import { outbox } from "../shared/email/outbox";
+import { db } from "../../infrastructure/db";
+import { parseUuid } from "../../infrastructure/ids";
+import { outbox } from "../../infrastructure/email/outbox";
 import { createInvitation } from "./commands/create-invitation";
 import { listInvitations } from "./commands/list-invitations";
 import { resendInvitation } from "./commands/resend-invitation";
 import { revokeInvitation } from "./commands/revoke-invitation";
-import { invitations } from "./tables";
-import { createToken, hashToken } from "../shared/tokens";
+import { invitations } from "../../infrastructure/identity/tables";
+import { createToken, hashToken } from "../../infrastructure/tokens";
 
 const forbidden = { kind: "forbidden", message: "You don't have permission to do that." };
 

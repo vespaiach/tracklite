@@ -1,13 +1,13 @@
 import "server-only";
 import { sql } from "drizzle-orm";
-import { DomainError } from "../../shared/domain-error";
-import { db } from "../../shared/db";
-import { sendEmail } from "../../shared/email/send";
-import { passwordResetEmail } from "../../shared/email/templates";
+import { DomainError } from "../../../domain/shared/domain-error";
+import { db } from "../../../infrastructure/db";
+import { sendEmail } from "../../../infrastructure/email/send";
+import { passwordResetEmail } from "../../../infrastructure/email/templates";
 import { recordResetRequest, resetRequestLimitReached, tooManyAttempts } from "../limits";
 import { activeMemberByEmail } from "../members";
-import { passwordResetTokens } from "../tables";
-import { createToken, hashToken } from "../../shared/tokens";
+import { passwordResetTokens } from "../../../infrastructure/identity/tables";
+import { createToken, hashToken } from "../../../infrastructure/tokens";
 
 export async function requestResetLink(normalizedEmail: string, ip: string) {
   if (await resetRequestLimitReached(normalizedEmail, ip)) throw tooManyAttempts();

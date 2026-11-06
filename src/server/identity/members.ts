@@ -1,11 +1,14 @@
 import "server-only";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import type { Me, MemberSummary } from "../../contract";
-import { DomainError } from "../shared/domain-error";
-import { db } from "../shared/db";
-import type { Transaction } from "../shared/transaction";
-import { members } from "./tables";
+import type { Me } from "../../contract";
+import { memberSummary } from "../../domain/identity/member-summary";
+import { DomainError } from "../../domain/shared/domain-error";
+import { db } from "../../infrastructure/db";
+import type { Transaction } from "../../infrastructure/transaction";
+import { members } from "../../infrastructure/identity/tables";
 import type { Member } from "./sessions";
+
+export { initials, memberSummary } from "../../domain/identity/member-summary";
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -17,27 +20,6 @@ export async function activeMemberByEmail(normalizedEmail: string): Promise<Memb
     .from(members)
     .where(and(eq(sql`lower(${members.email})`, normalizedEmail), isNull(members.deactivatedAt)));
   return member;
-}
-
-function firstCharacter(word: string) {
-  return [...word][0] ?? "";
-}
-
-export function initials(fullName: string) {
-  const words = fullName.trim().split(/\s+/);
-  const last = words.length > 1 ? firstCharacter(words[words.length - 1]) : "";
-  return (firstCharacter(words[0]) + last).toUpperCase();
-}
-
-export function memberSummary(
-  member: Pick<Member, "username" | "fullName" | "deactivatedAt">,
-): MemberSummary {
-  return {
-    username: member.username,
-    fullName: member.fullName,
-    initials: initials(member.fullName),
-    deactivated: member.deactivatedAt !== null,
-  };
 }
 
 export function profileResponse(member: Member): Me {

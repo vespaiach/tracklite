@@ -1,6 +1,6 @@
 import "server-only";
-import { db } from "../../shared/db";
-import type { Uuid } from "../../shared/ids";
+import { db } from "../../../infrastructure/db";
+import type { Uuid } from "../../../infrastructure/ids";
 import type { Member } from "../../identity";
 import { removeLabel } from "../model";
 import { loadLabelProject, saveProject } from "../repository";

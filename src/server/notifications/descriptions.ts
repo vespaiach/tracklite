@@ -1,9 +1,9 @@
 import "server-only";
 import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { findMentions } from "../../lib/markdown/parse";
-import type { Transaction } from "../shared/transaction";
+import type { Transaction } from "../../infrastructure/transaction";
 import { members } from "../identity";
-import { mentions } from "./tables";
+import { mentions } from "../../infrastructure/notifications/tables";
 
 type MentionSource = { projectId: string } | { issueId: string } | { commentId: string };
 

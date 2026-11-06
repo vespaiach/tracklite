@@ -1,7 +1,7 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
-import { db } from "../shared/db";
-import { notificationBatches, notificationDeliveries } from "./tables";
+import { db } from "../../infrastructure/db";
+import { notificationBatches, notificationDeliveries } from "../../infrastructure/notifications/tables";
 
 export const workerPassWindow = sql`interval '2 minutes'`;
 

@@ -1,11 +1,11 @@
 import "server-only";
 import { and, eq, getTableColumns, gt, isNull, sql } from "drizzle-orm";
-import { DomainError } from "../shared/domain-error";
-import { db } from "../shared/db";
-import { members, sessions } from "./tables";
-import { createToken, hashToken } from "../shared/tokens";
+import { DomainError } from "../../domain/shared/domain-error";
+import { db } from "../../infrastructure/db";
+import { type Member, members, sessions } from "../../infrastructure/identity/tables";
+import { createToken, hashToken } from "../../infrastructure/tokens";
 
-export type Member = typeof members.$inferSelect;
+export type { Member };
 export type Admin = Member & { role: "admin" };
 
 const sessionMaxAgeSeconds = 30 * 24 * 60 * 60;

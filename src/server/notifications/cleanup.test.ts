@@ -9,10 +9,14 @@ import {
   sessions,
   signInAttempts,
 } from "../identity";
-import { db } from "../shared/db";
-import { createToken, hashToken } from "../shared/tokens";
+import { db } from "../../infrastructure/db";
+import { createToken, hashToken } from "../../infrastructure/tokens";
 import { deleteExpiredRows } from "./cleanup";
-import { notificationBatches, notificationDeliveries, notifications } from "./tables";
+import {
+  notificationBatches,
+  notificationDeliveries,
+  notifications,
+} from "../../infrastructure/notifications/tables";
 
 type DeliveryState = (typeof notificationDeliveries.$inferSelect)["state"];
 

@@ -1,7 +1,11 @@
 import "server-only";
 import { sql } from "drizzle-orm";
-import { db } from "../../shared/db";
-import { notificationBatches, notificationDeliveries, workerHeartbeats } from "../tables";
+import { db } from "../../../infrastructure/db";
+import {
+  notificationBatches,
+  notificationDeliveries,
+  workerHeartbeats,
+} from "../../../infrastructure/notifications/tables";
 import { dueAt, workerPassWindow } from "../notification-queue";
 
 export async function workerIsHealthy() {

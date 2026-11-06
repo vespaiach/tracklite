@@ -1,5 +1,5 @@
 import { seededMembers, seedMembers } from "../src/server/identity";
-import { logError } from "../src/server/shared/log";
+import { logError } from "../src/infrastructure/log";
 
 try {
   await seedMembers();

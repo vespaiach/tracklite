@@ -1,6 +1,6 @@
 import "server-only";
-import { db } from "../../shared/db";
-import { invitations } from "../tables";
+import { db } from "../../../infrastructure/db";
+import { invitations } from "../../../infrastructure/identity/tables";
 import { assertAdmin, type Member } from "../sessions";
 import { invitationResponse, isOpen, openInvitations } from "../invitations";
 

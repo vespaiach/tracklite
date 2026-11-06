@@ -1,8 +1,8 @@
 import "server-only";
 import { sql } from "drizzle-orm";
 import { deleteExpiredAccountRows } from "../identity";
-import { deleteInChunks } from "../shared/chunked-delete";
-import { notificationBatches } from "./tables";
+import { deleteInChunks } from "../../infrastructure/chunked-delete";
+import { notificationBatches } from "../../infrastructure/notifications/tables";
 
 export async function deleteExpiredRows() {
   await deleteExpiredAccountRows();

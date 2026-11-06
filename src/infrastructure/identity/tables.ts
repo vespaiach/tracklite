@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, index, inet, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import { bytea, createdAt, id, notificationChannel, role, timestamptz } from "../shared/schema";
+import { bytea, createdAt, id, notificationChannel, role, timestamptz } from "../schema";
 
 export const members = pgTable(
   "members",
@@ -22,6 +22,8 @@ export const members = pgTable(
     check("members_username_format", sql`${t.username} ~ '^[a-z0-9-]{2,20}$'`),
   ],
 );
+
+export type Member = typeof members.$inferSelect;
 
 export const invitations = pgTable(
   "invitations",

@@ -1,13 +1,13 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { db } from "../../shared/db";
-import { publishAll } from "../../shared/events";
+import { db } from "../../../infrastructure/db";
+import { publishAll } from "../../../infrastructure/events";
 import type { Member } from "../../identity";
 import { type ProjectKey, takeIssueNumber, writableProject } from "../../projects";
-import { issues } from "../tables";
+import { issues } from "../../../infrastructure/issues/tables";
 import type { NewIssue } from "../schemas";
-import { findIssue, updatedIssue } from "../../queries";
+import { findIssue, updatedIssue } from "../../../queries";
 import { newIssue } from "../model";
 import { assigneeCandidates, firstPositionIn, saveIssue } from "../repository";
 

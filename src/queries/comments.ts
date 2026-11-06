@@ -1,16 +1,17 @@
 import "server-only";
 import { asc, eq, inArray, type SQL } from "drizzle-orm";
-import { DomainError } from "../shared/domain-error";
-import { db } from "../shared/db";
-import type { Executor } from "../shared/transaction";
-import { type Member, memberSummary, members } from "../identity";
-import { comments } from "../comments/tables";
-import { issues } from "../issues/tables";
-import type { IssueId } from "../issues/schemas";
-import { projects } from "../projects/tables";
-import type { ProjectKey } from "../projects/schemas";
-import { mentions } from "../notifications/tables";
-import type { ThreadComment } from "../../contract";
+import { DomainError } from "../domain/shared/domain-error";
+import { db } from "../infrastructure/db";
+import type { Executor } from "../infrastructure/transaction";
+import { memberSummary } from "../domain/identity/member-summary";
+import { type Member, members } from "../infrastructure/identity/tables";
+import { comments } from "../infrastructure/comments/tables";
+import { issues } from "../infrastructure/issues/tables";
+import type { IssueId } from "../domain/shared/identifiers";
+import { projects } from "../infrastructure/projects/tables";
+import type { ProjectKey } from "../domain/shared/identifiers";
+import { mentions } from "../infrastructure/notifications/tables";
+import type { ThreadComment } from "../contract";
 import { byIssueId } from "./issue";
 import { byProjectKey } from "./project";
 

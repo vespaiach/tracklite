@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { db } from "../../shared/db";
+import { db } from "../../../infrastructure/db";
 import type { Label } from "../../../contract";
 import type { Member } from "../../identity";
 import { addLabel } from "../model";

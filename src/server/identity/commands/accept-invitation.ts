@@ -1,10 +1,10 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
-import { DomainError } from "../../shared/domain-error";
-import { db } from "../../shared/db";
+import { DomainError } from "../../../domain/shared/domain-error";
+import { db } from "../../../infrastructure/db";
 import type { InvitationAcceptance, Username } from "../schemas";
-import { hashPassword } from "../../shared/passwords";
-import { invitations, members } from "../tables";
+import { hashPassword } from "../../../infrastructure/passwords";
+import { invitations, members } from "../../../infrastructure/identity/tables";
 import { createSession } from "../sessions";
 import { invitationByToken, usableInvitation } from "../invitations";
 

@@ -1,5 +1,5 @@
 import "server-only";
-import { db } from "../../shared/db";
+import { db } from "../../../infrastructure/db";
 import { expiredLink, usableLink } from "../password-resets";
 
 export async function checkResetLink(token: string) {

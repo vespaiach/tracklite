@@ -1,10 +1,10 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
-import { db } from "../../shared/db";
-import type { Uuid } from "../../shared/ids";
-import { invitations } from "../tables";
+import { db } from "../../../infrastructure/db";
+import type { Uuid } from "../../../infrastructure/ids";
+import { invitations } from "../../../infrastructure/identity/tables";
 import { assertAdmin, type Member } from "../sessions";
-import type { Executor } from "../../shared/transaction";
+import type { Executor } from "../../../infrastructure/transaction";
 import { isOpen, notFound, openInvitation, sendLink } from "../invitations";
 
 export async function resendInvitation(actor: Member, id: Uuid | undefined) {

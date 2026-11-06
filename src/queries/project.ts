@@ -1,14 +1,15 @@
 import "server-only";
 import { asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import { DomainError } from "../shared/domain-error";
-import { db } from "../shared/db";
-import type { Executor } from "../shared/transaction";
-import { type Member, memberSummary, members } from "../identity";
-import { mentions } from "../notifications/tables";
-import { issues } from "../issues/tables";
-import { projects } from "../projects/tables";
-import type { ProjectKey } from "../projects/schemas";
-import type { IssueStatus, Project, ProjectSummary } from "../../contract";
+import { DomainError } from "../domain/shared/domain-error";
+import { db } from "../infrastructure/db";
+import type { Executor } from "../infrastructure/transaction";
+import { memberSummary } from "../domain/identity/member-summary";
+import { type Member, members } from "../infrastructure/identity/tables";
+import { mentions } from "../infrastructure/notifications/tables";
+import { issues } from "../infrastructure/issues/tables";
+import { projects } from "../infrastructure/projects/tables";
+import type { ProjectKey } from "../domain/shared/identifiers";
+import type { IssueStatus, Project, ProjectSummary } from "../contract";
 
 type ProjectRow = typeof projects.$inferSelect;
 

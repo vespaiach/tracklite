@@ -1,10 +1,10 @@
 import "server-only";
 import { sql } from "drizzle-orm";
 import type { FirstAdmin } from "../schemas";
-import { db } from "../../shared/db";
-import { hashPassword } from "../../shared/passwords";
+import { db } from "../../../infrastructure/db";
+import { hashPassword } from "../../../infrastructure/passwords";
 import { createSession } from "../sessions";
-import { members } from "../tables";
+import { members } from "../../../infrastructure/identity/tables";
 import { setupDone } from "../setup";
 import { checkSetupSecret } from "./check-setup-secret";
 

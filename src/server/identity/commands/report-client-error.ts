@@ -1,5 +1,5 @@
 import "server-only";
-import { logError } from "../../shared/log";
+import { logError } from "../../../infrastructure/log";
 import { clientErrorLimitReached, recordClientErrorReport } from "../limits";
 import { describeUserAgent, maskIp } from "../rules";
 import type { ClientErrorReport } from "../schemas";

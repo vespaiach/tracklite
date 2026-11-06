@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, pgTable, text, uuid } from "drizzle-orm/pg-core";
-import { createdAt, id, timestamptz } from "../shared/schema";
+import { createdAt, id, timestamptz } from "../schema";
 import { members } from "../identity/tables";
 import { issues } from "../issues/tables";
 import { projects } from "../projects/tables";

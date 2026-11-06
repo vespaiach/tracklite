@@ -1,5 +1,5 @@
 import "server-only";
-import { db } from "../../shared/db";
+import { db } from "../../../infrastructure/db";
 import { assertAdmin, type Member } from "../../identity";
 import { deleteProjectRow, loadProject } from "../repository";
 import type { ProjectKey } from "../schemas";

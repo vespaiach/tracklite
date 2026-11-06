@@ -1,8 +1,8 @@
 import "server-only";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { db } from "../../shared/db";
-import { hashPassword } from "../../shared/passwords";
-import { members, passwordResetTokens, sessions } from "../tables";
+import { db } from "../../../infrastructure/db";
+import { hashPassword } from "../../../infrastructure/passwords";
+import { members, passwordResetTokens, sessions } from "../../../infrastructure/identity/tables";
 import { createSession } from "../sessions";
 import { expiredLink, usableLink } from "../password-resets";
 

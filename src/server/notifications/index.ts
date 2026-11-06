@@ -1,4 +1,4 @@
-import { subscribe } from "../shared/events";
+import { subscribe } from "../../infrastructure/events";
 import { onDomainEvent } from "./handlers/on-domain-event";
 
 subscribe(onDomainEvent);
@@ -13,4 +13,4 @@ export {
   notificationDeliveries,
   notifications,
   workerHeartbeats,
-} from "./tables";
+} from "../../infrastructure/notifications/tables";

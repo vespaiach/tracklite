@@ -2,7 +2,7 @@ import type { ThreadComment } from "../../../../../contract";
 import { apiRoute } from "../../../../../server/shared/api-route";
 import { parseIssueId } from "../../../../../server/issues";
 import { NewComment, postIssueComment } from "../../../../../server/comments";
-import { listIssueComments } from "../../../../../server/queries";
+import { listIssueComments } from "../../../../../queries";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/issues/[id]/comments">) {
   const id = parseIssueId((await params).id);

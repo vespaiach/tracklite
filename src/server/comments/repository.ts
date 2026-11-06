@@ -1,12 +1,12 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
-import { DomainError } from "../shared/domain-error";
-import type { Uuid } from "../shared/ids";
-import type { Executor, Transaction } from "../shared/transaction";
+import { DomainError } from "../../domain/shared/domain-error";
+import type { Uuid } from "../../infrastructure/ids";
+import type { Executor, Transaction } from "../../infrastructure/transaction";
 import { issues } from "../issues";
 import { projects, writableProject } from "../projects";
-import { findComments } from "../queries";
-import { comments } from "./tables";
+import { findComments } from "../../queries";
+import { comments } from "../../infrastructure/comments/tables";
 import { type Comment, parentOf } from "./model";
 
 export function commentGone() {

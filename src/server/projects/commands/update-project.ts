@@ -1,9 +1,9 @@
 import "server-only";
-import { db } from "../../shared/db";
-import type { Transaction } from "../../shared/transaction";
-import { publishAll } from "../../shared/events";
+import { db } from "../../../infrastructure/db";
+import type { Transaction } from "../../../infrastructure/transaction";
+import { publishAll } from "../../../infrastructure/events";
 import { assertAdmin, editConflict, type Member } from "../../identity";
-import { updatedProject } from "../../queries";
+import { updatedProject } from "../../../queries";
 import { changeSettings, descriptionSaveOf, needsAdmin, type Project, saveDescription } from "../model";
 import { loadProject, saveProject } from "../repository";
 import type { ProjectChanges, ProjectKey } from "../schemas";

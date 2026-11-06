@@ -1,6 +1,6 @@
 import type { LabelColor } from "../../contract";
-import { DomainError } from "../shared/domain-error";
-import type { DomainEvent } from "../shared/events";
+import { DomainError } from "../../domain/shared/domain-error";
+import type { DomainEvent } from "../../domain/shared/events";
 import type { Member } from "../identity";
 import type { LabelChanges, ProjectChanges, ProjectKey } from "./schemas";
 

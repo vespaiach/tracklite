@@ -1,16 +1,17 @@
 import "server-only";
 import { and, asc, eq, inArray, notInArray, or, type SQL, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { DomainError } from "../shared/domain-error";
-import { db } from "../shared/db";
-import type { Executor, Transaction } from "../shared/transaction";
-import { memberSummary, members } from "../identity";
-import { labels, projects } from "../projects/tables";
-import type { ProjectKey } from "../projects/schemas";
-import { issueAssignees, issueLabels, issues } from "../issues/tables";
-import type { IssueId } from "../issues/schemas";
-import { mentions } from "../notifications/tables";
-import type { Issue, IssueStatus } from "../../contract";
+import { DomainError } from "../domain/shared/domain-error";
+import { db } from "../infrastructure/db";
+import type { Executor, Transaction } from "../infrastructure/transaction";
+import { memberSummary } from "../domain/identity/member-summary";
+import { members } from "../infrastructure/identity/tables";
+import { labels, projects } from "../infrastructure/projects/tables";
+import type { ProjectKey } from "../domain/shared/identifiers";
+import { issueAssignees, issueLabels, issues } from "../infrastructure/issues/tables";
+import type { IssueId } from "../domain/shared/identifiers";
+import { mentions } from "../infrastructure/notifications/tables";
+import type { Issue, IssueStatus } from "../contract";
 import { byProjectKey } from "./project";
 
 const closedStatuses: IssueStatus[] = ["done", "canceled"];

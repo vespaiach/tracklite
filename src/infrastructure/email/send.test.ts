@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { spyOnLoggedErrors } from "../../../test/log";
+import { spyOnLoggedErrors } from "../../test/log";
 import { outbox } from "./outbox";
 import { sendEmail } from "./send";
 

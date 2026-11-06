@@ -1,8 +1,8 @@
 import "server-only";
 import { timingSafeEqual } from "node:crypto";
-import { DomainError } from "../../shared/domain-error";
-import { readConfig } from "../../shared/config";
-import { hashToken } from "../../shared/tokens";
+import { DomainError } from "../../../domain/shared/domain-error";
+import { readConfig } from "../../../infrastructure/config";
+import { hashToken } from "../../../infrastructure/tokens";
 import { setupDone } from "../setup";
 import { setupNeeded } from "./setup-needed";
 
