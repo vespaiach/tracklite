@@ -1,25 +1,21 @@
 import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { lookUpInvitation } from "../application/identity/look-up-invitation";
-import { DELETE as revoke } from "../app/api/invitations/[id]/route";
-import { POST as resend } from "../app/api/invitations/[id]/resend/route";
-import { GET as list, POST as create } from "../app/api/invitations/route";
+import {
+  createInvitation,
+  resendInvitation as resend,
+  revokeInvitation as revoke,
+} from "../app/(signed-in)/settings/members/actions";
+import type { ActionResult, Invitation } from "../contract";
 import { db } from "../infrastructure/db";
 import { DomainError } from "../domain/shared/domain-error";
 import { outbox } from "../infrastructure/email/outbox";
 import { identityWork } from "../infrastructure/identity/repositories";
 import { invitations } from "../infrastructure/identity/tables";
-import { createSession } from "../infrastructure/identity/session";
+import { createSession, signedInMemberBy } from "../infrastructure/identity/session";
+import { listInvitations } from "../queries";
 import { createMember } from "./factories";
-import { jsonRequest } from "./reset-links";
-
-export type InvitationBody = {
-  id: string;
-  email: string;
-  invitedBy: { username: string; fullName: string; initials: string; deactivated: boolean };
-  expiresAt: string;
-  state: "pending" | "bounced" | "expired";
-};
+import { setNextRequest } from "./next-request";
 
 export function uniqueEmail(name = "sam") {
   return `${name}-${randomBytes(4).toString("hex")}@acme.com`;
@@ -34,35 +30,36 @@ export function signedInAdmin(fullName = "Alex Kim") {
   return signedIn({ role: "admin", fullName });
 }
 
-export function invite(cookie: string, email: unknown) {
-  return create(jsonRequest("POST", "/api/invitations", { email }, { Cookie: cookie }));
+function tokenOf(cookie: string) {
+  return cookie.slice(cookie.indexOf("=") + 1);
 }
 
-export function listInvitations(cookie: string) {
-  return list(new Request("http://localhost:3000/api/invitations", { headers: { Cookie: cookie } }));
+async function sentAs<T>(cookie: string, call: () => Promise<T>) {
+  const separator = cookie.indexOf("=");
+  setNextRequest({ cookies: { [cookie.slice(0, separator)]: cookie.slice(separator + 1) } });
+  try {
+    return await call();
+  } finally {
+    setNextRequest({});
+  }
+}
+
+export function invite(cookie: string, email: unknown) {
+  return sentAs(cookie, () => createInvitation({ email }));
 }
 
 export async function listedInvitation(cookie: string, email: string) {
-  const body: InvitationBody[] = await (await listInvitations(cookie)).json();
-  return body.find((invitation) => invitation.email === email);
-}
-
-function idContext(id: string) {
-  return { params: Promise.resolve({ id }) };
+  const admin = await signedInMemberBy(tokenOf(cookie));
+  if (!admin) throw new Error("Not signed in");
+  return (await listInvitations(admin)).find((invitation) => invitation.email === email);
 }
 
 export function resendInvitation(cookie: string, id: string) {
-  return resend(
-    jsonRequest("POST", `/api/invitations/${id}/resend`, undefined, { Cookie: cookie }),
-    idContext(id),
-  );
+  return sentAs(cookie, () => resend({ id }));
 }
 
 export function revokeInvitation(cookie: string, id: string) {
-  return revoke(
-    jsonRequest("DELETE", `/api/invitations/${id}`, undefined, { Cookie: cookie }),
-    idContext(id),
-  );
+  return sentAs(cookie, () => revoke({ id }));
 }
 
 export async function lookUp(token: string) {
@@ -80,10 +77,13 @@ export function latestInvitationToken() {
   return token;
 }
 
+export function invited(result: ActionResult<Invitation>) {
+  if (!result.ok) throw new Error(`Inviting was refused: ${result.error.message}`);
+  return result.data;
+}
+
 export async function invitedBy(cookie: string, email: string) {
-  const response = await invite(cookie, email);
-  if (response.status !== 201) throw new Error(`Inviting answered ${response.status}`);
-  const invitation: InvitationBody = await response.json();
+  const invitation = invited(await invite(cookie, email));
   return { invitation, token: latestInvitationToken() };
 }
 

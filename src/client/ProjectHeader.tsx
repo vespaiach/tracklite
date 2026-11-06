@@ -1,22 +1,15 @@
 import { BookOpen, Settings, SquareKanban, List as ListIcon, Tag as TagIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link } from "react-router";
-import { AppBar, AppBarTitle, LinkTabs, Tag } from "../components/ui/track-lite";
+import { AppBar, LinkTabs, Tag } from "../components/ui/track-lite";
 import type { Issue, ProjectSummary } from "./api";
-import { useRouterClick } from "./links";
 import { NewIssueButton } from "../app/(signed-in)/project/[key]/NewIssueDialog";
 import { useNewIssue } from "./useNewIssue";
 
-export type ProjectView = "labels";
-
 type IssueCrumb = Pick<Issue, "id"> & Partial<Pick<Issue, "title">>;
 
-export type ProjectHeaderProps = {
-  project: ProjectSummary;
-  admin: boolean;
-} & ({ view: ProjectView; issue?: never } | { issue: IssueCrumb; view?: never });
+export type ProjectHeaderProps = { project: ProjectSummary; admin: boolean; issue: IssueCrumb };
 
-export function ProjectHeader({ project, view, issue, admin }: ProjectHeaderProps) {
+export function ProjectHeader({ project, issue, admin }: ProjectHeaderProps) {
   const base = `/project/${project.key}`;
   const title = `${project.name} · ${project.key}`;
   const details = <DetailsButton href={`${base}/detail`} />;
@@ -28,24 +21,14 @@ export function ProjectHeader({ project, view, issue, admin }: ProjectHeaderProp
           {!project.archivedAt && <SpaNewIssueButton project={project} />}
         </>
       }>
-      {issue ? (
-        <IssueCrumbs
-          details={details}
-          projectTitle={title}
-          projectHref={base}
-          issue={issue}
-        />
-      ) : (
-        <div className="tl-appbar__lead">
-          {details}
-          <AppBarTitle>{title}</AppBarTitle>
-        </div>
-      )}
-      {project.archivedAt && <Tag variant="neutral">Archived</Tag>}
-      <ViewTabs
-        base={base}
-        view={view}
+      <IssueCrumbs
+        details={details}
+        projectTitle={title}
+        projectHref={base}
+        issue={issue}
       />
+      {project.archivedAt && <Tag variant="neutral">Archived</Tag>}
+      <ViewTabs base={base} />
     </AppBar>
   );
 }
@@ -73,12 +56,12 @@ function DetailsButton({ href }: { href: string }) {
 
 function SettingsButton({ href }: { href: string }) {
   return (
-    <Link
-      to={href}
+    <a
+      href={href}
       aria-label="Project settings"
       className="tl-btn tl-btn--sm tl-btn--quiet tl-btn--icon">
       <Settings size={15} />
-    </Link>
+    </a>
   );
 }
 
@@ -119,8 +102,7 @@ function IssueCrumbs({ details, projectTitle, projectHref, issue }: IssueCrumbsP
   );
 }
 
-function ViewTabs({ base, view }: { base: string; view?: ProjectView }) {
-  const labelsClick = useRouterClick(`${base}/labels`);
+function ViewTabs({ base }: { base: string }) {
   return (
     <LinkTabs
       label="Project views"
@@ -141,8 +123,6 @@ function ViewTabs({ base, view }: { base: string; view?: ProjectView }) {
           href: `${base}/labels`,
           label: "Labels",
           icon: tabIcon(TagIcon),
-          current: view === "labels",
-          onClick: labelsClick,
         },
       ]}
     />

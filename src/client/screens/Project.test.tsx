@@ -1,6 +1,6 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { admin, alex, apiError, mockApi, project, renderAppAt } from "../../test/client-app";
+import { admin, alex, issue, mockApi, project, renderAppAt } from "../../test/client-app";
 import type { Me, Project } from "../api";
 
 afterEach(() => {
@@ -9,15 +9,16 @@ afterEach(() => {
 });
 
 const web = project("WEB", "Website");
-const old = project("OLD", "Old site", "2025-09-14T10:00:00.000Z");
+const archivedWeb = project("WEB", "Website", "2025-09-14T10:00:00.000Z");
 
-function mockProject(shown: Project, me: Me = admin) {
+function mockIssuePage(shown: Project, me: Me = admin) {
   return mockApi({
     "GET /api/me": () => Response.json(me),
     "GET /api/members": () => Response.json([]),
-    [`GET /api/projects/${shown.key}`]: () => Response.json(shown),
-    [`GET /api/projects/${shown.key}/labels`]: () => Response.json([]),
-    "GET /api/projects/NOPE": () => apiError(404, "Not found"),
+    "GET /api/projects/WEB": () => Response.json(shown),
+    "GET /api/projects/WEB/labels": () => Response.json([]),
+    "GET /api/issues/WEB-42": () => Response.json(issue({ archived: shown.archivedAt !== null })),
+    "GET /api/issues/WEB-42/comments": () => Response.json([]),
   });
 }
 
@@ -25,39 +26,33 @@ function header() {
   return screen.getByRole("banner");
 }
 
-it("REQ-046.1: the labels page's header shows the details button, the name, the view tabs and, for admins, the settings gear", async () => {
-  mockProject(web);
-  renderAppAt("/project/WEB/labels");
+it("REQ-046.1: the issue page's header shows the details button, the project, the view tabs as page loads and, for admins, the settings gear", async () => {
+  mockIssuePage(web);
+  renderAppAt("/issue/WEB-42");
 
-  expect(await screen.findByRole("heading", { name: "Website · WEB" })).toBeTruthy();
-  const details = within(header()).getByRole("link", { name: "Project details" });
-  expect(details.getAttribute("href")).toBe("/project/WEB/detail");
-  const views = within(header()).getByRole("navigation", { name: "Project views" });
-  expect(within(views).getByRole("link", { name: "Labels" }).getAttribute("aria-current")).toBe("page");
-  expect(within(views).getByRole("link", { name: "Board" }).getAttribute("href")).toBe("/project/WEB");
-  expect(within(views).getByRole("link", { name: "List" }).getAttribute("href")).toBe("/project/WEB/list");
+  const views = await screen.findByRole("navigation", { name: "Project views" });
+  expect(within(header()).getByRole("link", { name: "Project details" }).getAttribute("href")).toBe(
+    "/project/WEB/detail",
+  );
+  expect(
+    within(views)
+      .getAllByRole("link")
+      .map((link) => [link.textContent, link.getAttribute("href"), link.getAttribute("aria-current")]),
+  ).toEqual([
+    ["Board", "/project/WEB", null],
+    ["List", "/project/WEB/list", null],
+    ["Labels", "/project/WEB/labels", null],
+  ]);
   expect(within(header()).getByRole("link", { name: "Project settings" }).getAttribute("href")).toBe(
     "/project/WEB/settings",
   );
-  expect(
-    within(header())
-      .getAllByRole("link")
-      .map((link) => link.getAttribute("aria-label") ?? link.textContent),
-  ).toEqual(["Project details", "Board", "List", "Labels", "Project settings"]);
 });
 
 it("STD-2, REQ-013.1: a member sees no settings gear; an archived project's header shows the Archived badge", async () => {
-  mockProject(old, alex);
-  renderAppAt("/project/OLD/labels");
+  mockIssuePage(archivedWeb, alex);
+  renderAppAt("/issue/WEB-42");
 
-  await screen.findByRole("heading", { name: "Old site · OLD" });
+  await screen.findByRole("navigation", { name: "Project views" });
   expect(within(header()).queryByRole("link", { name: "Project settings" })).toBeNull();
   expect(within(header()).getByText("Archived")).toBeTruthy();
-});
-
-it("STD-4: an unknown project key shows Not found", async () => {
-  mockProject(web);
-  renderAppAt("/project/NOPE/labels");
-
-  expect(await screen.findByRole("heading", { name: "Not found" })).toBeTruthy();
 });

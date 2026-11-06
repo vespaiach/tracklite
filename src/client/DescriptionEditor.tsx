@@ -1,9 +1,9 @@
 import { type FormEvent, type KeyboardEvent, useId, useState } from "react";
 import { Button, Editor, EditorNotice, FieldError, SettingsActions } from "../components/ui/track-lite";
+import { useLeaveGuard } from "../components/leave-guard";
 import { useToast } from "../components/toast";
 import type { ActionResult, MemberSummary } from "../contract";
 import { settled } from "./action-result";
-import { LeaveGuard } from "./LeaveGuard";
 import { useMentions } from "./useMentions";
 
 export type DescriptionDraft = { text: string; startedFrom: string; version: number };
@@ -29,7 +29,7 @@ export function DescriptionEditor({
   const [conflict, setConflict] = useState<string>();
   const messageId = useId();
   const mentions = useMentions({ value: draft.text, onChange, members });
-  const unsaved = draft.text !== draft.startedFrom;
+  useLeaveGuard(draft.text !== draft.startedFrom ? "You have unsaved changes. Leave anyway?" : null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -61,10 +61,6 @@ export function DescriptionEditor({
       aria-label="Edit description"
       noValidate
       onSubmit={submit}>
-      <LeaveGuard
-        unsaved={unsaved}
-        message="You have unsaved changes. Leave anyway?"
-      />
       <Editor
         mono
         invalid={Boolean(error)}

@@ -22,11 +22,11 @@ import {
   SettingsActions,
 } from "../components/ui/track-lite";
 import { Markdown } from "../lib/markdown/Markdown";
+import { useLeaveGuard } from "../components/leave-guard";
 import { useToast } from "../components/toast";
 import type { ActionError, ActionResult, MemberSummary, ThreadComment } from "../contract";
 import { settled } from "./action-result";
 import { formatExact, formatUpdated } from "./dates";
-import { LeaveGuard } from "./LeaveGuard";
 import { useMentions } from "./useMentions";
 import { useReturnFocus } from "./useReturnFocus";
 
@@ -306,6 +306,7 @@ function CommentBox({ viewer }: { viewer: Viewer }) {
   const [text, setText] = useState("");
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [error, setError] = useState<string>();
+  useLeaveGuard(text.trim() !== "" ? "You have an unsent comment. Leave anyway?" : null);
 
   async function post() {
     setError(undefined);
@@ -324,32 +325,26 @@ function CommentBox({ viewer }: { viewer: Viewer }) {
   }
 
   return (
-    <>
-      <LeaveGuard
-        unsaved={text.trim() !== ""}
-        message="You have an unsent comment. Leave anyway?"
-      />
-      <CommentForm
-        label="Comment (Markdown)"
-        members={viewer.members}
-        placeholder="Leave a comment…"
-        text={text}
-        onChange={setText}
-        onSubmit={post}
-        saving={isLoading}
-        error={error}
-        actions={
-          <Button
-            size="sm"
-            variant="primary"
-            type="submit"
-            disabled={isLoading || text.trim() === ""}
-            aria-busy={isLoading || undefined}>
-            {isLoading ? "Posting…" : "Post"}
-          </Button>
-        }
-      />
-    </>
+    <CommentForm
+      label="Comment (Markdown)"
+      members={viewer.members}
+      placeholder="Leave a comment…"
+      text={text}
+      onChange={setText}
+      onSubmit={post}
+      saving={isLoading}
+      error={error}
+      actions={
+        <Button
+          size="sm"
+          variant="primary"
+          type="submit"
+          disabled={isLoading || text.trim() === ""}
+          aria-busy={isLoading || undefined}>
+          {isLoading ? "Posting…" : "Post"}
+        </Button>
+      }
+    />
   );
 }
 

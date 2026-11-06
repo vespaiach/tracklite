@@ -107,12 +107,6 @@ function mockThread({
   return mockApi(routes);
 }
 
-async function labelsLink() {
-  return within(await screen.findByRole("navigation", { name: "Project views" })).findByRole("link", {
-    name: "Labels",
-  });
-}
-
 function openIssue() {
   renderAppAt("/issue/WEB-42");
 }
@@ -398,23 +392,7 @@ it("STD-11.1, STD-11.2: failed comments show “Couldn’t load comments.” whi
   expect(within(section).queryByText("Couldn’t load comments.")).toBeNull();
 });
 
-it("REQ-035.1: leaving with an unsent comment asks first; Cancel keeps the text", async () => {
-  mockThread();
-  openIssue();
-  await type("Half a thought");
-
-  fireEvent.click(await labelsLink());
-  const prompt = await screen.findByRole("alertdialog", {
-    name: "You have an unsent comment. Leave anyway?",
-  });
-  fireEvent.click(within(prompt).getByRole("button", { name: "Cancel" }));
-
-  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
-  expect(window.location.pathname).toBe("/issue/WEB-42");
-  expect((await commentBox()).value).toBe("Half a thought");
-});
-
-it("REQ-035: closing the tab with an unsent comment asks the browser to confirm", async () => {
+it("REQ-035.1, REQ-035: leaving or closing the tab with an unsent comment asks the browser to confirm", async () => {
   mockThread();
   openIssue();
   await commentBox();
@@ -437,10 +415,9 @@ it("REQ-035.2, REQ-035: a posted comment or a blank box doesn't hold back leavin
   await commentWith("Verified on staging.");
   await type("   ");
 
-  fireEvent.click(await labelsLink());
-
-  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB/labels"));
-  expect(screen.queryByRole("alertdialog")).toBeNull();
+  const leaving = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(leaving);
+  expect(leaving.defaultPrevented).toBe(false);
 });
 
 it("REQ-031, REQ-033: hovering the time or “(edited)” shows the exact time", async () => {

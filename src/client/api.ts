@@ -1,15 +1,12 @@
 import { type BaseQueryFn, createApi } from "@reduxjs/toolkit/query/react";
 import type {
-  Invitation,
   Issue,
   IssuePriority,
   IssueStatus,
   Label,
   LabelColor,
   Me,
-  NotificationStats,
   Project,
-  ProjectSummary,
   ThreadComment,
 } from "../contract";
 import type { StoreExtra } from "./store";
@@ -70,58 +67,13 @@ const baseQuery: BaseQueryFn<ApiRequest, unknown, ApiFailure> = async (request, 
 export const api = createApi({
   baseQuery,
   refetchOnMountOrArgChange: true,
-  tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels", "Issue", "Comments"],
+  tagTypes: ["Projects", "Labels", "Issue", "Comments"],
   endpoints: (build) => ({
-    me: build.query<Me, void>({ query: () => "me", providesTags: ["Me"] }),
-    updateProfile: build.mutation<Me, { fullName: string }>({
-      query: (body) => ({ path: "me", method: "PATCH", body }),
-      invalidatesTags: ["Me"],
-    }),
-    members: build.query<Me[], void>({ query: () => "members", providesTags: ["Members"] }),
-    updateMember: build.mutation<Me, { username: string; role?: Me["role"]; deactivated?: boolean }>({
-      query: ({ username, ...body }) => ({ path: `members/${username}`, method: "PATCH", body }),
-      invalidatesTags: ["Members", "Me"],
-    }),
-    invitations: build.query<Invitation[], void>({
-      query: () => "invitations",
-      providesTags: ["Invitations"],
-    }),
-    createInvitation: build.mutation<Invitation, { email: string }>({
-      query: (body) => ({ path: "invitations", method: "POST", body }),
-      invalidatesTags: ["Invitations"],
-    }),
-    resendInvitation: build.mutation<Invitation, string>({
-      query: (id) => ({ path: `invitations/${id}/resend`, method: "POST" }),
-      invalidatesTags: ["Invitations"],
-    }),
-    revokeInvitation: build.mutation<null, string>({
-      query: (id) => ({ path: `invitations/${id}`, method: "DELETE" }),
-      invalidatesTags: ["Invitations"],
-    }),
-    notificationStats: build.query<NotificationStats, void>({ query: () => "notification-stats" }),
-    changePassword: build.mutation<null, { currentPassword: string; newPassword: string }>({
-      query: (body) => ({ path: "me/password", method: "PUT", body }),
-    }),
-    projects: build.query<ProjectSummary[], { archived: boolean }>({
-      query: ({ archived }) => `projects?archived=${archived}`,
-      providesTags: ["Projects"],
-    }),
+    me: build.query<Me, void>({ query: () => "me" }),
+    members: build.query<Me[], void>({ query: () => "members" }),
     project: build.query<Project, string>({
       query: (key) => `projects/${key}`,
       providesTags: ["Projects"],
-    }),
-    updateProject: build.mutation<
-      Project,
-      { key: string; name?: string; archived?: boolean; description?: string; descriptionVersion?: number }
-    >({
-      query: ({ key, ...body }) => ({ path: `projects/${key}`, method: "PATCH", body }),
-      invalidatesTags: ["Projects"],
-      async onQueryStarted(_change, { extra, queryFulfilled }) {
-        if (await queryFulfilled.catch(() => undefined)) (extra as StoreExtra).refreshServer();
-      },
-    }),
-    deleteProject: build.mutation<null, string>({
-      query: (key) => ({ path: `projects/${key}`, method: "DELETE" }),
     }),
     labels: build.query<Label[], string>({
       query: (key) => `projects/${key}/labels`,
@@ -130,14 +82,6 @@ export const api = createApi({
     createLabel: build.mutation<Label, { key: string; name: string; color: LabelColor }>({
       query: ({ key, ...body }) => ({ path: `projects/${key}/labels`, method: "POST", body }),
       invalidatesTags: (result) => (result ? ["Labels"] : []),
-    }),
-    updateLabel: build.mutation<Label, { id: string; name?: string; color?: LabelColor }>({
-      query: ({ id, ...body }) => ({ path: `labels/${id}`, method: "PATCH", body }),
-      invalidatesTags: (result, error) => (result || error?.status === 404 ? ["Labels"] : []),
-    }),
-    deleteLabel: build.mutation<null, string>({
-      query: (id) => ({ path: `labels/${id}`, method: "DELETE" }),
-      invalidatesTags: (_result, error) => (!error || error.status === 404 ? ["Labels"] : []),
     }),
     issue: build.query<Issue, string>({ query: (id) => `issues/${id}`, providesTags: ["Issue"] }),
     updateIssue: build.mutation<Issue, { id: string; change: IssueChange }>({
@@ -172,23 +116,10 @@ export const api = createApi({
 
 export const {
   useMeQuery,
-  useUpdateProfileMutation,
-  useChangePasswordMutation,
   useMembersQuery,
-  useUpdateMemberMutation,
-  useInvitationsQuery,
-  useCreateInvitationMutation,
-  useResendInvitationMutation,
-  useRevokeInvitationMutation,
-  useNotificationStatsQuery,
-  useProjectsQuery,
   useProjectQuery,
-  useUpdateProjectMutation,
-  useDeleteProjectMutation,
   useLabelsQuery,
   useCreateLabelMutation,
-  useUpdateLabelMutation,
-  useDeleteLabelMutation,
   useIssueQuery,
   useLazyIssueQuery,
   useUpdateIssueMutation,

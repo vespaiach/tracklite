@@ -59,20 +59,14 @@ export function networkError(): never {
   throw new TypeError("Failed to fetch");
 }
 
-export const refreshServer = vi.fn();
-
 export const createIssue = vi.fn();
 
 export function renderAppAt(path: string) {
   window.history.replaceState(null, "", path);
-  refreshServer.mockClear();
   createIssue.mockReset();
   return render(
     <ToastProvider>
-      <ClientApp
-        refreshServer={refreshServer}
-        createIssue={createIssue}
-      />
+      <ClientApp createIssue={createIssue} />
     </ToastProvider>,
   );
 }
