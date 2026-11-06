@@ -4,10 +4,10 @@ import type { DataRouter } from "react-router";
 import { api } from "./api";
 import { toastSlice } from "./toast";
 
-export type StoreExtra = { router: DataRouter; refreshServer: () => void };
+export type StoreExtra = { router: DataRouter };
 
-export function makeStore(router: DataRouter, refreshServer: () => void) {
-  const extra: StoreExtra = { router, refreshServer };
+export function makeStore(router: DataRouter) {
+  const extra: StoreExtra = { router };
   return configureStore({
     reducer: { [api.reducerPath]: api.reducer, toast: toastSlice.reducer },
     middleware: (getDefaultMiddleware) =>

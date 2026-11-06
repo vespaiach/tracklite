@@ -58,20 +58,12 @@ export function networkError(): never {
   throw new TypeError("Failed to fetch");
 }
 
-export const refreshServer = vi.fn();
-
 export const createIssue = vi.fn();
 
 export function renderAppAt(path: string) {
   window.history.replaceState(null, "", path);
-  refreshServer.mockClear();
   createIssue.mockReset();
-  return render(
-    <ClientApp
-      refreshServer={refreshServer}
-      createIssue={createIssue}
-    />,
-  );
+  return render(<ClientApp createIssue={createIssue} />);
 }
 
 export function requestsTo(fetchMock: ReturnType<typeof mockApi>, key: string) {

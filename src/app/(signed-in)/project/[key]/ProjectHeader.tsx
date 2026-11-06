@@ -29,6 +29,8 @@ export function ProjectHeader({ project, admin, issue, ...newIssue }: ProjectHea
     </a>
   );
 
+  if (view === "settings") return null;
+
   return (
     <AppBar
       end={

@@ -8,20 +8,6 @@ export const routes: RouteObject[] = [
       {
         children: [
           {
-            path: "settings/profile",
-            lazy: async () => ({ Component: (await import("./screens/Profile")).Profile }),
-          },
-          {
-            path: "settings/members",
-            lazy: async () => ({ Component: (await import("./screens/Members")).Members }),
-          },
-          {
-            path: "settings/notifications",
-            lazy: async () => ({
-              Component: (await import("./screens/NotificationStatus")).NotificationStatus,
-            }),
-          },
-          {
             path: "project/:key/list",
             lazy: async () => ({ Component: (await import("./screens/Project")).ProjectList }),
           },
@@ -29,18 +15,7 @@ export const routes: RouteObject[] = [
             path: "project/:key/detail",
             lazy: async () => ({ Component: (await import("./screens/ProjectDetail")).ProjectDetail }),
           },
-          {
-            path: "project/:key/labels",
-            lazy: async () => ({ Component: (await import("./screens/Labels")).Labels }),
-          },
-          {
-            path: "project/:key/settings",
-            lazy: async () => ({ Component: (await import("./screens/ProjectSettings")).ProjectSettings }),
-          },
-          {
-            path: "projects/archived",
-            lazy: async () => ({ Component: (await import("./screens/ArchivedProjects")).ArchivedProjects }),
-          },
+          {},
           {
             path: "*",
             lazy: async () => ({ Component: (await import("../app/(signed-in)/not-found")).default }),

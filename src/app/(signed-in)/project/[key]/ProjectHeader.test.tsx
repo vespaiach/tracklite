@@ -81,3 +81,19 @@ it("REQ-046: on an issue page the header shows the breadcrumb to the project and
   const views = within(header.getByRole("navigation", { name: "Project views" }));
   expect(views.queryAllByRole("link", { current: "page" })).toEqual([]);
 });
+
+it("design §6.2: the settings page has no project header", () => {
+  navigation.segment = "settings";
+  renderForm(
+    <ProjectHeader
+      project={web}
+      admin
+      members={[]}
+      me="sam"
+      createIssue={vi.fn()}
+    />,
+  );
+
+  expect(screen.queryByRole("banner")).toBeNull();
+  expect(screen.queryByRole("heading")).toBeNull();
+});
