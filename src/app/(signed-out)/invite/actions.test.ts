@@ -84,7 +84,7 @@ it("REQ-002.2: a link on day 8, one already accepted, an unknown one and one rep
   const accepted = await openInvitation();
   expect(await accept(profileFor(accepted.token))).toEqual({ ok: true, data: null });
   const replaced = await openInvitation();
-  expect((await resendInvitation(replaced.adminCookie, replaced.invitation.id)).status).toBe(200);
+  expect((await resendInvitation(replaced.adminCookie, replaced.invitation.id)).ok).toBe(true);
 
   expect(await accept(profileFor(dayEight.token))).toEqual(expired);
   expect(await accept(profileFor(accepted.token))).toEqual(expired);
@@ -121,7 +121,7 @@ it("REQ-002: a stale session cookie doesn't block accepting", async () => {
 
 it("REQ-002.4: a link revoked mid-form is no longer valid", async () => {
   const { adminCookie, invitation, token, email } = await openInvitation();
-  expect((await revokeInvitation(adminCookie, invitation.id)).status).toBe(204);
+  expect((await revokeInvitation(adminCookie, invitation.id)).ok).toBe(true);
 
   expect(await accept(profileFor(token))).toEqual({
     ok: false,

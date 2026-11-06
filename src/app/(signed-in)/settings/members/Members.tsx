@@ -1,9 +1,11 @@
+"use client";
+
 import { Ellipsis } from "lucide-react";
-import { type FormEvent, useMemo, useState } from "react";
-import { Link } from "react-router";
+import { useState } from "react";
+import { formatDate } from "../../../../client/dates";
+import { Link } from "../../../../components/leave-guard";
+import { useToast } from "../../../../components/toast";
 import {
-  AppBar,
-  AppBarTitle,
   Avatar,
   Button,
   Dialog,
@@ -22,104 +24,73 @@ import {
   SettingsSection,
   Table,
   Tag,
-} from "../../components/ui/track-lite";
-import {
-  type ApiFailure,
-  type Invitation,
-  type Me,
-  useCreateInvitationMutation,
-  useInvitationsQuery,
-  useMeQuery,
-  useMembersQuery,
-  useResendInvitationMutation,
-  useRevokeInvitationMutation,
-  useUpdateMemberMutation,
-} from "../api";
-import { formatDate } from "../dates";
-import { useFailureToast } from "../failure";
-import { Zone, zoneState } from "../Zone";
+} from "../../../../components/ui/track-lite";
+import { useFormAction } from "../../../../components/useFormAction";
+import type { ActionResult, Invitation, Me } from "../../../../contract";
 
-export function Members() {
-  const { data: me } = useMeQuery();
-  return (
-    <>
-      <AppBar>
-        <AppBarTitle>Members</AppBarTitle>
-      </AppBar>
-      {me?.role === "admin" ? (
-        <MembersAdmin />
-      ) : (
-        <SettingsLayout>
-          <FormStatus>You don't have permission to do that.</FormStatus>
-        </SettingsLayout>
-      )}
-    </>
-  );
-}
+type MemberChange = { username: string; role?: Me["role"]; deactivated?: boolean };
 
-function MembersAdmin() {
-  const { data: me } = useMeQuery();
-  const members = useMembersQuery();
-  const invitations = useInvitationsQuery();
-  const loaded = useMemo(
-    () =>
-      me && members.data && invitations.data
-        ? { you: me.username, members: members.data, invitations: invitations.data }
-        : undefined,
-    [me, members.data, invitations.data],
-  );
+export type MembersActions = {
+  createInvitation: (form: FormData) => Promise<ActionResult<Invitation>>;
+  resendInvitation: (invitation: { id: string }) => Promise<ActionResult<Invitation>>;
+  revokeInvitation: (invitation: { id: string }) => Promise<ActionResult<null>>;
+  updateMember: (change: MemberChange) => Promise<ActionResult<null>>;
+};
 
-  return (
-    <Zone
-      what="members"
-      state={zoneState({ data: loaded, isError: members.isError || invitations.isError })}
-      retry={() => {
-        members.refetch();
-        invitations.refetch();
-      }}
-      page>
-      {(data) => (
-        <SettingsLayout wide>
-          <MembersSection
-            members={data.members}
-            you={data.you}
-          />
-          <InvitationsSection invitations={data.invitations} />
-        </SettingsLayout>
-      )}
-    </Zone>
-  );
-}
+type MembersProps = MembersActions & { you: string; members: Me[]; invitations: Invitation[] };
 
-function InviteForm() {
-  const [createInvitation, { isLoading: sending }] = useCreateInvitationMutation();
-  const toastFailure = useFailureToast();
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState<string>();
-  const [sentTo, setSentTo] = useState<string>();
+const couldNotSave = "Couldn’t save. Try again.";
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(undefined);
-    setSentTo(undefined);
+function useActionCall() {
+  const toast = useToast();
+
+  return async <Data,>(call: () => Promise<ActionResult<Data>>) => {
     try {
-      const invitation = await createInvitation({ email }).unwrap();
+      const result = await call();
+      if (result.ok) return true;
+      toast(result.error.message);
+    } catch {
+      toast(couldNotSave);
+    }
+    return false;
+  };
+}
+
+export function Members({ you, members, invitations, ...actions }: MembersProps) {
+  return (
+    <SettingsLayout wide>
+      <MembersSection
+        members={members}
+        you={you}
+        updateMember={actions.updateMember}
+      />
+      <InvitationsSection
+        invitations={invitations}
+        {...actions}
+      />
+    </SettingsLayout>
+  );
+}
+
+function InviteForm({ createInvitation }: Pick<MembersActions, "createInvitation">) {
+  const [email, setEmail] = useState("");
+  const [sentTo, setSentTo] = useState<string>();
+  const { error, submit, pending } = useFormAction(
+    createInvitation,
+    (invitation) => {
       setEmail("");
       setSentTo(invitation.email);
-    } catch (caught) {
-      const failure = caught as ApiFailure;
-      if (failure.status === 422) {
-        setError(failure.fields?.email ?? failure.message);
-      } else {
-        toastFailure(failure);
-      }
-    }
-  }
+    },
+    ["invalid"],
+  );
 
   return (
     <SettingsForm
       aria-label="Invite by email"
-      onSubmit={submit}>
+      onSubmit={(event) => {
+        setSentTo(undefined);
+        submit(event);
+      }}>
       <SettingsInline>
         <Field
           label="Email"
@@ -128,10 +99,11 @@ function InviteForm() {
               The link works once and expires after <Mono>7</Mono> days.
             </>
           }
-          error={error}>
+          error={error ? (error.fields?.email ?? error.message) : undefined}>
           {(props) => (
             <Input
               {...props}
+              name="email"
               type="email"
               autoComplete="off"
               value={email}
@@ -143,9 +115,9 @@ function InviteForm() {
           <Button
             variant="primary"
             type="submit"
-            disabled={sending}
-            aria-busy={sending || undefined}>
-            {sending ? "Sending…" : "Send invitation"}
+            disabled={pending}
+            aria-busy={pending || undefined}>
+            {pending ? "Sending…" : "Send invitation"}
           </Button>
           {sentTo && <FormStatus>Invitation sent to {sentTo}.</FormStatus>}
         </SettingsActions>
@@ -160,29 +132,28 @@ const invitationStates = {
   expired: { label: "Expired", tag: "neutral", when: "Expired" },
 } as const;
 
-function InvitationsSection({ invitations }: { invitations: Invitation[] }) {
-  const [resendInvitation] = useResendInvitationMutation();
-  const [revokeInvitation, { isLoading: revoking }] = useRevokeInvitationMutation();
-  const toastFailure = useFailureToast();
+type InvitationsSectionProps = Omit<MembersActions, "updateMember"> & { invitations: Invitation[] };
+
+function InvitationsSection({
+  invitations,
+  createInvitation,
+  resendInvitation,
+  revokeInvitation,
+}: InvitationsSectionProps) {
+  const call = useActionCall();
   const [resentTo, setResentTo] = useState<string>();
   const [pendingRevoke, setPendingRevoke] = useState<Invitation>();
+  const [revoking, setRevoking] = useState(false);
 
   async function resend(invitation: Invitation) {
     setResentTo(undefined);
-    try {
-      await resendInvitation(invitation.id).unwrap();
-      setResentTo(invitation.email);
-    } catch (caught) {
-      toastFailure(caught);
-    }
+    if (await call(() => resendInvitation({ id: invitation.id }))) setResentTo(invitation.email);
   }
 
   async function revoke(invitation: Invitation) {
-    try {
-      await revokeInvitation(invitation.id).unwrap();
-    } catch (caught) {
-      toastFailure(caught);
-    }
+    setRevoking(true);
+    await call(() => revokeInvitation({ id: invitation.id }));
+    setRevoking(false);
     setPendingRevoke(undefined);
   }
 
@@ -193,12 +164,12 @@ function InvitationsSection({ invitations }: { invitations: Invitation[] }) {
       status={resentTo && <FormStatus>Invitation resent to {resentTo}.</FormStatus>}
       action={
         <Link
-          to="/settings/notifications"
+          href="/settings/notifications"
           className="tl-btn tl-btn--sm tl-btn--secondary">
           Notification status
         </Link>
       }>
-      <InviteForm />
+      <InviteForm createInvitation={createInvitation} />
       {invitations.length === 0 ? (
         <SettingsEmpty>No open invitations. Invite someone by email above.</SettingsEmpty>
       ) : (
@@ -278,17 +249,17 @@ function ActionsIcon() {
   return <Ellipsis size={15} />;
 }
 
-function MembersSection({ members, you }: { members: Me[]; you: string }) {
-  const [updateMember, { isLoading: updating }] = useUpdateMemberMutation();
-  const toastFailure = useFailureToast();
-  const [deactivating, setDeactivating] = useState<Me>();
+type MembersSectionProps = Pick<MembersActions, "updateMember"> & { members: Me[]; you: string };
 
-  async function update(member: Me, change: { role?: Me["role"]; deactivated?: boolean }) {
-    try {
-      await updateMember({ username: member.username, ...change }).unwrap();
-    } catch (caught) {
-      toastFailure(caught);
-    }
+function MembersSection({ members, you, updateMember }: MembersSectionProps) {
+  const call = useActionCall();
+  const [deactivating, setDeactivating] = useState<Me>();
+  const [updating, setUpdating] = useState(false);
+
+  async function update(member: Me, change: Omit<MemberChange, "username">) {
+    setUpdating(true);
+    await call(() => updateMember({ username: member.username, ...change }));
+    setUpdating(false);
   }
 
   function act(member: Me, action: string) {
