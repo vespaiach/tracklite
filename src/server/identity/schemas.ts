@@ -1,12 +1,12 @@
 import "server-only";
 import * as v from "valibot";
-import { roles } from "../../contract";
 import { emailAddress, linkToken, maxCharacters } from "../shared/schemas";
+import { FullName } from "../../domain/identity/full-name";
+import { Role } from "../../domain/identity/role";
 import { Username, usernameRule } from "../../domain/shared/identifiers";
 
 const minPasswordLength = 12;
 const maxPasswordLength = 128;
-const maxFullNameLength = 60;
 
 export const newPassword = v.pipe(
   v.string(`At least ${minPasswordLength} characters`),
@@ -14,12 +14,7 @@ export const newPassword = v.pipe(
   maxCharacters(maxPasswordLength, `Too long (max ${maxPasswordLength})`),
 );
 
-const fullName = v.pipe(
-  v.string("Name required"),
-  v.trim(),
-  v.nonEmpty("Name required"),
-  maxCharacters(maxFullNameLength, `Too long (max ${maxFullNameLength})`),
-);
+const fullName = FullName.schema;
 
 const username = v.pipe(v.string(usernameRule), v.trim(), Username.schema);
 
@@ -62,7 +57,7 @@ export const InvitationAcceptance = v.object({ token: linkToken, fullName, usern
 export type InvitationAcceptance = v.InferOutput<typeof InvitationAcceptance>;
 
 export const MemberChanges = v.object({
-  role: v.optional(v.picklist(roles, "Choose admin or member")),
+  role: v.optional(Role.schema),
   deactivated: v.optional(v.boolean("Choose true or false")),
 });
 export type MemberChanges = v.InferOutput<typeof MemberChanges>;

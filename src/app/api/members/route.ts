@@ -1,9 +1,8 @@
 import type { Me, MemberSummary } from "../../../contract";
+import { listMembers, profileResponse } from "../../../queries";
 import {
   acceptInvitation,
   InvitationAcceptance,
-  listMembers,
-  profileResponse,
   sessionCookie,
   signedInMember,
 } from "../../../server/identity";

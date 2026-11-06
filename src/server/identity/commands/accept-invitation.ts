@@ -5,7 +5,7 @@ import { db } from "../../../infrastructure/db";
 import type { InvitationAcceptance } from "../schemas";
 import { hashPassword } from "../../../infrastructure/passwords";
 import { invitations, members } from "../../../infrastructure/identity/tables";
-import { createSession } from "../sessions";
+import { createSession } from "../../../infrastructure/identity/session";
 import { invitationByToken, usableInvitation } from "../invitations";
 import type { Username } from "../../../domain/shared/identifiers";
 
@@ -20,7 +20,7 @@ export async function acceptInvitation({ token, fullName, username, password }: 
       .insert(members)
       .values({
         email: invitation.email,
-        fullName,
+        fullName: fullName.value,
         username: username.value,
         passwordHash: await hashPassword(password),
         role: "member",
