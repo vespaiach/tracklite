@@ -6,7 +6,7 @@ import type { Transaction } from "../../infrastructure/transaction";
 import { byProjectKey, findLabel } from "../../queries";
 import { labels, projectKeys, projects } from "../../infrastructure/projects/tables";
 import { labelGone, type Project, type ProjectLabel } from "./model";
-import type { ProjectKey } from "./schemas";
+import { ProjectKey } from "../../domain/shared/identifiers";
 
 type ProjectRows = { row: typeof projects.$inferSelect; labels: ProjectLabel[] };
 
@@ -50,7 +50,7 @@ export async function loadLabelProject(tx: Transaction, labelId: string | undefi
     .where(eq(labels.id, labelId));
   if (!label) throw labelGone();
 
-  return { project: await loadProject(tx, label.projectKey), labelId };
+  return { project: await loadProject(tx, ProjectKey.from(label.projectKey)), labelId };
 }
 
 export async function saveProject(tx: Transaction, before: Project | null, after: Project) {

@@ -1,11 +1,8 @@
 import "server-only";
 import * as v from "valibot";
 import { issuePriorities, issueStatuses } from "../../contract";
-import { descriptionText, descriptionVersion, maxCharacters, requestId } from "../shared/schemas";
-import { parseUsername, type Username } from "../identity";
-import { parseIssueId } from "../../domain/shared/identifiers";
-
-export { type IssueId, parseIssueId } from "../../domain/shared/identifiers";
+import { descriptionText, descriptionVersion, maxCharacters } from "../shared/schemas";
+import { IssueId, RequestId, tryFrom, Username } from "../../domain/shared/identifiers";
 
 const maxTitleLength = 200;
 const maxLabels = 10;
@@ -22,16 +19,14 @@ const status = v.picklist(issueStatuses, "Choose a status");
 
 const assignees = v.pipe(
   v.custom<string[]>(
-    (input) =>
-      Array.isArray(input) &&
-      input.every((username) => typeof username === "string" && parseUsername(username) !== undefined),
+    (input) => Array.isArray(input) && input.every((username) => tryFrom(Username, username) !== undefined),
     "Choose an active member",
   ),
-  v.transform((usernames) => [...new Set(usernames.map((username) => username.toLowerCase() as Username))]),
+  v.transform((usernames) => [...new Set(usernames.map((username) => username.toLowerCase()))].map(Username.from)),
 );
 
 export const NewIssue = v.object({
-  requestId,
+  requestId: RequestId.schema,
   title,
   status: v.optional(v.fallback(v.picklist(issueStatuses), "backlog"), "backlog"),
   assignees: v.optional(assignees, []),
@@ -94,7 +89,7 @@ export const IssueMove = v.object({
     [
       v.literal("top"),
       v.literal("bottom"),
-      v.object({ after: v.pipe(v.string(), v.transform(parseIssueId)) }),
+      v.object({ after: v.pipe(v.string(), v.transform((after) => tryFrom(IssueId, after))) }),
     ],
     "Choose a place",
   ),

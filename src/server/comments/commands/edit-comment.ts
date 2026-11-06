@@ -1,11 +1,11 @@
 import "server-only";
 import { db } from "../../../infrastructure/db";
-import type { Uuid } from "../../../infrastructure/ids";
 import { publishAll } from "../../../infrastructure/events";
 import { editConflict, type Member } from "../../identity";
 import type { CommentEdit } from "../schemas";
 import { edit } from "../model";
 import { loadComment, oneComment, saveComment } from "../repository";
+import type { Uuid } from "../../../domain/shared/identifiers";
 
 export async function editComment(actor: Member, id: Uuid | undefined, { body, version }: CommentEdit) {
   return db.transaction(async (tx) => {

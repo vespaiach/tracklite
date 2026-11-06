@@ -1,9 +1,8 @@
 import { expect, it } from "vitest";
 import { changeSettings, needsAdmin, newProject } from "./model";
-import type { ProjectKey } from "./schemas";
 
 const archived = {
-  ...newProject({ id: "admin" }, { id: "p", key: "WEB" as ProjectKey, name: "Website" }),
+  ...newProject({ id: "admin" }, { id: "p", key: "WEB", name: "Website" }),
   archived: true,
 };
 

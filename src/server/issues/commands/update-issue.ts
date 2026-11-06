@@ -3,7 +3,7 @@ import { db } from "../../../infrastructure/db";
 import type { Transaction } from "../../../infrastructure/transaction";
 import { publishAll } from "../../../infrastructure/events";
 import { editConflict, type Member } from "../../identity";
-import type { IssueChange, IssueId } from "../schemas";
+import type { IssueChange } from "../schemas";
 import { updatedIssue } from "../../../queries";
 import {
   assign,
@@ -19,6 +19,7 @@ import {
   saveDescription,
 } from "../model";
 import { assigneeCandidates, firstPositionIn, loadIssue, projectLabelIds, saveIssue } from "../repository";
+import type { IssueId } from "../../../domain/shared/identifiers";
 
 async function applyEdit(
   tx: Transaction,

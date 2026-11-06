@@ -7,13 +7,12 @@ import { memberSummary } from "../domain/identity/member-summary";
 import { type Member, members } from "../infrastructure/identity/tables";
 import { comments } from "../infrastructure/comments/tables";
 import { issues } from "../infrastructure/issues/tables";
-import type { IssueId } from "../domain/shared/identifiers";
 import { projects } from "../infrastructure/projects/tables";
-import type { ProjectKey } from "../domain/shared/identifiers";
 import { mentions } from "../infrastructure/notifications/tables";
 import type { ThreadComment } from "../contract";
 import { byIssueId } from "./issue";
 import { byProjectKey } from "./project";
+import type { IssueId, ProjectKey } from "../domain/shared/identifiers";
 
 export async function findComments(executor: Executor, where: SQL): Promise<ThreadComment[]> {
   const rows = await commentRows(executor, where);

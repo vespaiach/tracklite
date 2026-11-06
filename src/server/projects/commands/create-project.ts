@@ -10,7 +10,7 @@ import type { NewProject } from "../schemas";
 export async function createProject(actor: Member, { name, key }: NewProject) {
   assertAdmin(actor);
   return db.transaction(async (tx) => {
-    const project = newProject(actor, { id: randomUUID(), key, name });
+    const project = newProject(actor, { id: randomUUID(), key: key.value, name });
 
     await saveProject(tx, null, project);
 

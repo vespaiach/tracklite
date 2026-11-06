@@ -2,9 +2,7 @@ import "server-only";
 import * as v from "valibot";
 import { labelColors } from "../../contract";
 import { descriptionText, descriptionVersion, maxCharacters } from "../shared/schemas";
-import { projectKey } from "../../domain/shared/identifiers";
-
-export { type ProjectKey, parseProjectKey } from "../../domain/shared/identifiers";
+import { ProjectKey } from "../../domain/shared/identifiers";
 
 const maxProjectNameLength = 50;
 
@@ -15,7 +13,7 @@ const projectName = v.pipe(
   maxCharacters(maxProjectNameLength, `Too long (max ${maxProjectNameLength})`),
 );
 
-export const NewProject = v.object({ name: projectName, key: projectKey });
+export const NewProject = v.object({ name: projectName, key: ProjectKey.schema });
 export type NewProject = v.InferOutput<typeof NewProject>;
 
 function isMixedChange(body: Record<string, unknown>) {

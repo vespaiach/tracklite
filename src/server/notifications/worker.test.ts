@@ -7,9 +7,9 @@ import { postIssueComment } from "../comments";
 import { db } from "../../infrastructure/db";
 import { outbox } from "../../infrastructure/email/outbox";
 import type { Transaction } from "../../infrastructure/transaction";
-import { parseIssueId, updateIssue, issues } from "../issues";
+import { updateIssue, issues } from "../issues";
 import { notificationSenders } from "./notification-channels";
-import { members, type Member, parseUsername } from "../identity";
+import { members, type Member } from "../identity";
 import {
   notificationBatches,
   notificationDeliveries,
@@ -17,6 +17,7 @@ import {
   workerHeartbeats,
 } from "../../infrastructure/notifications/tables";
 import { runWorker, sendDueDeliveries } from "./handlers/run-worker";
+import { IssueId, Username } from "../../domain/shared/identifiers";
 
 beforeEach(() => {
   outbox.sent = [];
@@ -35,13 +36,13 @@ async function website() {
 }
 
 function assign(issueRef: string, by: Member, ...assignees: Member[]) {
-  return updateIssue(by, parseIssueId(issueRef), {
-    assignees: assignees.flatMap((assignee) => parseUsername(assignee.username) ?? []),
+  return updateIssue(by, IssueId.from(issueRef), {
+    assignees: assignees.map((assignee) => Username.from(assignee.username)),
   });
 }
 
 async function comment(issueRef: string, by: Member, body: string) {
-  const { comment } = await postIssueComment(by, parseIssueId(issueRef), { requestId: newRequestId(), body });
+  const { comment } = await postIssueComment(by, IssueId.from(issueRef), { requestId: newRequestId(), body });
   return comment;
 }
 

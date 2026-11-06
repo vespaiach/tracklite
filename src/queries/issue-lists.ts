@@ -18,9 +18,7 @@ import { db } from "../infrastructure/db";
 import { memberSummary } from "../domain/identity/member-summary";
 import { type Member, members } from "../infrastructure/identity/tables";
 import { issueAssignees, issueLabels, issues } from "../infrastructure/issues/tables";
-import type { IssueId } from "../domain/shared/identifiers";
 import { labels, projects } from "../infrastructure/projects/tables";
-import type { ProjectKey } from "../domain/shared/identifiers";
 import {
   type Board,
   type BoardIssue,
@@ -42,6 +40,7 @@ import {
   readableProject,
   recentlyClosedOrOpen,
 } from "./issue";
+import type { IssueId, ProjectKey } from "../domain/shared/identifiers";
 
 type SortColumn = keyof typeof sortColumns;
 

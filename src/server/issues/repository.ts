@@ -1,14 +1,14 @@
 import "server-only";
 import { and, asc, desc, eq, gt, inArray, ne, type SQL, sql } from "drizzle-orm";
-import { parseUuid } from "../../infrastructure/ids";
 import type { Transaction } from "../../infrastructure/transaction";
-import { members, type Username } from "../identity";
+import { members } from "../identity";
 import { labels, projects, writableProject } from "../projects";
 import type { IssueStatus } from "../../contract";
 import { issueAssignees, issueLabels, issues } from "../../infrastructure/issues/tables";
-import type { IssueId, IssueMove } from "./schemas";
+import type { IssueMove } from "./schemas";
 import { byIssueId, issueGone } from "../../queries";
 import { type AssigneeCandidate, assigneeChange, type Issue, type Neighbours } from "./model";
+import { type IssueId, ProjectKey, tryFrom, type Username, Uuid } from "../../domain/shared/identifiers";
 
 type IssueRows = {
   row: typeof issues.$inferSelect;
@@ -62,7 +62,7 @@ async function lockedRow(tx: Transaction, where: SQL) {
     .where(where);
   if (!target) throw issueGone();
 
-  await writableProject(tx, target.projectKey);
+  await writableProject(tx, ProjectKey.from(target.projectKey));
 
   const [row] = await tx.select().from(issues).where(eq(issues.id, target.id)).for("update");
   if (!row) throw issueGone();
@@ -158,7 +158,10 @@ export async function assigneeCandidates(
   const rows = await tx
     .select({ id: members.id, username: members.username, deactivatedAt: members.deactivatedAt })
     .from(members)
-    .where(inArray(members.username, usernames));
+    .where(inArray(
+        members.username,
+        usernames.map((username) => username.value),
+      ));
   return rows.map(({ id, username, deactivatedAt }) => ({
     id,
     username,
@@ -167,7 +170,7 @@ export async function assigneeCandidates(
 }
 
 export async function projectLabelIds(tx: Transaction, projectId: string, labelIds: string[]) {
-  const validIds = labelIds.filter((labelId) => parseUuid(labelId));
+  const validIds = labelIds.filter((labelId) => tryFrom(Uuid, labelId));
   if (validIds.length === 0) return [];
   const found = await tx
     .select({ id: labels.id })

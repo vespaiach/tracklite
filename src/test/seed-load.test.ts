@@ -3,10 +3,11 @@ import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { comments } from "../server/comments";
 import { members } from "../server/identity";
 import { createIssue, issueAssignees, issues } from "../server/issues";
-import { type ProjectKey, projectKeys, projects } from "../server/projects";
+import { projectKeys, projects } from "../server/projects";
 import { db } from "../infrastructure/db";
 import { newRequestId } from "./factories";
 import { seedLoadData } from "./seed-load";
+import { ProjectKey } from "../domain/shared/identifiers";
 
 async function counts() {
   return {
@@ -29,7 +30,7 @@ afterEach(() => {
 
 it("NFR-001: seeds 50 projects, 10,000 issues and 50,000 comments around keys reserved by deleted projects", async () => {
   expect(await counts()).toEqual({ projects: 50, issues: 10_000, comments: 50_000 });
-  expect(await db.$count(projects, eq(projects.key, "LAA" as ProjectKey))).toBe(0);
+  expect(await db.$count(projects, eq(projects.key, "LAA"))).toBe(0);
   expect(await db.$count(projectKeys)).toBe(51);
 });
 
@@ -62,7 +63,7 @@ it("NFR-001: an issue created after seeding gets the next number", async () => {
     .from(issues)
     .where(eq(issues.projectId, project.id));
 
-  const { issue } = await createIssue(member, project.key, {
+  const { issue } = await createIssue(member, ProjectKey.from(project.key), {
     requestId: newRequestId(),
     title: "After seeding",
     status: "backlog",

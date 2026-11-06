@@ -6,15 +6,15 @@ import { editComment, postIssueComment, postProjectComment } from "../comments";
 import { db } from "../../infrastructure/db";
 import type { DomainEvent } from "../../domain/shared/events";
 import { publish } from "../../infrastructure/events";
-import { parseUuid } from "../../infrastructure/ids";
-import { parseIssueId, updateIssue, issues } from "../issues";
+import { updateIssue, issues } from "../issues";
 import { updateProject } from "../projects";
-import { members, type Member, parseUsername } from "../identity";
+import { members, type Member } from "../identity";
 import {
   notificationBatches,
   notificationDeliveries,
   notifications,
 } from "../../infrastructure/notifications/tables";
+import { IssueId, ProjectKey, Username, Uuid } from "../../domain/shared/identifiers";
 
 async function website(assigneeIds: string[] = []) {
   const project = await createProject({ name: "Website" });
@@ -62,13 +62,13 @@ function deliveriesFor(member: { id: string }) {
 }
 
 function assign(issueRef: string, by: Member, ...assignees: Member[]) {
-  return updateIssue(by, parseIssueId(issueRef), {
-    assignees: assignees.flatMap((assignee) => parseUsername(assignee.username) ?? []),
+  return updateIssue(by, IssueId.from(issueRef), {
+    assignees: assignees.map((assignee) => Username.from(assignee.username)),
   });
 }
 
 async function comment(issueRef: string, by: Member, body: string) {
-  const { comment } = await postIssueComment(by, parseIssueId(issueRef), { requestId: newRequestId(), body });
+  const { comment } = await postIssueComment(by, IssueId.from(issueRef), { requestId: newRequestId(), body });
   return comment;
 }
 
@@ -182,7 +182,7 @@ it("REQ-044.3: Alex edits a comment that already mentions @sam and adds @jo → 
   const { issueRef } = await website();
   const posted = await comment(issueRef, alex, `@${sam.username} look`);
 
-  await editComment(alex, parseUuid(posted.id), {
+  await editComment(alex, Uuid.from(posted.id), {
     body: `@${sam.username} @${jo.username} look`,
     version: 0,
   });
@@ -206,7 +206,7 @@ it("REQ-044.5: Alex mentions @sam in a comment on project WEB → the email link
   const sam = await createMember();
   const project = await createProject({ name: "Website" });
 
-  const { comment: posted } = await postProjectComment(alex, project.key, {
+  const { comment: posted } = await postProjectComment(alex, ProjectKey.from(project.key), {
     requestId: newRequestId(),
     body: `@${sam.username} thoughts?`,
   });
@@ -232,7 +232,7 @@ it("REQ-044.6: Alex mentions @sam in the WEB project description → Sam gets th
   const sam = await createMember();
   const project = await createProject({ name: "Website" });
 
-  await updateProject(alex, project.key, {
+  await updateProject(alex, ProjectKey.from(project.key), {
     description: `Owner: @${sam.username}`,
     descriptionVersion: 0,
   });
@@ -256,7 +256,7 @@ it("REQ-044: a mention in an issue description emails the member, linking to the
   const sam = await createMember();
   const { issue, issueRef } = await website();
 
-  await updateIssue(alex, parseIssueId(issueRef), {
+  await updateIssue(alex, IssueId.from(issueRef), {
     description: `Ask @${sam.username}`,
     descriptionVersion: 0,
   });
@@ -280,8 +280,8 @@ it("REQ-044.7: Alex mentions @sam in a comment, edits the mention out, then adds
   const { issueRef } = await website();
   const posted = await comment(issueRef, alex, `@${sam.username} look`);
 
-  await editComment(alex, parseUuid(posted.id), { body: "look", version: 0 });
-  await editComment(alex, parseUuid(posted.id), { body: `@${sam.username} look again`, version: 1 });
+  await editComment(alex, Uuid.from(posted.id), { body: "look", version: 0 });
+  await editComment(alex, Uuid.from(posted.id), { body: `@${sam.username} look again`, version: 1 });
 
   expect((await notificationsFor(sam)).map((row) => row.excerpt)).toEqual([
     `@${sam.username} look`,

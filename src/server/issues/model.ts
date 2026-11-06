@@ -2,8 +2,9 @@ import { generateKeyBetween } from "fractional-indexing";
 import type { IssuePriority, IssueStatus } from "../../contract";
 import { DomainError } from "../../domain/shared/domain-error";
 import type { DomainEvent } from "../../domain/shared/events";
-import type { Member, Username } from "../identity";
+import type { Member } from "../identity";
 import type { IssueChange } from "./schemas";
+import type { Username } from "../../domain/shared/identifiers";
 
 export type Issue = Readonly<{
   id: string;
@@ -138,7 +139,7 @@ export function assign(
 }
 
 function assigneeIdOf(issue: Issue, username: Username, candidates: AssigneeCandidate[]) {
-  const member = candidates.find((candidate) => candidate.username === username);
+  const member = candidates.find((candidate) => candidate.username === username.value);
   if (!member || (member.deactivated && !issue.assigneeIds.includes(member.id))) {
     throw new DomainError("invalid", "Check the highlighted fields", {
       assignees: "Choose an active member",

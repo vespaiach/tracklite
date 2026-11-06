@@ -7,12 +7,11 @@ import type { Executor, Transaction } from "../infrastructure/transaction";
 import { memberSummary } from "../domain/identity/member-summary";
 import { members } from "../infrastructure/identity/tables";
 import { labels, projects } from "../infrastructure/projects/tables";
-import type { ProjectKey } from "../domain/shared/identifiers";
 import { issueAssignees, issueLabels, issues } from "../infrastructure/issues/tables";
-import type { IssueId } from "../domain/shared/identifiers";
 import { mentions } from "../infrastructure/notifications/tables";
 import type { Issue, IssueStatus } from "../contract";
 import { byProjectKey } from "./project";
+import type { IssueId, ProjectKey } from "../domain/shared/identifiers";
 
 const closedStatuses: IssueStatus[] = ["done", "canceled"];
 
@@ -96,8 +95,7 @@ export function issueGone() {
 
 export function byIssueId(id: IssueId | undefined) {
   if (id === undefined) return undefined;
-  const [key, number] = id.split("-");
-  return and(eq(projects.key, key as ProjectKey), eq(issues.number, Number(number)));
+  return and(eq(projects.key, id.key.value), eq(issues.number, id.number));
 }
 
 export async function updatedIssue(tx: Transaction, issueId: string) {

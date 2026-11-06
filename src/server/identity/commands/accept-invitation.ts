@@ -2,11 +2,12 @@ import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { DomainError } from "../../../domain/shared/domain-error";
 import { db } from "../../../infrastructure/db";
-import type { InvitationAcceptance, Username } from "../schemas";
+import type { InvitationAcceptance } from "../schemas";
 import { hashPassword } from "../../../infrastructure/passwords";
 import { invitations, members } from "../../../infrastructure/identity/tables";
 import { createSession } from "../sessions";
 import { invitationByToken, usableInvitation } from "../invitations";
+import type { Username } from "../../../domain/shared/identifiers";
 
 export async function acceptInvitation({ token, fullName, username, password }: InvitationAcceptance) {
   return db.transaction(async (tx) => {
@@ -20,7 +21,7 @@ export async function acceptInvitation({ token, fullName, username, password }: 
       .values({
         email: invitation.email,
         fullName,
-        username,
+        username: username.value,
         passwordHash: await hashPassword(password),
         role: "member",
       })
@@ -36,6 +37,6 @@ async function assertUsernameFree(executor: Pick<typeof db, "select">, username:
   const [taken] = await executor
     .select({ id: members.id })
     .from(members)
-    .where(eq(members.username, username));
+    .where(eq(members.username, username.value));
   if (taken) throw new DomainError("invalid", "Check the highlighted fields", { username: "Username taken" });
 }

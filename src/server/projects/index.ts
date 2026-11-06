@@ -9,8 +9,6 @@ export {
   LabelChanges,
   NewLabel,
   NewProject,
-  parseProjectKey,
   ProjectChanges,
-  type ProjectKey,
 } from "./schemas";
 export { labels, projectKeys, projects } from "../../infrastructure/projects/tables";

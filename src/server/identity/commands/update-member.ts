@@ -1,12 +1,13 @@
 import "server-only";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import type { MemberChanges, Username } from "../schemas";
+import type { MemberChanges } from "../schemas";
 import { DomainError } from "../../../domain/shared/domain-error";
 import { db } from "../../../infrastructure/db";
 import type { Transaction } from "../../../infrastructure/transaction";
 import { members, sessions } from "../../../infrastructure/identity/tables";
 import { assertAdmin, type Member } from "../sessions";
 import { isLastAdmin, mayLeaveNoAdmin } from "../rules";
+import type { Username } from "../../../domain/shared/identifiers";
 
 async function keepLastAdmin(tx: Transaction, target: Member) {
   const activeAdmins = await tx
@@ -26,7 +27,7 @@ export async function updateMember(
 ) {
   assertAdmin(actor);
   return db.transaction(async (tx) => {
-    const [target] = username ? await tx.select().from(members).where(eq(members.username, username)) : [];
+    const [target] = username ? await tx.select().from(members).where(eq(members.username, username.value)) : [];
     if (!target) throw new DomainError("notFound", "Not found");
 
     if (mayLeaveNoAdmin({ role, deactivated })) await keepLastAdmin(tx, target);

@@ -5,7 +5,8 @@ import type { Label } from "../../../contract";
 import type { Member } from "../../identity";
 import { addLabel } from "../model";
 import { loadProject, saveProject, savedLabel } from "../repository";
-import type { NewLabel, ProjectKey } from "../schemas";
+import type { NewLabel } from "../schemas";
+import type { ProjectKey } from "../../../domain/shared/identifiers";
 
 export async function createLabel(
   _actor: Member,

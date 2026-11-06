@@ -5,14 +5,14 @@ import { db } from "../../../infrastructure/db";
 import type { Transaction } from "../../../infrastructure/transaction";
 import type { EventTarget } from "../../../domain/shared/events";
 import { publishAll } from "../../../infrastructure/events";
-import type { IssueId } from "../../issues";
 import type { Member } from "../../identity";
-import { type ProjectKey, writableProject } from "../../projects";
+import { writableProject } from "../../projects";
 import { findComments, issueGone, issueTarget } from "../../../queries";
 import { comments } from "../../../infrastructure/comments/tables";
 import type { NewComment } from "../schemas";
 import { newComment } from "../model";
 import { oneComment, saveComment } from "../repository";
+import { type IssueId, ProjectKey } from "../../../domain/shared/identifiers";
 
 async function postComment(
   actor: Member,
@@ -22,10 +22,10 @@ async function postComment(
   return db.transaction(async (tx) => {
     const target = await targetOf(tx);
 
-    const [repeated] = await findComments(tx, eq(comments.requestId, requestId));
+    const [repeated] = await findComments(tx, eq(comments.requestId, requestId.value));
     if (repeated) return { comment: repeated, created: false };
 
-    const { comment, events } = newComment(actor, { id: randomUUID(), target, body, requestId });
+    const { comment, events } = newComment(actor, { id: randomUUID(), target, body, requestId: requestId.value });
 
     await saveComment(tx, null, comment);
 
@@ -40,7 +40,7 @@ export function postIssueComment(actor: Member, id: IssueId | undefined, body: N
     const issue = await issueTarget(tx, id);
     if (!issue) throw issueGone();
 
-    await writableProject(tx, issue.projectKey);
+    await writableProject(tx, ProjectKey.from(issue.projectKey));
 
     return { issueId: issue.id };
   });
