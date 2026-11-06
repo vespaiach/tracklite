@@ -7,11 +7,14 @@ import {
   mockApi,
   noContent,
   project,
+  refreshServer,
   renderAppAt,
   requestsTo,
-  summary,
 } from "../../test/client-app";
+import { loadPage } from "../../lib/load-page";
 import type { Me, Project } from "../api";
+
+vi.mock("../../lib/load-page", () => ({ loadPage: vi.fn() }));
 
 afterEach(() => {
   cleanup();
@@ -26,8 +29,6 @@ function mockSettings({ me = admin, shown = web, patch }: { me?: Me; shown?: Pro
   let current: Project | undefined = shown;
   return mockApi({
     "GET /api/me": () => Response.json(me),
-    "GET /api/projects?archived=false": () =>
-      Response.json(current && current.archivedAt === null ? [summary(current)] : []),
     [`GET /api/projects/${shown.key}`]: () => (current ? Response.json(current) : apiError(404, "Not found")),
     [`PATCH /api/projects/${shown.key}`]:
       patch ??
@@ -49,10 +50,6 @@ function mockSettings({ me = admin, shown = web, patch }: { me?: Me; shown?: Pro
   });
 }
 
-function sidebar() {
-  return screen.findByRole("complementary");
-}
-
 async function nameField() {
   return (await screen.findByLabelText("Name")) as HTMLInputElement;
 }
@@ -62,7 +59,7 @@ async function openDelete() {
   return screen.getByRole("dialog", { name: "Delete Website · WEB?" });
 }
 
-it("REQ-011.1: renaming a project keeps its key and updates the sidebar", async () => {
+it("REQ-011.1: renaming a project keeps its key and refreshes the server-rendered sidebar", async () => {
   const fetchMock = mockSettings();
   renderAppAt("/project/WEB/settings");
 
@@ -71,7 +68,7 @@ it("REQ-011.1: renaming a project keeps its key and updates the sidebar", async 
 
   expect(await screen.findByText("Saved.")).toBeTruthy();
   expect(requestsTo(fetchMock, "PATCH /api/projects/WEB")).toEqual([{ name: "Marketing site" }]);
-  expect(await within(await sidebar()).findByRole("link", { name: "Marketing site · WEB" })).toBeTruthy();
+  expect(refreshServer).toHaveBeenCalledOnce();
   expect(screen.getByText("WEB", { selector: ".tl-fact__value--mono" })).toBeTruthy();
 });
 
@@ -98,20 +95,15 @@ it("STD-9: a failed rename shows the toast and keeps the typed name", async () =
   expect((await nameField()).value).toBe("Marketing site");
 });
 
-it("REQ-013.1, REQ-013.3, REQ-013.7: archiving removes it from the sidebar and shows the name read-only with no Save; unarchiving restores it", async () => {
+it("REQ-013.1, REQ-013.3, REQ-013.7: archiving refreshes the server-rendered sidebar and shows the name read-only with no Save; unarchiving restores it", async () => {
   const fetchMock = mockSettings();
   renderAppAt("/project/WEB/settings");
-  await within(await sidebar()).findByRole("link", { name: "Website · WEB" });
 
   fireEvent.click(await screen.findByRole("button", { name: "Archive project" }));
 
   expect(await screen.findByRole("button", { name: "Unarchive project" })).toBeTruthy();
   expect(requestsTo(fetchMock, "PATCH /api/projects/WEB")).toEqual([{ archived: true }]);
-  await waitFor(() =>
-    expect(
-      within(screen.getByRole("complementary")).queryByRole("link", { name: "Website · WEB" }),
-    ).toBeNull(),
-  );
+  expect(refreshServer).toHaveBeenCalledOnce();
 
   expect(screen.getByText("Website", { selector: ".tl-fact__value" })).toBeTruthy();
   expect(screen.queryByLabelText("Name")).toBeNull();
@@ -119,15 +111,14 @@ it("REQ-013.1, REQ-013.3, REQ-013.7: archiving removes it from the sidebar and s
 
   fireEvent.click(screen.getByRole("button", { name: "Unarchive project" }));
 
-  expect(await within(await sidebar()).findByRole("link", { name: "Website · WEB" })).toBeTruthy();
+  await waitFor(() => expect(refreshServer).toHaveBeenCalledTimes(2));
   expect(requestsTo(fetchMock, "PATCH /api/projects/WEB")).toEqual([{ archived: true }, { archived: false }]);
   expect(await screen.findByRole("button", { name: "Archive project" })).toBeTruthy();
 });
 
-it("REQ-014.1, REQ-014.2: Delete stays disabled until the key matches exactly, then deletes and goes to My issues", async () => {
+it("REQ-014.1, REQ-014.2: Delete stays disabled until the key matches exactly, then deletes and loads My issues", async () => {
   const fetchMock = mockSettings();
   renderAppAt("/project/WEB/settings");
-  await within(await sidebar()).findByRole("link", { name: "Website · WEB" });
   const dialog = await openDelete();
 
   const confirm = within(dialog).getByRole("button", { name: "Delete project" }) as HTMLButtonElement;
@@ -140,13 +131,8 @@ it("REQ-014.1, REQ-014.2: Delete stays disabled until the key matches exactly, t
   fireEvent.change(within(dialog).getByLabelText("Type WEB to confirm"), { target: { value: "WEB" } });
   fireEvent.click(within(dialog).getByRole("button", { name: "Delete project" }));
 
-  await waitFor(() => expect(window.location.pathname).toBe("/my-issues"));
+  await waitFor(() => expect(loadPage).toHaveBeenCalledWith("/my-issues"));
   expect(requestsTo(fetchMock, "DELETE /api/projects/WEB")).toHaveLength(1);
-  await waitFor(() =>
-    expect(
-      within(screen.getByRole("complementary")).queryByRole("link", { name: "Website · WEB" }),
-    ).toBeNull(),
-  );
 });
 
 it("STD-2: a member who opens project settings sees the permission message", async () => {

@@ -70,7 +70,7 @@ function workerWarning(worker: HTMLElement) {
   return within(worker).queryByText(/never run|No outbox run/)?.textContent;
 }
 
-it("REQ-053.1, REQ-053.2, REQ-053.3, REQ-053.4, REQ-053.10, STD-2: worker without a warning, queue, Email counts, problem rows newest first, Members link current", async () => {
+it("REQ-053.1, REQ-053.2, REQ-053.3, REQ-053.4, REQ-053.10, STD-2: worker without a warning, queue, Email counts, problem rows newest first", async () => {
   const older = Array.from({ length: 19 }, (_, index) =>
     problem({ id: `d-${index + 2}`, target: `WEB-${index + 1}`, at: secondsAgo((index + 4) * 3600) }),
   );
@@ -96,9 +96,6 @@ it("REQ-053.1, REQ-053.2, REQ-053.3, REQ-053.4, REQ-053.10, STD-2: worker withou
   expect(cellTexts(rows[0])).toEqual(["sam", "Email", "WEB-42", "4", "3 hours ago"]);
   expect(within(rows[0]).getByText("3 hours ago").getAttribute("title")).toBeTruthy();
   expect(document.body.textContent).not.toContain("sam@acme.com");
-
-  const members = within(screen.getByRole("complementary")).getByRole("link", { name: "Members" });
-  expect(members.getAttribute("aria-current")).toBe("page");
 });
 
 it("REQ-053.5, REQ-053.6, REQ-053.9: a worker that never ran shows Never with its warning, nothing due shows None, no problems shows the empty message", async () => {
@@ -167,11 +164,10 @@ it("REQ-053.7: numbers change only on Refresh", async () => {
   expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
 });
 
-it("REQ-053.8: a member sees “You don't have permission to do that.” and no Notifications link", async () => {
+it("REQ-053.8: a member sees “You don't have permission to do that.”", async () => {
   const fetchMock = mockStatusPage(() => Response.json(stats()), alex);
   renderAppAt("/settings/notifications");
 
   expect(await screen.findByText("You don't have permission to do that.")).toBeTruthy();
-  expect(within(screen.getByRole("complementary")).queryByRole("link", { name: "Notifications" })).toBeNull();
   expect(requestsTo(fetchMock, statsRequest)).toHaveLength(0);
 });

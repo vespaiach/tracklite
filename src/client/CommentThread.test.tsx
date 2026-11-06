@@ -14,7 +14,6 @@ import {
   renderAppAt,
   requestsTo,
   sam,
-  summary,
 } from "../test/client-app";
 import type { Me, Project, ThreadComment } from "./api";
 import { formatExact } from "./dates";
@@ -57,7 +56,6 @@ function mockThread({
   patch,
   remove,
   on = "issue",
-  alsoInSidebar = [],
 }: {
   me?: Me;
   inProject?: Project;
@@ -67,15 +65,12 @@ function mockThread({
   patch?: Answer;
   remove?: Answer;
   on?: "issue" | "project";
-  alsoInSidebar?: Project[];
 } = {}) {
   let current = comments;
   const listPath = on === "issue" ? "/api/issues/WEB-42/comments" : "/api/projects/WEB/comments";
   const routes: Record<string, Answer> = {
     "GET /api/me": () => Response.json(me),
     "GET /api/members": () => Response.json([alex, sam]),
-    "GET /api/projects?archived=false": () =>
-      Response.json([...(inProject.archivedAt === null ? [inProject] : []), ...alsoInSidebar].map(summary)),
     "GET /api/projects/WEB": () => Response.json(inProject),
     "GET /api/projects/WEB/labels": () => Response.json([]),
     "GET /api/issues/WEB-42": () => Response.json(issue({ archived: inProject.archivedAt !== null })),
@@ -112,6 +107,12 @@ function mockThread({
       });
   }
   return mockApi(routes);
+}
+
+async function projectLink() {
+  return within(await screen.findByRole("navigation", { name: "Breadcrumb" })).findByRole("link", {
+    name: /Website/,
+  });
 }
 
 function openIssue() {
@@ -408,11 +409,11 @@ it("STD-11.1, STD-11.2: failed comments show “Couldn’t load comments.” whi
 });
 
 it("REQ-035.1: leaving with an unsent comment asks first; Cancel keeps the text", async () => {
-  mockThread({ alsoInSidebar: [project("MOB", "Mobile")] });
+  mockThread();
   openIssue();
   await type("Half a thought");
 
-  fireEvent.click(await screen.findByRole("link", { name: /Mobile/ }));
+  fireEvent.click(await projectLink());
   const prompt = await screen.findByRole("alertdialog", {
     name: "You have an unsent comment. Leave anyway?",
   });
@@ -446,9 +447,9 @@ it("REQ-035.2, REQ-035: a posted comment or a blank box doesn't hold back leavin
   await commentWith("Verified on staging.");
   await type("   ");
 
-  fireEvent.click(await screen.findByRole("link", { name: "My issues" }));
+  fireEvent.click(await projectLink());
 
-  await waitFor(() => expect(window.location.pathname).toBe("/my-issues"));
+  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB"));
   expect(screen.queryByRole("alertdialog")).toBeNull();
 });
 

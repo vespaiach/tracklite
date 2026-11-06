@@ -1,40 +1,43 @@
-import { type FormEvent, useId, useState } from "react";
-import { Button, Dialog, Field, Input, SettingsForm } from "../components/ui/track-lite";
+"use client";
 
-export type NewProject = { name: string; key: string };
+import { useId, useState } from "react";
+import { Button, Dialog, Field, Input, SettingsForm } from "../../components/ui/track-lite";
+import { useFormAction } from "../../components/useFormAction";
+import type { FormAction } from "../../contract";
+import { loadPage } from "../../lib/load-page";
 
-export type NewProjectDialogProps = {
-  busy: boolean;
-  errors: Partial<NewProject>;
-  onCancel: () => void;
-  onCreate: (project: NewProject) => void;
-};
+export type CreateProject = FormAction<{ key: string }>;
 
-export function NewProjectDialog({ busy, errors, onCancel, onCreate }: NewProjectDialogProps) {
+export type NewProjectDialogProps = { createProject: CreateProject; onClose: () => void };
+
+export function NewProjectDialog({ createProject, onClose }: NewProjectDialogProps) {
   const formId = useId();
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    onCreate({ name, key });
-  }
+  const { error, submit, pending } = useFormAction(
+    createProject,
+    (created) => {
+      onClose();
+      loadPage(`/project/${created.key}`);
+    },
+    [],
+  );
 
   return (
     <Dialog
       open
       title="New project"
-      onClose={onCancel}
+      onClose={onClose}
       actions={
         <>
-          <Button onClick={onCancel}>Cancel</Button>
+          <Button onClick={onClose}>Cancel</Button>
           <Button
             variant="primary"
             type="submit"
             form={formId}
-            disabled={busy}
-            aria-busy={busy || undefined}>
-            {busy ? "Creating…" : "Create"}
+            disabled={pending}
+            aria-busy={pending || undefined}>
+            {pending ? "Creating…" : "Create"}
           </Button>
         </>
       }>
@@ -43,10 +46,11 @@ export function NewProjectDialog({ busy, errors, onCancel, onCreate }: NewProjec
         onSubmit={submit}>
         <Field
           label="Name"
-          error={errors.name}>
+          error={error?.fields?.name}>
           {(props) => (
             <Input
               {...props}
+              name="name"
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
@@ -54,7 +58,7 @@ export function NewProjectDialog({ busy, errors, onCancel, onCreate }: NewProjec
         </Field>
         <Field
           label="Key"
-          error={errors.key}
+          error={error?.fields?.key}
           help={
             <>
               2 to 5 letters. Issue IDs start with it, such as <span className="tl-table__mono">WEB-42</span>.
@@ -64,6 +68,7 @@ export function NewProjectDialog({ busy, errors, onCancel, onCreate }: NewProjec
           {(props) => (
             <Input
               {...props}
+              name="key"
               autoComplete="off"
               value={key}
               onChange={(event) => setKey(event.target.value)}

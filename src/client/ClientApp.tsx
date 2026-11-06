@@ -6,9 +6,9 @@ import { routes } from "./routes";
 import { makeStore } from "./store";
 import { Toaster } from "./Toaster";
 
-export default function ClientApp() {
+export default function ClientApp({ refreshServer }: { refreshServer: () => void }) {
   const [router] = useState(() => createBrowserRouter(routes));
-  const [store] = useState(() => makeStore(router));
+  const [store] = useState(() => makeStore(router, refreshServer));
   const [report] = useState(createBrowserErrorReporter);
   useEffect(() => reportUncaughtErrors(report), [report]);
   return (

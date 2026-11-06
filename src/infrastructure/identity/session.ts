@@ -41,10 +41,6 @@ export function sessionCookieOptions() {
   };
 }
 
-export function clearedSessionCookie() {
-  return cookieWith("", 0);
-}
-
 export function readSessionToken(request: Request) {
   const prefix = `${sessionCookieName()}=`;
   const pair = request.headers

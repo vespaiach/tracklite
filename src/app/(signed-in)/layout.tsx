@@ -1,17 +1,37 @@
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { isInAppPath } from "../../lib/return-to";
-import { requestPathHeader } from "../../proxy";
-import { pageMember } from "../_server/session";
+import { Region } from "../../components/region/Region";
+import type { Member } from "../../infrastructure/identity/tables";
+import { listProjects, profileResponse } from "../../queries";
+import { signOut } from "../(signed-out)/actions";
+import { signedInPageMember } from "../_server/session";
+import { createProject } from "./actions";
+import { ProjectLinks, Shell } from "./Shell";
 
 export default async function SignedInLayout({ children }: { children: ReactNode }) {
-  if (!(await pageMember())) redirect(await signInAddress());
+  const member = await signedInPageMember();
 
-  return children;
+  return (
+    <Shell
+      me={profileResponse(member)}
+      projects={
+        <Region what="projects">
+          <SidebarProjects member={member} />
+        </Region>
+      }
+      createProject={createProject}
+      signOut={signOut}>
+      {children}
+    </Shell>
+  );
 }
 
-async function signInAddress() {
-  const path = (await headers()).get(requestPathHeader);
-  return isInAppPath(path) ? `/sign-in?next=${encodeURIComponent(path)}` : "/sign-in";
+async function SidebarProjects({ member }: { member: Member }) {
+  const [active, archived] = await Promise.all([listProjects(member, false), listProjects(member, true)]);
+
+  return (
+    <ProjectLinks
+      projects={active}
+      archivedKeys={archived.map((project) => project.key)}
+    />
+  );
 }

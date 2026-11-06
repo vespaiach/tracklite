@@ -26,10 +26,7 @@ export const alex: Me = {
 export function mockApi(routes: Record<string, Handler>) {
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     const key = `${init?.method ?? "GET"} ${url}`;
-    const defaults: Record<string, Handler> = {
-      "GET /api/projects?archived=false": () => Response.json([]),
-    };
-    const handler = { ...defaults, ...routes }[key];
+    const handler = routes[key];
     if (!handler) throw new Error(`Unmocked request ${key}`);
     return handler(init?.body ? JSON.parse(String(init.body)) : undefined);
   });
@@ -61,9 +58,12 @@ export function networkError(): never {
   throw new TypeError("Failed to fetch");
 }
 
+export const refreshServer = vi.fn();
+
 export function renderAppAt(path: string) {
   window.history.replaceState(null, "", path);
-  return render(<ClientApp />);
+  refreshServer.mockClear();
+  return render(<ClientApp refreshServer={refreshServer} />);
 }
 
 export function requestsTo(fetchMock: ReturnType<typeof mockApi>, key: string) {

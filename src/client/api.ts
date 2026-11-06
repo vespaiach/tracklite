@@ -9,14 +9,13 @@ import type {
   Label,
   LabelColor,
   Me,
-  MyIssueGroup,
   NotificationStats,
   Project,
   ProjectSummary,
   ThreadComment,
 } from "../contract";
 import type { StoreExtra } from "./store";
-import { loadPage } from "./load-page";
+import { loadPage } from "../lib/load-page";
 import { showToast } from "./toast";
 
 export type * from "../contract";
@@ -107,10 +106,6 @@ export const api = createApi({
   tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels", "Issue", "Board", "Comments"],
   endpoints: (build) => ({
     me: build.query<Me, void>({ query: () => "me", providesTags: ["Me"] }),
-    signOut: build.mutation<null, void>({
-      query: () => ({ path: "sessions/current", method: "DELETE" }),
-      invalidatesTags: ["Me"],
-    }),
     updateProfile: build.mutation<Me, { fullName: string }>({
       query: (body) => ({ path: "me", method: "PATCH", body }),
       invalidatesTags: ["Me"],
@@ -148,16 +143,15 @@ export const api = createApi({
       query: (key) => `projects/${key}`,
       providesTags: ["Projects"],
     }),
-    createProject: build.mutation<Project, { name: string; key: string }>({
-      query: (body) => ({ path: "projects", method: "POST", body }),
-      invalidatesTags: ["Projects"],
-    }),
     updateProject: build.mutation<
       Project,
       { key: string; name?: string; archived?: boolean; description?: string; descriptionVersion?: number }
     >({
       query: ({ key, ...body }) => ({ path: `projects/${key}`, method: "PATCH", body }),
       invalidatesTags: ["Projects"],
+      async onQueryStarted(_change, { extra, queryFulfilled }) {
+        if (await queryFulfilled.catch(() => undefined)) (extra as StoreExtra).refreshServer();
+      },
     }),
     deleteProject: build.mutation<null, string>({
       query: (key) => ({ path: `projects/${key}`, method: "DELETE" }),
@@ -204,7 +198,6 @@ export const api = createApi({
       },
       query: ({ queryArg, pageParam }) => issueListPath(queryArg.key, queryArg.query, pageParam),
     }),
-    myIssues: build.query<MyIssueGroup[], void>({ query: () => "my-issues" }),
     board: build.query<Board, string>({ query: (key) => `projects/${key}/board`, providesTags: ["Board"] }),
     moveIssue: build.mutation<Issue, { id: string; status: IssueStatus; place: BoardPlace }>({
       query: ({ id, ...body }) => ({ path: `issues/${id}/position`, method: "PUT", body }),
@@ -243,7 +236,6 @@ export const api = createApi({
 
 export const {
   useMeQuery,
-  useSignOutMutation,
   useUpdateProfileMutation,
   useChangePasswordMutation,
   useMembersQuery,
@@ -256,7 +248,6 @@ export const {
   useProjectsQuery,
   useProjectQuery,
   useLazyProjectQuery,
-  useCreateProjectMutation,
   useUpdateProjectMutation,
   useDeleteProjectMutation,
   useLabelsQuery,
@@ -269,7 +260,6 @@ export const {
   useUpdateIssueMutation,
   useDeleteIssueMutation,
   useIssueListInfiniteQuery,
-  useMyIssuesQuery,
   useBoardQuery,
   useMoveIssueMutation,
   useCommentsQuery,

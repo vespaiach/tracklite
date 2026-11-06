@@ -1,3 +1,5 @@
+"use client";
+
 import {
   AppBar,
   AppBarCount,
@@ -10,13 +12,11 @@ import {
   Priority,
   SettingsLayout,
   Status,
-} from "../../components/ui/track-lite";
-import { type IssueStatus, type MyIssue, type MyIssueGroup, useMeQuery, useMyIssuesQuery } from "../api";
-import { formatExact } from "../dates";
-import { Assignees, assignedTo, LabelPills, UpdatedAt } from "../IssueCells";
-import { priorities, statuses } from "../issue-fields";
-import { useRouterClick } from "../links";
-import { Zone, zoneState } from "../Zone";
+} from "../../../components/ui/track-lite";
+import { formatExact } from "../../../client/dates";
+import { Assignees, assignedTo, LabelPills, UpdatedAt } from "../../../client/IssueCells";
+import { priorities, statuses } from "../../../client/issue-fields";
+import type { IssueStatus, MyIssue, MyIssueGroup } from "../../../contract";
 
 const columns = "14px 64px minmax(240px, 1fr) minmax(100px, 140px) minmax(0, 180px) 72px 100px";
 
@@ -30,9 +30,8 @@ function groupId(status: IssueStatus) {
   return `my-issues-${status}`;
 }
 
-export function MyIssues() {
-  const myIssues = useMyIssuesQuery();
-  const total = myIssues.data?.reduce((sum, group) => sum + group.count, 0) ?? 0;
+export function MyIssues({ groups, me }: { groups: MyIssueGroup[]; me: string }) {
+  const total = groups.reduce((sum, group) => sum + group.count, 0);
 
   return (
     <>
@@ -45,26 +44,21 @@ export function MyIssues() {
           />
         )}
       </AppBar>
-      <Zone
-        what="your issues"
-        state={zoneState(myIssues)}
-        retry={myIssues.refetch}
-        page>
-        {(groups) =>
-          groups.length === 0 ? (
-            <SettingsLayout>
-              <FormStatus>Nothing assigned to you. Open a project to find or create issues.</FormStatus>
-            </SettingsLayout>
-          ) : (
-            <IssueGroups groups={groups} />
-          )
-        }
-      </Zone>
+      {groups.length === 0 ? (
+        <SettingsLayout>
+          <FormStatus>Nothing assigned to you. Open a project to find or create issues.</FormStatus>
+        </SettingsLayout>
+      ) : (
+        <IssueGroups
+          groups={groups}
+          me={me}
+        />
+      )}
     </>
   );
 }
 
-function IssueGroups({ groups }: { groups: MyIssueGroup[] }) {
+function IssueGroups({ groups, me }: { groups: MyIssueGroup[]; me: string }) {
   return (
     <>
       <ListRowHead columns={columns}>
@@ -84,6 +78,7 @@ function IssueGroups({ groups }: { groups: MyIssueGroup[] }) {
             key={group.status}
             group={group}
             next={groups[index + 1]?.status}
+            me={me}
           />
         ))}
         <ListNote>Sorted by priority, then most recently updated.</ListNote>
@@ -92,7 +87,7 @@ function IssueGroups({ groups }: { groups: MyIssueGroup[] }) {
   );
 }
 
-function IssueGroup({ group, next }: { group: MyIssueGroup; next?: IssueStatus }) {
+function IssueGroup({ group, next, me }: { group: MyIssueGroup; next?: IssueStatus; me: string }) {
   const { name, kind } = statuses[group.status];
   return (
     <section aria-label={`${name}, ${issueCount(group.count)}`}>
@@ -111,6 +106,7 @@ function IssueGroup({ group, next }: { group: MyIssueGroup; next?: IssueStatus }
           <IssueRow
             key={issue.id}
             issue={issue}
+            me={me}
           />
         ))}
       </CollapsibleListGroup>
@@ -118,17 +114,14 @@ function IssueGroup({ group, next }: { group: MyIssueGroup; next?: IssueStatus }
   );
 }
 
-function IssueRow({ issue }: { issue: MyIssue }) {
+function IssueRow({ issue, me }: { issue: MyIssue; me: string }) {
   const href = `/issue/${issue.id}`;
-  const open = useRouterClick(href);
-  const { data: me } = useMeQuery();
   const { name: priorityName, kind: priorityKind } = priorities[issue.priority];
   return (
     <ListRowLink
       columns={columns}
       href={href}
-      label={`${issue.id}, ${issue.title}, ${priorityName}, ${issue.projectName}, ${assignedTo(issue.assignees)}, updated ${formatExact(issue.updatedAt)}`}
-      onClick={open}>
+      label={`${issue.id}, ${issue.title}, ${priorityName}, ${issue.projectName}, ${assignedTo(issue.assignees)}, updated ${formatExact(issue.updatedAt)}`}>
       <span
         className="tl-list-row__prio"
         title={priorityName}>
@@ -151,7 +144,7 @@ function IssueRow({ issue }: { issue: MyIssue }) {
       />
       <Assignees
         assignees={issue.assignees}
-        me={me?.username}
+        me={me}
       />
       <UpdatedAt at={issue.updatedAt} />
     </ListRowLink>

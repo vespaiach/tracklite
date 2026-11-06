@@ -10,7 +10,6 @@ import {
   renderAppAt,
   requestsTo,
   sam,
-  summary,
 } from "../../test/client-app";
 import type { Project } from "../api";
 
@@ -29,8 +28,6 @@ function mockDetail({ shown = web, patch }: { shown?: Project; patch?: Answer } 
   let current = shown;
   return mockApi({
     "GET /api/me": () => Response.json(sam),
-    "GET /api/projects?archived=false": () =>
-      Response.json(current.archivedAt === null ? [summary(current)] : []),
     [`GET /api/projects/${shown.key}`]: () => Response.json(current),
     [`PATCH /api/projects/${shown.key}`]: async (body) => {
       const answer = await (patch ?? (() => Response.json(described(current, body))))(body);
@@ -162,7 +159,7 @@ it("REQ-035.3, REQ-035.4: leaving or closing the tab with unsaved description ch
   window.dispatchEvent(changed);
   expect(changed.defaultPrevented).toBe(true);
 
-  fireEvent.click(within(await screen.findByRole("complementary")).getByRole("link", { name: "My issues" }));
+  fireEvent.click(await screen.findByRole("link", { name: "List" }));
   const prompt = await screen.findByRole("alertdialog", { name: "You have unsaved changes. Leave anyway?" });
   fireEvent.click(within(prompt).getByRole("button", { name: "Cancel" }));
 
@@ -170,11 +167,11 @@ it("REQ-035.3, REQ-035.4: leaving or closing the tab with unsaved description ch
   expect(window.location.pathname).toBe("/project/WEB/detail");
   expect(editor().value).toBe("Unsaved text");
 
-  fireEvent.click(within(screen.getByRole("complementary")).getByRole("link", { name: "My issues" }));
+  fireEvent.click(screen.getByRole("link", { name: "List" }));
   const again = await screen.findByRole("alertdialog", { name: "You have unsaved changes. Leave anyway?" });
   fireEvent.click(within(again).getByRole("button", { name: "Leave" }));
 
-  await waitFor(() => expect(window.location.pathname).toBe("/my-issues"));
+  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB/list"));
 });
 
 it("REQ-035: leaving with an unchanged editor doesn't ask", async () => {
@@ -182,9 +179,9 @@ it("REQ-035: leaving with an unchanged editor doesn't ask", async () => {
   renderAppAt("/project/WEB/detail");
   await startEditing();
 
-  fireEvent.click(within(await screen.findByRole("complementary")).getByRole("link", { name: "My issues" }));
+  fireEvent.click(await screen.findByRole("link", { name: "List" }));
 
-  await waitFor(() => expect(window.location.pathname).toBe("/my-issues"));
+  await waitFor(() => expect(window.location.pathname).toBe("/project/WEB/list"));
   expect(screen.queryByRole("alertdialog")).toBeNull();
 });
 
