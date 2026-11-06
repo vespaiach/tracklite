@@ -1,0 +1,1 @@
+export { DelayedFallback as default } from "../components/region/DelayedFallback";
