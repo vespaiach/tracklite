@@ -1,7 +1,7 @@
 import "server-only";
 import * as v from "valibot";
-import { maxCharacters, version } from "../shared/schemas";
-import { RequestId } from "../../domain/shared/identifiers";
+import { maxCharacters, version } from "../../../server/shared/schemas";
+import { RequestId } from "../../../domain/shared/identifiers";
 
 const commentBody = v.pipe(
   v.string("Comment required"),
@@ -10,7 +10,5 @@ const commentBody = v.pipe(
 );
 
 export const NewComment = v.object({ requestId: RequestId.schema, body: commentBody });
-export type NewComment = v.InferOutput<typeof NewComment>;
 
 export const CommentEdit = v.object({ body: commentBody, version });
-export type CommentEdit = v.InferOutput<typeof CommentEdit>;

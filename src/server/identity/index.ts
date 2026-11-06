@@ -11,7 +11,7 @@ export { resendInvitation } from "./commands/resend-invitation";
 export { resetPassword } from "./commands/reset-password";
 export { revokeInvitation } from "./commands/revoke-invitation";
 export { clientIp } from "../../infrastructure/identity/limits";
-export { editConflict, memberSummary } from "./members";
+export { memberSummary } from "./members";
 export {
   ClientErrorReport,
   FirstAdmin,

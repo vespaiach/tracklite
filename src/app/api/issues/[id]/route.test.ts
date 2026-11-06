@@ -3,7 +3,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../../infrastructure/db";
 import { createSession, memberSummary, members } from "../../../../server/identity";
-import { comments } from "../../../../server/comments";
+import { comments } from "../../../../infrastructure/comments/tables";
 import { issueAssignees, issueLabels, issues } from "../../../../infrastructure/issues/tables";
 import { labels, projects } from "../../../../infrastructure/projects/tables";
 import {
