@@ -65,12 +65,12 @@ Always run drizzle-kit through the npm scripts. They set `NODE_OPTIONS=--conditi
 
 **Processes (§1.1).** `tracklite-web` is `next start` behind a reverse proxy. Deployment (servers, proxy, deploys, backups) is maintained outside this repository. There is no worker process: a scheduler calls `POST /api/cron/outbox` every minute with `Authorization: Bearer {CRON_SECRET}` (§1.4). The app uses PostgreSQL 18 and nothing else; there is no Redis and no paid queue.
 
-**Strict single-page app (§1.7).** Every page address serves the same HTML shell. `src/app/(signed-in)/[[...path]]/page.tsx` (and, until H13, the `(signed-out)` pages) renders `<ClientApp />` through `src/client/ClientPage.tsx` with `next/dynamic` and `ssr: false`. The browser does all of these:
+**Strict single-page app (§1.7).** Every page address serves the same HTML shell. `src/app/(signed-in)/[[...path]]/page.tsx` renders `<ClientApp />` through `src/client/ClientPage.tsx` with `next/dynamic` and `ssr: false`. The browser does all of these:
 - routing, with React Router in data mode and lazy routes;
 - signed-out redirects (`GET /api/me`, then `/sign-in?next=…`);
 - all data loading, through `/api`.
 
-There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks` are more specific routes, so the catch-all never handles them. `src/proxy.ts` only sets the nonce-based CSP and `Referrer-Policy`, and forwards the requested path in `x-request-path`. The `(signed-in)` layout redirects a signed-out visitor to `/sign-in?next=…` on the server; server actions are wrapped by `action()` in `src/app/_server/action.ts` (tech design §1.2).
+There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks` are more specific routes, so the catch-all never handles them. `src/proxy.ts` only sets the nonce-based CSP and `Referrer-Policy`, and forwards the requested path in `x-request-path`. The `(signed-in)` layout redirects a signed-out visitor to `/sign-in?next=…` on the server; server actions are wrapped by `action()` in `src/app/_server/action.ts` (tech design §1.2). The signed-out pages (`/sign-in`, `/forgot-password`, `/reset-password`, `/invite`, `/welcome`) are server pages in `src/app/(signed-out)/`, each with an `actions.ts` and a client form built on `useFormAction` (`src/components/useFormAction.ts`); the single-page app reaches them, and a `401`, with a full page load (`src/client/load-page.ts`).
 
 **Client state (§1.7).** Redux Toolkit:
 - RTK Query holds all server data, in one `api` slice with a shared `baseQuery` that redirects on `401`.

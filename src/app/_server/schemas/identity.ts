@@ -25,9 +25,6 @@ export type SignIn = v.InferOutput<typeof SignIn>;
 export const ResetLinkRequest = v.object({ email: emailAddress });
 export type ResetLinkRequest = v.InferOutput<typeof ResetLinkRequest>;
 
-export const ResetLinkLookup = v.object({ token: linkToken });
-export type ResetLinkLookup = v.InferOutput<typeof ResetLinkLookup>;
-
 export const PasswordReset = v.object({ token: linkToken, password: newPassword });
 export type PasswordReset = v.InferOutput<typeof PasswordReset>;
 
@@ -50,9 +47,6 @@ export const NewInvitation = v.object({
   email: v.pipe(emailAddress, v.regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Enter a valid email")),
 });
 export type NewInvitation = v.InferOutput<typeof NewInvitation>;
-
-export const InvitationLinkLookup = v.object({ token: linkToken });
-export type InvitationLinkLookup = v.InferOutput<typeof InvitationLinkLookup>;
 
 export const InvitationAcceptance = v.object({ token: linkToken, fullName, username, password: newPassword });
 export type InvitationAcceptance = v.InferOutput<typeof InvitationAcceptance>;

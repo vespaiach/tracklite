@@ -7,7 +7,7 @@ import {
   signedInMemberBy,
 } from "../../infrastructure/identity/session";
 
-async function sessionToken() {
+export async function sessionToken() {
   return (await cookies()).get(sessionCookieName())?.value;
 }
 
@@ -21,4 +21,12 @@ export async function actionMember() {
 
   if (renewed && token) (await cookies()).set(sessionCookieName(), token, sessionCookieOptions());
   return member;
+}
+
+export async function startSessionCookie(token: string) {
+  (await cookies()).set(sessionCookieName(), token, sessionCookieOptions());
+}
+
+export async function clearSessionCookie() {
+  (await cookies()).set(sessionCookieName(), "", { ...sessionCookieOptions(), maxAge: 0 });
 }

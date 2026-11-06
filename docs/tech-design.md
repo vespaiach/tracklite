@@ -25,7 +25,7 @@ Deployment (servers, the reverse proxy, the scheduler, process supervision, depl
 | **Scheduler** | Calls `POST /api/cron/outbox` once a minute with `Authorization: Bearer {CRON_SECRET}` (1.4, 1.6). Any cron-like service works; a missed or overlapping call is harmless. |
 | **PostgreSQL** | All state, including the outbox and the notification queue. |
 
-**Batch H.** The code is moving to this design one task at a time (`docs/execution-plan.md`, batch H). Until H20, the old client-rendered screens under `src/app/(signed-in)/[[...path]]` (and, until H13, the `(signed-out)` page stubs that load the same `ClientPage`) and the `/api` routes they call (3.3) still run beside the new pages. Where the code and this file differ, the open H row says which way the code goes.
+**Batch H.** The code is moving to this design one task at a time (`docs/execution-plan.md`, batch H). Until H20, the old client-rendered screens under `src/app/(signed-in)/[[...path]]` and the `/api` routes they call (3.3) still run beside the new pages. Where the code and this file differ, the open H row says which way the code goes.
 
 ### 1.2 Request flow
 
@@ -45,7 +45,7 @@ There are three ways in: a page, a server action and a route handler. All three 
 4. Call one use case from `src/application/` (1.8) with the member as `actor`, a `UnitOfWork` wired with the repositories the use case names, and the input. The use case checks permissions (4.10), loads aggregates, runs their rules and saves them; the unit of work commits the change and its events together (spec §12).
 5. On success, call `refresh()` from `next/cache`, so the page's server components render again with current data, and return `{ ok: true, data }`. `data` is only what the client needs next, such as a new issue's ID.
 6. Turn a thrown `DomainError` into `{ ok: false, error: { kind, message, fields? } }` (3.2), and **rethrow anything else**, which Next.js reports through `onRequestError` (4.8) and the browser sees as a failed call (STD-9).
-7. Write one JSON `action/call` line, without inputs or tokens (SEC-007, 4.8), also before rethrowing. A signed-in call names the member as `actor` by username, so an unexpected error's `route/request-failed` line can be matched to the member (OPS-007.4).
+7. Write one JSON `action/call` line, without inputs or tokens (SEC-007, 4.8), also before rethrowing. A signed-in call names the member as `actor` by username, and a public action names the member it signs in through the `nameActor` callback the adapter passes it (sign-in, accepting an invitation, first-admin setup; SEC-007.1), so an unexpected error's `route/request-failed` line can be matched to the member (OPS-007.4).
 
 **Route handlers.** Only callers that aren't the app's own pages use routes: the scheduler (`/api/cron/outbox`), the uptime checker (`/health`, `/health/worker`), the email provider (`/webhooks/email`), and the browser's error reporter (`/api/client-errors`, which must work after a page has crashed, 4.8). Each checks its own caller (a bearer secret, a signature, or the origin check of 4.4) and calls one use case. Until H20, the `/api` routes of 3.3 also run, through `apiRoute`, which keeps the same steps with HTTP statuses.
 
@@ -123,7 +123,7 @@ Next.js App Router with React Server Components (D-10). A page renders on the se
 
 **Reads.** A page or layout calls `src/queries` (D-64) and passes plain contract types (3.5) to client components as props. Each data region is its own async server component inside a `Region`, so regions load and fail independently.
 
-**Writes.** A client component calls its route's server action, through `useActionState` for forms and `startTransition` for single controls (a picker, a board move). The action's `refresh()` (1.2) re-renders the page's server components, so whatever the page shows is read again; there are no cache tags to keep in step. A result with `ok: false` is shown by the component: field errors next to their fields (STD-3), a conflict in the editor (STD-8), and anything else as a toast (STD-9). A thrown call (network, a `500`, or an action ID from an older build after a deploy) toasts "Couldn’t save. Try again."
+**Writes.** A client component calls its route's server action, through `useActionState` for forms and `startTransition` for single controls (a picker, a board move). The action's `refresh()` (1.2) re-renders the page's server components, so whatever the page shows is read again; there are no cache tags to keep in step. A result with `ok: false` is shown by the component: field errors next to their fields (STD-3), a conflict in the editor (STD-8), and anything else as a toast (STD-9). A thrown call (network, a `500`, or an action ID from an older build after a deploy) toasts "Couldn’t save. Try again." `useFormAction(action, onDone, besideForm?)` (`src/components/useFormAction.ts`) does this for a form: it runs the action through `useActionState` from the form's `onSubmit` (so React doesn't reset the form's controlled fields), calls `onDone` on success, returns an `invalid`, `limited` or `expired` refusal (or any with `fields`) for the form to show, and toasts the rest. Pages pass their actions to these client components as props, so a component test passes a stub.
 - **Optimistic board moves (NFR-005, REQ-026).** The board keeps its columns in `useOptimistic`; a drop updates them inside the action's transition. On `ok: false` or a thrown call, the transition ends without the new data, so the card returns to where it was, and the board toasts the server's message, or "Couldn’t move WEB-42" for a network error or `5xx`. A `404` for a card deleted meanwhile (REQ-026.5) needs nothing more: the refresh drops it.
 - **Request IDs (STD-5).** `useRequestId()` (`src/components/useRequestId.ts`) returns `[requestId, renew]`: it generates `crypto.randomUUID()` once, when a create form opens, and reuses it for every retry of that submit; the form calls `renew()` when it is reset.
 - **URL state.** List filters, search and sort live in the URL (REQ-040), and the list page reads them from `searchParams`. The parameters use enum values as their keys, such as `status=in_progress`. A filter or sort change pushes a history entry with `router.push`; search uses `router.replace`, so Back doesn't step through each typed word. Form drafts live in component state.
@@ -401,23 +401,14 @@ The client-rendered screens under `src/app/(signed-in)/[[...path]]` call these u
 
 The queries declare the contract types (3.5) as their return types. The tables give only what the types can't say.
 
-**Sign-in and account** (no session needed unless noted)
+**Sign-in and account** (no session needed unless noted). Signing in, password resets, accepting an invitation and first-admin setup are the `(signed-out)` pages' actions since H13 (6.1); signing out stays here for the shell until H14.
 
 | Method and path | Notes | Who | Spec |
 |---|---|---|---|
-| `POST /api/sessions` | `204`, sets the cookie | Anyone | REQ-047, SEC-001 |
 | `DELETE /api/sessions/current` | `204`, with or without a session | Anyone | REQ-006 |
-| `POST /api/password-reset-links` | `204` whether or not the email belongs to a member | Anyone | REQ-050, SEC-001 |
-| `POST /api/password-reset-lookups` | `204` or `410`; doesn't use up the link | Anyone | REQ-050.5, REQ-050.9 |
-| `POST /api/password-resets` | `204`; ends all the member's sessions, then sets a new cookie | Anyone | REQ-050 |
-| `POST /api/invitation-lookups` | The invited email, or `410` as for accepting | Anyone | REQ-002 |
-| `POST /api/members` | Accepts an invitation: `201` and the new member's profile, sets the cookie. `403` with a session (4.6) | Anyone | REQ-002, REQ-003 |
 | `GET /api/me` | The profile, including email and role | Member | REQ-003.3 |
 | `PATCH /api/me` | Full name only | Member | REQ-003 |
 | `PUT /api/me/password` | `204`; ends the member's other sessions. A wrong current password counts toward the sign-in limit (4.5) | Member | REQ-049, SEC-001 |
-| `GET /api/setup` | `{ needed: boolean }`, true while no members exist | Anyone | OPS-001 |
-| `POST /api/setup-checks` | Body `{ secret }`. `204` for the right secret; `403` "Wrong setup secret", `410` "Setup already done", `503` when `SETUP_SECRET` isn't set (4.6) | Anyone | OPS-001 |
-| `POST /api/setup` | Body `{ secret, email, fullName, username, password }`; same refusals as the check. `201` and the new admin's profile (`Me`), sets the cookie | Anyone | OPS-001, REQ-003, REQ-048 |
 
 **Members and invitations**
 
@@ -527,7 +518,7 @@ How sessions start and end:
 
 ### 4.4 Cross-site writes (SEC-004)
 
-**Server actions** rely on Next.js's own check (D-69). An action runs only for a `POST`, and Next.js compares the request's `Origin` with its `Host` (or `X-Forwarded-Host`) and aborts the action when they differ, before any app code runs (`node_modules/next/dist/docs/01-app/02-guides/data-security.md`, "Allowed origins"). The reverse proxy passes the original host (1.1), so `serverActions.allowedOrigins` stays unset. A request with no `Origin` gets through that check, but a browser never sends the `SameSite=Lax` cookie on a cross-site `POST`, so it arrives signed out and only public actions run, which change nothing an attacker could exploit in someone else's name. A test posts to an action with a foreign `Origin` and finds nothing changed (SEC-004.1).
+**Server actions** rely on Next.js's own check (D-69). An action runs only for a `POST`, and Next.js compares the request's `Origin` with its `Host` (or `X-Forwarded-Host`) and aborts the action when they differ, before any app code runs (`node_modules/next/dist/docs/01-app/02-guides/data-security.md`, "Allowed origins"). The reverse proxy passes the original host (1.1), so `serverActions.allowedOrigins` stays unset. A request with no `Origin` gets through that check, but a browser never sends the `SameSite=Lax` cookie on a cross-site `POST`, so it arrives signed out and only public actions run, which change nothing an attacker could exploit in someone else's name. Since a unit test can't run Next.js's check, SEC-004.1 for actions is a smoke test against `next start` (H13, [#310](https://github.com/vespaiach/tracklite/pull/310)): posting the sign-in action with the right password and `Origin: http://evil.example` was aborted with no cookie and no `action/call` line, while the same post from the app's origin signed in.
 
 **Route handlers.** For `POST`, `PUT`, `PATCH` and `DELETE`, `/api/client-errors` (and, until H20, the `/api` routes, through `apiRoute`) require:
 - an `Origin` header equal to `APP_URL`'s origin;

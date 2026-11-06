@@ -5,6 +5,7 @@ import type { ActionError, ActionResult } from "../../contract";
 import { DomainError, type DomainErrorKind } from "../../domain/shared/domain-error";
 import type { Member } from "../../infrastructure/identity/tables";
 import { logInfo } from "../../infrastructure/log";
+import "../../infrastructure/notifications/subscription";
 import { parseInput } from "./parse-input";
 import { actionMember } from "./session";
 
@@ -22,7 +23,7 @@ export function action<Schema extends v.GenericSchema, Data>(
   name: string,
   access: "public",
   schema: Schema,
-  run: (input: v.InferOutput<Schema>) => Promise<Data>,
+  run: (input: v.InferOutput<Schema>, nameActor: (username: string) => void) => Promise<Data>,
 ): Action<Data>;
 export function action(name: string, access: "member" | "public", schema: v.GenericSchema, run: AnyUseCase) {
   const execute = run as (...args: unknown[]) => Promise<unknown>;
@@ -39,7 +40,11 @@ export function action(name: string, access: "member" | "public", schema: v.Gene
       });
 
     const perform = async () => {
-      if (access === "public") return execute(parseInput(schema, formValues(input)));
+      if (access === "public") {
+        return execute(parseInput(schema, formValues(input)), (username: string) => {
+          actor = username;
+        });
+      }
 
       const member = await actionMember();
       actor = member.username;

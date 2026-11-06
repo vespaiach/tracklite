@@ -1,5 +1,15 @@
-import { ClientPage } from "../../../client/ClientPage";
+import { redirect } from "next/navigation";
+import { setupNeeded } from "../../../queries";
+import { checkSetupSecret, createFirstAdmin } from "./actions";
+import { WelcomeForm } from "./WelcomeForm";
 
-export default function Page() {
-  return <ClientPage />;
+export default async function WelcomePage() {
+  if (!(await setupNeeded())) redirect("/sign-in");
+
+  return (
+    <WelcomeForm
+      checkSetupSecret={checkSetupSecret}
+      createFirstAdmin={createFirstAdmin}
+    />
+  );
 }
