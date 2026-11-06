@@ -8,7 +8,8 @@ import {
 } from "../../../contract";
 import { db } from "../../../infrastructure/db";
 import { queueCounts, workerPassWindow } from "../notification-queue";
-import { members, assertAdmin, type Member } from "../../identity";
+import { members, type Member } from "../../../infrastructure/identity/tables";
+import { assertAdmin } from "../../../domain/identity/actor";
 import {
   notificationBatches,
   notificationDeliveries,

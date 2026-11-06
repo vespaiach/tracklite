@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../../../infrastructure/db";
 import { labels } from "../../../../../infrastructure/projects/tables";
-import { createSession } from "../../../../../server/identity";
+import { createSession } from "../../../../../infrastructure/identity/session";
 import { createIssue, createLabel, createMember, createProject } from "../../../../../test/factories";
 import { jsonRequest } from "../../../../../test/reset-links";
 import { PATCH } from "../../../labels/[id]/route";

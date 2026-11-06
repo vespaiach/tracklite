@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../infrastructure/db";
 import { outbox } from "../../../infrastructure/email/outbox";
 import { invitationEmail } from "../../../infrastructure/email/templates";
-import { invitations } from "../../../server/identity";
+import { invitations } from "../../../infrastructure/identity/tables";
 import { createMember } from "../../../test/factories";
 import {
   type InvitationBody,

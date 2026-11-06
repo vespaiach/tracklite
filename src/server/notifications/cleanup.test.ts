@@ -8,7 +8,7 @@ import {
   passwordResetTokens,
   sessions,
   signInAttempts,
-} from "../identity";
+} from "../../infrastructure/identity/tables";
 import { db } from "../../infrastructure/db";
 import { createToken, hashToken } from "../../infrastructure/tokens";
 import { deleteExpiredRows } from "./cleanup";

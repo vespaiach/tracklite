@@ -23,6 +23,8 @@ export function drizzleMemberRepository({ tx, saved }: TransactionScope): Member
 
     getByUsername: (username) => lockedWhere(eq(members.username, username.value)),
 
+    byEmail: (normalizedEmail) => lockedWhere(eq(sql`lower(${members.email})`, normalizedEmail)),
+
     activeByEmail: (normalizedEmail) =>
       lockedWhere(and(eq(sql`lower(${members.email})`, normalizedEmail), isNull(members.deactivatedAt))),
 

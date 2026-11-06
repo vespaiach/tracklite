@@ -1,7 +1,7 @@
 import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { comments } from "../infrastructure/comments/tables";
-import { members } from "../server/identity";
+import { members } from "../infrastructure/identity/tables";
 import { createIssue } from "../application/issues/create-issue";
 import { IssueStatus } from "../domain/issues/issue-status";
 import { IssueTitle } from "../domain/issues/issue-title";

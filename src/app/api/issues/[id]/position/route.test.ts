@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../../../infrastructure/db";
 import { issues } from "../../../../../infrastructure/issues/tables";
 import type { issueStatus } from "../../../../../infrastructure/schema";
-import { createSession } from "../../../../../server/identity";
+import { createSession } from "../../../../../infrastructure/identity/session";
 import { createIssue, createMember, createProject } from "../../../../../test/factories";
 import { jsonRequest } from "../../../../../test/reset-links";
 import { GET } from "../../../projects/[key]/board/route";

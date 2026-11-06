@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createSession } from "../../../../server/identity";
+import { createSession } from "../../../../infrastructure/identity/session";
 import { createMember } from "../../../../test/factories";
 import { GET as getMe } from "../../me/route";
 import { DELETE } from "./route";

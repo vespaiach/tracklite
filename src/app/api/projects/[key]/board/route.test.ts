@@ -3,7 +3,7 @@ import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../../../infrastructure/db";
 import { issues } from "../../../../../infrastructure/issues/tables";
-import { createSession } from "../../../../../server/identity";
+import { createSession } from "../../../../../infrastructure/identity/session";
 import { createIssue, createLabel, createMember, createProject } from "../../../../../test/factories";
 import { GET } from "./route";
 

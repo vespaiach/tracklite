@@ -1,6 +1,6 @@
 import "server-only";
 import { sql } from "drizzle-orm";
-import { deleteExpiredAccountRows } from "../identity";
+import { deleteExpiredAccountRows } from "../../infrastructure/identity/delete-expired-account-rows";
 import { deleteInChunks } from "../../infrastructure/chunked-delete";
 import { notificationBatches } from "../../infrastructure/notifications/tables";
 

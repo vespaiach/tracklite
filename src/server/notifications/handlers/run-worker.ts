@@ -9,7 +9,7 @@ import { notificationSenders, type Recipient } from "../notification-channels";
 import { afterFailure, assignmentKey, checkedMessage, mentionKey } from "../model";
 import { dueAt, queueCounts } from "../notification-queue";
 import { issueAssignees, issues } from "../../../infrastructure/issues/tables";
-import { members } from "../../identity";
+import { members } from "../../../infrastructure/identity/tables";
 import {
   mentions,
   notificationBatches,

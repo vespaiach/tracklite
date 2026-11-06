@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { members } from "../../../server/identity";
+import { members } from "../../../infrastructure/identity/tables";
 import { db } from "../../../infrastructure/db";
 import { jsonRequest } from "../../../test/reset-links";
 import { POST as checkSecret } from "../setup-checks/route";

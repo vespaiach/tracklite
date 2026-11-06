@@ -1,9 +1,10 @@
 import "server-only";
 import * as v from "valibot";
-import { emailAddress, linkToken, maxCharacters } from "../shared/schemas";
-import { FullName } from "../../domain/identity/full-name";
-import { Role } from "../../domain/identity/role";
-import { Username, usernameRule } from "../../domain/shared/identifiers";
+import { emailAddress, linkToken, maxCharacters } from "../../../server/shared/schemas";
+import { clientErrorEvents } from "../../../domain/identity/client-error";
+import { FullName } from "../../../domain/identity/full-name";
+import { Role } from "../../../domain/identity/role";
+import { Username, usernameRule } from "../../../domain/shared/identifiers";
 
 const minPasswordLength = 12;
 const maxPasswordLength = 128;
@@ -72,8 +73,6 @@ export const FirstAdmin = v.object({
   password: newPassword,
 });
 export type FirstAdmin = v.InferOutput<typeof FirstAdmin>;
-
-const clientErrorEvents = ["uncaught", "page-crashed", "zone-crashed"] as const;
 
 function cappedText(max: number) {
   return v.pipe(v.string("Required"), maxCharacters(max, `Too long (max ${max})`));
