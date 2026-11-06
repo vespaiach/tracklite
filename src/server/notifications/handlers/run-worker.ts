@@ -17,7 +17,7 @@ import {
   notifications,
   workerHeartbeats,
 } from "../../../infrastructure/notifications/tables";
-import { projects } from "../../projects";
+import { projects } from "../../../infrastructure/projects/tables";
 
 type DueDelivery = Awaited<ReturnType<typeof dueDeliveries>>[number];
 type ClaimedDelivery = DueDelivery & { lease: string };

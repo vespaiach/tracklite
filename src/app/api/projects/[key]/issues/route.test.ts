@@ -7,7 +7,7 @@ import { createSession, memberSummary } from "../../../../../server/identity";
 import { comments } from "../../../../../server/comments";
 import { issues } from "../../../../../infrastructure/issues/tables";
 import { notificationBatches, notifications } from "../../../../../server/notifications";
-import { labels, projects } from "../../../../../server/projects";
+import { labels, projects } from "../../../../../infrastructure/projects/tables";
 import { createIssue, createLabel, createMember, createProject } from "../../../../../test/factories";
 import { jsonRequest } from "../../../../../test/reset-links";
 import { PUT as moveIssue } from "../../../issues/[id]/position/route";

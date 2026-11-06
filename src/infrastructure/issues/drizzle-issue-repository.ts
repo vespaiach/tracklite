@@ -3,9 +3,9 @@ import { and, asc, desc, eq, gt, inArray, ne, type SQL, sql } from "drizzle-orm"
 import { assigneeChange, type Issue, type IssueProps, type Neighbours } from "../../domain/issues/issue";
 import type { IssueRepository, Place } from "../../domain/issues/issue-repository";
 import type { IssueStatus } from "../../domain/issues/issue-status";
-import { type IssueId, ProjectKey, type RequestId } from "../../domain/shared/identifiers";
+import type { IssueId, RequestId } from "../../domain/shared/identifiers";
 import { byIssueId, issueGone } from "../../queries";
-import { takeIssueNumber, writableProject } from "../../server/projects";
+import { takeIssueNumber } from "../projects/drizzle-project-repository";
 import { projects } from "../projects/tables";
 import type { Transaction } from "../transaction";
 import type { TransactionScope } from "../unit-of-work";
@@ -70,17 +70,13 @@ async function loadIssue(tx: Transaction, id: IssueId | undefined) {
 
 async function lockedRow(tx: Transaction, where: SQL) {
   const [target] = await tx
-    .select({ id: issues.id, projectKey: projects.key })
+    .select({ row: issues })
     .from(issues)
     .innerJoin(projects, eq(projects.id, issues.projectId))
-    .where(where);
+    .where(where)
+    .for("update", { of: issues });
   if (!target) throw issueGone();
-
-  await writableProject(tx, ProjectKey.from(target.projectKey));
-
-  const [row] = await tx.select().from(issues).where(eq(issues.id, target.id)).for("update");
-  if (!row) throw issueGone();
-  return row;
+  return target.row;
 }
 
 async function idForRequest(tx: Transaction, requestId: RequestId) {

@@ -24,18 +24,19 @@ export async function createIssue(
   { requestId, title, status, assignees }: NewIssueInput,
 ) {
   return work.run(async ({ issues, projects, members }) => {
-    const project = await projects.writable(projectKey);
+    const project = await projects.get(projectKey);
+    project.assertWritable();
 
     const repeatedId = await issues.idForRequest(requestId);
     if (repeatedId) return { issueId: repeatedId, created: false };
 
     const issue = Issue.create(actor, {
-      projectId: project.id,
-      number: await issues.nextNumber(project.id),
+      projectId: project.props.id,
+      number: await issues.nextNumber(project.props.id),
       requestId,
       title,
       status,
-      firstInColumn: await issues.firstPositionIn(project.id, status),
+      firstInColumn: await issues.firstPositionIn(project.props.id, status),
       assignees,
       candidates: await members.withUsernames(assignees),
     });

@@ -6,7 +6,7 @@ import type { Transaction } from "../../../infrastructure/transaction";
 import type { EventTarget } from "../../../domain/shared/events";
 import { publishAll } from "../../../infrastructure/events";
 import type { Member } from "../../identity";
-import { writableProject } from "../../projects";
+import { writableProject } from "../../../infrastructure/projects/drizzle-project-repository";
 import { findComments, issueGone, issueTarget } from "../../../queries";
 import { comments } from "../../../infrastructure/comments/tables";
 import type { NewComment } from "../schemas";

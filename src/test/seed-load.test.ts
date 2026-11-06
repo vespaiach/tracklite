@@ -8,7 +8,7 @@ import { IssueTitle } from "../domain/issues/issue-title";
 import { issueWork } from "../infrastructure/issues/issue-work";
 import { issueAssignees, issues } from "../infrastructure/issues/tables";
 import { updatedIssue } from "../queries";
-import { projectKeys, projects } from "../server/projects";
+import { projectKeys, projects } from "../infrastructure/projects/tables";
 import { db } from "../infrastructure/db";
 import { newRequestId } from "./factories";
 import { seedLoadData } from "./seed-load";

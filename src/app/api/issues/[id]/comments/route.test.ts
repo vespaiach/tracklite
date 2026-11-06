@@ -5,7 +5,7 @@ import { db } from "../../../../../infrastructure/db";
 import { comments } from "../../../../../server/comments";
 import { issues } from "../../../../../infrastructure/issues/tables";
 import { mentions } from "../../../../../server/notifications";
-import { projects } from "../../../../../server/projects";
+import { projects } from "../../../../../infrastructure/projects/tables";
 import { createSession } from "../../../../../server/identity";
 import { createComment, createIssue, createMember, createProject } from "../../../../../test/factories";
 import { jsonRequest } from "../../../../../test/reset-links";

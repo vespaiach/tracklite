@@ -2,7 +2,10 @@ import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createMember, createProject } from "../../test/factories";
 import { db } from "../../infrastructure/db";
-import { createLabel } from "./commands/create-label";
+import { projectWork } from "../../infrastructure/projects/project-work";
+import { createLabel } from "./create-label";
+import { LabelColor } from "../../domain/projects/label-color";
+import { LabelName } from "../../domain/projects/label-name";
 import { labels } from "../../infrastructure/projects/tables";
 import { ProjectKey } from "../../domain/shared/identifiers";
 
@@ -34,7 +37,10 @@ it("REQ-021.2: two concurrent creates of bug and BUG leave one label", async () 
   });
   await firstInserted;
 
-  const second = createLabel(member, ProjectKey.from(project.key), { name: "BUG", color: "blue" });
+  const second = createLabel(member, projectWork, ProjectKey.from(project.key), {
+    name: LabelName.from("BUG"),
+    color: LabelColor.from("blue"),
+  });
   await waitForLockWaiters(1);
   finishFirst();
   await first;

@@ -9,7 +9,8 @@ import { publish } from "../../infrastructure/events";
 import { updateIssue } from "../../application/issues/update-issue";
 import { issueWork } from "../../infrastructure/issues/issue-work";
 import { issues } from "../../infrastructure/issues/tables";
-import { updateProject } from "../projects";
+import { updateProject } from "../../application/projects/update-project";
+import { projectWork } from "../../infrastructure/projects/project-work";
 import { members, type Member } from "../identity";
 import {
   notificationBatches,
@@ -234,7 +235,7 @@ it("REQ-044.6: Alex mentions @sam in the WEB project description → Sam gets th
   const sam = await createMember();
   const project = await createProject({ name: "Website" });
 
-  await updateProject(alex, ProjectKey.from(project.key), {
+  await updateProject(alex, projectWork, ProjectKey.from(project.key), {
     description: `Owner: @${sam.username}`,
     descriptionVersion: 0,
   });
