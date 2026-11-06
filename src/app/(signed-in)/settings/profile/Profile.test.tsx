@@ -129,6 +129,7 @@ it("STD-9.3: a failed name save or password change shows the toast and keeps wha
   changePassword("correct-horse-battery", "staple-lantern-orbit");
 
   await waitFor(() => expect(failing).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Change password" })).toBeTruthy());
   expect(within(screen.getByRole("status")).getByText("Couldn’t save. Try again.")).toBeTruthy();
   expect(input("Current password").value).toBe("correct-horse-battery");
   expect(input("New password").value).toBe("staple-lantern-orbit");
