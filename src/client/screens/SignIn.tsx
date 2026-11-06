@@ -12,7 +12,7 @@ import {
   SignedOutLayout,
 } from "../../components/ui/track-lite";
 import { type ApiFailure, useMeQuery, useSetupStatusQuery, useSignInMutation } from "../api";
-import { returnTarget } from "../return-to";
+import { returnTarget } from "../../lib/return-to";
 import { showToast } from "../toast";
 
 export function SignIn() {
