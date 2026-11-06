@@ -38,19 +38,20 @@ it("§2.6: the migration applies to an empty database, with every table, the enu
       "issue_assignees",
       "issue_labels",
       "issues",
+      "job_runs",
       "labels",
       "members",
       "mentions",
       "notification_batches",
       "notification_deliveries",
       "notifications",
+      "outbox_events",
       "password_reset_requests",
       "password_reset_tokens",
       "project_keys",
       "projects",
       "sessions",
       "sign_in_attempts",
-      "worker_heartbeats",
     ]);
 
     // Declared order matters: ORDER BY status/priority relies on it (design §2.1).

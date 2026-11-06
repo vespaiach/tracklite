@@ -19,7 +19,7 @@
     "db:seed:load": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/seed-load.ts",
     "db:reset": "tsx --env-file-if-exists=.env.local scripts/reset.ts && npm run db:seed",
     "email:dev": "tsx --conditions=react-server --env-file=.env.local scripts/send-dev-email.ts",
-    "worker": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/worker.ts"
+    "cron": "tsx --env-file-if-exists=.env.local scripts/cron.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.1",

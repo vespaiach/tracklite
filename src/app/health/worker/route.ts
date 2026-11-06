@@ -1,8 +1,8 @@
-import { workerIsHealthy } from "../../../queries";
+import { outboxIsHealthy } from "../../../queries";
 
 export async function GET() {
   try {
-    return (await workerIsHealthy()) ? new Response("ok") : unavailable();
+    return (await outboxIsHealthy()) ? new Response("ok") : unavailable();
   } catch {
     return unavailable();
   }

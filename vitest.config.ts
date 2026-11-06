@@ -27,6 +27,7 @@ export default defineConfig({
       EMAIL_FROM: "tracklite@localhost",
       MAILPIT_HOST: "localhost",
       MAILPIT_PORT: "8025",
+      CRON_SECRET: "test-cron-secret-0123456789abcdefghij",
     },
     projects: [
       {
@@ -37,7 +38,7 @@ export default defineConfig({
           environment: "node",
           fileParallelism: false,
           globalSetup: ["src/test/migrate.ts"],
-          setupFiles: ["src/test/subscribe-notifications.ts", "src/test/next-mocks.ts"],
+          setupFiles: ["src/test/next-mocks.ts"],
         },
       },
       {

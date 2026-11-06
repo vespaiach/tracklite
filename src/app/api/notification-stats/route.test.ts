@@ -3,11 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { NotificationStats } from "../../../contract";
 import { db } from "../../../infrastructure/db";
-import {
-  notificationDeliveries,
-  notifications,
-  workerHeartbeats,
-} from "../../../infrastructure/notifications/tables";
+import { notificationDeliveries, notifications, jobRuns } from "../../../infrastructure/notifications/tables";
 import { createMember, createNotificationBatch } from "../../../test/factories";
 import { signedInAdmin } from "../../../test/invitations";
 import { GET } from "./route";
@@ -20,7 +16,7 @@ const webIssue: Target = { type: "issue", issueRef: "WEB-42", projectKey: "WEB" 
 beforeEach(async () => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   await db.delete(notificationDeliveries);
-  await db.delete(workerHeartbeats);
+  await db.delete(jobRuns);
 });
 
 afterEach(() => {
@@ -38,12 +34,12 @@ async function statsAsAdmin(): Promise<NotificationStats> {
   return response.json();
 }
 
-async function lastPassWas(interval: string) {
+async function lastRunWas(interval: string) {
   const [heartbeat] = await db
-    .insert(workerHeartbeats)
-    .values({ name: "worker", lastPassAt: sql`now() - ${interval}::interval` })
+    .insert(jobRuns)
+    .values({ name: "outbox", lastRunAt: sql`now() - ${interval}::interval` })
     .returning();
-  return heartbeat.lastPassAt;
+  return heartbeat.lastRunAt;
 }
 
 async function pendingDelivery(sendAfter: string) {
@@ -98,16 +94,16 @@ async function many(count: number, state: FinishedState, ago = "1 hour") {
   for (let i = 0; i < count; i++) await finishedDelivery(state, { ago });
 }
 
-it("REQ-053.1: last pass 4 seconds ago, 3 pending, 1 due for 40 seconds → last pass time, 3 pending, 1 due, 40 seconds", async () => {
-  const lastPassAt = await lastPassWas("4 seconds");
+it("REQ-053.1: the outbox ran 4 seconds ago, 3 pending, 1 due for 40 seconds → last run time, 3 pending, 1 due, 40 seconds", async () => {
+  const lastRunAt = await lastRunWas("4 seconds");
   await pendingDelivery("-40 seconds");
   await pendingDelivery("1 minute");
   await pendingDelivery("2 minutes");
 
   const stats = await statsAsAdmin();
 
-  expect(stats.workerLastPassAt).toBe(lastPassAt.toISOString());
-  expect(stats.workerStaleMinutes).toBeNull();
+  expect(stats.outboxLastRunAt).toBe(lastRunAt.toISOString());
+  expect(stats.outboxStaleMinutes).toBeNull();
   expect(stats.queue).toEqual({ pending: 3, due: 1, oldestDueSeconds: 40 });
 });
 
@@ -212,24 +208,24 @@ it("REQ-053: a failed delivery the previous release wrote without a state change
   expect(stats.recentProblems.map((problem) => problem.id)).toEqual([listed.deliveryId]);
 });
 
-it("REQ-053.5, REQ-053.6: the worker has never run and nothing has failed or bounced → no last pass time and an empty recent list", async () => {
+it("REQ-053.5, REQ-053.6: the outbox has never run and nothing has failed or bounced → no last run time and an empty recent list", async () => {
   await many(2, "sent");
 
   const stats = await statsAsAdmin();
 
-  expect(stats.workerLastPassAt).toBeNull();
-  expect(stats.workerStaleMinutes).toBeNull();
+  expect(stats.outboxLastRunAt).toBeNull();
+  expect(stats.outboxStaleMinutes).toBeNull();
   expect(stats.recentProblems).toEqual([]);
   expect(stats.channels).toEqual([{ channel: "email", sent: 2, dropped: 0, failed: 0, bounced: 0 }]);
 });
 
-it("REQ-053.10: the last pass was 3 min 50 s ago → 3 whole minutes without a pass; 1 min 59 s ago → not stale", async () => {
-  await lastPassWas("3 minutes 50 seconds");
+it("REQ-053.10: the last outbox run was 3 min 50 s ago → 3 whole minutes without a run; 1 min 59 s ago → not stale", async () => {
+  await lastRunWas("3 minutes 50 seconds");
 
-  expect((await statsAsAdmin()).workerStaleMinutes).toBe(3);
+  expect((await statsAsAdmin()).outboxStaleMinutes).toBe(3);
 
-  await db.delete(workerHeartbeats);
-  await lastPassWas("1 minute 59 seconds");
+  await db.delete(jobRuns);
+  await lastRunWas("1 minute 59 seconds");
 
-  expect((await statsAsAdmin()).workerStaleMinutes).toBeNull();
+  expect((await statsAsAdmin()).outboxStaleMinutes).toBeNull();
 });

@@ -41,7 +41,7 @@ npm run db:studio
 npm run db:seed        # dev members and admins (password in src/infrastructure/identity/seed.ts)
 npm run db:seed:load   # NFR-001 load data: 50 projects, 10,000 issues, 50,000 comments
 npm run db:reset       # drop the local dev database's schemas, re-run migrations, then db:seed
-npm run worker         # run the notification worker
+npm run cron           # call POST /api/cron/outbox every minute (the outbox run)
 npm run email:dev      # send one sample email to Mailpit
 ```
 
@@ -63,7 +63,7 @@ Always run drizzle-kit through the npm scripts. They set `NODE_OPTIONS=--conditi
 
 ## Architecture (as designed in docs/tech-design.md)
 
-**Processes (§1.1).** `tracklite-web` is `next start` behind a reverse proxy. Deployment (servers, proxy, deploys, backups) is maintained outside this repository. `tracklite-worker` is a Node entry point in `scripts/`, run from the same codebase. Both use PostgreSQL 18 and nothing else; there is no Redis and no paid queue.
+**Processes (§1.1).** `tracklite-web` is `next start` behind a reverse proxy. Deployment (servers, proxy, deploys, backups) is maintained outside this repository. There is no worker process: a scheduler calls `POST /api/cron/outbox` every minute with `Authorization: Bearer {CRON_SECRET}` (§1.4). The app uses PostgreSQL 18 and nothing else; there is no Redis and no paid queue.
 
 **Strict single-page app (§1.7).** Every page address serves the same HTML shell. `src/app/(signed-in)/[[...path]]/page.tsx` renders `<ClientApp />` through `src/client/ClientPage.tsx` with `next/dynamic` and `ssr: false`. The browser does all of these:
 - routing, with React Router in data mode and lazy routes;
@@ -89,14 +89,14 @@ There is no server-side data fetching in pages. `/api`, `/health` and `/webhooks
 
 The browser shows `message` as-is, so all user-facing copy for server outcomes lives on the server.
 
-**Layers (§1.8, D-60).** The backend is moving from `src/server/` into `src/domain/`, `src/application/`, `src/infrastructure/` and `src/queries/`, one folder per context inside each. Already moved: db, transaction, schema enums and column helpers, config, log, email, tokens, passwords, chunked-delete, ids and the event bus (`infrastructure/events.ts`) are in `src/infrastructure/`; each context's tables are in `src/infrastructure/<context>/tables.ts`; `DomainError`, `result`, the domain event types and the `IssueId`/`ProjectKey` parsers are in `src/domain/shared/`; `memberSummary` is in `src/domain/identity/`. `src/architecture.test.ts` checks the layer imports: `domain/**` imports only `domain/**` and `valibot`; `application/**` only `domain/**`, `application/**` and `src/contract`; `queries/**` only `domain/**`, `infrastructure/**/tables.ts`, `infrastructure/db`, `infrastructure/transaction`, `src/contract` and packages other than `next/*`.
+**Layers (§1.8, D-60).** The backend is moving from `src/server/` into `src/domain/`, `src/application/`, `src/infrastructure/` and `src/queries/`, one folder per context inside each. Already moved: db, transaction, schema enums and column helpers, config, log, email, tokens, passwords, chunked-delete, ids and the unit of work are in `src/infrastructure/`; each context's tables are in `src/infrastructure/<context>/tables.ts`; `DomainError`, `result`, the domain event types and the `IssueId`/`ProjectKey` parsers are in `src/domain/shared/`; `memberSummary` is in `src/domain/identity/`. `src/architecture.test.ts` checks the layer imports: `domain/**` imports only `domain/**` and `valibot`; `application/**` only `domain/**`, `application/**` and `src/contract`; `queries/**` only `domain/**`, `infrastructure/**/tables.ts`, `infrastructure/db`, `infrastructure/transaction`, `src/contract` and packages other than `next/*`.
 
 **Bounded contexts (§1.8).** Every context (`identity`, `notifications`, `projects`, `issues`, `comments`) now lives in the layers; all that is left in `src/server/` is `shared/` (api-route, shared request schemas). Reads behind screens and the responses commands return live in `src/queries/` (D-57), which reads any context's tables and writes nothing.
 - Each context has a public `index.ts`. Other contexts, routes and `scripts/` import a context only through it; `shared/` files are imported directly.
-- Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `projects`; `notifications` → `comments`, `issues`, `projects`; every context → `identity`, `shared/`; `issues`, `projects`, `comments` → `queries`. No other context imports `notifications`; `shared/api-route.ts` and the test setup import `infrastructure/notifications/subscription.ts` so its event subscription (which calls `application/notifications/record-notifications.ts`) is registered. No cycles.
+- Allowed dependencies: `comments` → `issues`, `projects`; `issues` → `projects`; `notifications` → `comments`, `issues`, `projects`; every context → `identity`, `shared/`; `issues`, `projects`, `comments` → `queries`. No other context imports `notifications`; only `infrastructure/unit-of-work.ts` reaches it, through the outbox writer (`infrastructure/notifications/outbox-writer.ts`). No cycles.
 - A context's request schemas are in its `schemas.ts`; tests sit next to their source.
 - Each context owns its tables (§1.8 table): only the owner inserts, updates or deletes them; others may read them in joins through the owner's `index.ts`.
-- Domain model (§1.8, M16): identifiers are branded types parsed in `schemas.ts` and `domain/shared/identifiers.ts` (`IssueId`, `ProjectKey`, `Username`, `RequestId`, `Uuid`); decisions that need no database are pure functions (load → decide → write), as methods of the `Issue`, `Project` and `Delivery` entities in `domain/issues/issue.ts`, `domain/projects/project.ts` and `domain/notifications/delivery.ts` (use cases in `application/<ctx>/`; tech design §1.8), in the aggregate's `model.ts` where another context has one, and in `rules.ts` elsewhere; contexts publish domain events through `infrastructure/events.ts` inside their transaction and `notifications` subscribes, and `publish` throws if nothing subscribed. Use the §1.8 glossary's terms in code.
+- Domain model (§1.8, M16): identifiers are branded types parsed in `schemas.ts` and `domain/shared/identifiers.ts` (`IssueId`, `ProjectKey`, `Username`, `RequestId`, `Uuid`); decisions that need no database are pure functions (load → decide → write), as methods of the `Issue`, `Project` and `Delivery` entities in `domain/issues/issue.ts`, `domain/projects/project.ts` and `domain/notifications/delivery.ts` (use cases in `application/<ctx>/`; tech design §1.8), in the aggregate's `model.ts` where another context has one, and in `rules.ts` elsewhere; entities record domain events, and the unit of work hands them to the outbox writer, which mirrors mentions and writes one `outbox_events` row per event (recipients and snapshot included) in the action's transaction (§1.4). Use the §1.8 glossary's terms in code.
 
 **API conventions (§3.1).**
 - Issues are addressed by ID (`WEB-42`), projects by key, members by username, all matched ignoring case.
@@ -111,7 +111,7 @@ The browser shows `message` as-is, so all user-facing copy for server outcomes l
 
 **Email (§1.5, §1.4).**
 - Invitations and password resets are sent synchronously inside the request transaction. If the send fails, the transaction rolls back and the API answers `503`.
-- Notifications are grouped in `notification_batches`, with one `notification_deliveries` row per channel the recipient chose (only `email` in R1). The worker polls deliveries every 5 s with `for update skip locked`, hands them to the channel's sender in `src/infrastructure/notifications/channels/`, and uses the delivery id as Resend's `Idempotency-Key`.
+- Notifications are grouped in `notification_batches`, with one `notification_deliveries` row per channel the recipient chose (only `email` in R1). Each outbox run (`src/app/api/cron/outbox/route.ts`, `infrastructure/notifications/run-outbox.ts`, at most 50 s) records the heartbeat in `job_runs`, turns due `outbox_events` into notifications (`record-notifications`, idempotent through `notifications (event_id, recipient_id)`), claims deliveries with `for update skip locked`, hands them to the channel's sender in `src/infrastructure/notifications/channels/`, and uses the delivery id as Resend's `Idempotency-Key`.
 - All mail goes through one `sendEmail()` with three backends: Resend in production, Mailpit (`:8025`) in development, and an in-memory outbox in tests.
 
 **Schema (§2, `src/infrastructure/schema.ts` and each context's `src/infrastructure/<context>/tables.ts`).**

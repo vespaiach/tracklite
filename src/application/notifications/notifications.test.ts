@@ -1,13 +1,12 @@
 import { asc, DrizzleQueryError, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createIssue, createMember, createProject, newRequestId } from "../../test/factories";
+import { recordEvents } from "../../test/outbox";
 import { moveIntoPast } from "../../test/time";
 import { editComment } from "../../application/comments/edit-comment";
 import { postIssueComment, postProjectComment } from "../../application/comments/post-comment";
 import { commentWork } from "../../infrastructure/comments/comment-work";
 import { db } from "../../infrastructure/db";
-import type { DomainEvent } from "../../domain/shared/events";
-import { publish } from "../../infrastructure/events";
 import { updateIssue } from "../../application/issues/update-issue";
 import { issueWork } from "../../infrastructure/issues/issue-work";
 import { issues } from "../../infrastructure/issues/tables";
@@ -18,6 +17,7 @@ import {
   notificationBatches,
   notificationDeliveries,
   notifications,
+  outboxEvents,
 } from "../../infrastructure/notifications/tables";
 import { IssueId, ProjectKey, Username, Uuid } from "../../domain/shared/identifiers";
 
@@ -66,7 +66,12 @@ function deliveriesFor(member: { id: string }) {
     .orderBy(asc(notificationDeliveries.createdAt));
 }
 
-function assign(issueRef: string, by: Member, ...assignees: Member[]) {
+async function assign(issueRef: string, by: Member, ...assignees: Member[]) {
+  await assignWithoutRecording(issueRef, by, ...assignees);
+  await recordEvents();
+}
+
+function assignWithoutRecording(issueRef: string, by: Member, ...assignees: Member[]) {
   return updateIssue(by, issueWork, IssueId.from(issueRef), {
     assignees: assignees.map((assignee) => Username.from(assignee.username)),
   });
@@ -77,6 +82,7 @@ async function comment(issueRef: string, by: Member, body: string) {
     requestId: newRequestId(),
     body,
   });
+  await recordEvents();
   return { id: commentId };
 }
 
@@ -194,6 +200,7 @@ it("REQ-044.3: Alex edits a comment that already mentions @sam and adds @jo → 
     body: `@${sam.username} @${jo.username} look`,
     version: 0,
   });
+  await recordEvents();
 
   expect(await notificationsFor(sam)).toHaveLength(1);
   expect(await notificationsFor(jo)).toMatchObject([{ kind: "mentioned", commentId: posted.id }]);
@@ -218,6 +225,7 @@ it("REQ-044.5: Alex mentions @sam in a comment on project WEB → the email link
     requestId: newRequestId(),
     body: `@${sam.username} thoughts?`,
   });
+  await recordEvents();
 
   expect(await notificationsFor(sam)).toEqual([
     expect.objectContaining({
@@ -244,6 +252,7 @@ it("REQ-044.6: Alex mentions @sam in the WEB project description → Sam gets th
     description: `Owner: @${sam.username}`,
     descriptionVersion: 0,
   });
+  await recordEvents();
 
   expect(await notificationsFor(sam)).toEqual([
     expect.objectContaining({
@@ -268,6 +277,7 @@ it("REQ-044: a mention in an issue description emails the member, linking to the
     description: `Ask @${sam.username}`,
     descriptionVersion: 0,
   });
+  await recordEvents();
 
   expect(await notificationsFor(sam)).toEqual([
     expect.objectContaining({
@@ -289,10 +299,12 @@ it("REQ-044.7: Alex mentions @sam in a comment, edits the mention out, then adds
   const posted = await comment(issueRef, alex, `@${sam.username} look`);
 
   await editComment(alex, commentWork, Uuid.from(posted.id), { body: "look", version: 0 });
+  await recordEvents();
   await editComment(alex, commentWork, Uuid.from(posted.id), {
     body: `@${sam.username} look again`,
     version: 1,
   });
+  await recordEvents();
 
   expect((await notificationsFor(sam)).map((row) => row.excerpt)).toEqual([
     `@${sam.username} look`,
@@ -374,30 +386,19 @@ it("§2.6: a member must keep at least one notification channel", async () => {
   });
 });
 
-it("M16: an event and its notification rows commit or roll back together", async () => {
+it("REQ-045, §2.6: the wait counts from the action, not from the run, so an event recorded late is due at once", async () => {
   const alex = await createMember();
   const sam = await createMember();
-  const { issue } = await website();
-  const assigned = {
-    type: "IssueAssigned",
-    actorId: alex.id,
-    issueId: issue.id,
-    assigneeIds: [sam.id],
-  } satisfies DomainEvent;
+  const { issueRef } = await website();
+  await assignWithoutRecording(issueRef, alex, sam);
+  await db
+    .update(outboxEvents)
+    .set({ occurredAt: sql`now() - interval '5 minutes'` })
+    .where(sql`${outboxEvents.payload} @> ${JSON.stringify({ recipientIds: [sam.id] })}::jsonb`);
 
-  const rolledBack = db.transaction(async (tx) => {
-    await publish(tx, assigned);
-    tx.rollback();
-  });
-
-  await expect(rolledBack).rejects.toThrow();
-  expect(await notificationsFor(sam)).toEqual([]);
-  expect(await deliveriesFor(sam)).toEqual([]);
-
-  await db.transaction((tx) => publish(tx, assigned));
+  await recordEvents();
 
   expect(await notificationsFor(sam)).toEqual([
-    expect.objectContaining({ kind: "assigned", targetId: issue.id }),
+    expect.objectContaining({ kind: "assigned", waitSeconds: -180 }),
   ]);
-  expect(await deliveriesFor(sam)).toEqual([expect.objectContaining({ state: "pending" })]);
 });
