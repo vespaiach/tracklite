@@ -15,10 +15,11 @@ afterEach(() => {
 const web: ProjectSummary = { key: "WEB", name: "Website", archivedAt: null };
 const old: ProjectSummary = { key: "OLD", name: "Old site", archivedAt: "2025-09-14T10:00:00.000Z" };
 
-function renderHeader(project: ProjectSummary, admin: boolean) {
+function renderHeader(project: ProjectSummary, admin: boolean, issue?: { id: string; title: string }) {
   renderForm(
     <ProjectHeader
       project={project}
+      issue={issue}
       admin={admin}
       members={[]}
       me="sam"
@@ -63,4 +64,20 @@ it("STD-2, REQ-013.1, REQ-013.4: a member sees no settings gear; an archived pro
   expect(header.queryByRole("link", { name: "Project settings" })).toBeNull();
   expect(header.getByText("Archived")).toBeTruthy();
   expect(header.queryByRole("button", { name: "New issue" })).toBeNull();
+});
+
+it("REQ-046: on an issue page the header shows the breadcrumb to the project and no view selected", () => {
+  navigation.segment = "issue";
+  const header = renderHeader(web, false, { id: "WEB-42", title: "Fix login button" });
+
+  const crumbs = within(header.getByRole("navigation", { name: "Breadcrumb" }));
+  expect(crumbs.getByRole("link", { name: "Project details" }).getAttribute("href")).toBe(
+    "/project/WEB/detail",
+  );
+  expect(crumbs.getByRole("link", { name: "Website · WEB" }).getAttribute("href")).toBe("/project/WEB");
+  const current = crumbs.getByText("WEB-42");
+  expect(current.getAttribute("aria-current")).toBe("page");
+  expect(current.getAttribute("title")).toBe("Fix login button");
+  const views = within(header.getByRole("navigation", { name: "Project views" }));
+  expect(views.queryAllByRole("link", { current: "page" })).toEqual([]);
 });

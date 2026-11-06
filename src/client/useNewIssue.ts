@@ -1,6 +1,6 @@
 import { createContext, use } from "react";
-import { useNavigate } from "react-router";
 import type { CreateIssue } from "../app/(signed-in)/project/[key]/NewIssueDialog";
+import { loadPage } from "../lib/load-page";
 import { useMeQuery, useMembersQuery } from "./api";
 
 export const CreateIssueContext = createContext<CreateIssue>(async () => {
@@ -10,11 +10,10 @@ export const CreateIssueContext = createContext<CreateIssue>(async () => {
 export function useNewIssue() {
   const { data: members = [] } = useMembersQuery();
   const { data: me } = useMeQuery();
-  const navigate = useNavigate();
   return {
     members,
     me: me?.username ?? "",
     createIssue: use(CreateIssueContext),
-    onCreated: (id: string) => void navigate(`/issue/${id}`),
+    onCreated: (id: string) => loadPage(`/issue/${id}`),
   };
 }

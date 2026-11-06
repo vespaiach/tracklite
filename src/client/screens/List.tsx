@@ -30,7 +30,6 @@ import { formatExact } from "../dates";
 import { Assignees, assignedTo, LabelPills, memberName, UpdatedAt } from "../IssueCells";
 import { issuePriorities, issueStatuses } from "../../contract";
 import { priorities, statuses } from "../issue-fields";
-import { useRouterClick } from "../links";
 import { NewIssueDialog } from "../../app/(signed-in)/project/[key]/NewIssueDialog";
 import { useNewIssue } from "../useNewIssue";
 import { Zone, zoneState } from "../Zone";
@@ -361,15 +360,13 @@ function AssigneeAvatar({ initials }: { initials: string }) {
 
 function IssueRow({ issue, me }: { issue: ListIssue; me?: string }) {
   const href = `/issue/${issue.id}`;
-  const open = useRouterClick(href);
   const { name: statusName, kind: statusKind } = statuses[issue.status];
   const { name: priorityName, kind: priorityKind } = priorities[issue.priority];
   return (
     <ListRowLink
       columns={columns}
       href={href}
-      label={`${issue.id}, ${issue.title}, ${statusName}, ${priorityName}, ${assignedTo(issue.assignees)}, updated ${formatExact(issue.updatedAt)}`}
-      onClick={open}>
+      label={`${issue.id}, ${issue.title}, ${statusName}, ${priorityName}, ${assignedTo(issue.assignees)}, updated ${formatExact(issue.updatedAt)}`}>
       <span className="tl-list-row__id">{issue.id}</span>
       <span
         className="tl-list-row__title"

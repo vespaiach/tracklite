@@ -1,10 +1,7 @@
 import { type BaseQueryFn, createApi } from "@reduxjs/toolkit/query/react";
 import type {
   Invitation,
-  Issue,
   IssueListPage,
-  IssuePriority,
-  IssueStatus,
   Label,
   LabelColor,
   Me,
@@ -28,14 +25,6 @@ function issueListPath(key: string, query: string, offset: number) {
   const search = params.toString();
   return `projects/${key}/issues${search ? `?${search}` : ""}`;
 }
-
-export type IssueChange =
-  | { title: string }
-  | { status: IssueStatus }
-  | { priority: IssuePriority }
-  | { assignees: string[] }
-  | { labelIds: string[] }
-  | { description: string; descriptionVersion: number };
 
 type ApiRequest = string | { path: string; method: "POST" | "PATCH" | "PUT" | "DELETE"; body?: unknown };
 
@@ -80,7 +69,7 @@ const baseQuery: BaseQueryFn<ApiRequest, unknown, ApiFailure> = async (request, 
 export const api = createApi({
   baseQuery,
   refetchOnMountOrArgChange: true,
-  tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels", "Issue", "Comments"],
+  tagTypes: ["Me", "Members", "Invitations", "Projects", "Labels", "Comments"],
   endpoints: (build) => ({
     me: build.query<Me, void>({ query: () => "me", providesTags: ["Me"] }),
     updateProfile: build.mutation<Me, { fullName: string }>({
@@ -149,18 +138,6 @@ export const api = createApi({
       query: (id) => ({ path: `labels/${id}`, method: "DELETE" }),
       invalidatesTags: (_result, error) => (!error || error.status === 404 ? ["Labels"] : []),
     }),
-    issue: build.query<Issue, string>({ query: (id) => `issues/${id}`, providesTags: ["Issue"] }),
-    updateIssue: build.mutation<Issue, { id: string; change: IssueChange }>({
-      query: ({ id, change }) => ({ path: `issues/${id}`, method: "PATCH", body: change }),
-      invalidatesTags: (_result, error) => (error?.status === 404 ? ["Labels"] : []),
-      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
-        const saved = await queryFulfilled.catch(() => undefined);
-        if (saved) dispatch(api.util.upsertQueryData("issue", id, saved.data));
-      },
-    }),
-    deleteIssue: build.mutation<null, string>({
-      query: (id) => ({ path: `issues/${id}`, method: "DELETE" }),
-    }),
     issueList: build.infiniteQuery<IssueListPage, { key: string; query: string }, number>({
       infiniteQueryOptions: {
         initialPageParam: 0,
@@ -208,10 +185,6 @@ export const {
   useCreateLabelMutation,
   useUpdateLabelMutation,
   useDeleteLabelMutation,
-  useIssueQuery,
-  useLazyIssueQuery,
-  useUpdateIssueMutation,
-  useDeleteIssueMutation,
   useIssueListInfiniteQuery,
   useCommentsQuery,
   usePostCommentMutation,

@@ -1,30 +1,18 @@
 import { BookOpen, Settings, SquareKanban, List as ListIcon, Tag as TagIcon } from "lucide-react";
-import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { AppBar, AppBarTitle, LinkTabs, Tag } from "../components/ui/track-lite";
-import type { Issue, ProjectSummary } from "./api";
+import type { ProjectSummary } from "./api";
 import { useRouterClick } from "./links";
 import { NewIssueButton } from "../app/(signed-in)/project/[key]/NewIssueDialog";
 import { useNewIssue } from "./useNewIssue";
 
 export type ProjectView = "board" | "list" | "detail" | "labels";
 
-type IssueCrumb = Pick<Issue, "id"> & Partial<Pick<Issue, "title">>;
+export type ProjectHeaderProps = { project: ProjectSummary; admin: boolean; view: ProjectView };
 
-export type ProjectHeaderProps = {
-  project: ProjectSummary;
-  admin: boolean;
-} & ({ view: ProjectView; issue?: never } | { issue: IssueCrumb; view?: never });
-
-export function ProjectHeader({ project, view, issue, admin }: ProjectHeaderProps) {
+export function ProjectHeader({ project, view, admin }: ProjectHeaderProps) {
   const base = `/project/${project.key}`;
   const title = `${project.name} · ${project.key}`;
-  const details = (
-    <DetailsButton
-      href={`${base}/detail`}
-      current={view === "detail"}
-    />
-  );
   return (
     <AppBar
       end={
@@ -33,19 +21,13 @@ export function ProjectHeader({ project, view, issue, admin }: ProjectHeaderProp
           {!project.archivedAt && <SpaNewIssueButton project={project} />}
         </>
       }>
-      {issue ? (
-        <IssueCrumbs
-          details={details}
-          projectTitle={title}
-          projectHref={base}
-          issue={issue}
+      <div className="tl-appbar__lead">
+        <DetailsButton
+          href={`${base}/detail`}
+          current={view === "detail"}
         />
-      ) : (
-        <div className="tl-appbar__lead">
-          {details}
-          <AppBarTitle>{title}</AppBarTitle>
-        </div>
-      )}
+        <AppBarTitle>{title}</AppBarTitle>
+      </div>
       {project.archivedAt && <Tag variant="neutral">Archived</Tag>}
       <ViewTabs
         base={base}
@@ -88,44 +70,7 @@ function SettingsButton({ href }: { href: string }) {
   );
 }
 
-type IssueCrumbsProps = {
-  details: ReactNode;
-  projectTitle: string;
-  projectHref: string;
-  issue: IssueCrumb;
-};
-
-function IssueCrumbs({ details, projectTitle, projectHref, issue }: IssueCrumbsProps) {
-  return (
-    <nav
-      aria-label="Breadcrumb"
-      className="tl-crumbs">
-      <span className="tl-crumbs__item tl-appbar__lead">
-        {details}
-        <a
-          href={projectHref}
-          className="tl-appbar__title">
-          {projectTitle}
-        </a>
-      </span>
-      <span className="tl-crumbs__item">
-        <span
-          className="tl-crumbs__sep"
-          aria-hidden="true">
-          /
-        </span>
-        <span
-          aria-current="page"
-          title={issue.title}
-          className="tl-crumbs__id">
-          {issue.id}
-        </span>
-      </span>
-    </nav>
-  );
-}
-
-function ViewTabs({ base, view }: { base: string; view?: ProjectView }) {
+function ViewTabs({ base, view }: { base: string; view: ProjectView }) {
   const listClick = useRouterClick(`${base}/list`);
   const labelsClick = useRouterClick(`${base}/labels`);
   return (

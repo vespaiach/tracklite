@@ -1,32 +1,26 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import {
-  admin,
-  alex,
-  apiError,
-  deferred,
-  issue,
-  memberOf,
-  mockApi,
-  noContent,
-  project,
-  renderAppAt,
-  requestsTo,
-  sam,
-} from "../../test/client-app";
-import { loadPage } from "../../lib/load-page";
-import type { Issue, IssueLabel, Label, Me, Project } from "../api";
+import type { ActionResult, Issue, IssueLabel, Label, Me, ProjectSummary } from "../../../../contract";
+import { loadPage } from "../../../../lib/load-page";
+import { admin, alex, issue, memberOf, sam } from "../../../../test/client-app";
+import { done, refused, renderForm } from "../../../../test/forms";
+import { type IssueChange, IssueView } from "./IssueView";
 
-vi.mock("../../lib/load-page", () => ({ loadPage: vi.fn() }));
+const router = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("../../../../lib/load-page", () => ({ loadPage: vi.fn() }));
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
+  vi.mocked(loadPage).mockClear();
+  router.refresh.mockReset();
 });
 
-type Answer = (body: unknown) => Response | Promise<Response>;
+type Change = { id: string } & IssueChange;
+type Answer<Data> = ActionResult<Data> | Promise<ActionResult<Data>>;
 
-const web = project("WEB", "Website");
+const web: ProjectSummary = { key: "WEB", name: "Website", archivedAt: null };
 const jordan: Me = { ...alex, username: "jordan", fullName: "Jordan Diaz", initials: "JD" };
 const priya: Me = { ...alex, username: "priya", fullName: "Priya Shah", initials: "PS", deactivated: true };
 const team = [alex, jordan, priya, sam];
@@ -45,67 +39,100 @@ function labelled(...names: string[]) {
   return names.map((name) => onIssue(webLabels.find((candidate) => candidate.name === name) as Label));
 }
 
-function mockIssue({
+function applied(current: Issue, labels: Label[], { id: _id, ...change }: Change): Issue {
+  const { assignees, labelIds, ...rest } = change as Partial<Omit<Issue, "assignees">> & {
+    assignees?: string[];
+    labelIds?: string[];
+  };
+  return {
+    ...current,
+    ...rest,
+    ...(assignees && {
+      assignees: team.filter(({ username }) => assignees.includes(username)).map(memberOf),
+    }),
+    ...(labelIds && {
+      labels: labelIds.map((labelId) => onIssue(labels.find(({ id }) => id === labelId) as Label)),
+    }),
+    ...(rest.description !== undefined && { descriptionVersion: current.descriptionVersion + 1 }),
+  };
+}
+
+function renderIssue({
   me = sam,
   shown = issue(),
-  inProject = web,
-  get,
-  patch,
-  remove,
-  labels = () => webLabels,
+  labels = webLabels,
+  update,
+  remove = () => done,
+  onRefresh = () => {},
 }: {
   me?: Me;
   shown?: Issue;
-  inProject?: Project;
-  get?: Answer;
-  patch?: Answer;
-  remove?: Answer;
-  labels?: () => Label[];
+  labels?: Label[];
+  update?: (change: Change) => Answer<Issue | null>;
+  remove?: () => Answer<null>;
+  onRefresh?: (server: { issue: Issue; labels: Label[] }) => void;
 } = {}) {
-  let current: Issue | undefined = shown;
-  const created: Label[] = [];
-  const known = () => [...labels(), ...created];
-  return mockApi({
-    "GET /api/me": () => Response.json(me),
-    "GET /api/members": () => Response.json(team),
-    [`GET /api/projects/${inProject.key}`]: () => Response.json(inProject),
-    [`GET /api/projects/${inProject.key}/labels`]: () => Response.json(known()),
-    [`POST /api/projects/${inProject.key}/labels`]: (body) => {
-      const made = { ...label((body as { name: string }).name), id: "l-new" };
-      created.push(made);
-      return Response.json(made, { status: 201 });
-    },
-    [`GET /api/issues/${shown.id}`]:
-      get ?? (() => (current ? Response.json(current) : apiError(404, "Not found"))),
-    [`PATCH /api/issues/${shown.id}`]:
-      patch ??
-      ((body) => {
-        const change = body as Partial<Omit<Issue, "assignees">> & {
-          assignees?: string[];
-          labelIds?: string[];
-        };
-        const { assignees, labelIds, ...rest } = change;
-        current = {
-          ...(current as Issue),
-          ...rest,
-          ...(assignees && {
-            assignees: team.filter(({ username }) => assignees.includes(username)).map(memberOf),
-          }),
-          ...(labelIds && {
-            labels: labelIds.map((labelId) => onIssue(known().find(({ id }) => id === labelId) as Label)),
-          }),
-          ...(rest.description !== undefined && {
-            descriptionVersion: (current as Issue).descriptionVersion + 1,
-          }),
-        };
-        return Response.json(current);
-      }),
-    [`DELETE /api/issues/${shown.id}`]: async (body) => {
-      const answer = await (remove ?? noContent)(body);
-      if (answer.ok) current = undefined;
-      return answer;
-    },
+  const server = { issue: shown, labels: [...labels] };
+  const page = { refresh: () => {} };
+
+  async function answered<Data>(answer: Answer<Data>) {
+    const result = await answer;
+    if (result.ok) page.refresh();
+    return result;
+  }
+
+  function saved(change: Change): ActionResult<Issue> {
+    server.issue = applied(server.issue, server.labels, change);
+    return { ok: true, data: server.issue };
+  }
+
+  const updateIssue = vi.fn(
+    async (change: Change) =>
+      answered(update ? update(change) : saved(change)) as Promise<ActionResult<Issue>>,
+  );
+  const createLabel = vi.fn(async ({ name }: { key: string; name: string }) => {
+    const made = { ...label(name), id: "l-new" };
+    server.labels.push(made);
+    return answered<Label>({ ok: true, data: made });
   });
+  const deleteIssue = vi.fn(async (_issue: { id: string }) => answered(remove()));
+  router.refresh.mockImplementation(() => {
+    onRefresh(server);
+    page.refresh();
+  });
+
+  function RefreshingPage() {
+    const [, setRefreshes] = useState(0);
+    page.refresh = () => setRefreshes((count) => count + 1);
+    return (
+      <IssueView
+        issue={server.issue}
+        project={web}
+        labels={server.labels}
+        members={team}
+        me={{ username: me.username, admin: me.role === "admin" }}
+        comments="The comment thread"
+        updateIssue={updateIssue}
+        deleteIssue={deleteIssue}
+        createLabel={createLabel}
+      />
+    );
+  }
+
+  renderForm(<RefreshingPage />);
+  return { updateIssue, createLabel, deleteIssue, server };
+}
+
+function changes(updateIssue: ReturnType<typeof renderIssue>["updateIssue"]) {
+  return updateIssue.mock.calls.map(([{ id: _id, ...change }]) => change);
+}
+
+function deferredResult<Data>() {
+  let settle!: (result: ActionResult<Data>) => void;
+  const result = new Promise<ActionResult<Data>>((resolve) => {
+    settle = resolve;
+  });
+  return { answer: () => result, settle };
 }
 
 async function titleField() {
@@ -127,54 +154,8 @@ function keysOf(listbox: HTMLElement) {
     .map((option) => option.getAttribute("data-key"));
 }
 
-it("REQ-016.5: a lower-case address opens the issue at its canonical address", async () => {
-  mockIssue();
-  renderAppAt("/issue/web-42");
-
-  expect((await titleField()).value).toBe("Fix login button");
-  expect(window.location.pathname).toBe("/issue/WEB-42");
-  expect(screen.getByText("WEB-42")).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Website · WEB" }).getAttribute("href")).toBe("/project/WEB");
-});
-
-it("REQ-046: the issue page header shows the breadcrumb to the project and no view selected", async () => {
-  mockIssue();
-  renderAppAt("/issue/WEB-42");
-
-  await titleField();
-  const crumbs = within(screen.getByRole("banner")).getByRole("navigation", { name: "Breadcrumb" });
-  expect(within(crumbs).getByRole("link", { name: "Project details" }).getAttribute("href")).toBe(
-    "/project/WEB/detail",
-  );
-  expect(within(crumbs).getByRole("link", { name: "Website · WEB" }).getAttribute("href")).toBe(
-    "/project/WEB",
-  );
-  const current = within(crumbs).getByText("WEB-42");
-  expect(current.getAttribute("aria-current")).toBe("page");
-  expect(current.getAttribute("title")).toBe("Fix login button");
-  const views = screen.getByRole("navigation", { name: "Project views" });
-  expect(within(views).queryAllByRole("link", { current: "page" })).toEqual([]);
-});
-
-it("REQ-046, STD-11: the project header stays while the issue loads and when it fails to load", async () => {
-  const loading = deferred();
-  mockIssue({ get: loading.answer });
-  renderAppAt("/issue/WEB-42");
-
-  const crumbs = await screen.findByRole("navigation", { name: "Breadcrumb" });
-  expect(within(crumbs).getByRole("link", { name: "Website · WEB" })).toBeTruthy();
-  expect(within(crumbs).getByText("WEB-42").getAttribute("aria-current")).toBe("page");
-
-  loading.resolve(apiError(500, "Internal error"));
-
-  expect(await screen.findByText("Couldn’t load this issue.")).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
-  expect(screen.getByRole("navigation", { name: "Breadcrumb" })).toBeTruthy();
-});
-
 it("REQ-016: Enter or leaving the title saves it; Escape restores the saved title", async () => {
-  const fetchMock = mockIssue();
-  renderAppAt("/issue/WEB-42");
+  const { updateIssue } = renderIssue();
 
   const title = await titleField();
   fireEvent.change(title, { target: { value: "Something else" } });
@@ -182,19 +163,17 @@ it("REQ-016: Enter or leaving the title saves it; Escape restores the saved titl
   expect(title.value).toBe("Fix login button");
 
   fireEvent.blur(title);
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([]);
+  expect(changes(updateIssue)).toEqual([]);
 
   fireEvent.change(title, { target: { value: "Fix the login button" } });
   fireEvent.keyDown(title, { key: "Enter" });
-  await waitFor(() =>
-    expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ title: "Fix the login button" }]),
-  );
+  await waitFor(() => expect(changes(updateIssue)).toEqual([{ title: "Fix the login button" }]));
   await waitFor(() => expect(title.value).toBe("Fix the login button"));
 
   fireEvent.change(title, { target: { value: "Fix the Safari login button" } });
   fireEvent.blur(title);
   await waitFor(() =>
-    expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([
+    expect(changes(updateIssue)).toEqual([
       { title: "Fix the login button" },
       { title: "Fix the Safari login button" },
     ]),
@@ -202,8 +181,9 @@ it("REQ-016: Enter or leaving the title saves it; Escape restores the saved titl
 });
 
 it("REQ-016.3: a title of only spaces gets Title required and keeps what was typed", async () => {
-  mockIssue({ patch: () => apiError(422, "Check the highlighted fields", { title: "Title required" }) });
-  renderAppAt("/issue/WEB-42");
+  renderIssue({
+    update: () => refused("invalid", "Check the highlighted fields", { title: "Title required" }),
+  });
 
   const title = await titleField();
   fireEvent.change(title, { target: { value: "   " } });
@@ -215,8 +195,7 @@ it("REQ-016.3: a title of only spaces gets Title required and keeps what was typ
 });
 
 it("REQ-017, REQ-017.1: the Status picker lists statuses in order with the current one checked; Backlog → Done saves", async () => {
-  const fetchMock = mockIssue({ shown: issue({ status: "backlog" }) });
-  renderAppAt("/issue/WEB-42");
+  const { updateIssue } = renderIssue({ shown: issue({ status: "backlog" }) });
 
   const listbox = await openPicker("Status");
   expect(keysOf(listbox)).toEqual(["backlog", "in_progress", "in_review", "done", "canceled"]);
@@ -226,12 +205,11 @@ it("REQ-017, REQ-017.1: the Status picker lists statuses in order with the curre
   await waitFor(() =>
     expect(screen.getByRole("button", { name: /^Status/ }).textContent ?? "").toContain("Done"),
   );
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ status: "done" }]);
+  expect(changes(updateIssue)).toEqual([{ status: "done" }]);
 });
 
 it("REQ-018.1: setting the priority to Urgent shows Urgent", async () => {
-  const fetchMock = mockIssue();
-  renderAppAt("/issue/WEB-42");
+  const { updateIssue } = renderIssue();
 
   const listbox = await openPicker("Priority");
   expect(keysOf(listbox)).toEqual(["urgent", "high", "medium", "low", "none"]);
@@ -240,7 +218,7 @@ it("REQ-018.1: setting the priority to Urgent shows Urgent", async () => {
   await waitFor(() =>
     expect(screen.getByRole("button", { name: /^Priority/ }).textContent).toContain("Urgent"),
   );
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ priority: "urgent" }]);
+  expect(changes(updateIssue)).toEqual([{ priority: "urgent" }]);
 });
 
 function assigneesPick() {
@@ -252,8 +230,7 @@ function memberOption(name: string) {
 }
 
 it("REQ-019.1, REQ-019.2, REQ-019.3, REQ-019.4, REQ-019: each toggle saves the whole set; only active members are listed, filtered by name or username", async () => {
-  const fetchMock = mockIssue({ shown: issue({ assignees: [memberOf(jordan)] }) });
-  renderAppAt("/issue/WEB-42");
+  const { updateIssue } = renderIssue({ shown: issue({ assignees: [memberOf(jordan)] }) });
 
   const listbox = await openPicker("Assignees");
   expect(keysOf(listbox)).toEqual(["alex", "jordan", "sam"]);
@@ -273,7 +250,7 @@ it("REQ-019.1, REQ-019.2, REQ-019.3, REQ-019.4, REQ-019: each toggle saves the w
 
   fireEvent.click(memberOption("Jordan Diaz"));
   await waitFor(async () => expect((await assigneesPick()).textContent).toContain("Unassigned"));
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([
+  expect(changes(updateIssue)).toEqual([
     { assignees: ["jordan", "alex"] },
     { assignees: ["jordan"] },
     { assignees: [] },
@@ -281,8 +258,7 @@ it("REQ-019.1, REQ-019.2, REQ-019.3, REQ-019.4, REQ-019: each toggle saves the w
 });
 
 it("REQ-019: Enter in the filter adds the first matching member", async () => {
-  const fetchMock = mockIssue({ shown: issue({ assignees: [] }) });
-  renderAppAt("/issue/WEB-42");
+  const { updateIssue } = renderIssue({ shown: issue({ assignees: [] }) });
 
   await openPicker("Assignees");
   const search = screen.getByRole("searchbox", { name: "Filter members" });
@@ -290,12 +266,11 @@ it("REQ-019: Enter in the filter adds the first matching member", async () => {
   fireEvent.keyDown(search, { key: "Enter" });
 
   await waitFor(async () => expect((await assigneesPick()).textContent).toContain("Jordan Diaz"));
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ assignees: ["jordan"] }]);
+  expect(changes(updateIssue)).toEqual([{ assignees: ["jordan"] }]);
 });
 
 it("REQ-019.6: a deactivated assignee is shown but not offered, and stays when another member is added", async () => {
-  const fetchMock = mockIssue({ shown: issue({ assignees: [memberOf(priya)] }) });
-  renderAppAt("/issue/WEB-42");
+  const { updateIssue } = renderIssue({ shown: issue({ assignees: [memberOf(priya)] }) });
 
   expect((await assigneesPick()).textContent).toContain("Priya Shah (deactivated)");
   const listbox = await openPicker("Assignees");
@@ -304,14 +279,14 @@ it("REQ-019.6: a deactivated assignee is shown but not offered, and stays when a
 
   await waitFor(async () => expect((await assigneesPick()).textContent).toContain("Jordan Diaz"));
   expect((await assigneesPick()).textContent).toContain("Priya Shah (deactivated)");
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ assignees: ["priya", "jordan"] }]);
+  expect(changes(updateIssue)).toEqual([{ assignees: ["priya", "jordan"] }]);
 });
 
 it("REQ-019.5: a member deactivated meanwhile gets Choose an active member and the assignees are kept", async () => {
-  mockIssue({
-    patch: () => apiError(422, "Check the highlighted fields", { assignees: "Choose an active member" }),
+  renderIssue({
+    update: () =>
+      refused("invalid", "Check the highlighted fields", { assignees: "Choose an active member" }),
   });
-  renderAppAt("/issue/WEB-42");
 
   await openPicker("Assignees");
   fireEvent.click(memberOption("Jordan Diaz"));
@@ -322,8 +297,7 @@ it("REQ-019.5: a member deactivated meanwhile gets Choose an active member and t
 });
 
 it("STD-9: a failed picker save shows the toast and keeps the old value", async () => {
-  mockIssue({ patch: () => apiError(500, "Internal error") });
-  renderAppAt("/issue/WEB-42");
+  renderIssue({ update: () => Promise.reject(new TypeError("Failed to fetch")) });
 
   const listbox = await openPicker("Priority");
   fireEvent.click(within(listbox).getByRole("option", { name: "Urgent" }));
@@ -333,9 +307,8 @@ it("STD-9: a failed picker save shows the toast and keeps the old value", async 
 });
 
 it("REQ-023, REQ-023.1: Cancel closes without deleting; confirming shows Deleting…, deletes and lands on the board", async () => {
-  const deletion = deferred();
-  const fetchMock = mockIssue({ remove: deletion.answer });
-  renderAppAt("/issue/WEB-42");
+  const deletion = deferredResult<null>();
+  const { deleteIssue } = renderIssue({ remove: deletion.answer });
 
   fireEvent.click(await screen.findByRole("button", { name: "Delete issue…" }));
   fireEvent.click(
@@ -344,7 +317,7 @@ it("REQ-023, REQ-023.1: Cancel closes without deleting; confirming shows Deletin
     }),
   );
   expect(screen.queryByRole("alertdialog")).toBeNull();
-  expect(requestsTo(fetchMock, "DELETE /api/issues/WEB-42")).toEqual([]);
+  expect(deleteIssue).not.toHaveBeenCalled();
 
   fireEvent.click(screen.getByRole("button", { name: "Delete issue…" }));
   const dialog = screen.getByRole("alertdialog", { name: "Delete WEB-42?" });
@@ -357,45 +330,28 @@ it("REQ-023, REQ-023.1: Cancel closes without deleting; confirming shows Deletin
 
   const busy = await within(dialog).findByRole("button", { name: "Deleting…" });
   expect((busy as HTMLButtonElement).disabled).toBe(true);
-  deletion.resolve(noContent());
+  deletion.settle(done);
 
   await waitFor(() => expect(loadPage).toHaveBeenCalledWith("/project/WEB"));
-  expect(requestsTo(fetchMock, "DELETE /api/issues/WEB-42")).toHaveLength(1);
+  expect(deleteIssue.mock.calls).toEqual([[{ id: "WEB-42" }]]);
 });
 
 it("REQ-023.2: a member who didn't create the issue sees no Delete option, while an admin does", async () => {
-  mockIssue({ me: alex });
-  renderAppAt("/issue/WEB-42");
+  renderIssue({ me: alex });
   await titleField();
   expect(screen.queryByRole("button", { name: "Delete issue…" })).toBeNull();
   cleanup();
 
-  mockIssue({ me: { ...admin, username: "jordan", fullName: "Jordan Diaz", initials: "JD" } });
-  renderAppAt("/issue/WEB-42");
+  renderIssue({ me: { ...admin, username: "jordan", fullName: "Jordan Diaz", initials: "JD" } });
   expect(await screen.findByRole("button", { name: "Delete issue…" })).toBeTruthy();
 });
 
-it("STD-4: an unknown issue ID shows Not found", async () => {
-  mockApi({
-    "GET /api/me": () => Response.json(sam),
-    "GET /api/members": () => Response.json(team),
-    "GET /api/projects/WEB": () => Response.json(web),
-    "GET /api/issues/WEB-40": () => apiError(404, "Not found"),
-  });
-  renderAppAt("/issue/WEB-40");
-
-  expect(await screen.findByRole("heading", { name: "Not found" })).toBeTruthy();
-});
-
 it("REQ-013: an archived issue is read-only: title, pickers, labels, description and Delete", async () => {
-  mockIssue({
+  renderIssue({
     shown: issue({ archived: true, labels: labelled("bug"), description: "Old text" }),
-    inProject: project("WEB", "Website", "2026-10-01T10:00:00.000Z"),
   });
-  renderAppAt("/issue/WEB-42");
 
   expect(await screen.findByRole("heading", { name: "Fix login button" })).toBeTruthy();
-  expect(screen.getByText("Archived")).toBeTruthy();
   expect(screen.getByText("In Progress")).toBeTruthy();
   expect(screen.queryByRole("textbox", { name: "Title" })).toBeNull();
   expect(screen.queryByRole("button", { name: /^(Status|Priority|Assignee)/ })).toBeNull();
@@ -409,8 +365,7 @@ it("REQ-013: an archived issue is read-only: title, pickers, labels, description
 });
 
 it("REQ-020: in a project with no labels the label picker opens and says No labels in this project yet.", async () => {
-  mockIssue({ labels: () => [] });
-  renderAppAt("/issue/WEB-42");
+  renderIssue({ labels: [] });
 
   fireEvent.click(await pick("Labels"));
 
@@ -427,8 +382,7 @@ function labelOption(name: string) {
 }
 
 it("REQ-020.1, REQ-020: adding bug and frontend saves each and shows both; unchecking frontend removes it", async () => {
-  const fetchMock = mockIssue();
-  renderAppAt("/issue/WEB-42");
+  const { updateIssue } = renderIssue();
 
   await openPicker("Labels");
   fireEvent.click(labelOption("bug"));
@@ -437,16 +391,13 @@ it("REQ-020.1, REQ-020: adding bug and frontend saves each and shows both; unche
 
   await waitFor(async () => expect((await labelsPick()).textContent).toContain("frontend"));
   expect((await labelsPick()).textContent).toContain("bug");
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([
-    { labelIds: ["l-bug"] },
-    { labelIds: ["l-bug", "l-frontend"] },
-  ]);
+  expect(changes(updateIssue)).toEqual([{ labelIds: ["l-bug"] }, { labelIds: ["l-bug", "l-frontend"] }]);
 
   expect(labelOption("frontend").getAttribute("aria-selected")).toBe("true");
   fireEvent.click(labelOption("frontend"));
 
   await waitFor(async () => expect((await labelsPick()).textContent).not.toContain("frontend"));
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([
+  expect(changes(updateIssue)).toEqual([
     { labelIds: ["l-bug"] },
     { labelIds: ["l-bug", "l-frontend"] },
     { labelIds: ["l-bug"] },
@@ -454,8 +405,9 @@ it("REQ-020.1, REQ-020: adding bug and frontend saves each and shows both; unche
 });
 
 it("REQ-020.2: typing a name that doesn't exist creates it as Gray and adds it", async () => {
-  const fetchMock = mockIssue({ labels: () => webLabels.filter(({ name }) => name !== "Design") });
-  renderAppAt("/issue/WEB-42");
+  const { updateIssue, createLabel } = renderIssue({
+    labels: webLabels.filter(({ name }) => name !== "Design"),
+  });
 
   await openPicker("Labels");
   fireEvent.change(screen.getByRole("searchbox", { name: "Filter or create labels" }), {
@@ -464,13 +416,12 @@ it("REQ-020.2: typing a name that doesn't exist creates it as Gray and adds it",
   fireEvent.click(labelOption("Create label “Design”"));
 
   await waitFor(async () => expect((await labelsPick()).textContent).toContain("Design"));
-  expect(requestsTo(fetchMock, "POST /api/projects/WEB/labels")).toEqual([{ name: "Design", color: "gray" }]);
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ labelIds: ["l-new"] }]);
+  expect(createLabel.mock.calls).toEqual([[{ key: "WEB", name: "Design", color: "gray" }]]);
+  expect(changes(updateIssue)).toEqual([{ labelIds: ["l-new"] }]);
 });
 
 it("REQ-020.5: typing a name that differs only in capitals adds the existing label", async () => {
-  const fetchMock = mockIssue();
-  renderAppAt("/issue/WEB-42");
+  const { updateIssue, createLabel } = renderIssue();
 
   await openPicker("Labels");
   fireEvent.change(screen.getByRole("searchbox", { name: "Filter or create labels" }), {
@@ -480,16 +431,15 @@ it("REQ-020.5: typing a name that differs only in capitals adds the existing lab
   fireEvent.click(labelOption("Design"));
 
   await waitFor(async () => expect((await labelsPick()).textContent).toContain("Design"));
-  expect(requestsTo(fetchMock, "POST /api/projects/WEB/labels")).toEqual([]);
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([{ labelIds: ["l-design"] }]);
+  expect(createLabel).not.toHaveBeenCalled();
+  expect(changes(updateIssue)).toEqual([{ labelIds: ["l-design"] }]);
 });
 
 it("REQ-020.3: adding an 11th label shows Maximum 10 labels and keeps the labels", async () => {
-  mockIssue({
+  renderIssue({
     shown: issue({ labels: labelled("bug") }),
-    patch: () => apiError(422, "Check the highlighted fields", { labelIds: "Maximum 10 labels" }),
+    update: () => refused("invalid", "Check the highlighted fields", { labelIds: "Maximum 10 labels" }),
   });
-  renderAppAt("/issue/WEB-42");
 
   await openPicker("Labels");
   fireEvent.click(labelOption("docs"));
@@ -500,17 +450,14 @@ it("REQ-020.3: adding an 11th label shows Maximum 10 labels and keeps the labels
   expect(labels.getAttribute("aria-describedby")).toContain(error.closest("[id]")?.id);
 });
 
-it("REQ-020.4: a label deleted meanwhile shows the toast and keeps the other labels", async () => {
-  let deleted = false;
-  const fetchMock = mockIssue({
+it("REQ-020.4: a label deleted meanwhile shows the toast, keeps the other labels and refreshes the page", async () => {
+  renderIssue({
     shown: issue({ labels: labelled("bug", "docs") }),
-    labels: () => webLabels.filter(({ name }) => !(deleted && name === "frontend")),
-    patch: () => {
-      deleted = true;
-      return apiError(404, "That label no longer exists");
+    update: () => refused("notFound", "That label no longer exists"),
+    onRefresh: (server) => {
+      server.labels = server.labels.filter(({ name }) => name !== "frontend");
     },
   });
-  renderAppAt("/issue/WEB-42");
 
   await openPicker("Labels");
   fireEvent.click(labelOption("frontend"));
@@ -520,7 +467,7 @@ it("REQ-020.4: a label deleted meanwhile shows the toast and keeps the other lab
   expect(labels.textContent).toContain("bug");
   expect(labels.textContent).toContain("docs");
   await waitFor(() => expect(screen.queryByRole("option", { name: /^frontend/ })).toBeNull());
-  expect(requestsTo(fetchMock, "GET /api/projects/WEB/labels").length).toBeGreaterThan(1);
+  expect(router.refresh).toHaveBeenCalledOnce();
 });
 
 async function editDescription() {
@@ -529,8 +476,7 @@ async function editDescription() {
 }
 
 it("REQ-022.1: saving a description with a checklist and a code block shows it formatted", async () => {
-  const fetchMock = mockIssue();
-  renderAppAt("/issue/WEB-42");
+  const { updateIssue } = renderIssue();
 
   const editor = await editDescription();
   const text = "- [x] Reproduce in Safari\n\n```js\nsignIn();\n```";
@@ -540,14 +486,11 @@ it("REQ-022.1: saving a description with a checklist and a code block shows it f
   expect(await screen.findByRole("checkbox")).toBeTruthy();
   expect(document.querySelector("pre")?.textContent).toContain("signIn();");
   expect(screen.queryByRole("textbox", { name: "Description (Markdown)" })).toBeNull();
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([
-    { description: text, descriptionVersion: 0 },
-  ]);
+  expect(changes(updateIssue)).toEqual([{ description: text, descriptionVersion: 0 }]);
 });
 
 it("STD-7: an empty description says No description yet. and Add one. opens the editor", async () => {
-  mockIssue({ shown: issue({ description: "" }) });
-  renderAppAt("/issue/WEB-42");
+  renderIssue({ shown: issue({ description: "" }) });
 
   expect((await screen.findByText(/^No description yet\./)).textContent).toBe("No description yet. Add one.");
   fireEvent.click(screen.getByRole("button", { name: "Add one." }));
@@ -556,19 +499,18 @@ it("STD-7: an empty description says No description yet. and Add one. opens the 
 });
 
 it("STD-8: a description changed by someone else keeps your text with Save disabled until Reload brings in theirs", async () => {
-  let saved = issue({ description: "First text", descriptionVersion: 0 });
+  const theirs = issue({ description: "Their text", descriptionVersion: 1 });
   const answers = [
-    () => {
-      saved = { ...saved, description: "Their text", descriptionVersion: 1 };
-      return apiError(409, "This was changed by Alex Kim. Copy your text and reload.");
-    },
-    () => Response.json({ ...saved, description: "Merged text", descriptionVersion: 2 }),
+    () => refused("conflict", "This was changed by Alex Kim. Copy your text and reload."),
+    () => ({ ok: true, data: { ...theirs, description: "Merged text", descriptionVersion: 2 } }) as const,
   ];
-  const fetchMock = mockIssue({
-    get: () => Response.json(saved),
-    patch: () => (answers.shift() as () => Response)(),
+  const { updateIssue } = renderIssue({
+    shown: issue({ description: "First text", descriptionVersion: 0 }),
+    update: () => (answers.shift() as () => ActionResult<Issue>)(),
+    onRefresh: (server) => {
+      server.issue = theirs;
+    },
   });
-  renderAppAt("/issue/WEB-42");
 
   const editor = await editDescription();
   fireEvent.change(editor, { target: { value: "My version" } });
@@ -587,15 +529,14 @@ it("STD-8: a description changed by someone else keeps your text with Save disab
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
   await waitFor(() => expect(screen.queryByRole("textbox", { name: "Description (Markdown)" })).toBeNull());
-  expect(requestsTo(fetchMock, "PATCH /api/issues/WEB-42")).toEqual([
+  expect(changes(updateIssue)).toEqual([
     { description: "My version", descriptionVersion: 0 },
     { description: "Merged text", descriptionVersion: 1 },
   ]);
 });
 
 it("NFR-007: Edit moves focus into the description editor; Escape and Save return it to Edit", async () => {
-  mockIssue();
-  renderAppAt("/issue/WEB-42");
+  renderIssue();
 
   const escaping = await editDescription();
   await waitFor(() => expect(document.activeElement).toBe(escaping));

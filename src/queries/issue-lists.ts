@@ -13,7 +13,6 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
-import { DomainError } from "../domain/shared/domain-error";
 import { db } from "../infrastructure/db";
 import { memberSummary } from "../domain/identity/member-summary";
 import { type Member, members } from "../infrastructure/identity/tables";
@@ -53,11 +52,9 @@ const sortColumns = {
   updated: { column: issues.updatedAt, ascending: false },
 };
 
-export async function getIssue(_actor: Member, id: IssueId | undefined) {
+export async function findIssueById(_actor: Member, id: IssueId | undefined) {
   const where = byIssueId(id);
-  const issue = where ? await findIssue(db, where) : undefined;
-  if (!issue) throw new DomainError("notFound", "Not found");
-  return issue;
+  return (where && (await findIssue(db, where))) ?? null;
 }
 
 function knownValues<T extends string>(values: string[], allowed: readonly T[]) {
