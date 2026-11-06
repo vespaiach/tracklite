@@ -15,6 +15,9 @@ import {
   summary,
 } from "../test/client-app";
 import type { Me, Project } from "./api";
+import { loadPage } from "./load-page";
+
+vi.mock("./load-page", () => ({ loadPage: vi.fn() }));
 
 afterEach(() => {
   cleanup();
@@ -211,7 +214,7 @@ it("design §6.2: the member button shows initials and name, and Profile goes to
   expect(window.location.pathname).toBe("/settings/profile");
 });
 
-it("REQ-006: Sign out in the member menu ends the session and lands on /sign-in", async () => {
+it("REQ-006: Sign out in the member menu ends the session and loads /sign-in", async () => {
   let signedIn = true;
   const fetchMock = mockApi({
     "GET /api/me": () => (signedIn ? Response.json(admin) : signedOut()),
@@ -225,9 +228,6 @@ it("REQ-006: Sign out in the member menu ends the session and lands on /sign-in"
   const menu = await openMemberMenu();
   fireEvent.click(within(menu).getByRole("menuitem", { name: "Sign out" }));
 
-  expect(await screen.findByRole("heading", { name: "Sign in" })).toBeTruthy();
+  await waitFor(() => expect(loadPage).toHaveBeenCalledWith("/sign-in"));
   expect(requestsTo(fetchMock, "DELETE /api/sessions/current")).toEqual([undefined]);
-  expect(window.location.pathname).toBe("/sign-in");
-  expect(window.location.search).toBe("");
-  expect(screen.queryByRole("complementary")).toBeNull();
 });

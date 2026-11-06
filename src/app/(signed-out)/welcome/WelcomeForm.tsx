@@ -1,6 +1,8 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
-import { useDispatch } from "react-redux";
-import { Navigate, useNavigate } from "react-router";
+import type { ActionError, FormAction } from "../../../contract";
 import {
   Button,
   Field,
@@ -11,61 +13,59 @@ import {
   SignedOutFormError,
   SignedOutHeading,
   SignedOutLayout,
-} from "../../components/ui/track-lite";
-import {
-  type ApiFailure,
-  useCheckSetupSecretMutation,
-  useCreateFirstAdminMutation,
-  useSetupStatusQuery,
-} from "../api";
-import { showToast } from "../toast";
+} from "../../../components/ui/track-lite";
+import { useFormAction } from "../../../components/useFormAction";
 
 type ProfileField = "email" | "fullName" | "username" | "password" | "confirmPassword";
 
 const passwordsDiffer = "Passwords don’t match";
 
-export function Welcome() {
-  const setup = useSetupStatusQuery();
-  const [secret, setSecret] = useState<string>();
+const everyRefusal: ActionError["kind"][] = [
+  "signedOut",
+  "forbidden",
+  "notFound",
+  "conflict",
+  "expired",
+  "invalid",
+  "limited",
+  "unavailable",
+];
 
-  if (setup.data?.needed === false) {
-    return (
-      <Navigate
-        to="/sign-in"
-        replace
-      />
-    );
-  }
+export function WelcomeForm({
+  checkSetupSecret,
+  createFirstAdmin,
+}: {
+  checkSetupSecret: FormAction;
+  createFirstAdmin: FormAction;
+}) {
+  const [secret, setSecret] = useState<string>();
 
   return (
     <SignedOutLayout>
-      {!setup.isLoading &&
-        (secret === undefined ? <SecretStep onAccepted={setSecret} /> : <ProfileStep secret={secret} />)}
+      {secret === undefined ? (
+        <SecretStep
+          checkSetupSecret={checkSetupSecret}
+          onAccepted={setSecret}
+        />
+      ) : (
+        <ProfileStep
+          secret={secret}
+          createFirstAdmin={createFirstAdmin}
+        />
+      )}
     </SignedOutLayout>
   );
 }
 
-function SecretStep({ onAccepted }: { onAccepted: (secret: string) => void }) {
-  const [checkSetupSecret, { isLoading: checking }] = useCheckSetupSecretMutation();
-  const dispatch = useDispatch();
+function SecretStep({
+  checkSetupSecret,
+  onAccepted,
+}: {
+  checkSetupSecret: FormAction;
+  onAccepted: (secret: string) => void;
+}) {
   const [secret, setSecret] = useState("");
-  const [formError, setFormError] = useState<string>();
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFormError(undefined);
-    try {
-      await checkSetupSecret({ secret }).unwrap();
-      onAccepted(secret);
-    } catch (error) {
-      const failure = error as ApiFailure;
-      if (failure.status === "network") {
-        dispatch(showToast(failure.message));
-      } else {
-        setFormError(failure.fields?.secret ?? failure.message);
-      }
-    }
-  }
+  const { error, submit, pending } = useFormAction(checkSetupSecret, () => onAccepted(secret), everyRefusal);
 
   return (
     <SignedOutForm onSubmit={submit}>
@@ -77,6 +77,7 @@ function SecretStep({ onAccepted }: { onAccepted: (secret: string) => void }) {
           {(props) => (
             <Input
               {...props}
+              name="secret"
               type="password"
               autoComplete="off"
               value={secret}
@@ -85,23 +86,21 @@ function SecretStep({ onAccepted }: { onAccepted: (secret: string) => void }) {
           )}
         </Field>
       </SignedOutFields>
-      {formError && <SignedOutFormError>{formError}</SignedOutFormError>}
+      {error && <SignedOutFormError>{error.fields?.secret ?? error.message}</SignedOutFormError>}
       <Button
         variant="primary"
         type="submit"
         block
-        disabled={checking}
-        aria-busy={checking || undefined}>
-        {checking ? "Checking…" : "Continue"}
+        disabled={pending}
+        aria-busy={pending || undefined}>
+        {pending ? "Checking…" : "Continue"}
       </Button>
     </SignedOutForm>
   );
 }
 
-function ProfileStep({ secret }: { secret: string }) {
-  const [createFirstAdmin, { isLoading: saving }] = useCreateFirstAdminMutation();
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
+function ProfileStep({ secret, createFirstAdmin }: { secret: string; createFirstAdmin: FormAction }) {
+  const router = useRouter();
   const [profile, setProfile] = useState<Record<ProfileField, string>>({
     email: "",
     fullName: "",
@@ -109,31 +108,21 @@ function ProfileStep({ secret }: { secret: string }) {
     password: "",
     confirmPassword: "",
   });
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<ProfileField, string>>>({});
-  const [formError, setFormError] = useState<string>();
+  const [mismatch, setMismatch] = useState(false);
+  const { error, submit, pending } = useFormAction(
+    createFirstAdmin,
+    () => router.replace("/my-issues"),
+    everyRefusal,
+  );
+  const fieldErrors: Partial<Record<ProfileField, string>> = mismatch
+    ? { confirmPassword: passwordsDiffer }
+    : (error?.fields ?? {});
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFormError(undefined);
-    const { confirmPassword, ...firstAdmin } = profile;
-    if (confirmPassword !== firstAdmin.password) {
-      setFieldErrors({ confirmPassword: passwordsDiffer });
-      return;
-    }
-
-    try {
-      await createFirstAdmin({ secret, ...firstAdmin }).unwrap();
-      await navigate("/my-issues", { replace: true });
-    } catch (error) {
-      const failure = error as ApiFailure;
-      if (failure.fields) {
-        setFieldErrors(failure.fields);
-      } else if (failure.status === "network") {
-        dispatch(showToast(failure.message));
-      } else {
-        setFormError(failure.message);
-      }
-    }
+  function create(event: FormEvent<HTMLFormElement>) {
+    const differ = profile.confirmPassword !== profile.password;
+    setMismatch(differ);
+    if (differ) event.preventDefault();
+    else submit(event);
   }
 
   function edit(field: ProfileField) {
@@ -141,10 +130,15 @@ function ProfileStep({ secret }: { secret: string }) {
   }
 
   return (
-    <SignedOutForm onSubmit={submit}>
+    <SignedOutForm onSubmit={create}>
       <SignedOutHeading title="Create the first admin">
         Your username and email can't be changed later.
       </SignedOutHeading>
+      <input
+        type="hidden"
+        name="secret"
+        value={secret}
+      />
       <SignedOutFields>
         <Field
           label="Email"
@@ -152,6 +146,7 @@ function ProfileStep({ secret }: { secret: string }) {
           {(props) => (
             <Input
               {...props}
+              name="email"
               type="email"
               autoComplete="email"
               value={profile.email}
@@ -165,6 +160,7 @@ function ProfileStep({ secret }: { secret: string }) {
           {(props) => (
             <Input
               {...props}
+              name="fullName"
               autoComplete="name"
               value={profile.fullName}
               onChange={edit("fullName")}
@@ -182,6 +178,7 @@ function ProfileStep({ secret }: { secret: string }) {
           {(props) => (
             <Input
               {...props}
+              name="username"
               autoComplete="username"
               value={profile.username}
               onChange={edit("username")}
@@ -199,6 +196,7 @@ function ProfileStep({ secret }: { secret: string }) {
           {(props) => (
             <Input
               {...props}
+              name="password"
               type="password"
               autoComplete="new-password"
               value={profile.password}
@@ -220,14 +218,14 @@ function ProfileStep({ secret }: { secret: string }) {
           )}
         </Field>
       </SignedOutFields>
-      {formError && <SignedOutFormError>{formError}</SignedOutFormError>}
+      {error && !error.fields && !mismatch && <SignedOutFormError>{error.message}</SignedOutFormError>}
       <Button
         variant="primary"
         type="submit"
         block
-        disabled={saving}
-        aria-busy={saving || undefined}>
-        {saving ? "Creating…" : "Create admin"}
+        disabled={pending}
+        aria-busy={pending || undefined}>
+        {pending ? "Creating…" : "Create admin"}
       </Button>
     </SignedOutForm>
   );

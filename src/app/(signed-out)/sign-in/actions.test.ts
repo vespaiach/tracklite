@@ -1,14 +1,16 @@
-import { randomInt } from "node:crypto";
 import { hash } from "@node-rs/argon2";
 import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, type MockInstance, vi } from "vitest";
-import { hashPassword, verifyPassword } from "../../../infrastructure/passwords";
-import { members, signInAttempts } from "../../../infrastructure/identity/tables";
 import { db } from "../../../infrastructure/db";
+import { members, signInAttempts } from "../../../infrastructure/identity/tables";
+import { hashPassword, verifyPassword } from "../../../infrastructure/passwords";
+import { sessionCookieWritten } from "../../../test/actions";
 import { createMember } from "../../../test/factories";
-import { GET as getIssue } from "../[...path]/route";
-import { GET as getMe } from "../me/route";
-import { POST } from "./route";
+import { setNextRequest } from "../../../test/next-request";
+import { uniqueIp } from "../../../test/reset-links";
+import { GET as getIssue } from "../../api/[...path]/route";
+import { GET as getMe } from "../../api/me/route";
+import { signIn as signInAction } from "./actions";
 
 const password = "correct horse battery";
 let passwordHash: string;
@@ -24,26 +26,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function uniqueIp() {
-  return `10.${randomInt(256)}.${randomInt(256)}.${randomInt(256)}`;
-}
-
-function signIn(body: { email: string; password: string }, forwardedFor = uniqueIp()) {
-  return POST(
-    new Request("http://localhost:3000/api/sessions", {
-      method: "POST",
-      headers: {
-        Origin: "http://localhost:3000",
-        "Content-Type": "application/json",
-        "X-Forwarded-For": forwardedFor,
-      },
-      body: JSON.stringify(body),
-    }),
-  );
-}
-
-function cookieFrom(response: Response) {
-  return response.headers.get("set-cookie")?.split(";")[0];
+function signIn(input: { email: string; password: string }, forwardedFor = uniqueIp()) {
+  setNextRequest({ headers: { "x-forwarded-for": forwardedFor } });
+  return signInAction(input);
 }
 
 async function signedInUsername(cookie: string | undefined) {
@@ -53,13 +38,12 @@ async function signedInUsername(cookie: string | undefined) {
   return response.status === 200 ? ((await response.json()) as { username: string }).username : undefined;
 }
 
-const incorrect = { error: { message: "Incorrect email or password." } };
-const tooMany = { error: { message: "Too many attempts. Try again later." } };
+const incorrect = { ok: false, error: { kind: "invalid", message: "Incorrect email or password." } };
+const tooMany = { ok: false, error: { kind: "limited", message: "Too many attempts. Try again later." } };
 
-async function expectRefused(response: Response, body: object, status: number) {
-  expect(response.status).toBe(status);
-  expect(await response.json()).toEqual(body);
-  expect(response.headers.get("set-cookie")).toBeNull();
+async function expectRefused(result: Promise<unknown>, refusal: object) {
+  expect(await result).toEqual(refusal);
+  expect(sessionCookieWritten()).toBeUndefined();
 }
 
 async function storedHash(memberId: string) {
@@ -83,22 +67,21 @@ async function seedFailures(values: { email: string; ip: string }, count: number
 it("REQ-047.1, REQ-047.4, §4.1: an active member with the right password is signed in, whatever the capitals in the email, and a current hash isn't rewritten", async () => {
   const sam = await createMember({ passwordHash });
 
-  const response = await signIn({ email: sam.email.toUpperCase(), password });
+  expect(await signIn({ email: sam.email.toUpperCase(), password })).toEqual({ ok: true, data: null });
 
-  expect(response.status).toBe(204);
-  expect(await signedInUsername(cookieFrom(response))).toBe(sam.username);
+  expect(await signedInUsername(sessionCookieWritten())).toBe(sam.username);
   expect(await storedHash(sam.id)).toBe(passwordHash);
 });
 
 it("SEC-007.1: Sam signs in → the log line names member sam, with no password or token", async () => {
   const sam = await createMember({ passwordHash });
 
-  const response = await signIn({ email: sam.email, password });
+  await signIn({ email: sam.email, password });
 
   const lines = log.mock.calls.map(([raw]) => raw as string);
-  const [line] = lines.filter((raw) => JSON.parse(raw).event === "request");
-  expect(JSON.parse(line)).toMatchObject({ method: "POST", path: "/api/sessions", actor: sam.username });
-  for (const secret of [password, cookieFrom(response)?.split("=")[1] ?? "", sam.email]) {
+  const [line] = lines.filter((raw) => JSON.parse(raw).source === "action");
+  expect(JSON.parse(line)).toMatchObject({ event: "call", action: "signIn", actor: sam.username });
+  for (const secret of [password, sessionCookieWritten()?.split("=")[1] ?? "", sam.email]) {
     expect(line).not.toContain(secret);
   }
 });
@@ -107,9 +90,9 @@ it("REQ-047.2, REQ-047.3, REQ-047: a wrong password, an unknown email and a deac
   const sam = await createMember({ passwordHash });
   const jo = await createMember({ passwordHash, deactivatedAt: new Date() });
 
-  await expectRefused(await signIn({ email: sam.email, password: "wrong password!!" }), incorrect, 422);
-  await expectRefused(await signIn({ email: "nobody-047-3@x.com", password }), incorrect, 422);
-  await expectRefused(await signIn({ email: jo.email, password }), incorrect, 422);
+  await expectRefused(signIn({ email: sam.email, password: "wrong password!!" }), incorrect);
+  await expectRefused(signIn({ email: "nobody-047-3@x.com", password }), incorrect);
+  await expectRefused(signIn({ email: jo.email, password }), incorrect);
 });
 
 it("REQ-047.5: after signing in, the page Sam was sent away from loads", async () => {
@@ -120,28 +103,28 @@ it("REQ-047.5: after signing in, the page Sam was sent away from loads", async (
     );
   expect((await openIssue()).status).toBe(401);
 
-  const cookie = cookieFrom(await signIn({ email: sam.email, password }));
+  await signIn({ email: sam.email, password });
 
-  expect((await openIssue(cookie)).status).not.toBe(401);
+  expect((await openIssue(sessionCookieWritten())).status).not.toBe(401);
 });
 
 it("SEC-001.1: 10 wrong passwords lock out the right one, and a successful sign-in in between doesn't reset the count", async () => {
   const sam = await createMember({ passwordHash });
   for (let attempt = 0; attempt < 9; attempt++) {
-    expect((await signIn({ email: sam.email, password: "wrong password!!" })).status).toBe(422);
+    expect(await signIn({ email: sam.email, password: "wrong password!!" })).toEqual(incorrect);
   }
-  expect((await signIn({ email: sam.email, password })).status).toBe(204);
-  expect((await signIn({ email: sam.email, password: "wrong password!!" })).status).toBe(422);
+  expect(await signIn({ email: sam.email, password })).toEqual({ ok: true, data: null });
+  expect(await signIn({ email: sam.email, password: "wrong password!!" })).toEqual(incorrect);
 
-  await expectRefused(await signIn({ email: sam.email, password }), tooMany, 429);
+  await expectRefused(signIn({ email: sam.email, password }), tooMany);
 });
 
 it("SEC-001.3: an unknown email tried 11 times gets the same limit message", async () => {
   for (let attempt = 0; attempt < 10; attempt++) {
-    await expectRefused(await signIn({ email: "stranger@x.com", password }), incorrect, 422);
+    await expectRefused(signIn({ email: "stranger@x.com", password }), incorrect);
   }
 
-  await expectRefused(await signIn({ email: "stranger@x.com", password }), tooMany, 429);
+  await expectRefused(signIn({ email: "stranger@x.com", password }), tooMany);
 });
 
 it("SEC-001: 30 failures from one IP block any email from that IP, read from the rightmost X-Forwarded-For", async () => {
@@ -149,8 +132,11 @@ it("SEC-001: 30 failures from one IP block any email from that IP, read from the
   const ip = uniqueIp();
   await seedFailures({ email: "someone-else@x.com", ip }, 30);
 
-  await expectRefused(await signIn({ email: sam.email, password }, `203.0.113.7, ${ip}`), tooMany, 429);
-  expect((await signIn({ email: sam.email, password }, `${ip}, ${uniqueIp()}`)).status).toBe(204);
+  await expectRefused(signIn({ email: sam.email, password }, `203.0.113.7, ${ip}`), tooMany);
+  expect(await signIn({ email: sam.email, password }, `${ip}, ${uniqueIp()}`)).toEqual({
+    ok: true,
+    data: null,
+  });
 });
 
 it("SEC-001: failures older than an hour don't count", async () => {
@@ -161,17 +147,17 @@ it("SEC-001: failures older than an hour don't count", async () => {
     .set({ createdAt: sql`now() - interval '61 minutes'` })
     .where(eq(signInAttempts.email, sam.email));
 
-  expect((await signIn({ email: sam.email, password })).status).toBe(204);
+  expect(await signIn({ email: sam.email, password })).toEqual({ ok: true, data: null });
 });
 
 it("§4.1: a wrong password leaves a hash made with older settings alone; the right one stores a hash with the current settings", async () => {
   const olderHash = await hashWithOlderSettings(password);
   const sam = await createMember({ passwordHash: olderHash });
 
-  expect((await signIn({ email: sam.email, password: "wrong password!!" })).status).toBe(422);
+  expect(await signIn({ email: sam.email, password: "wrong password!!" })).toEqual(incorrect);
   expect(await storedHash(sam.id)).toBe(olderHash);
 
-  expect((await signIn({ email: sam.email, password })).status).toBe(204);
+  expect(await signIn({ email: sam.email, password })).toEqual({ ok: true, data: null });
 
   const rehashed = await storedHash(sam.id);
   expect(rehashed.startsWith(currentSettingsPrefix)).toBe(true);

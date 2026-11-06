@@ -1,11 +1,13 @@
 import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { POST as lookUpInvitation } from "../app/api/invitation-lookups/route";
+import { lookUpInvitation } from "../application/identity/look-up-invitation";
 import { DELETE as revoke } from "../app/api/invitations/[id]/route";
 import { POST as resend } from "../app/api/invitations/[id]/resend/route";
 import { GET as list, POST as create } from "../app/api/invitations/route";
 import { db } from "../infrastructure/db";
+import { DomainError } from "../domain/shared/domain-error";
 import { outbox } from "../infrastructure/email/outbox";
+import { identityWork } from "../infrastructure/identity/repositories";
 import { invitations } from "../infrastructure/identity/tables";
 import { createSession } from "../infrastructure/identity/session";
 import { createMember } from "./factories";
@@ -63,8 +65,13 @@ export function revokeInvitation(cookie: string, id: string) {
   );
 }
 
-export function lookUp(token: unknown) {
-  return lookUpInvitation(jsonRequest("POST", "/api/invitation-lookups", { token }));
+export async function lookUp(token: string) {
+  try {
+    return await lookUpInvitation(identityWork, token);
+  } catch (error) {
+    if (error instanceof DomainError && error.kind === "expired") return { expired: error.message };
+    throw error;
+  }
 }
 
 export function latestInvitationToken() {

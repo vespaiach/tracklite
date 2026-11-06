@@ -2,8 +2,8 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { hashPassword } from "../../../../infrastructure/passwords";
 import { createSession } from "../../../../infrastructure/identity/session";
 import { createMember } from "../../../../test/factories";
+import { outcome, signInAs } from "../../../../test/actions";
 import { jsonRequest } from "../../../../test/reset-links";
-import { POST as signIn } from "../../sessions/route";
 import { GET as getMe } from "../route";
 import { PUT } from "./route";
 
@@ -31,8 +31,8 @@ function changePassword(cookie: string, currentPassword: string, password = newP
   );
 }
 
-async function signInStatus(email: string, password: string) {
-  return (await signIn(jsonRequest("POST", "/api/sessions", { email, password }))).status;
+async function signInOutcome(email: string, password: string) {
+  return outcome(await signInAs(email, password));
 }
 
 async function meStatus(cookie: string) {
@@ -48,8 +48,8 @@ it("REQ-049.1: the right current password and a valid new one are saved; this se
   expect(response.status).toBe(204);
   expect(await meStatus(cookie)).toBe(200);
   expect(await meStatus(otherComputer)).toBe(401);
-  expect(await signInStatus(sam.email, oldPassword)).toBe(422);
-  expect(await signInStatus(sam.email, newPassword)).toBe(204);
+  expect(await signInOutcome(sam.email, oldPassword)).toBe("invalid");
+  expect(await signInOutcome(sam.email, newPassword)).toBe("ok");
 });
 
 it('REQ-049.2, REQ-048: a wrong current password gets "Incorrect password", a new one that is too short gets "At least 12 characters", and the old password still works', async () => {
@@ -62,7 +62,7 @@ it('REQ-049.2, REQ-048: a wrong current password gets "Incorrect password", a ne
   expect((await wrongCurrent.json()).error.fields).toEqual({ currentPassword: "Incorrect password" });
   expect(tooShort.status).toBe(422);
   expect((await tooShort.json()).error.fields).toEqual({ newPassword: "At least 12 characters" });
-  expect(await signInStatus(sam.email, oldPassword)).toBe(204);
+  expect(await signInOutcome(sam.email, oldPassword)).toBe("ok");
 });
 
 it("REQ-049.3, SEC-001: after 10 wrong current passwords the 11th try is refused even when right, and they count toward the sign-in limit", async () => {
@@ -75,7 +75,7 @@ it("REQ-049.3, SEC-001: after 10 wrong current passwords the 11th try is refused
 
   expect(response.status).toBe(429);
   expect(await response.json()).toEqual({ error: { message: "Too many attempts. Try again later." } });
-  expect(await signInStatus(sam.email, newPassword)).toBe(429);
-  expect(await signInStatus(sam.email, oldPassword)).toBe(429);
+  expect(await signInOutcome(sam.email, newPassword)).toBe("limited");
+  expect(await signInOutcome(sam.email, oldPassword)).toBe("limited");
   expect(await meStatus(cookie)).toBe(200);
 });

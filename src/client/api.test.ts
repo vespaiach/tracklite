@@ -1,7 +1,10 @@
 import { createMemoryRouter } from "react-router";
 import { afterEach, expect, it, vi } from "vitest";
 import { api } from "./api";
+import { loadPage } from "./load-page";
 import { makeStore } from "./store";
+
+vi.mock("./load-page", () => ({ loadPage: vi.fn() }));
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -23,12 +26,13 @@ function respondWith(status: number, body?: unknown) {
 
 it("STD-1: a 401 from any request redirects to /sign-in?next={current address}", async () => {
   respondWith(401, { error: { message: "Sign in to continue." } });
-  const { router, store } = storeAt("/project/WEB/list?status=todo");
+  const { store } = storeAt("/project/WEB/list?status=todo");
 
   await store.dispatch(api.endpoints.me.initiate());
 
-  expect(router.state.location.pathname).toBe("/sign-in");
-  expect(router.state.location.search).toBe(`?next=${encodeURIComponent("/project/WEB/list?status=todo")}`);
+  expect(loadPage).toHaveBeenCalledWith(
+    `/sign-in?next=${encodeURIComponent("/project/WEB/list?status=todo")}`,
+  );
 });
 
 it('STD-9.3: a network or server error reads "Couldn’t save. Try again."', async () => {
@@ -56,8 +60,8 @@ it("STD-9.3, STD-6: any other failure (403, 503) shows the server's message", as
   expect(router.state.location.pathname).toBe("/my-issues");
 
   respondWith(503, { error: { message: "We couldn’t send the email. Try again." } });
-  const unavailable = await storeAt("/forgot-password").store.dispatch(
-    api.endpoints.requestResetLink.initiate({ email: "sam@acme.com" }),
+  const unavailable = await storeAt("/settings/members").store.dispatch(
+    api.endpoints.createInvitation.initiate({ email: "sam@acme.com" }),
   );
 
   expect(unavailable.error).toEqual({ status: 503, message: "We couldn’t send the email. Try again." });
@@ -77,18 +81,7 @@ it("STD-3: baseQuery passes a 422's field errors to the component without redire
   expect(store.getState().toast).toBeNull();
 });
 
-it("STD-1: a 401 on a signed-out page doesn't redirect", async () => {
-  respondWith(401, { error: { message: "Sign in to continue." } });
-  for (const path of ["/sign-in?next=%2Fmy-issues", "/forgot-password", "/reset-password?token=abc"]) {
-    const { router, store } = storeAt(path);
-
-    await store.dispatch(api.endpoints.me.initiate());
-
-    expect(router.state.location.pathname + router.state.location.search).toBe(path);
-  }
-});
-
-it("baseQuery: GET returns parsed JSON; POST sends a JSON body and a 204 gives null", async () => {
+it("baseQuery: GET returns parsed JSON; PUT sends a JSON body and a 204 gives null", async () => {
   const me = {
     username: "sam",
     fullName: "Sam Lee",
@@ -105,17 +98,20 @@ it("baseQuery: GET returns parsed JSON; POST sends a JSON body and a 204 gives n
   expect(fetch).toHaveBeenCalledWith("/api/me", expect.anything());
 
   respondWith(204);
-  const signedIn = await storeAt("/sign-in").store.dispatch(
-    api.endpoints.signIn.initiate({ email: "sam@acme.com", password: "correct-horse-battery" }),
+  const changed = await storeAt("/settings/profile").store.dispatch(
+    api.endpoints.changePassword.initiate({
+      currentPassword: "correct-horse-battery",
+      newPassword: "a brand new password",
+    }),
   );
 
-  expect(signedIn.data).toBeNull();
+  expect(changed.data).toBeNull();
   expect(fetch).toHaveBeenCalledWith(
-    "/api/sessions",
+    "/api/me/password",
     expect.objectContaining({
-      method: "POST",
+      method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: "sam@acme.com", password: "correct-horse-battery" }),
+      body: JSON.stringify({ currentPassword: "correct-horse-battery", newPassword: "a brand new password" }),
     }),
   );
 });

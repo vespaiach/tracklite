@@ -9,7 +9,7 @@ export const POST = apiRoute("public", ClientErrorReport, async (request, report
   const member = await signedInMember(request);
   if (member) nameActor(member.username);
 
-  const sender = { ip: clientIp(request), userAgent: request.headers.get("user-agent") ?? "" };
+  const sender = { ip: clientIp(request.headers), userAgent: request.headers.get("user-agent") ?? "" };
   await reportClientError(member, identityWork, report, sender);
 
   return new Response(null, { status: 204 });

@@ -9,7 +9,7 @@ export const PUT = apiRoute("member", PasswordChange, async (request, member, ch
   await changePassword(member, identityWork, {
     ...change,
     sessionToken: readSessionToken(request) ?? "",
-    ip: clientIp(request),
+    ip: clientIp(request.headers),
   });
   return new Response(null, { status: 204 });
 });

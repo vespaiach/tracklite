@@ -44,8 +44,8 @@ it("REQ-001.3, REQ-001: Jo resending Sam's pending invitation → a new link is 
     to: email,
     ...invitationEmail({ inviterName: "Jo Park", token: newToken }),
   });
-  expect((await lookUp(oldToken)).status).toBe(410);
-  expect(await (await lookUp(newToken)).json()).toEqual({ email });
+  expect(await lookUp(oldToken)).toHaveProperty("expired");
+  expect(await lookUp(newToken)).toEqual({ email });
 });
 
 it("REQ-001.7: a failed resend answers 503 and keeps the previous link working", async () => {
@@ -58,7 +58,7 @@ it("REQ-001.7: a failed resend answers 503 and keeps the previous link working",
 
   expect(response.status).toBe(503);
   expect(await response.json()).toEqual({ error: { message: "We couldn’t send the email. Try again." } });
-  expect(await (await lookUp(token)).json()).toEqual({ email });
+  expect(await lookUp(token)).toEqual({ email });
   expect(await listedInvitation(cookie, email)).toEqual(invitation);
 });
 
@@ -79,7 +79,7 @@ it("REQ-051.3, REQ-001: resending an expired invitation → a new link valid for
   expect(daysLeft).toBeGreaterThan(6.99);
   expect(daysLeft).toBeLessThanOrEqual(7);
   expect((await listedInvitation(cookie, email))?.state).toBe("pending");
-  expect(await (await lookUp(latestInvitationToken())).json()).toEqual({ email });
+  expect(await lookUp(latestInvitationToken())).toEqual({ email });
 
   await resendInvitation(cookie, bounced.id);
 

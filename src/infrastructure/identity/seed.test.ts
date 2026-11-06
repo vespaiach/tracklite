@@ -1,7 +1,6 @@
 import { isNotNull, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { POST as signIn } from "../../app/api/sessions/route";
-import { jsonRequest } from "../../test/reset-links";
+import { outcome, signInAs } from "../../test/actions";
 import { db } from "../db";
 import { members } from "./tables";
 import { seededMembers, seedMembers, seedPassword } from "./seed";
@@ -32,8 +31,7 @@ it("seed: a seeded admin and member can sign in", async () => {
   const admin = seededMembers.find((member) => member.role === "admin" && !member.deactivated);
   const member = seededMembers.find((member) => member.role === "member" && !member.deactivated);
   for (const { email } of [admin, member].map((found) => found as NonNullable<typeof found>)) {
-    const response = await signIn(jsonRequest("POST", "/api/sessions", { email, password: seedPassword }));
-    expect(response.status).toBe(204);
+    expect(outcome(await signInAs(email, seedPassword))).toBe("ok");
   }
 });
 

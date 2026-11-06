@@ -146,15 +146,22 @@ it("STD-2, STD-4, STD-6, STD-8: each DomainError kind comes back with its kind, 
   ]);
 });
 
-it("DEC-002: a public action runs signed out, with its parsed input and no actor", async () => {
+it("DEC-002, SEC-007.1: a public action runs signed out, with its parsed input and no actor unless it names one", async () => {
   const run = vi.fn(async () => "done");
 
   const result = await action("publicThing", "public", NewThing, run)({ name: "Website", key: "WEB" });
 
   expect(result).toEqual({ ok: true, data: "done" });
-  expect(run).toHaveBeenCalledWith({ name: "Website", key: "WEB" });
+  expect(run).toHaveBeenCalledWith({ name: "Website", key: "WEB" }, expect.any(Function));
   expect(refresh).toHaveBeenCalledOnce();
   expect(loggedLines()[0]).not.toHaveProperty("actor");
+
+  await action("signIn", "public", NewThing, async (_input, nameActor) => nameActor("sam"))({
+    name: "Website",
+    key: "WEB",
+  });
+
+  expect(loggedLines()[1]).toMatchObject({ action: "signIn", actor: "sam" });
 });
 
 it("OPS-007: an unknown error is rethrown, not refreshed, and logged as action/call with outcome error", async () => {
