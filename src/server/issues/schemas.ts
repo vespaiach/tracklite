@@ -22,7 +22,9 @@ const assignees = v.pipe(
     (input) => Array.isArray(input) && input.every((username) => tryFrom(Username, username) !== undefined),
     "Choose an active member",
   ),
-  v.transform((usernames) => [...new Set(usernames.map((username) => username.toLowerCase()))].map(Username.from)),
+  v.transform((usernames) =>
+    [...new Set(usernames.map((username) => username.toLowerCase()))].map(Username.from),
+  ),
 );
 
 export const NewIssue = v.object({
@@ -89,7 +91,12 @@ export const IssueMove = v.object({
     [
       v.literal("top"),
       v.literal("bottom"),
-      v.object({ after: v.pipe(v.string(), v.transform((after) => tryFrom(IssueId, after))) }),
+      v.object({
+        after: v.pipe(
+          v.string(),
+          v.transform((after) => tryFrom(IssueId, after)),
+        ),
+      }),
     ],
     "Choose a place",
   ),

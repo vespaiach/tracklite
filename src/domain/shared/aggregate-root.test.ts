@@ -13,9 +13,8 @@ it("D-61: pullEvents hands recorded events over once, in order", () => {
   assignment.assign("sam");
   assignment.assign("alex");
 
-  expect(assignment.pullEvents().map((event: DomainEvent) => event.type === "IssueAssigned" && event.assigneeIds)).toEqual([
-    ["sam"],
-    ["alex"],
-  ]);
+  expect(
+    assignment.pullEvents().map((event: DomainEvent) => event.type === "IssueAssigned" && event.assigneeIds),
+  ).toEqual([["sam"], ["alex"]]);
   expect(assignment.pullEvents()).toEqual([]);
 });

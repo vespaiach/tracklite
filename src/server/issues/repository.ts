@@ -158,10 +158,12 @@ export async function assigneeCandidates(
   const rows = await tx
     .select({ id: members.id, username: members.username, deactivatedAt: members.deactivatedAt })
     .from(members)
-    .where(inArray(
+    .where(
+      inArray(
         members.username,
         usernames.map((username) => username.value),
-      ));
+      ),
+    );
   return rows.map(({ id, username, deactivatedAt }) => ({
     id,
     username,

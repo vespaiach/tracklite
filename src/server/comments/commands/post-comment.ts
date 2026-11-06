@@ -25,7 +25,12 @@ async function postComment(
     const [repeated] = await findComments(tx, eq(comments.requestId, requestId.value));
     if (repeated) return { comment: repeated, created: false };
 
-    const { comment, events } = newComment(actor, { id: randomUUID(), target, body, requestId: requestId.value });
+    const { comment, events } = newComment(actor, {
+      id: randomUUID(),
+      target,
+      body,
+      requestId: requestId.value,
+    });
 
     await saveComment(tx, null, comment);
 

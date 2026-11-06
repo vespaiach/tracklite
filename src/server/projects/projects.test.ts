@@ -54,7 +54,9 @@ it("REQ-013.4: archiving waits for a write already under way, so that write can'
   const [stored] = await db.select().from(projects).where(eq(projects.id, project.id));
   expect(stored.description).toBe("Saved");
   expect(stored.archivedAt).not.toBeNull();
-  await expect(db.transaction((tx) => writableProject(tx, ProjectKey.from(project.key)))).rejects.toMatchObject({
+  await expect(
+    db.transaction((tx) => writableProject(tx, ProjectKey.from(project.key))),
+  ).rejects.toMatchObject({
     kind: "forbidden",
   });
 });
@@ -73,7 +75,9 @@ it("STD-2: a member can't create a project", async () => {
   const member = await createMember();
   const key = uniqueProjectKey();
 
-  await expect(create(member, { name: "Website", key: ProjectKey.from(key) })).rejects.toMatchObject(forbidden);
+  await expect(create(member, { name: "Website", key: ProjectKey.from(key) })).rejects.toMatchObject(
+    forbidden,
+  );
 
   expect(await db.select().from(projects).where(eq(projects.key, key))).toHaveLength(0);
 });
@@ -82,8 +86,12 @@ it("STD-2: a member can't rename or archive a project", async () => {
   const member = await createMember();
   const project = await createProject({ name: "Website" });
 
-  await expect(updateProject(member, ProjectKey.from(project.key), { name: "Renamed" })).rejects.toMatchObject(forbidden);
-  await expect(updateProject(member, ProjectKey.from(project.key), { archived: true })).rejects.toMatchObject(forbidden);
+  await expect(
+    updateProject(member, ProjectKey.from(project.key), { name: "Renamed" }),
+  ).rejects.toMatchObject(forbidden);
+  await expect(updateProject(member, ProjectKey.from(project.key), { archived: true })).rejects.toMatchObject(
+    forbidden,
+  );
 
   expect(await storedProject(project.id)).toMatchObject({ name: "Website", archivedAt: null });
 });

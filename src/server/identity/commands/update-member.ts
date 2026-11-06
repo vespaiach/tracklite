@@ -27,7 +27,9 @@ export async function updateMember(
 ) {
   assertAdmin(actor);
   return db.transaction(async (tx) => {
-    const [target] = username ? await tx.select().from(members).where(eq(members.username, username.value)) : [];
+    const [target] = username
+      ? await tx.select().from(members).where(eq(members.username, username.value))
+      : [];
     if (!target) throw new DomainError("notFound", "Not found");
 
     if (mayLeaveNoAdmin({ role, deactivated })) await keepLastAdmin(tx, target);

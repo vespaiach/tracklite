@@ -14,7 +14,10 @@ export function unitOfWork<R>(repositoriesOn: (scope: TransactionScope) => R): U
         const saved = new Set<AggregateRoot>();
         const result = await work(repositoriesOn({ tx, saved: (aggregate) => saved.add(aggregate) }));
 
-        await publishAll(tx, [...saved].flatMap((aggregate) => aggregate.pullEvents()));
+        await publishAll(
+          tx,
+          [...saved].flatMap((aggregate) => aggregate.pullEvents()),
+        );
         return result;
       }),
   };
