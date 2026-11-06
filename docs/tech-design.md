@@ -172,7 +172,7 @@ Nothing under `domain`, `application` or `queries` imports `next/*`. `src/contra
 | `projects` | `Project` with its labels (`ProjectKey`, `ProjectName`, `LabelName`, `LabelColor`) | create, update (rename, archive or unarchive, or a description save: one `PATCH`), delete; create, update and delete labels |
 | `issues` | `Issue` (`IssueId`, `IssueTitle`, `IssueStatus`, `IssuePriority`) | create, update one field, move, delete |
 | `comments` | `Comment` (`create` records `CommentPosted`; `edit` is the author's only and returns `{ conflictWith }` on a stale version; `assertDeletableBy` the author or an admin) | post on an issue or a project, edit, delete |
-| `notifications` | `Delivery` (which notifications are still wanted, what a failed attempt leads to) | record notifications, send due deliveries, clean up, notification stats, outbox health, receive an email event |
+| `notifications` | `Delivery` (which notifications are still wanted, what a failed attempt leads to) | record notifications, send due deliveries, clean up, receive an email event; notification stats and outbox health are reads in `queries/notifications.ts`, where `assertAdmin` guards the stats (as for the member list) |
 
 **Allowed dependencies between contexts.** Unchanged from the context map: `comments` → `issues`, `projects`; `issues` → `projects`; `notifications` → `comments`, `issues`, `projects` (reads for its drop checks and snapshots); every context → `identity` and `shared`. No context but `notifications` depends on `notifications`; the unit of work reaches it only through the outbox writer interface (D-62). No cycles. Within a layer, a context imports another context's files directly; the direction rule above still holds.
 
