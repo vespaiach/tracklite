@@ -4,7 +4,7 @@ import { IssueId, tryFrom } from "../../../../../domain/shared/identifiers";
 import { commentWork } from "../../../../../infrastructure/comments/comment-work";
 import { db } from "../../../../../infrastructure/db";
 import { listIssueComments, updatedComment } from "../../../../../queries";
-import { apiRoute } from "../../../../../server/shared/api-route";
+import { apiRoute } from "../../../_route";
 import { NewComment } from "../../../../_server/schemas/comments";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/issues/[id]/comments">) {

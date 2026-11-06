@@ -5,7 +5,7 @@ import { IssueId, tryFrom } from "../../../../domain/shared/identifiers";
 import { db } from "../../../../infrastructure/db";
 import { issueWork } from "../../../../infrastructure/issues/issue-work";
 import { getIssue, updatedIssue } from "../../../../queries";
-import { apiRoute } from "../../../../server/shared/api-route";
+import { apiRoute } from "../../_route";
 import { IssueChange } from "../../../_server/schemas/issues";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/issues/[id]">) {

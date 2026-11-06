@@ -5,7 +5,7 @@ import { tryFrom, Uuid } from "../../../../domain/shared/identifiers";
 import { db } from "../../../../infrastructure/db";
 import { projectWork } from "../../../../infrastructure/projects/project-work";
 import { updatedLabel } from "../../../../queries";
-import { apiRoute } from "../../../../server/shared/api-route";
+import { apiRoute } from "../../_route";
 import { LabelChanges } from "../../../_server/schemas/projects";
 
 export async function PATCH(request: Request, { params }: RouteContext<"/api/labels/[id]">) {

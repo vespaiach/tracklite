@@ -1,5 +1,5 @@
 import type * as v from "valibot";
-import { parseInput, unreadableInput } from "../../app/_server/parse-input";
+import { parseInput, unreadableInput } from "../_server/parse-input";
 import { DomainError, type DomainErrorKind } from "../../domain/shared/domain-error";
 import { readConfig } from "../../infrastructure/config";
 import { logError, logInfo } from "../../infrastructure/log";

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import * as v from "valibot";
 import { afterEach, beforeEach, expect, it, type MockInstance, vi } from "vitest";
 import { createMember } from "../../test/factories";
-import { apiRoute } from "./api-route";
+import { apiRoute } from "./_route";
 import { db } from "../../infrastructure/db";
 import { DomainError, type DomainErrorKind } from "../../domain/shared/domain-error";
 import { createSession } from "../../infrastructure/identity/session";

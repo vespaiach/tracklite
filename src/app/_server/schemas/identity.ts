@@ -1,6 +1,6 @@
 import "server-only";
 import * as v from "valibot";
-import { emailAddress, linkToken, maxCharacters } from "../../../server/shared/schemas";
+import { emailAddress, linkToken, maxCharacters } from "./shared";
 import { clientErrorEvents } from "../../../domain/identity/client-error";
 import { FullName } from "../../../domain/identity/full-name";
 import { Role } from "../../../domain/identity/role";
