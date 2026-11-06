@@ -1,1 +1,1 @@
-import "../server/notifications";
+import "../infrastructure/notifications/subscription";

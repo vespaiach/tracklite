@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { db } from "../../../infrastructure/db";
-import { notificationDeliveries, workerHeartbeats } from "../../../server/notifications";
+import { notificationDeliveries, workerHeartbeats } from "../../../infrastructure/notifications/tables";
 import { createMember, createNotificationBatch } from "../../../test/factories";
 import { GET } from "./route";
 

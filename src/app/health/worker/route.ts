@@ -1,4 +1,4 @@
-import { workerIsHealthy } from "../../../server/notifications";
+import { workerIsHealthy } from "../../../queries";
 
 export async function GET() {
   try {
